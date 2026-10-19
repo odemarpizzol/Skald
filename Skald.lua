@@ -1590,7 +1590,7 @@ ns.ShowResumeCard = function(data)
         fr.paper = { SetTexCoord = function() end }
         fr.icon = fr:CreateTexture(nil, "ARTWORK")
         fr.icon:SetSize(40, 40)
-        fr.icon:SetPoint("TOPLEFT", 16, -14)
+        fr.icon:SetPoint("TOPLEFT", 34, -26)
         fr.icon:SetTexture(K.TEX .. "quill")
         fr.title = fr:CreateFontString(nil, "OVERLAY", "SkaldHead")
         fr.title:SetPoint("LEFT", fr.icon, "RIGHT", 12, 0)
@@ -1620,7 +1620,7 @@ ns.ShowResumeCard = function(data)
         end
         p:SetFontObject(font)
         p:ClearAllPoints()
-        p:SetWidth(332)
+        p:SetWidth(300)
         p:SetJustifyH("LEFT")
         p:SetWordWrap(true)
         p:SetTextColor(r, g, b)
@@ -1628,9 +1628,9 @@ ns.ShowResumeCard = function(data)
         p:Show()
         return p, gap
     end
-    local y = 72
+    local y = 86
     local function Place(p, gap)
-        p:SetPoint("TOPLEFT", card, "TOPLEFT", 24, -(y + (gap or 0)))
+        p:SetPoint("TOPLEFT", card, "TOPLEFT", 40, -(y + (gap or 0)))
         y = y + (gap or 0) + math.max(14, p:GetStringHeight() or 14)
     end
     Place(Part("SkaldSec", Upper(L.RESUME_LABEL_LAST), K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3]))
@@ -1647,7 +1647,7 @@ ns.ShowResumeCard = function(data)
         Place(Part("SkaldNote", data.note, K.C_NOTE[1], K.C_NOTE[2], K.C_NOTE[3]), 1)
     end
     Place(Part("SkaldSec", L.RESUME_HINT, K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3]), 12)
-    local height = y + 16
+    local height = y + 34
     card:SetHeight(height)
     card.paper:SetTexCoord(0, 380 / 256, 0, height / 256)
     ns.PlaceNotice(card)

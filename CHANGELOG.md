@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.33.3-beta
+
+- The reminder "Where was I?" keeps its text and its quill clear of the gold corners of the parchment.
+
 ## 0.33.2-beta
 
 - **Where the notices appear:** at the top of the screen by default; the Style tab has three places (Top, Left, Bottom) next to the button that lets you drag them anywhere. The notice slides in from its edge.
