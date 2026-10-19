@@ -3922,26 +3922,41 @@ Mile.BuildPets = function(panel)
     local nowLabel = SectionLabel(panel, L.PETS_NOW, 0, -52)
     local icon = panel:CreateTexture(nil, "ARTWORK")
     icon:SetSize(44, 44)
-    icon:SetPoint("TOPLEFT", 0, -78)
+    icon:SetPoint("TOPLEFT", 0, -76)
     icon:SetTexture("Interface\\AddOns\\Skald\\Textures\\ev_pet")
     local name = panel:CreateFontString(nil, "OVERLAY", "SkaldHead")
-    name:SetPoint("TOPLEFT", 58, -80)
+    name:SetPoint("LEFT", icon, "RIGHT", 14, 0)
     name:SetWidth(K.CW - 58)
     name:SetJustifyH("LEFT")
     name:SetTextColor(K.C_HEAD[1], K.C_HEAD[2], K.C_HEAD[3])
-    local detail = panel:CreateFontString(nil, "OVERLAY", "SkaldBody")
-    detail:SetPoint("TOPLEFT", 58, -108)
-    detail:SetWidth(K.CW - 58)
-    detail:SetJustifyH("LEFT")
-    detail:SetTextColor(K.C_BODY[1], K.C_BODY[2], K.C_BODY[3])
-    local since = NoteText(panel, 0, -134)
-    local diet = NoteText(panel, 0, -152)
 
-    -- The companion itself, turning in an arched alcove like the character on the cover. Only the pet
+    -- The facts, in two columns: a small label over each value.
+    local function Cell(col, row, label)
+        local x, y = (col - 1) * 170, -134 - (row - 1) * 38
+        local l = panel:CreateFontString(nil, "OVERLAY", "SkaldSec")
+        l:SetPoint("TOPLEFT", x, y)
+        l:SetWidth(160)
+        l:SetJustifyH("LEFT")
+        l:SetTextColor(K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3])
+        l:SetText(Upper(label))
+        local v = panel:CreateFontString(nil, "OVERLAY", "SkaldBody")
+        v:SetPoint("TOPLEFT", x, y - 15)
+        v:SetWidth(160)
+        v:SetJustifyH("LEFT")
+        v:SetTextColor(K.C_BODY[1], K.C_BODY[2], K.C_BODY[3])
+        return v, l
+    end
+    local famV, famL = Cell(1, 1, L.PETL_FAMILY)
+    local lvlV, lvlL = Cell(2, 1, L.PETL_LEVEL)
+    local dietV, dietL = Cell(1, 2, L.PETL_DIET)
+    local sinceV, sinceL = Cell(2, 2, L.PETL_SINCE)
+    local lastLine = NoteText(panel, 0, -134)
+
+    -- The companion itself, standing in an arched frame like the character on the cover. Only the pet
     -- that is out can be drawn; for any other the paw takes its place.
     local holder = CreateFrame("Frame", nil, panel)
-    holder:SetSize(210, 250)
-    holder:SetPoint("TOPLEFT", (K.CW - 210) / 2, -176)
+    holder:SetSize(196, 232)
+    holder:SetPoint("TOPLEFT", (K.CW - 214) / 2 + 9, -206)
     local okModel, model = pcall(CreateFrame, "PlayerModel", nil, holder)
     if okModel and model then
         model:SetAllPoints()
@@ -3963,19 +3978,19 @@ Mile.BuildPets = function(panel)
             end
         end)
         model:SetScript("OnMouseWheel", function(self, delta)
-            self.skaldZoom = math.max(0.8, math.min(5, (self.skaldZoom or 1.15) - (delta or 0) * 0.25))
+            self.skaldZoom = math.max(0.8, math.min(5, (self.skaldZoom or 1.25) - (delta or 0) * 0.25))
             pcall(self.SetCamDistanceScale, self, self.skaldZoom)
         end)
     end
     local placeholder = holder:CreateTexture(nil, "ARTWORK")
-    placeholder:SetSize(110, 110)
+    placeholder:SetSize(100, 100)
     placeholder:SetPoint("CENTER")
     placeholder:SetTexture("Interface\\AddOns\\Skald\\Textures\\ev_pet")
     placeholder:SetAlpha(0.55)
     local alcove = CreateFrame("Frame", nil, panel)
     alcove:SetFrameLevel(holder:GetFrameLevel() + 5)
-    alcove:SetSize(230, 271)
-    alcove:SetPoint("TOPLEFT", (K.CW - 230) / 2, -166)
+    alcove:SetSize(214, 252)
+    alcove:SetPoint("TOPLEFT", (K.CW - 214) / 2, -198)
     local alcoveTex = alcove:CreateTexture(nil, "OVERLAY")
     alcoveTex:SetAllPoints()
     alcoveTex:SetTexture(K.TEX .. "alcove")
@@ -3985,7 +4000,7 @@ Mile.BuildPets = function(panel)
         if okModel and model and petName and UnitExists("pet") and Safe(UnitName("pet")) == petName then
             out = pcall(model.SetUnit, model, "pet")
             if out then
-                model.skaldZoom, model.skaldAngle = 1.15, 0.6
+                model.skaldZoom, model.skaldAngle = 1.25, 0.6
                 pcall(model.SetCamDistanceScale, model, model.skaldZoom)
                 pcall(model.SetFacing, model, model.skaldAngle)
             end
@@ -4013,6 +4028,11 @@ Mile.BuildPets = function(panel)
     local empty = NoteText(panel, 0, -80)
     local total = NoteText(panel, K.RIGHT_X, -420)
 
+    local facts = { famV, famL, lvlV, lvlL, dietV, dietL, sinceV, sinceL }
+    local function ShowFacts(on)
+        for _, fs in ipairs(facts) do fs:SetShown(on) end
+    end
+
     return function()
         local db = Journal()
         local pets, list = (db and db.pets) or {}, {}
@@ -4021,33 +4041,30 @@ Mile.BuildPets = function(panel)
         -- Who is at the side now: only a pet that is really out. With none out (a loaned pet that left,
         -- one that was dismissed) the page says so and names the last one.
         local out = db and db.petNow and pets[db.petNow] and { name = db.petNow, rec = pets[db.petNow] } or nil
-        local now = out
         empty:SetShown(#list == 0)
         nowLabel:SetText(out and L.PETS_NOW or L.PETS_NONE_NOW)
+        lastLine:SetText("")
         if #list == 0 then
             empty:SetText(L.PETS_NONE)
-            name:SetText(""); detail:SetText(""); since:SetText(""); diet:SetText(""); total:SetText("")
-            icon:Hide()
+            name:SetText(""); total:SetText("")
+            icon:Hide(); ShowFacts(false)
             ShowPet(nil)
         elseif not out then
-            local last = list[1]
-            icon:Hide()
+            icon:Hide(); ShowFacts(false)
             name:SetText("")
-            detail:SetText(string.format(L.PETS_LAST, last.name))
-            since:SetText(""); diet:SetText("")
+            lastLine:SetText(string.format(L.PETS_LAST, list[1].name))
             total:SetText(string.format(L.PETS_TOTAL, #list))
             ShowPet(nil)
         else
-            icon:Show()
-            name:SetText(now.name)
-            local parts = {}
-            if now.rec.fam then parts[#parts + 1] = now.rec.fam end
-            if now.rec.lv and now.rec.lv > 0 then parts[#parts + 1] = string.format(L.TIP_LEVEL, now.rec.lv) end
-            detail:SetText(table.concat(parts, "  -  "))
-            since:SetText(string.format(L.PETS_SINCE, date(L.DAY_DATE, now.rec.t or time())))
-            diet:SetText(now.rec.diet and string.format(L.PET_DIET, now.rec.diet) or "")
+            local rec = out.rec
+            icon:Show(); ShowFacts(true)
+            name:SetText(out.name)
+            famV:SetText(rec.fam or "-")
+            lvlV:SetText((rec.lv and rec.lv > 0) and tostring(rec.lv) or "-")
+            dietV:SetText(rec.diet or "-")
+            sinceV:SetText(date(L.DAY_DATE, rec.t or time()))
             total:SetText(string.format(L.PETS_TOTAL, #list))
-            ShowPet(now.name)
+            ShowPet(out.name)
         end
         for i = 1, 12 do
             local item = list[i]

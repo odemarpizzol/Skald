@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.31.14-beta
+
+- **Pets tab, tidier:** the facts of the companion (family, level, diet, together since) are laid out in two columns, each with a small label over its value, under the name; the arched frame moved below them.
+
 ## 0.31.13-beta
 
 - **The pet is drawn larger** in the Pets tab (the mouse wheel still moves the camera).
