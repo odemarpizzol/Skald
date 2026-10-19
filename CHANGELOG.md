@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.32.4-beta
+
+- The notice of a new page moved higher on the screen, above the game's own banners (the "You have reached level N" banner and the like no longer cover it).
+
 ## 0.32.3-beta
 
 - **Clicking the reminder** "Where was I?" now opens the book at the newest day (it opened the tab used last, for instance Pets). **Clicking the notice of a new page** opens the book at that page and lights it.
