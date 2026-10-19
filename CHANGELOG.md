@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.31.11-beta
+
+- **Pets tab:** when no pet is out (a loaned pet that left, one that was dismissed or died) the page says "No companion at the moment" and names the last one, instead of still showing it at your side.
+
 ## 0.31.10-beta
 
 - The pet in the Pets tab is drawn larger in its frame (the mouse wheel still moves the camera).

@@ -3521,7 +3521,7 @@ Mile.CheckPet = function()
     if not okClass or classFile ~= "HUNTER" then return end
     local firstLook = db.pets == nil
     db.pets = db.pets or {}
-    if not UnitExists("pet") then return end
+    if not UnitExists("pet") then db.petNow = nil; return end   -- no pet out (dismissed, dead, or a loaned one that left)
     local name = Safe(UnitName("pet"))
     if type(name) ~= "string" or name == "" or (UNKNOWN and name == UNKNOWN) then return end
     local family
@@ -3860,7 +3860,7 @@ end
 -- The hunter's tab: the companion at one's side, and every pet there has been.
 Mile.BuildPets = function(panel)
     PageHeading(panel, L.TAB_PETS, 0)
-    SectionLabel(panel, L.PETS_NOW, 0, -52)
+    local nowLabel = SectionLabel(panel, L.PETS_NOW, 0, -52)
     local icon = panel:CreateTexture(nil, "ARTWORK")
     icon:SetSize(44, 44)
     icon:SetPoint("TOPLEFT", 0, -78)
@@ -3959,12 +3959,24 @@ Mile.BuildPets = function(panel)
         local pets, list = (db and db.pets) or {}, {}
         for pname, rec in pairs(pets) do list[#list + 1] = { name = pname, rec = rec } end
         table.sort(list, function(x, y) return (x.rec.t or 0) > (y.rec.t or 0) end)
-        local now = db and db.petNow and pets[db.petNow] and { name = db.petNow, rec = pets[db.petNow] } or list[1]
+        -- Who is at the side now: only a pet that is really out. With none out (a loaned pet that left,
+        -- one that was dismissed) the page says so and names the last one.
+        local out = db and db.petNow and pets[db.petNow] and { name = db.petNow, rec = pets[db.petNow] } or nil
+        local now = out
         empty:SetShown(#list == 0)
+        nowLabel:SetText(out and L.PETS_NOW or L.PETS_NONE_NOW)
         if #list == 0 then
             empty:SetText(L.PETS_NONE)
             name:SetText(""); detail:SetText(""); since:SetText(""); diet:SetText(""); total:SetText("")
             icon:Hide()
+            ShowPet(nil)
+        elseif not out then
+            local last = list[1]
+            icon:Hide()
+            name:SetText("")
+            detail:SetText(string.format(L.PETS_LAST, last.name))
+            since:SetText(""); diet:SetText("")
+            total:SetText(string.format(L.PETS_TOTAL, #list))
             ShowPet(nil)
         else
             icon:Show()
