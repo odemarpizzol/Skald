@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.32.2-beta
+
+- **Map tab, tidier:** the buttons of "When" now say how many pages each choice holds ("All (3)", "This session (0)", "Today (3)"), so an empty choice is no surprise; the controls are spaced so that nothing touches the seals; "This region" shows the name of the land, then its facts (first visit, quests, falls, foes, levels, items, favourites) in the book's own fonts, and a line that says how many of its pages the filters show, or that none matches.
+
 ## 0.32.1-beta
 
 - **Your notes on favourite memories look like notes:** written in the handwriting of the book, in the ink of your own notes, indented under the page with a thin gold line at their side, instead of a plain extra line of the page's text.

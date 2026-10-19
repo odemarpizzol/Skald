@@ -3103,6 +3103,7 @@ SkaldAPI.SectionLabel = SectionLabel
 SkaldAPI.NoteText = NoteText
 SkaldAPI.MakeDisc = MakeDisc
 SkaldAPI.RIGHT_X = K.RIGHT_X
+SkaldAPI.C_BODY, SkaldAPI.C_HEAD, SkaldAPI.C_MUTED = K.C_BODY, K.C_HEAD, K.C_MUTED
 SkaldAPI.PAGE_W = K.CW
 
 

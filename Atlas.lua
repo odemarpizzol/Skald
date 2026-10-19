@@ -72,6 +72,7 @@ local UI_TEXT = {
         FAVONLY = "Only favourite memories",
         REGION = "This region", FIRST_VISIT = "First visit: %s", R_LINE1 = "Quests: %d   Falls: %d   Foes: %d",
         R_LINE2 = "Levels: %d   Items: %d   Favourites: %d", CLICK_OPEN = "Click to open the page in the book",
+        STATUS = "Showing %d of %d pages here.", STATUS_NONE = "No page here matches the filters.",
         OPACITY = "Marker opacity",
         OPACITY_HINT = "Fainter markers let the game's own quest markers show through.",
         RARITY = "Smallest rarity shown", KINDS = "Pages shown",
@@ -90,6 +91,7 @@ local UI_TEXT = {
         FAVONLY = "Só memórias favoritas",
         REGION = "Esta região", FIRST_VISIT = "Primeira visita: %s", R_LINE1 = "Missões: %d   Quedas: %d   Inimigos: %d",
         R_LINE2 = "Níveis: %d   Itens: %d   Favoritas: %d", CLICK_OPEN = "Clique para abrir a página no livro",
+        STATUS = "Mostrando %d de %d páginas aqui.", STATUS_NONE = "Nenhuma página daqui passa pelos filtros.",
         OPACITY = "Opacidade dos marcadores",
         OPACITY_HINT = "Marcadores mais fracos deixam ver os de missão do jogo por baixo.",
         RARITY = "Menor raridade mostrada", KINDS = "Páginas mostradas",
@@ -108,6 +110,7 @@ local UI_TEXT = {
         FAVONLY = "Seulement les souvenirs préférés",
         REGION = "Cette région", FIRST_VISIT = "Première visite\194\160: %s", R_LINE1 = "Quêtes\194\160: %d   Chutes\194\160: %d   Ennemis\194\160: %d",
         R_LINE2 = "Niveaux\194\160: %d   Objets\194\160: %d   Préférés\194\160: %d", CLICK_OPEN = "Cliquez pour ouvrir la page dans le livre",
+        STATUS = "%d pages sur %d affichées ici.", STATUS_NONE = "Aucune page d'ici ne passe les filtres.",
         OPACITY = "Opacité des marqueurs",
         OPACITY_HINT = "Des marqueurs plus pâles laissent voir ceux des quêtes du jeu en dessous.",
         RARITY = "Plus faible rareté affichée", KINDS = "Pages affichées",
@@ -440,14 +443,17 @@ local function InstallHooks()
     end
 end
 
--- The Map tab inside the Skald window: pins on or off, the smallest rarity
--- shown (click a seal) and which kinds of page appear.
+-- The Map tab inside the Skald window: pins on or off, opacity, the smallest rarity (click a seal),
+-- when (all, this session, today), favourites only, what the region you are in holds, and on the
+-- right page the kinds of page.
 local function BuildMapTab(panel)
     local RIGHT_X = SkaldAPI.RIGHT_X or 402
+    local body = SkaldAPI.C_BODY or { 0.24, 0.16, 0.09 }
+    local head = SkaldAPI.C_HEAD or { 0.43, 0.12, 0.10 }
+    local muted = SkaldAPI.C_MUTED or { 0.45, 0.34, 0.20 }
     local syncs = {}
     local function SyncAll() for _, fn in ipairs(syncs) do fn() end end
 
-    -- Left page: the pins and the smallest rarity. Right page: the kinds of page.
     SkaldAPI.PageHeading(panel, UI.TAB, 0)
 
     -- A wax check box with its label; `glyph` (optional) is drawn between them.
@@ -466,12 +472,12 @@ local function BuildMapTab(panel)
         function(on) SkaldAtlasDB.hidden = not on end)
 
     -- Marker opacity: three steps.
-    SkaldAPI.SectionLabel(panel, UI.OPACITY, 0, -92)
+    SkaldAPI.SectionLabel(panel, UI.OPACITY, 0, -88)
     local steps = { 0.5, 0.75, 1 }
     local alphaButtons = {}
     for i, value in ipairs(steps) do
         local b = SkaldAPI.MakeButton(panel, 114, 26, string.format("%d%%", value * 100))
-        b:SetPoint("TOPLEFT", (i - 1) * 114, -116)
+        b:SetPoint("TOPLEFT", (i - 1) * 114, -110)
         b:SetScript("OnClick", function()
             SkaldAtlasDB.alpha = value
             SyncAll()
@@ -493,12 +499,12 @@ local function BuildMapTab(panel)
         end
     end
 
-    SkaldAPI.SectionLabel(panel, UI.RARITY, 0, -164)
+    SkaldAPI.SectionLabel(panel, UI.RARITY, 0, -148)
     local seals = {}
     for tier = 0, 5 do
         local b = CreateFrame("Button", nil, panel)
         b:SetSize(38, 38)
-        b:SetPoint("TOPLEFT", tier * 56 + 4, -192)
+        b:SetPoint("TOPLEFT", tier * 56 + 4, -176)
         -- The chosen seal is circled, as in Skald's Options.
         local ring = SkaldAPI.MakeDisc(b, "BACKGROUND", 48, 0.431, 0.118, 0.102, 0)
         ring:SetPoint("CENTER", 0, 0)
@@ -526,12 +532,14 @@ local function BuildMapTab(panel)
         end
     end
 
-    -- When: all the pages, only those of this session, only today's.
-    SkaldAPI.SectionLabel(panel, UI.WHEN, 0, -240)
+    -- When: all the pages, only those of this session, only today's. Each button says how many pages
+    -- it holds, so an empty choice is not a surprise.
+    SkaldAPI.SectionLabel(panel, UI.WHEN, 0, -236)
     local rangeButtons = {}
-    for i, key in ipairs({ "all", "session", "today" }) do
+    local ranges = { "all", "session", "today" }
+    for i, key in ipairs(ranges) do
         local b = SkaldAPI.MakeButton(panel, 114, 26, UI["RANGE_" .. key:upper()])
-        b:SetPoint("TOPLEFT", (i - 1) * 114, -262)
+        b:SetPoint("TOPLEFT", (i - 1) * 114, -258)
         b:SetScript("OnClick", function()
             SkaldAtlasDB.range = (key ~= "all") and key or nil
             SyncAll()
@@ -541,9 +549,19 @@ local function BuildMapTab(panel)
     end
     syncs[#syncs + 1] = function()
         local current = SkaldAtlasDB.range or "all"
-        for key, b in pairs(rangeButtons) do b:SetActive(key == current) end
+        local entries = SkaldAPI.GetEntries()
+        for _, key in ipairs(ranges) do
+            local filter = MakeFilter(0, {}, key, false)
+            local n = 0
+            for _, e in ipairs(entries) do
+                if e.m and e.x and e.y and filter(e) then n = n + 1 end
+            end
+            local b = rangeButtons[key]
+            b.text:SetText(UI["RANGE_" .. key:upper()] .. " (" .. n .. ")")
+            b:SetActive(key == current)
+        end
     end
-    Check(UI.FAVONLY, 0, -296,
+    Check(UI.FAVONLY, 0, -292,
         function() return SkaldAtlasDB.onlyFav and true or false end,
         function(on) SkaldAtlasDB.onlyFav = on and true or nil end)
 
@@ -562,15 +580,20 @@ local function BuildMapTab(panel)
             end, kind)
     end
 
-    -- What the map you are on holds: pages recorded here, the pins they make, and how many
-    -- the filters above hide. The map open on screen counts; otherwise the zone you are in.
-    SkaldAPI.SectionLabel(panel, UI.REGION, 0, -334)
-    local summary = panel:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    summary:SetPoint("TOPLEFT", 0, -354)
-    summary:SetWidth(342)
-    summary:SetJustifyH("LEFT")
-    summary:SetSpacing(2)
-    summary:SetTextColor(0.15, 0.10, 0.04)
+    -- The region: the land of the map open on screen (or the one you are in), what the diary holds
+    -- there, and how much of it the filters show.
+    SkaldAPI.SectionLabel(panel, UI.REGION, 0, -326)
+    local function Line(y, font, color)
+        local fs = panel:CreateFontString(nil, "OVERLAY", font)
+        fs:SetPoint("TOPLEFT", 0, y)
+        fs:SetWidth(342)
+        fs:SetJustifyH("LEFT")
+        fs:SetTextColor(color[1], color[2], color[3])
+        return fs
+    end
+    local regionName = Line(-346, "SkaldBody", head)
+    local fact1, fact2, fact3 = Line(-368, "SkaldBody", body), Line(-386, "SkaldBody", body), Line(-404, "SkaldBody", body)
+    local status = Line(-424, "SkaldSmall", muted)
     syncs[#syncs + 1] = function()
         local ok = pcall(function()
             local mapID
@@ -580,47 +603,44 @@ local function BuildMapTab(panel)
             if not mapID and C_Map and C_Map.GetBestMapForUnit then
                 mapID = C_Map.GetBestMapForUnit("player")
             end
-            if not mapID then summary:SetText(""); return end
-
+            if not mapID then
+                regionName:SetText(""); fact1:SetText(""); fact2:SetText(""); fact3:SetText(""); status:SetText("")
+                return
+            end
             local info = C_Map.GetMapInfo and C_Map.GetMapInfo(mapID)
+            regionName:SetText((info and info.name) or "?")
             local entries = SkaldAPI.GetEntries()
-            -- Pins are grouped by how close they are on screen: use the canvas size when the
-            -- map has one, a typical size otherwise.
+            -- Markers are grouped by how close they are on screen: use the canvas size when the map
+            -- has one, a typical size otherwise.
             local w, h = 1000, 667
             local canvas = Canvas()
             if canvas then
                 local cw, ch = canvas:GetSize()
                 if cw and cw > 0 and ch and ch > 0 then w, h = cw, ch end
             end
-
-            -- Pages that belong to this map (its own and its zones'), with no filter, against
-            -- the markers the filters leave.
-            local total = CountPages(entries, mapID, MakeFilter(0, {}, "all", false))
-            local clusters = CollectPins(entries, mapID, w, h, CurrentFilter())
-            local shown = 0
-            for _, c in ipairs(clusters) do shown = shown + #c.entries end
-
-            local pins = #clusters
-            -- the land itself: first visit, quests, falls, foes, levels, items, favourites
-            local text = ""
             local zoneId = SkaldAPI.ZoneIdOfMap and SkaldAPI.ZoneIdOfMap(mapID)
             local region = zoneId and SkaldAPI.RegionStats and SkaldAPI.RegionStats(zoneId)
             if region then
-                text = string.format(UI.FIRST_VISIT, date(SkaldAPI.DayFormat or "%d/%m/%Y", region.first or time())) .. "\n"
-                    .. string.format(UI.R_LINE1, region.quest, region.death, region.boss) .. "\n"
-                    .. string.format(UI.R_LINE2, region.level, region.loot, region.fav) .. "\n"
+                fact1:SetText(string.format(UI.FIRST_VISIT, date(SkaldAPI.DayFormat or "%d/%m/%Y", region.first or time())))
+                fact2:SetText(string.format(UI.R_LINE1, region.quest, region.death, region.boss))
+                fact3:SetText(string.format(UI.R_LINE2, region.level, region.loot, region.fav))
+            else
+                fact1:SetText(""); fact2:SetText(""); fact3:SetText("")
             end
-            text = text .. string.format(UI.SUMMARY, (info and info.name) or "?",
-                total, total == 1 and UI.PAGE or UI.PAGES, pins, pins == 1 and UI.PIN or UI.PINS)
+            local total = CountPages(entries, mapID, MakeFilter(0, {}, "all", false))
+            local shown = 0
+            for _, c in ipairs(CollectPins(entries, mapID, w, h, CurrentFilter())) do shown = shown + #c.entries end
             if total == 0 then
-                text = text .. "\n" .. UI.NONE
-            elseif total > shown then
-                local hidden = total - shown
-                text = text .. "\n" .. (hidden == 1 and UI.HIDDEN_ONE or string.format(UI.HIDDEN, hidden))
+                status:SetText(UI.NONE)
+            elseif shown == 0 then
+                status:SetText(UI.STATUS_NONE)
+            else
+                status:SetText(string.format(UI.STATUS, shown, total))
             end
-            summary:SetText(text)
         end)
-        if not ok then summary:SetText("") end
+        if not ok then
+            regionName:SetText(""); fact1:SetText(""); fact2:SetText(""); fact3:SetText(""); status:SetText("")
+        end
     end
 
     return SyncAll
