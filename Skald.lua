@@ -4730,9 +4730,40 @@ H.ZONE_CHANGED_NEW_AREA = function(self, event, ...)
 end
 H.PLAYER_ENTERING_WORLD = H.ZONE_CHANGED_NEW_AREA
 
+-- What the quest asks, in the client's own language: from the quest dialog when it is offered, and from the
+-- quest log when it is handed in. Kept by quest id until the quest is turned in.
+K.OBJECTIVE_KEPT = 150
+ns.NoteObjective = function(event)
+    if event == "QUEST_COMPLETE" then ns.pendingObjective = nil end
+    local id = GetQuestID and tonumber(GetQuestID()) or nil
+    local text = Safe(GetObjectiveText and GetObjectiveText())
+    if (type(text) ~= "string" or text == "") and id and id > 0 then
+        pcall(function()
+            local index = C_QuestLog and C_QuestLog.GetLogIndexForQuestID and C_QuestLog.GetLogIndexForQuestID(id)
+            if index and GetQuestLogQuestText then
+                local _, objectives = GetQuestLogQuestText(index)
+                text = objectives
+            end
+        end)
+    end
+    if type(text) ~= "string" or text == "" then return end
+    text = text:sub(1, 400)
+    if event == "QUEST_COMPLETE" then ns.pendingObjective = text end
+    local db = Journal()
+    if db and id and id > 0 then
+        db.questObj = db.questObj or {}
+        db.questObj[id] = text
+        local n = 0
+        for _ in pairs(db.questObj) do n = n + 1 end
+        if n > K.OBJECTIVE_KEPT then
+            for k in pairs(db.questObj) do if k ~= id then db.questObj[k] = nil; break end end
+        end
+    end
+end
+
 H.QUEST_DETAIL = function(self, event, ...)
     pendingQuestTitle = GetTitleText()
-    ns.pendingObjective = Safe(GetObjectiveText and GetObjectiveText()) or ns.pendingObjective
+    pcall(ns.NoteObjective, event)
     pendingNPC = Safe(UnitName and UnitName("npc")) or pendingNPC
     Mile.npcId = Mile.NpcId("npc") or Mile.npcId
     if event == "QUEST_COMPLETE" then
@@ -4805,13 +4836,15 @@ H.QUEST_TURNED_IN = function(self, event, ...)
         end
         AddEntry("quest", QuestName(questID), nil,
             { tier = tier, q = questID, npc = pendingNPC, qtype = qtype or false, cend = cend, since = since,
-              ot = (type(ns.pendingObjective) == "string" and ns.pendingObjective ~= "") and ns.pendingObjective:sub(1, 400) or nil,
+              ot = (type(ns.pendingObjective) == "string" and ns.pendingObjective ~= "" and ns.pendingObjective)
+                  or (Journal() and Journal().questObj and Journal().questObj[questID]) or nil,
               ql = pendingQuestLevel, pl = UnitLevel and UnitLevel("player"), nid = Mile.npcId })
     else
         CountOnly("quest", tier)
     end
     pendingQuestTitle, pendingNPC, pendingQuestLevel = nil, nil, nil
     ns.pendingObjective = nil
+    if Journal() and Journal().questObj then Journal().questObj[questID] = nil end
     pendingObjectiveTypes = nil
     Mile.npcId = nil
 end
