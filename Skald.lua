@@ -1953,9 +1953,21 @@ local function CreateWindow()
     local modelHolder = CreateFrame("Frame", nil, cover1)
     modelHolder:SetSize(288, 344)
     modelHolder:SetPoint("TOPLEFT", (PAGE_SW - 288) / 2, -64)
+    -- The portrait (used while the character is a spirit) sits in a dark round medallion, so the
+    -- black behind a portrait reads as part of the frame.
+    local medal = {}
+    do
+        local okDisc, ring = pcall(function() return SkaldAPI.MakeDisc(modelHolder, "BACKGROUND", 206, 0.30, 0.17, 0.08, 1) end)
+        if okDisc and ring then
+            ring:SetPoint("CENTER")
+            local inner = SkaldAPI.MakeDisc(modelHolder, "BACKGROUND", 194, 0.07, 0.04, 0.025, 2)
+            inner:SetPoint("CENTER")
+            medal = { ring, inner }
+        end
+    end
     local portrait = modelHolder:CreateTexture(nil, "ARTWORK")
     portrait:SetPoint("CENTER")
-    portrait:SetSize(150, 150)
+    portrait:SetSize(186, 186)
     local okModel, model = pcall(CreateFrame, "PlayerModel", nil, modelHolder)
     if okModel and model then
         model:SetAllPoints()
@@ -1985,6 +1997,7 @@ local function CreateWindow()
         end
         if model then model:SetShown(works) end
         portrait:SetShown(not works)
+        for _, t in ipairs(medal) do t:SetShown(not works) end
         if not works then pcall(SetPortraitTexture, portrait, "player") end
     end
     local coverTitle = cover1:CreateFontString(nil, "OVERLAY", "SkaldHead")

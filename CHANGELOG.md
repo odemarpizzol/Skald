@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.31.2-beta
+
+- While your character is a spirit, the cover shows the portrait in a round medallion (the model returns when you are alive again).
+
 ## 0.31.1-beta
 
 - **The Hearthstone.** A new page when you use the hearthstone to go home, told with the name of the place where you land. Nothing is written when you use it at the very place it takes you.
