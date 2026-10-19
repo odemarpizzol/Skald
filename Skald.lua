@@ -632,6 +632,14 @@ function PoolFor(e)
     return PHRASES.quest
 end
 
+-- Words that agree with the one who speaks (the diary is in the first person): {g:he-form|she-form} is
+-- written once in the phrase and the character's sex picks the form, as in "tombé{g:|e}".
+ns.Gendered = function(text)
+    if type(text) ~= "string" or not text:find("{g:", 1, true) then return text end
+    local female = UnitSex and UnitSex("player") == 3
+    return (text:gsub("{g:([^|}]*)|([^}]*)}", function(masculine, feminine) return female and feminine or masculine end))
+end
+
 -- The text of a day's closing page: what the day held, then a line fitting how it went.
 local function DayText(e)
     local d = e.day
@@ -665,7 +673,7 @@ local function DayText(e)
     local activity = (d.q or 0) + (d.l or 0) + (d.d or 0) + (d.z or 0) + (d.u or 0) + (d.b or 0) + (d.a or 0)
     local mood = ((d.d or 0) >= 3 and "deadly") or ((d.l or 0) > 0 and "levels")
         or (activity >= 12 and "busy") or (activity <= 3 and "quiet") or "plain"
-    return text .. " " .. L.DAY_CLOSE[mood]
+    return ns.Gendered(text .. " " .. L.DAY_CLOSE[mood])
 end
 
 K.QUALITY_COLOR = {
@@ -790,7 +798,7 @@ local function RenderEntry(e)
         local text = curated and curated.text and (curated.text[GetLocale()] or curated.text.enUS)
         if text then
             text = text:gsub("{quest}", function() return tostring(e.arg) end)
-            return (text:gsub("{npc}", function() return npc end))
+            return ns.Gendered((text:gsub("{npc}", function() return npc end)))
         end
     end
 
@@ -823,7 +831,7 @@ local function RenderEntry(e)
     end)
     text = text:gsub("{standing}", function() return tostring(e.st or "") end)
     text = text:gsub("{npc}", function() return npc end)
-    return text .. (e.noExtras and "" or Extras(e))
+    return ns.Gendered(text) .. (e.noExtras and "" or Extras(e))
 end
 
 -- Hooks for companion addons (e.g. Wayfarer): read the pages, and add a tab to the window.
@@ -3745,10 +3753,10 @@ end
 local function OnLoot(text)
     local db, s = Journal(), Settings()
     if not db or type(text) ~= "string" then return end
-    local link, src
+    local link, src, quantity
     for _, def in ipairs(LootPatterns()) do
-        local found = text:match(def[1])
-        if found then link, src = found, def[2]; break end
+        local found, amount = text:match(def[1])
+        if found then link, src, quantity = found, def[2], tonumber(amount); break end
     end
     if not link then return end
     local ref, name, quality = ItemParts(link)
@@ -3762,7 +3770,7 @@ local function OnLoot(text)
 
     -- Making the same thing again and again is one page that counts them, not a page for each.
     local iid = tonumber(tostring(item):match("item:(%d+)"))
-    local qty = tonumber(text:match("|h|rx(%d+)")) or 1
+    local qty = quantity or 1
     if src == "craft" and iid then
         local last = db.entries[#db.entries]
         if last and last.kind == "loot" and last.src == "craft" and last.iid == iid
@@ -4211,7 +4219,10 @@ local function Expand(t)
     t = t:gsub("%$[Nn]", function() return name end)
     t = t:gsub("%$[Cc]", function() return class end)
     t = t:gsub("%$[Rr]", function() return race end)
-    t = t:gsub("%$[Gg]([^:;]*):([^;]*);", function(male) return (male:gsub("^%s+", ""):gsub("%s+$", "")) end)
+    local female = UnitSex and UnitSex("player") == 3
+    t = t:gsub("%$[Gg]([^:;]*):([^;]*);", function(male, woman)
+        return ((female and woman or male):gsub("^%s+", ""):gsub("%s+$", ""))
+    end)
     t = t:gsub("%$%w+", "")
     t = t:gsub("%s+", " ")
     t = t:gsub("^%s+", ""):gsub("%s+$", "")
@@ -5822,15 +5833,15 @@ SlashCmdList["SKALD"] = function(msg)
                 break
             end
         end
-        Say(removed and (removed .. ": removed from the companions.") or "no companion with that name (/skald forgetpet <name>).")
+        Say(removed and string.format(L.CMD_PET_FORGOTTEN, removed) or L.CMD_PET_NONE)
     elseif msg == "forgetcompanions" then
         local db = Journal()
         if db then db.companions = nil end
         Mile.reunionTold = {}
-        Say("the companions I remembered are forgotten.")
+        Say(L.CMD_COMPANIONS_FORGOTTEN)
     elseif msg == "tidy" then
         pcall(Mile.Relocalize)
-        Say(string.format("%d repeated page(s) removed.", Mile.Tidy()))
+        Say(string.format(L.CMD_TIDY, Mile.Tidy()))
     elseif msg == "resume" then
         for _, line in ipairs(Mile.ResumeLines() or {}) do Say(line) end
     elseif msg == "probe spells" or msg == "probe spells off" then

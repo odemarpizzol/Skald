@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Quest summaries now choose gender-specific text according to the player instead of always using the masculine variant.
+- Crafted item counts follow the client's loot message format, including localized spacing and multiplication signs.
+- Polished two English boss victory phrases.
+
 ## 0.34.1-beta
 
 - **Quest descriptions in your language, again:** the description shown over a quest page is the one the game gave you, kept when you accept the quest (or read from the quest log when you hand it in), so it follows the language of your client. Quests accepted before this version have no description to show outside English.
