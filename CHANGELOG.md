@@ -5,6 +5,9 @@
 - Quest summaries now choose gender-specific text according to the player instead of always using the masculine variant.
 - Crafted item counts follow the client's loot message format, including localized spacing and multiplication signs.
 - Polished two English boss victory phrases.
+- Exported item pages now contain readable item names without in-game hyperlink codes.
+- Long quest objectives, summaries and exported text no longer split UTF-8 characters at the byte limit.
+- The Portuguese map filter now labels guild pages as "Guilda".
 
 ## 0.34.1-beta
 

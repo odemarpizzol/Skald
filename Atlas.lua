@@ -98,7 +98,7 @@ local UI_TEXT = {
         KIND = {
             quest = "Missões", level = "Níveis", milestone = "Marcos", death = "Mortes",
             boss = "Inimigos", dungeon = "Masmorras", zone = "Terras", mount = "Montarias",
-            guild = "Guild", party = "Grupo", pet = "Companheiros", achievement = "Feitos", profession = "Ofícios",
+            guild = "Guilda", party = "Grupo", pet = "Companheiros", achievement = "Feitos", profession = "Ofícios",
         },
     },
     frFR = {

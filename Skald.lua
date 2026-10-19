@@ -7,6 +7,18 @@ local ADDON_NAME, ns = ...
 -- Constants live in one table: the main chunk of a Lua file may hold only 200 locals.
 local K = {}
 
+-- Keep byte limits without cutting through a UTF-8 character (accents, CJK, etc.).
+K.TextPrefix = function(text, limit)
+    if #text <= limit then return text end
+    local nextByte = limit + 1
+    while nextByte > 1 do
+        local b = text:byte(nextByte)
+        if b < 128 or b >= 192 then break end
+        nextByte = nextByte - 1
+    end
+    return text:sub(1, nextByte - 1)
+end
+
 local MAX_ENTRIES = 3000
 
 -- Localization: texts live in Locales.lua.
@@ -4227,7 +4239,7 @@ local function Expand(t)
     t = t:gsub("%s+", " ")
     t = t:gsub("^%s+", ""):gsub("%s+$", "")
     if #t > 230 then
-        t = t:sub(1, 230):gsub("%s+%S*$", "") .. "..."
+        t = K.TextPrefix(t, 230):gsub("%s+%S*$", "") .. "..."
     end
     return t ~= "" and t or nil
 end
@@ -4758,7 +4770,7 @@ ns.NoteObjective = function(event)
         end)
     end
     if type(text) ~= "string" or text == "" then return end
-    text = text:sub(1, 400)
+    text = K.TextPrefix(text, 400)
     if event == "QUEST_COMPLETE" then ns.pendingObjective = text end
     local db = Journal()
     if db and id and id > 0 then
@@ -5283,6 +5295,7 @@ K.EXPORT_LIMIT = 1900   -- Discord takes 2000 characters a message; the rest is 
 
 local function PlainText(s)
     s = tostring(s or "")
+    s = s:gsub("|H.-|h(.-)|h", "%1")
     s = s:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""):gsub("|T.-|t", "")
     return s
 end
@@ -5338,7 +5351,7 @@ local function BuildExport(format, scope)
 
     local chunks, current = {}, ""
     for _, block in ipairs(blocks) do
-        if #block > K.EXPORT_LIMIT then block = block:sub(1, K.EXPORT_LIMIT) end
+        if #block > K.EXPORT_LIMIT then block = K.TextPrefix(block, K.EXPORT_LIMIT) end
         if #current > 0 and #current + #block + 2 > K.EXPORT_LIMIT then
             chunks[#chunks + 1] = current
             current = ""
