@@ -68,6 +68,10 @@ local UI_TEXT = {
         SUMMARY = "%s: %d %s, %d %s.", PAGE = "page", PAGES = "pages", PIN = "pin", PINS = "pins",
         HIDDEN = "%d hidden by the filters.", HIDDEN_ONE = "1 hidden by the filters.",
         NONE = "No pages recorded here yet.",
+        WHEN = "When", RANGE_ALL = "All", RANGE_SESSION = "This session", RANGE_TODAY = "Today",
+        FAVONLY = "Only favourite memories",
+        REGION = "This region", FIRST_VISIT = "First visit: %s", R_LINE1 = "Quests: %d   Falls: %d   Foes: %d",
+        R_LINE2 = "Levels: %d   Items: %d   Favourites: %d", CLICK_OPEN = "Click to open the page in the book",
         OPACITY = "Marker opacity",
         OPACITY_HINT = "Fainter markers let the game's own quest markers show through.",
         RARITY = "Smallest rarity shown", KINDS = "Pages shown",
@@ -82,6 +86,10 @@ local UI_TEXT = {
         SUMMARY = "%s: %d %s, %d %s.", PAGE = "página", PAGES = "páginas", PIN = "marcador", PINS = "marcadores",
         HIDDEN = "%d escondidas pelos filtros.", HIDDEN_ONE = "1 escondida pelos filtros.",
         NONE = "Nenhuma página registrada aqui ainda.",
+        WHEN = "Quando", RANGE_ALL = "Tudo", RANGE_SESSION = "Esta sessão", RANGE_TODAY = "Hoje",
+        FAVONLY = "Só memórias favoritas",
+        REGION = "Esta região", FIRST_VISIT = "Primeira visita: %s", R_LINE1 = "Missões: %d   Quedas: %d   Inimigos: %d",
+        R_LINE2 = "Níveis: %d   Itens: %d   Favoritas: %d", CLICK_OPEN = "Clique para abrir a página no livro",
         OPACITY = "Opacidade dos marcadores",
         OPACITY_HINT = "Marcadores mais fracos deixam ver os de missão do jogo por baixo.",
         RARITY = "Menor raridade mostrada", KINDS = "Páginas mostradas",
@@ -96,6 +104,10 @@ local UI_TEXT = {
         SUMMARY = "%s\194\160: %d %s, %d %s.", PAGE = "page", PAGES = "pages", PIN = "marqueur", PINS = "marqueurs",
         HIDDEN = "%d masquées par les filtres.", HIDDEN_ONE = "1 masquée par les filtres.",
         NONE = "Aucune page enregistrée ici pour l'instant.",
+        WHEN = "Quand", RANGE_ALL = "Tout", RANGE_SESSION = "Cette session", RANGE_TODAY = "Aujourd'hui",
+        FAVONLY = "Seulement les souvenirs préférés",
+        REGION = "Cette région", FIRST_VISIT = "Première visite\194\160: %s", R_LINE1 = "Quêtes\194\160: %d   Chutes\194\160: %d   Ennemis\194\160: %d",
+        R_LINE2 = "Niveaux\194\160: %d   Objets\194\160: %d   Préférés\194\160: %d", CLICK_OPEN = "Cliquez pour ouvrir la page dans le livre",
         OPACITY = "Opacité des marqueurs",
         OPACITY_HINT = "Des marqueurs plus pâles laissent voir ceux des quêtes du jeu en dessous.",
         RARITY = "Plus faible rareté affichée", KINDS = "Pages affichées",
@@ -133,6 +145,31 @@ local function PinAlpha()
     return (SkaldAtlasDB and SkaldAtlasDB.alpha) or 0.75
 end
 
+-- Which pages a marker may show: the smallest rarity, the kinds, when they happened (all, this session,
+-- today) and, if asked, only the favourites.
+local function MakeFilter(minTier, kinds, range, onlyFav)
+    local session = SkaldAPI and SkaldAPI.Session and SkaldAPI.Session()
+    local from, to
+    if range == "today" then
+        local now = date("*t", time())
+        from = time({ year = now.year, month = now.month, day = now.day, hour = 0 })
+        to = from + 86400
+    end
+    return function(e)
+        if TierOf(e) < minTier then return false end
+        if kinds[GLYPH[e.kind] or e.kind] == false then return false end
+        if onlyFav and not e.fav then return false end
+        if range == "session" and (not session or e.ses ~= session) then return false end
+        if from and not (e.t and e.t >= from and e.t < to) then return false end
+        return true
+    end
+end
+
+local function CurrentFilter()
+    local db = SkaldAtlasDB
+    return MakeFilter(db.minTier or 0, db.kinds or {}, db.range or "all", db.onlyFav)
+end
+
 local function ShowTooltip(pin)
     local list = pin.entries
     if not list or #list == 0 then return end
@@ -144,11 +181,13 @@ local function ShowTooltip(pin)
         local e = list[i]
         GameTooltip:AddLine(date(SkaldAPI.DateFormat or "%b %d, %H:%M", e.t), 0.6, 0.6, 0.6)
         GameTooltip:AddLine(SkaldAPI.Render(e), 1, 1, 1, true)
+        if e.fav and e.favNote then GameTooltip:AddLine(e.favNote, 1, 0.82, 0, true) end
         shown = shown + 1
     end
     if #list > shown then
         GameTooltip:AddLine(string.format("+%d", #list - shown), 0.6, 0.6, 0.6)
     end
+    GameTooltip:AddLine(UI.CLICK_OPEN, 0.5, 0.5, 0.5)
     GameTooltip:Show()
 end
 
@@ -173,6 +212,23 @@ local function GetPin(i, canvas)
         if file then pin.count:SetFont(file, (size or 10) + 2, "OUTLINE") end
     end)
     pin.count:SetTextColor(1, 1, 1)
+    pin.star = pin:CreateTexture(nil, "OVERLAY", nil, 2)
+    pin.star:SetSize(12, 12)
+    pin.star:SetPoint("TOPRIGHT", pin, "TOPRIGHT", 4, 4)
+    pin.star:SetTexture("Interface\\AddOns\\Skald\\Textures\\ev_fav")
+    pin.star:Hide()
+    -- A click opens the newest page of the marker in the book, and puts the map away.
+    pin:SetScript("OnMouseUp", function(self, button)
+        if button ~= "LeftButton" or not self.entries or #self.entries == 0 then return end
+        local e = self.entries[#self.entries]
+        GameTooltip:Hide()
+        pcall(function()
+            if WorldMapFrame and WorldMapFrame:IsShown() then
+                if HideUIPanel then HideUIPanel(WorldMapFrame) else WorldMapFrame:Hide() end
+            end
+        end)
+        if SkaldAPI and SkaldAPI.OpenEntry then SkaldAPI.OpenEntry(e) end
+    end)
 
     -- Faint markers let the game's own show through; the one under the mouse is solid.
     pin:SetScript("OnEnter", function(self)
@@ -194,21 +250,39 @@ end
 
 -- Pages that would overlap on screen share one marker, which wears the rarity
 -- and symbol of its most notable page (rarer first, then newer).
-local function Cluster(entries, mapID, w, h, minTier, kinds)
-    local clusters = {}
+local function Cluster(entries, mapID, w, h, filter)
+    local clusters, grid = {}, {}
+    local radius2 = PIN_SIZE * PIN_SIZE
     for _, e in ipairs(entries) do
-        if e.m == mapID and e.x and e.y and TierOf(e) >= minTier
-            and kinds[GLYPH[e.kind] or e.kind] ~= false then
+        if e.m == mapID and e.x and e.y and filter(e) then
+            local px, py = e.x * w, e.y * h
+            local cx, cy = math.floor(px / PIN_SIZE), math.floor(py / PIN_SIZE)
+            -- Only the markers in the same or a neighbouring square of the grid can be close enough;
+            -- of those the oldest wins, exactly as if every marker had been compared in turn.
             local home
-            for _, c in ipairs(clusters) do
-                local dx, dy = (c.x - e.x) * w, (c.y - e.y) * h
-                if dx * dx + dy * dy < PIN_SIZE * PIN_SIZE then home = c break end
+            for gx = cx - 1, cx + 1 do
+                for gy = cy - 1, cy + 1 do
+                    local bucket = grid[gx * 100003 + gy]
+                    if bucket then
+                        for _, c in ipairs(bucket) do
+                            local dx, dy = c.px - px, c.py - py
+                            if dx * dx + dy * dy < radius2 and (not home or c.index < home.index) then home = c end
+                        end
+                    end
+                end
             end
             if home then
                 table.insert(home.entries, e)
                 if TierOf(e) >= TierOf(home.top) then home.top = e end
+                if e.fav then home.fav = true end
             else
-                table.insert(clusters, { x = e.x, y = e.y, top = e, entries = { e } })
+                local c = { x = e.x, y = e.y, px = px, py = py, index = #clusters + 1, top = e, entries = { e },
+                    fav = e.fav and true or nil }
+                clusters[#clusters + 1] = c
+                local key = cx * 100003 + cy
+                local bucket = grid[key]
+                if not bucket then bucket = {}; grid[key] = bucket end
+                bucket[#bucket + 1] = c
             end
         end
     end
@@ -254,11 +328,10 @@ local function ToParent(e, top)
     return rect[1] + e.x * (rect[2] - rect[1]), rect[3] + e.y * (rect[4] - rect[3])
 end
 
-local function ZoneSummaries(entries, top, minTier, kinds)
+local function ZoneSummaries(entries, top, filter)
     local groups, order = {}, {}
     for _, e in ipairs(entries) do
-        if e.m and e.m ~= top and e.x and e.y and TierOf(e) >= minTier
-            and kinds[GLYPH[e.kind] or e.kind] ~= false then
+        if e.m and e.m ~= top and e.x and e.y and filter(e) then
             local child = ChildUnder(e.m, top)
             if child then
                 local px, py = ToParent(e, top)
@@ -271,6 +344,7 @@ local function ZoneSummaries(entries, top, minTier, kinds)
                         order[#order + 1] = g
                     end
                     g.entries[#g.entries + 1] = e
+                    if e.fav then g.fav = true end
                     g.sx, g.sy = g.sx + px, g.sy + py
                     if TierOf(e) >= TierOf(g.top) then g.top = e end
                 end
@@ -283,10 +357,26 @@ local function ZoneSummaries(entries, top, minTier, kinds)
     return order
 end
 
+-- How many pages a map holds under a filter: its own and those of the lands inside it.
+local function CountPages(entries, mapID, filter)
+    local n = 0
+    for _, e in ipairs(entries) do
+        if e.m and e.x and e.y and filter(e) then
+            if e.m == mapID then
+                n = n + 1
+            else
+                local child = ChildUnder(e.m, mapID)
+                if child and ToParent(e, mapID) then n = n + 1 end
+            end
+        end
+    end
+    return n
+end
+
 -- Every marker for a map: the pages on it, then one per zone inside it.
-local function CollectPins(entries, mapID, w, h, minTier, kinds)
-    local pins = Cluster(entries, mapID, w, h, minTier, kinds)
-    for _, group in ipairs(ZoneSummaries(entries, mapID, minTier, kinds)) do
+local function CollectPins(entries, mapID, w, h, filter)
+    local pins = Cluster(entries, mapID, w, h, filter)
+    for _, group in ipairs(ZoneSummaries(entries, mapID, filter)) do
         pins[#pins + 1] = group
     end
     return pins
@@ -306,10 +396,8 @@ local function Refresh()
 
     -- Above the map's own pins, which are stacked from a few hundred upward.
     local level = math.min(9000, canvas:GetFrameLevel() + 3000)
-    local minTier = SkaldAtlasDB.minTier or 0
-
     local n = 0
-    for _, c in ipairs(CollectPins(SkaldAPI.GetEntries(), mapID, w, h, minTier, SkaldAtlasDB.kinds or {})) do
+    for _, c in ipairs(CollectPins(SkaldAPI.GetEntries(), mapID, w, h, CurrentFilter())) do
         n = n + 1
         local pin = GetPin(n, canvas)
         pin.entries = c.entries
@@ -317,6 +405,7 @@ local function Refresh()
         pin.medallion:SetTexture(TEXTURES .. "pin_med" .. math.max(0, math.min(5, TierOf(c.top))))
         pin.glyph:SetTexture("Interface\\AddOns\\Skald\\Textures\\ev_" .. (GLYPH[c.top.kind] or "zone"))   -- the book's own icons
         pin.count:SetText(#c.entries > 1 and #c.entries or "")
+        pin.star:SetShown(c.fav and true or false)
         pin:SetFrameLevel(level)
         pin:SetAlpha(PinAlpha())
         pin:ClearAllPoints()
@@ -333,6 +422,11 @@ local function RefreshSoon()
     Refresh()
     if C_Timer and C_Timer.After then C_Timer.After(0.2, Refresh) end
 end
+
+-- A star marked or unmarked in the book changes the pins at once.
+SkaldAPI.favHook = Refresh
+-- (kept reachable for the regression scenarios)
+SkaldAPI.AtlasPure = { MakeFilter = MakeFilter, Cluster = Cluster }
 
 -- The world map frame can load on demand, so hook it as soon as it exists.
 local hooked = false
@@ -432,6 +526,27 @@ local function BuildMapTab(panel)
         end
     end
 
+    -- When: all the pages, only those of this session, only today's.
+    SkaldAPI.SectionLabel(panel, UI.WHEN, 0, -240)
+    local rangeButtons = {}
+    for i, key in ipairs({ "all", "session", "today" }) do
+        local b = SkaldAPI.MakeButton(panel, 114, 26, UI["RANGE_" .. key:upper()])
+        b:SetPoint("TOPLEFT", (i - 1) * 114, -262)
+        b:SetScript("OnClick", function()
+            SkaldAtlasDB.range = (key ~= "all") and key or nil
+            SyncAll()
+            Refresh()
+        end)
+        rangeButtons[key] = b
+    end
+    syncs[#syncs + 1] = function()
+        local current = SkaldAtlasDB.range or "all"
+        for key, b in pairs(rangeButtons) do b:SetActive(key == current) end
+    end
+    Check(UI.FAVONLY, 0, -296,
+        function() return SkaldAtlasDB.onlyFav and true or false end,
+        function(on) SkaldAtlasDB.onlyFav = on and true or nil end)
+
     SkaldAPI.PageHeading(panel, UI.KINDS, RIGHT_X)
     for i, kind in ipairs(KIND_ORDER) do
         Check(UI.KIND[kind], RIGHT_X, -52 - (i - 1) * 28,
@@ -449,8 +564,9 @@ local function BuildMapTab(panel)
 
     -- What the map you are on holds: pages recorded here, the pins they make, and how many
     -- the filters above hide. The map open on screen counts; otherwise the zone you are in.
+    SkaldAPI.SectionLabel(panel, UI.REGION, 0, -334)
     local summary = panel:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    summary:SetPoint("TOPLEFT", 0, -250)
+    summary:SetPoint("TOPLEFT", 0, -354)
     summary:SetWidth(342)
     summary:SetJustifyH("LEFT")
     summary:SetSpacing(2)
@@ -479,17 +595,22 @@ local function BuildMapTab(panel)
 
             -- Pages that belong to this map (its own and its zones'), with no filter, against
             -- the markers the filters leave.
-            local function Count(list)
-                local n = 0
-                for _, c in ipairs(list) do n = n + #c.entries end
-                return n
-            end
-            local total = Count(CollectPins(entries, mapID, w, h, 0, {}))
-            local clusters = CollectPins(entries, mapID, w, h, SkaldAtlasDB.minTier or 0, SkaldAtlasDB.kinds or {})
-            local shown = Count(clusters)
+            local total = CountPages(entries, mapID, MakeFilter(0, {}, "all", false))
+            local clusters = CollectPins(entries, mapID, w, h, CurrentFilter())
+            local shown = 0
+            for _, c in ipairs(clusters) do shown = shown + #c.entries end
 
             local pins = #clusters
-            local text = string.format(UI.SUMMARY, (info and info.name) or "?",
+            -- the land itself: first visit, quests, falls, foes, levels, items, favourites
+            local text = ""
+            local zoneId = SkaldAPI.ZoneIdOfMap and SkaldAPI.ZoneIdOfMap(mapID)
+            local region = zoneId and SkaldAPI.RegionStats and SkaldAPI.RegionStats(zoneId)
+            if region then
+                text = string.format(UI.FIRST_VISIT, date(SkaldAPI.DayFormat or "%d/%m/%Y", region.first or time())) .. "\n"
+                    .. string.format(UI.R_LINE1, region.quest, region.death, region.boss) .. "\n"
+                    .. string.format(UI.R_LINE2, region.level, region.loot, region.fav) .. "\n"
+            end
+            text = text .. string.format(UI.SUMMARY, (info and info.name) or "?",
                 total, total == 1 and UI.PAGE or UI.PAGES, pins, pins == 1 and UI.PIN or UI.PINS)
             if total == 0 then
                 text = text .. "\n" .. UI.NONE

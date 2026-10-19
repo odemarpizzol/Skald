@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.32.0-beta
+
+- **From the map to the book:** click a pin on the world map to open its page in the book (the page lights up for a moment).
+- **Favourite memories:** a star beside every page of the book marks it as a favourite; right-click it (or Shift-click) to write a note of your own ("Here I got my first rare sword"). The note shows under the page and in the pin's tooltip, and a pin that holds a favourite wears a small star.
+- **When:** the Map tab can show all the pages, only those of this session, or only today's, and only the favourite memories.
+- **This region:** the Map tab sums up the land you are in: first visit, quests, falls, foes, levels, items and favourites.
+- **Faster map:** the markers of a big diary are grouped much faster (a diary of 3000 pages on one map: about fourteen times faster).
+- New regression scenarios cover each of these.
+
 ## 0.31.16-beta
 
 - **Smaller saved file:** pin positions on the map are kept with four decimals instead of fifteen (old pages are shortened once at login).

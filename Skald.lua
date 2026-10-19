@@ -773,6 +773,7 @@ SkaldAPI = {
     GetEntries = function() return Journal() and Journal().entries or {} end,
     Render = RenderEntry,
     DateFormat = L.DATE_FMT,
+    DayFormat = L.DAY_DATE,
     TierName = function(tier) return L.TIERS[tier] end,
     -- "fight", "gather", "explore" or "delivery" for a quest id (nil without QuestDB data).
     QuestType = QuestTypeFromDB,
@@ -1076,6 +1077,36 @@ StaticPopupDialogs["SKALD_DISCARD"] = {
         Journal().previous = {}
         if window then window:Refresh() end
         Say(L.ARCHIVE_DISCARDED)
+    end,
+    timeout = 0,
+    whileDead = true,
+    hideOnEscape = true,
+    preferredIndex = 3,
+}
+
+-- A note for a favourite memory ("Here I got my first rare sword"): one line, kept on the page.
+StaticPopupDialogs["SKALD_FAVNOTE"] = {
+    text = L.FAV_NOTE_TEXT,
+    button1 = L.FAV_SAVE,
+    button2 = L.NO,
+    hasEditBox = true,
+    maxLetters = 100,
+    OnShow = function(self, data)
+        local eb = self.editBox or (self.GetEditBox and self:GetEditBox())
+        if eb then eb:SetText((data and data.favNote) or ""); eb:HighlightText() end
+    end,
+    OnAccept = function(self, data)
+        local eb = self.editBox or (self.GetEditBox and self:GetEditBox())
+        local text = strtrim((eb and eb:GetText()) or "")
+        if data then
+            data.fav = true
+            data.favNote = (text ~= "") and text:sub(1, 100) or nil
+            if ns.FavoritesChanged then ns.FavoritesChanged() end
+        end
+    end,
+    EditBoxOnEnterPressed = function(self)
+        local parent = self:GetParent()
+        if parent and parent.button1 then parent.button1:Click() end
     end,
     timeout = 0,
     whileDead = true,
@@ -1865,6 +1896,37 @@ local function CreateWindow()
                     ChatEdit_InsertLink(self.link)
                 end
             end)
+            r.flash = s.frame:CreateTexture(nil, "BACKGROUND", nil, 2)
+            r.flash:SetColorTexture(0.85, 0.65, 0.10, 0.22)
+            r.flash:Hide()
+            r.star = CreateFrame("Button", nil, s.frame)
+            r.star:SetSize(16, 16)
+            r.star:SetFrameLevel(s.frame:GetFrameLevel() + 4)
+            r.star.tex = r.star:CreateTexture(nil, "ARTWORK")
+            r.star.tex:SetAllPoints()
+            r.star.tex:SetTexture("Interface\\AddOns\\Skald\\Textures\\ev_fav")
+            r.star:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+            r.star:SetScript("OnClick", function(self, button)
+                if not self.entry then return end
+                if button == "RightButton" or (IsShiftKeyDown and IsShiftKeyDown()) then
+                    ns.EditFavNote(self.entry)
+                else
+                    ns.ToggleFavorite(self.entry)
+                end
+            end)
+            r.star:SetScript("OnEnter", function(self)
+                self:SetAlpha(1)
+                GameTooltip:SetOwner(self, "ANCHOR_LEFT")
+                GameTooltip:AddLine(L.FAV_TIP, 1, 0.82, 0)
+                GameTooltip:AddLine(L.FAV_HINT, 1, 1, 1, true)
+                if self.entry and self.entry.favNote then GameTooltip:AddLine(self.entry.favNote, 0.9, 0.9, 0.9, true) end
+                GameTooltip:Show()
+            end)
+            r.star:SetScript("OnLeave", function(self)
+                GameTooltip:Hide()
+                self:SetAlpha((self.entry and self.entry.fav) and 1 or 0.22)
+            end)
+            r.star:Hide()
             s.rows[n] = r
         end
         return r
@@ -2258,6 +2320,7 @@ local function CreateWindow()
         end
         local indexPages = math.max(2, math.ceil(math.max(1, #rows) / perPage))
         if indexPages % 2 == 1 then indexPages = indexPages + 1 end   -- the days start on a left page
+        local entryPage = {}
         local pages = { { type = "coverL" }, { type = "coverR" } }
         for i = 1, indexPages do
             local chunk = {}
@@ -2292,11 +2355,13 @@ local function CreateWindow()
                 local text = RenderEntry(e)
                 if e.kind == "loot" then text = text:gsub("|r", "|r" .. Hex(ink)) end
                 local body = Hex(ink) .. text .. "|r"
+                if e.fav and e.favNote then body = body .. "\n" .. Hex(K.C_NOTE) .. e.favNote .. "|r" end
                 blocks[#blocks + 1] = {
                     text = (head ~= "" and (head .. "\n") or "") .. body,
                     time = date("%H:%M", e.t),
                     link = (e.kind == "loot" and type(e.arg) == "string") and e.arg or nil,
                     quest = (e.kind == "quest") and e or nil,
+                    entry = e,
                     icon = (e.kind == "loot" and ItemIcon(e)) or (e.kind == "note" and (K.TEX .. "quill")) or (isQuest and (K.SEAL_PATH .. e.tier)) or EventIconPath(e.kind, e),
                 }
             end
@@ -2308,7 +2373,7 @@ local function CreateWindow()
             local y = 70
             pages[#pages + 1] = page
             for i, block in ipairs(blocks) do
-                block.h = math.max(24, Measure(block.text, block.closing and (K.CW - 32) or (K.CW - K.ENTRY_X)))
+                block.h = math.max(24, Measure(block.text, block.closing and (K.CW - 32) or (K.CW - K.ENTRY_X - 22)))
                 local limit = K.PAGE_H - ((i == #blocks) and K.NOTE_BTN_H or 0)
                 if y + block.h > limit and #page.blocks > 0 then
                     page = { type = "day", day = day, blocks = {}, first = false }
@@ -2316,12 +2381,13 @@ local function CreateWindow()
                     y = 40
                 end
                 page.blocks[#page.blocks + 1] = block
+                if block.entry then entryPage[block.entry] = #pages end
                 y = y + block.h + K.GAP
             end
             page.note = true
         end
         if #pages % 2 == 1 then pages[#pages + 1] = { type = "blank" } end
-        return { days = days, pages = pages, indexPages = indexPages, firstDayPage = firstDayPage }
+        return { days = days, pages = pages, indexPages = indexPages, firstDayPage = firstDayPage, entryPage = entryPage }
     end
 
     -- Paginating measures every line of every page, so the result is kept until something it depends
@@ -2342,7 +2408,7 @@ local function CreateWindow()
 
     local function Clear(s)
         for _, fs in pairs(s.texts) do fs:Hide() end
-        for _, r in pairs(s.rows) do r.icon:Hide(); r.time:Hide(); r.text:Hide(); r.hit:Hide() end
+        for _, r in pairs(s.rows) do r.icon:Hide(); r.time:Hide(); r.text:Hide(); r.hit:Hide(); r.star:Hide(); r.flash:Hide() end
         for _, b in pairs(s.lines) do b:Hide() end
         if s.note then s.note:Hide() end
         if s.noteArea and not editing then s.noteArea:Hide() end
@@ -2486,7 +2552,7 @@ local function CreateWindow()
                 r.time:Show()
                 r.text:ClearAllPoints()
                 r.text:SetPoint("TOPLEFT", px + K.ENTRY_X, -(top + 2))
-                r.text:SetWidth(K.CW - K.ENTRY_X)
+                r.text:SetWidth(K.CW - K.ENTRY_X - 22)
                 r.text:SetText(block.text)
                 r.text:Show()
                 r.hit:ClearAllPoints()
@@ -2495,6 +2561,15 @@ local function CreateWindow()
                 r.hit.link = block.link
                 r.hit.entry = block.quest
                 r.hit:SetShown(block.link ~= nil or block.quest ~= nil)
+                r.star.entry = block.entry
+                r.star:ClearAllPoints()
+                r.star:SetPoint("TOPRIGHT", s.frame, "TOPLEFT", px + K.CW, -(top + 3))
+                r.star:SetAlpha((block.entry and block.entry.fav) and 1 or 0.22)
+                r.star:SetShown(block.entry ~= nil)
+                r.flash:ClearAllPoints()
+                r.flash:SetPoint("TOPLEFT", s.frame, "TOPLEFT", px - 4, -(top - 2))
+                r.flash:SetSize(K.CW + 8, block.h + 4)
+                r.flash:SetShown(block.entry ~= nil and block.entry == f.flashEntry)
             end
             y = y + block.h + K.GAP
         end
@@ -2768,6 +2843,22 @@ local function CreateWindow()
         f:Refresh()
         SkaldDB.qa = { when = date("%Y-%m-%d %H:%M"), count = #issues, issues = issues }
         return issues
+    end
+
+    -- Opens the book at the page of one entry and lights its row for a moment (used by the map pins).
+    function f:OpenEntry(e)
+        view = "book"
+        layout = Layout()
+        local page = layout.entryPage and layout.entryPage[e]
+        if not page then return false end
+        spread = math.floor((page + 1) / 2)
+        f.flashEntry = e
+        f:Refresh()
+        f:Show()
+        C_Timer.After(2.5, function()
+            if f.flashEntry == e then f.flashEntry = nil; if f:IsShown() then f:Refresh() end end
+        end)
+        return true
     end
 
     function f:GoToPage(page)
@@ -4213,6 +4304,85 @@ Mile.ProbeEvent = function(event, ...)
     table.insert(s.spellLog, rec)
     while #s.spellLog > 200 do table.remove(s.spellLog, 1) end
 end
+end
+
+-- The zone-level map (the land, not a district or a city quarter) that a map belongs to; cached.
+do
+local zoneIds = {}
+ns.ZoneIdOfMap = function(mapID)
+    if type(mapID) ~= "number" then return nil end
+    if zoneIds[mapID] ~= nil then return zoneIds[mapID] or nil end
+    local result = false
+    pcall(function()
+        if not (C_Map and C_Map.GetMapInfo) then return end
+        local id = mapID
+        for _ = 1, 8 do
+            local info = C_Map.GetMapInfo(id)
+            if not info or info.mapType == 4 then return end
+            if info.mapType and info.mapType <= 3 then
+                if info.mapType == 3 then result = id end
+                return
+            end
+            if not info.parentMapID or info.parentMapID == 0 then return end
+            id = info.parentMapID
+        end
+    end)
+    zoneIds[mapID] = result
+    return result or nil
+end
+ns.ZoneIdOfEntry = function(e)
+    local id = (type(e.m) == "number" and e.m) or e.zm
+    return id and ns.ZoneIdOfMap(id) or nil
+end
+
+-- What the diary holds about each land: first visit, quests, falls, foes, levels, items, favourites.
+-- Counted once per change of the pages, then read by zone id.
+local stats, statsSig
+ns.RegionStats = function(zoneId)
+    local db = Journal()
+    if not db or not zoneId then return nil end
+    local sig = #db.entries .. ":" .. (ns.layoutRev or 0)
+    if sig ~= statsSig then
+        stats, statsSig = {}, sig
+        for _, e in ipairs(db.entries) do
+            local id = ns.ZoneIdOfEntry(e)
+            if id and e.kind ~= "day" then
+                local z = stats[id]
+                if not z then z = { first = e.t, total = 0, quest = 0, death = 0, boss = 0, level = 0, loot = 0, fav = 0 }; stats[id] = z end
+                z.total = z.total + 1
+                if e.t and (not z.first or e.t < z.first) then z.first = e.t end
+                if e.kind == "quest" then z.quest = z.quest + 1
+                elseif e.kind == "death" then z.death = z.death + 1
+                elseif e.kind == "boss" or e.kind == "dungeon" then z.boss = z.boss + 1
+                elseif e.kind == "level" or e.kind == "milestone" then z.level = z.level + 1
+                elseif e.kind == "loot" then z.loot = z.loot + 1 end
+                if e.fav then z.fav = z.fav + 1 end
+            end
+        end
+    end
+    return stats[zoneId]
+end
+
+-- Favourite memories: a star on a page, with a note of one's own.
+ns.FavoritesChanged = function()
+    ns.layoutRev = (ns.layoutRev or 0) + 1
+    if window and window:IsShown() then window:Refresh() end
+    if SkaldAPI and SkaldAPI.favHook then pcall(SkaldAPI.favHook) end
+end
+ns.ToggleFavorite = function(e)
+    if not e then return end
+    if e.fav then e.fav, e.favNote = nil, nil else e.fav = true end
+    ns.FavoritesChanged()
+end
+ns.EditFavNote = function(e)
+    if e then StaticPopup_Show("SKALD_FAVNOTE", nil, nil, e) end
+end
+SkaldAPI.OpenEntry = function(e) return window and window:OpenEntry(e) or false end
+SkaldAPI.Session = function() return loginTime end
+SkaldAPI.RegionStats = ns.RegionStats
+SkaldAPI.ZoneIdOfMap = ns.ZoneIdOfMap
+SkaldAPI.ToggleFavorite = ns.ToggleFavorite
+SkaldAPI.EditFavNote = ns.EditFavNote
 end
 
 -- One function per event, looked up by name (instead of a long chain of comparisons).

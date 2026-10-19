@@ -30,7 +30,7 @@ Skald is one addon. The world-map pins (formerly the separate Skald Atlas) are b
 
 ### Map pins (built in since 0.31)
 
-The map pins show the pages of your diary on the world map, as medallions coloured by rarity, and adds a **Map** tab to the book (pins on or off, opacity, smallest rarity shown, kinds of page shown). Optional; requires Skald.
+The map pins show the pages of your diary on the world map, as medallions coloured by rarity. **Click a pin to open its page in the book.** The **Map** tab of the book sets the pins on or off, their opacity, the smallest rarity, the kinds of page, **when** (all, this session, today) and **only favourite memories**; it also sums up the region you are in (first visit, quests, falls, foes, levels, items, favourites). In the book, the star beside a page marks it as a favourite memory (right-click it to write a note, which also shows on the map).
 
 ## Using it
 
