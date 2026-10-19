@@ -1896,6 +1896,14 @@ local function CreateWindow()
                     ChatEdit_InsertLink(self.link)
                 end
             end)
+            r.note = s.frame:CreateFontString(nil, "OVERLAY", "SkaldNote")
+            r.note:SetJustifyH("LEFT")
+            r.note:SetJustifyV("TOP")
+            r.note:SetWordWrap(true)
+            r.note:SetTextColor(K.C_NOTE[1], K.C_NOTE[2], K.C_NOTE[3])
+            r.noteLine = s.frame:CreateTexture(nil, "ARTWORK", nil, 3)
+            r.noteLine:SetColorTexture(0.85, 0.65, 0.10, 0.65)
+            r.noteLine:SetWidth(2)
             r.flash = s.frame:CreateTexture(nil, "BACKGROUND", nil, 2)
             r.flash:SetColorTexture(0.85, 0.65, 0.10, 0.22)
             r.flash:Hide()
@@ -1941,6 +1949,14 @@ local function CreateWindow()
         meter:SetWidth(width)
         meter:SetText(text)
         return math.max(16, meter:GetStringHeight() or 16)
+    end
+    local meterNote = f:CreateFontString(nil, "OVERLAY", "SkaldNote")
+    meterNote:SetWordWrap(true)
+    meterNote:SetAlpha(0)
+    local function MeasureNote(text, width)
+        meterNote:SetWidth(width)
+        meterNote:SetText(text)
+        return math.max(18, meterNote:GetStringHeight() or 18)
     end
 
     -- The note at the foot of a day: ruled lines, your own words; click it to write. ----
@@ -2355,13 +2371,13 @@ local function CreateWindow()
                 local text = RenderEntry(e)
                 if e.kind == "loot" then text = text:gsub("|r", "|r" .. Hex(ink)) end
                 local body = Hex(ink) .. text .. "|r"
-                if e.fav and e.favNote then body = body .. "\n" .. Hex(K.C_NOTE) .. e.favNote .. "|r" end
                 blocks[#blocks + 1] = {
                     text = (head ~= "" and (head .. "\n") or "") .. body,
                     time = date("%H:%M", e.t),
                     link = (e.kind == "loot" and type(e.arg) == "string") and e.arg or nil,
                     quest = (e.kind == "quest") and e or nil,
                     entry = e,
+                    note = (e.fav and e.favNote) or nil,
                     icon = (e.kind == "loot" and ItemIcon(e)) or (e.kind == "note" and (K.TEX .. "quill")) or (isQuest and (K.SEAL_PATH .. e.tier)) or EventIconPath(e.kind, e),
                 }
             end
@@ -2373,7 +2389,11 @@ local function CreateWindow()
             local y = 70
             pages[#pages + 1] = page
             for i, block in ipairs(blocks) do
-                block.h = math.max(24, Measure(block.text, block.closing and (K.CW - 32) or (K.CW - K.ENTRY_X - 22)))
+                local mainH = Measure(block.text, block.closing and (K.CW - 32) or (K.CW - K.ENTRY_X - 22))
+                local noteH = block.note and MeasureNote(block.note, K.CW - K.ENTRY_X - 22 - 16) or 0
+                block.mainH = mainH
+                block.noteH = noteH
+                block.h = math.max(24, mainH + (noteH > 0 and (noteH + 6) or 0))
                 local limit = K.PAGE_H - ((i == #blocks) and K.NOTE_BTN_H or 0)
                 if y + block.h > limit and #page.blocks > 0 then
                     page = { type = "day", day = day, blocks = {}, first = false }
@@ -2408,7 +2428,7 @@ local function CreateWindow()
 
     local function Clear(s)
         for _, fs in pairs(s.texts) do fs:Hide() end
-        for _, r in pairs(s.rows) do r.icon:Hide(); r.time:Hide(); r.text:Hide(); r.hit:Hide(); r.star:Hide(); r.flash:Hide() end
+        for _, r in pairs(s.rows) do r.icon:Hide(); r.time:Hide(); r.text:Hide(); r.hit:Hide(); r.star:Hide(); r.flash:Hide(); r.note:Hide(); r.noteLine:Hide() end
         for _, b in pairs(s.lines) do b:Hide() end
         if s.note then s.note:Hide() end
         if s.noteArea and not editing then s.noteArea:Hide() end
@@ -2570,6 +2590,21 @@ local function CreateWindow()
                 r.flash:SetPoint("TOPLEFT", s.frame, "TOPLEFT", px - 4, -(top - 2))
                 r.flash:SetSize(K.CW + 8, block.h + 4)
                 r.flash:SetShown(block.entry ~= nil and block.entry == f.flashEntry)
+                if block.note then
+                    local noteTop = top + 2 + (block.mainH or 0) + 4
+                    r.note:ClearAllPoints()
+                    r.note:SetPoint("TOPLEFT", s.frame, "TOPLEFT", px + K.ENTRY_X + 14, -noteTop)
+                    r.note:SetWidth(K.CW - K.ENTRY_X - 22 - 16)
+                    r.note:SetText(block.note)
+                    r.note:Show()
+                    r.noteLine:ClearAllPoints()
+                    r.noteLine:SetPoint("TOPLEFT", s.frame, "TOPLEFT", px + K.ENTRY_X + 4, -(noteTop + 1))
+                    r.noteLine:SetHeight(math.max(14, block.noteH or 16))
+                    r.noteLine:Show()
+                else
+                    r.note:Hide()
+                    r.noteLine:Hide()
+                end
             end
             y = y + block.h + K.GAP
         end

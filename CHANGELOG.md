@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.32.1-beta
+
+- **Your notes on favourite memories look like notes:** written in the handwriting of the book, in the ink of your own notes, indented under the page with a thin gold line at their side, instead of a plain extra line of the page's text.
+
 ## 0.32.0-beta
 
 - **From the map to the book:** click a pin on the world map to open its page in the book (the page lights up for a moment).
