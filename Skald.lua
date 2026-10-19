@@ -196,6 +196,7 @@ end
 
 K.CRAFT_MERGE = 1200   -- seconds: making the same thing again within this time adds to the page of the last one
 K.QUEST_START_MAX, K.QUEST_START_DAYS = 300, 60   -- quests whose acceptance is kept, and for how long
+K.MODEL_REUSE, K.MODEL_RETRY = 20, { 1.5, 4 }   -- seconds: the cover model is not asked for again within K.MODEL_REUSE; retries after the first request
 K.FALLS_FORGOTTEN = 7200   -- seconds after the last fall in a dungeon, when it no longer counts for a boss
 
 -- Which pages the diary writes at all (Options: What the quill records).
@@ -2281,15 +2282,33 @@ local function CreateWindow()
     alcoveTex:SetAllPoints()
     alcoveTex:SetTexture(K.TEX .. "alcove")
     alcoveTex:SetTexCoord(0, 316 / 512, 0, 372 / 512)
-    local function ShowModel()
-        local works = false
+    -- The model is asked for once, then again a moment later and a little after that: the textures of what
+    -- the character wears can still be on their way, and until they arrive the model has white patches.
+    local function LoadModel()
+        if not (okModel and model) then return false end
         -- The third argument asks for the character in its native form: not as a spirit, and not as
         -- the bear or the cat of a druid. (Where the game ignores it, the model is what it always was.)
-        if okModel and model and pcall(model.SetUnit, model, "player", false, true) then
-            pcall(model.SetCamDistanceScale, model, 0.8)
+        if not pcall(model.SetUnit, model, "player", false, true) then return false end
+        pcall(model.SetCamDistanceScale, model, 0.8)
+        pcall(model.SetFacing, model, model.skaldAngle or 0)
+        model.skaldLoadedAt = (GetTime and GetTime()) or 0
+        return true
+    end
+    local function ShowModel()
+        local works = false
+        local now = (GetTime and GetTime()) or 0
+        local loadedAt = model and rawget(model, "skaldLoadedAt")
+        if loadedAt and now - loadedAt < K.MODEL_REUSE then
+            works = true   -- asked for a moment ago: asking again would only restart the loading
+        elseif LoadModel() then
             model.skaldAngle = 0
             pcall(model.SetFacing, model, 0)
             works = true
+            for _, delay in ipairs(K.MODEL_RETRY) do
+                C_Timer.After(delay, function()
+                    if model and model:IsShown() and not rawget(model, "skaldDragging") then LoadModel() end
+                end)
+            end
         end
         if model then model:SetShown(works) end
         portrait:SetShown(not works)
