@@ -683,9 +683,14 @@ Extras = function(e)
         local list = L.AMBIENT[PartOfDay(e.hr)]
         if list then out = out .. " " .. list[idx % #list + 1] end
     end
-    if e.kind == "tame" and type(e.fam) == "string" and e.fam ~= "" and L.PET_FAMILY
-        and tostring(e.arg or ""):lower() ~= e.fam:lower() then
-        out = out .. " " .. string.format(L.PET_FAMILY, e.fam)
+    if e.kind == "tame" and L.PET_FAMILY then
+        -- the family as the record of the pet has it now (it is read again in the client's language)
+        local db = Journal()
+        local rec = db and db.pets and db.pets[tostring(e.arg or "")]
+        local fam = (rec and rec.fam) or e.fam
+        if type(fam) == "string" and fam ~= "" and tostring(e.arg or ""):lower() ~= fam:lower() then
+            out = out .. " " .. string.format(L.PET_FAMILY, fam)
+        end
     end
     if type(e.pet) == "string" and idx % 3 == 1 and L.PET then
         out = out .. " " .. string.format(L.PET[idx % #L.PET + 1], e.pet)
@@ -4006,6 +4011,12 @@ Mile.Relocalize = function()
                 e.zone = zone
                 changed = changed + 1
             end
+        end
+        -- a hand-picked quest has the rarity picked for it, also on pages written before it was picked
+        if e.kind == "quest" and e.q and ns.CURATED and ns.CURATED[e.q] and ns.CURATED[e.q].tier
+            and e.tier ~= ns.CURATED[e.q].tier then
+            e.tier = ns.CURATED[e.q].tier
+            changed = changed + 1
         end
         -- the quest's title
         if e.kind == "quest" and e.q and C_QuestLog and C_QuestLog.GetTitleForQuestID then

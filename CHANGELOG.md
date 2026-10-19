@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.33.5-beta
+
+- **The hunter's first lessons ("Taming the Beast")** are told as a class milestone: a rare page of their own, in English, Portuguese and French, instead of an ordinary "errand" (the game lends a beast for a little while in each of them). Pages already written get the new rarity and text.
+- The family on a pet's page follows the pet's record, which is read again in the language of the client, so it no longer stays in the old language.
+
 ## 0.33.4-beta
 
 - **The cover shows your character in 3D also as a spirit** (and a druid in the shape of a bear or a cat shows as the character): the model is asked for the character's native form instead of falling back to the portrait.

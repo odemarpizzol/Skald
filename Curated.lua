@@ -224,4 +224,27 @@ C[667] = { tier = 3, text = {
     frFR = "Nous avons tenu la ligne contre les nagas jusqu'à la montée de la marée\194\160: «\194\160{quest}\194\160». Un capitaine m'a offert une place dans son équipage\194\160; la route avait d'autres plans.",
 } }
 
+
+-- The hunter's first lessons (Taming the Beast): the game lends a beast for a little while. Three texts,
+-- spread over the ids of the lessons of every race, told as a class milestone (rare).
+local HUNTER_LESSON_A = { tier = 3, text = {
+    enUS = "A hunter learns the wild by taming it: \"{quest}\". The beast will not stay, but what I learned of it will.",
+    ptBR = "Um caçador aprende a natureza domando-a: \"{quest}\". A fera não vai ficar, mas o que aprendi com ela, sim.",
+    frFR = "Un chasseur apprend la nature en l'apprivoisant\194\160: «\194\160{quest}\194\160». La bête ne restera pas, mais ce que j'ai appris d'elle, si.",
+} }
+local HUNTER_LESSON_B = { tier = 3, text = {
+    enUS = "The beast let itself be led for a little while: \"{quest}\". I learned to read the wild, and the wild learned my name.",
+    ptBR = "A fera deixou-se guiar por um tempo: \"{quest}\". Aprendi a ler a natureza, e a natureza aprendeu o meu nome.",
+    frFR = "La bête s'est laissé guider un moment\194\160: «\194\160{quest}\194\160». J'ai appris à lire la nature, et la nature a appris mon nom.",
+} }
+local HUNTER_LESSON_C = { tier = 3, text = {
+    enUS = "One more lesson in patience: \"{quest}\". A friend borrowed from the wild is still a friend, for as long as it lasts.",
+    ptBR = "Mais uma lição de paciência: \"{quest}\". Um amigo emprestado da natureza ainda é um amigo, enquanto dura.",
+    frFR = "Une leçon de patience de plus\194\160: «\194\160{quest}\194\160». Un ami emprunté à la nature reste un ami, tant qu'il dure.",
+} }
+local LESSONS = { HUNTER_LESSON_A, HUNTER_LESSON_B, HUNTER_LESSON_C }
+for i, id in ipairs({ 6061, 6062, 6063, 6064, 6082, 6083, 6084, 6085, 6087, 6088, 6101, 6102 }) do
+    C[id] = LESSONS[(i - 1) % 3 + 1]
+end
+
 ns.CURATED = C
