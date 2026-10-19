@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.31.8-beta
+
+- **Pets tab:** the pet now stands in a three-quarter view instead of turning on its own: hold the left button and drag to turn it, and use the mouse wheel to bring the camera closer or further (big animals no longer overflow the frame). On the cover, your character can be turned the same way by dragging; it keeps turning slowly when let go.
+- Developer: `/skald petinfo` (with the pet out) records which pet functions this client has, to find where the diet of a pet can be read from.
+
 ## 0.31.7-beta
 
 - **Pets tab:** the companion at your side is shown in 3D, turning in an arched frame like your character on the cover (when the pet is not out, the paw takes its place), together with its diet. The total number of companions moved to the right page.

@@ -1979,8 +1979,21 @@ local function CreateWindow()
     if okModel and model then
         model:SetAllPoints()
         local angle = 0
+        local dragging, lastX
+        -- Hold the left button and drag to turn the character; it goes on turning slowly when let go.
+        model:EnableMouse(true)
+        model:SetScript("OnMouseDown", function(_, button)
+            if button == "LeftButton" then dragging, lastX = true, GetCursorPosition() end
+        end)
+        model:SetScript("OnMouseUp", function() dragging = false end)
         model:SetScript("OnUpdate", function(self, elapsed)
-            angle = (angle + (elapsed or 0) * 0.35) % (math.pi * 2)
+            if dragging then
+                local x = GetCursorPosition()
+                angle = (angle + (x - (lastX or x)) * 0.012) % (math.pi * 2)
+                lastX = x
+            else
+                angle = (angle + (elapsed or 0) * 0.35) % (math.pi * 2)
+            end
             pcall(self.SetFacing, self, angle)
         end)
     end
@@ -3873,10 +3886,26 @@ Mile.BuildPets = function(panel)
     local okModel, model = pcall(CreateFrame, "PlayerModel", nil, holder)
     if okModel and model then
         model:SetAllPoints()
-        local angle = 0.6
-        model:SetScript("OnUpdate", function(self, elapsed)
-            angle = (angle + (elapsed or 0) * 0.35) % (math.pi * 2)
-            pcall(self.SetFacing, self, angle)
+        -- The pet stands still in a three-quarter view. Hold the left button and drag to turn it; the
+        -- wheel moves the camera closer or further (animals differ a great deal in size).
+        local dragging, lastX
+        model:EnableMouse(true)
+        model:EnableMouseWheel(true)
+        model:SetScript("OnMouseDown", function(_, button)
+            if button == "LeftButton" then dragging, lastX = true, GetCursorPosition() end
+        end)
+        model:SetScript("OnMouseUp", function() dragging = false end)
+        model:SetScript("OnUpdate", function(self)
+            if dragging then
+                local x = GetCursorPosition()
+                self.skaldAngle = ((self.skaldAngle or 0.6) + (x - (lastX or x)) * 0.012) % (math.pi * 2)
+                lastX = x
+                pcall(self.SetFacing, self, self.skaldAngle)
+            end
+        end)
+        model:SetScript("OnMouseWheel", function(self, delta)
+            self.skaldZoom = math.max(1, math.min(5, (self.skaldZoom or 2.6) - (delta or 0) * 0.25))
+            pcall(self.SetCamDistanceScale, self, self.skaldZoom)
         end)
     end
     local placeholder = holder:CreateTexture(nil, "ARTWORK")
@@ -3896,7 +3925,11 @@ Mile.BuildPets = function(panel)
         local out = false
         if okModel and model and petName and UnitExists("pet") and Safe(UnitName("pet")) == petName then
             out = pcall(model.SetUnit, model, "pet")
-            if out then pcall(model.SetCamDistanceScale, model, 1.0) end
+            if out then
+                model.skaldZoom, model.skaldAngle = 2.6, 0.6
+                pcall(model.SetCamDistanceScale, model, model.skaldZoom)
+                pcall(model.SetFacing, model, model.skaldAngle)
+            end
         end
         if model then model:SetShown(out) end
         placeholder:SetShown(not out)
@@ -3960,6 +3993,49 @@ Mile.BuildPets = function(panel)
             end
         end
     end
+end
+
+-- /skald petinfo (with the pet out) records which pet functions this client really has and what they
+-- answer, to find where the diet and the happiness of a pet can be read from (read it after /reload).
+Mile.PetInfo = function()
+    local info = { t = time(), out = UnitExists("pet") and true or false }
+    local function many(fn)
+        local ok, r = pcall(function() return { fn() } end)
+        if not ok then return "error: " .. tostring(r) end
+        local parts = {}
+        for i = 1, math.min(#r, 12) do parts[#parts + 1] = tostring(r[i]) end
+        return #parts > 0 and table.concat(parts, " | ") or "(nothing)"
+    end
+    info.answers = {
+        GetPetFoodTypes = type(GetPetFoodTypes) == "function" and many(GetPetFoodTypes) or type(GetPetFoodTypes),
+        GetPetHappiness = type(GetPetHappiness) == "function" and many(GetPetHappiness) or type(GetPetHappiness),
+        GetPetTrainingPoints = type(GetPetTrainingPoints) == "function" and many(GetPetTrainingPoints) or type(GetPetTrainingPoints),
+        GetPetExperience = type(GetPetExperience) == "function" and many(GetPetExperience) or type(GetPetExperience),
+        HasPetUI = type(HasPetUI) == "function" and many(HasPetUI) or type(HasPetUI),
+        UnitCreatureType = many(function() return UnitCreatureType("pet") end),
+        UnitCreatureFamily = many(function() return UnitCreatureFamily("pet") end),
+    }
+    -- every global that looks like a pet function, and what the pet tables hold
+    local names = {}
+    for k, v in pairs(_G) do
+        if type(k) == "string" and (k:find("^GetPet") or k:find("^C_Pet") or k:find("^C_Stable") or k:find("Pet.*Food") or k:find("Food.*Pet")
+            or k:find("^PetCan") or k:find("^CastPet")) then
+            names[#names + 1] = k .. " (" .. type(v) .. ")"
+        end
+    end
+    table.sort(names)
+    info.names = names
+    for _, tname in ipairs({ "C_PetInfo", "C_StableInfo" }) do
+        local t = _G[tname]
+        if type(t) == "table" then
+            local keys = {}
+            for k in pairs(t) do keys[#keys + 1] = tostring(k) end
+            table.sort(keys)
+            info[tname] = keys
+        end
+    end
+    Settings().petProbe = info
+    return info
 end
 
 Mile.SetNext = function(text)
@@ -4941,6 +5017,10 @@ SlashCmdList["SKALD"] = function(msg)
     msg = raw:lower()
     if msg == "next" or msg:match("^next%s") then
         Mile.SetNext(raw:sub(5))
+    elseif msg == "petinfo" then
+        local info = Mile.PetInfo()
+        Say(string.format("pet out: %s; %d pet functions found. Food: %s. Type /reload to save the report.",
+            tostring(info.out), #info.names, tostring(info.answers.GetPetFoodTypes)))
     elseif msg == "tidy" then
         pcall(Mile.Relocalize)
         Say(string.format("%d repeated page(s) removed.", Mile.Tidy()))
