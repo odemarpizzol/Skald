@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.31.13-beta
+
+- **The pet is drawn larger** in the Pets tab (the mouse wheel still moves the camera).
+- **Pets on loan.** A pet lent for a quest (it leaves after a while) is no longer written as a companion: it gets no page and is not listed.
+- **Diet:** read from this client's own pet functions (`C_PetInfo`); the Pets tab shows it when the game reports it.
+- Developer: `/skald petinfo` now also records what the pet and stable functions answer.
+
 ## 0.31.12-beta
 
 - **The notice of a new page is redone:** it names what happened (a new level, a foe defeated, a new companion...), carries the page's own icon, slides in and fades out softly, shows a thin line that shortens with the time left, stays while the mouse is over it, and a click opens the book (a right click only closes it). It tells only the page, not who was there or the hour.

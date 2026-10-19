@@ -3569,6 +3569,15 @@ Mile.CheckPet = function()
     if not UnitExists("pet") then db.petNow = nil; return end   -- no pet out (dismissed, dead, or a loaned one that left)
     local name = Safe(UnitName("pet"))
     if type(name) ~= "string" or name == "" or (UNKNOWN and name == UNKNOWN) then return end
+    -- A pet on loan (for a quest) has a time remaining and leaves after a while: it is not a companion.
+    local loaned = false
+    pcall(function()
+        if GetPetTimeRemaining then
+            local left = GetPetTimeRemaining()
+            if type(left) == "number" and left > 0 then loaned = true end
+        end
+    end)
+    if loaned then db.petNow = nil; return end
     local family
     pcall(function() family = Safe(UnitCreatureFamily("pet")) end)
     local petLevel, myLevel = UnitLevel("pet") or 0, UnitLevel("player") or 0
@@ -3577,10 +3586,15 @@ Mile.CheckPet = function()
     -- What the pet eats (the game tells it only for the pet that is out): kept for the Pets tab.
     local diet
     pcall(function()
-        if GetPetFoodTypes then
-            local foods = { GetPetFoodTypes() }
-            if #foods > 0 then diet = table.concat(foods, ", ") end
-        end
+        -- this client keeps the pet functions in C_PetInfo (the old global is gone); the answer may be
+        -- a list or several values, and only words are kept
+        local fn = (C_PetInfo and C_PetInfo.GetPetFoodTypes) or GetPetFoodTypes
+        if not fn then return end
+        local foods = { fn() }
+        if #foods == 1 and type(foods[1]) == "table" then foods = foods[1] end
+        local words = {}
+        for _, v in ipairs(foods) do if type(v) == "string" and v ~= "" then words[#words + 1] = v end end
+        if #words > 0 then diet = table.concat(words, ", ") end
     end)
     if rec then
         rec.lv = petLevel
@@ -3949,7 +3963,7 @@ Mile.BuildPets = function(panel)
             end
         end)
         model:SetScript("OnMouseWheel", function(self, delta)
-            self.skaldZoom = math.max(0.8, math.min(5, (self.skaldZoom or 1.6) - (delta or 0) * 0.25))
+            self.skaldZoom = math.max(0.8, math.min(5, (self.skaldZoom or 1.15) - (delta or 0) * 0.25))
             pcall(self.SetCamDistanceScale, self, self.skaldZoom)
         end)
     end
@@ -3971,7 +3985,7 @@ Mile.BuildPets = function(panel)
         if okModel and model and petName and UnitExists("pet") and Safe(UnitName("pet")) == petName then
             out = pcall(model.SetUnit, model, "pet")
             if out then
-                model.skaldZoom, model.skaldAngle = 1.6, 0.6
+                model.skaldZoom, model.skaldAngle = 1.15, 0.6
                 pcall(model.SetCamDistanceScale, model, model.skaldZoom)
                 pcall(model.SetFacing, model, model.skaldAngle)
             end
@@ -4063,6 +4077,41 @@ Mile.PetInfo = function()
         for i = 1, math.min(#r, 12) do parts[#parts + 1] = tostring(r[i]) end
         return #parts > 0 and table.concat(parts, " | ") or "(nothing)"
     end
+    local function dump(v, depth)
+        if type(v) ~= "table" then return tostring(v) end
+        if (depth or 0) >= 2 then return "{...}" end
+        local parts, n = {}, 0
+        for k, x in pairs(v) do
+            n = n + 1
+            if n > 14 then parts[#parts + 1] = "..."; break end
+            parts[#parts + 1] = tostring(k) .. "=" .. dump(x, (depth or 0) + 1)
+        end
+        return "{" .. table.concat(parts, ", ") .. "}"
+    end
+    local function call(tbl, name, ...)
+        local f = _G[tbl] and _G[tbl][name]
+        if type(f) ~= "function" then return "(no such function)" end
+        local args = { ... }
+        local ok, r = pcall(function() return { f(unpack(args)) } end)
+        if not ok then return "error: " .. tostring(r) end
+        local parts = {}
+        for i = 1, math.min(#r, 8) do parts[#parts + 1] = dump(r[i], 0) end
+        return #parts > 0 and table.concat(parts, " | ") or "(nothing)"
+    end
+    info.C_PetInfo_calls = {
+        GetPetFoodTypes = call("C_PetInfo", "GetPetFoodTypes"),
+        GetPetHappiness = call("C_PetInfo", "GetPetHappiness"),
+        GetPetLoyalty = call("C_PetInfo", "GetPetLoyalty"),
+        GetPetTrainingPoints = call("C_PetInfo", "GetPetTrainingPoints"),
+        GetPetTalentTree = call("C_PetInfo", "GetPetTalentTree"),
+    }
+    info.C_StableInfo_calls = {
+        GetActivePetList = call("C_StableInfo", "GetActivePetList"),
+        GetNumActivePets = call("C_StableInfo", "GetNumActivePets"),
+        GetStablePetInfo1 = call("C_StableInfo", "GetStablePetInfo", 1),
+        GetStablePetFoodTypes1 = call("C_StableInfo", "GetStablePetFoodTypes", 1),
+    }
+    info.GetPetTimeRemaining = type(GetPetTimeRemaining) == "function" and many(GetPetTimeRemaining) or type(GetPetTimeRemaining)
     info.answers = {
         GetPetFoodTypes = type(GetPetFoodTypes) == "function" and many(GetPetFoodTypes) or type(GetPetFoodTypes),
         GetPetHappiness = type(GetPetHappiness) == "function" and many(GetPetHappiness) or type(GetPetHappiness),
@@ -5077,7 +5126,7 @@ SlashCmdList["SKALD"] = function(msg)
     elseif msg == "petinfo" then
         local info = Mile.PetInfo()
         Say(string.format("pet out: %s; %d pet functions found. Food: %s. Type /reload to save the report.",
-            tostring(info.out), #info.names, tostring(info.answers.GetPetFoodTypes)))
+            tostring(info.out), #info.names, tostring(info.C_PetInfo_calls.GetPetFoodTypes)))
     elseif msg == "tidy" then
         pcall(Mile.Relocalize)
         Say(string.format("%d repeated page(s) removed.", Mile.Tidy()))
