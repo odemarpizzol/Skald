@@ -3516,12 +3516,21 @@ Mile.CheckPet = function()
     local petLevel, myLevel = UnitLevel("pet") or 0, UnitLevel("player") or 0
     local rec = db.pets[name]
     db.petNow = name
+    -- What the pet eats (the game tells it only for the pet that is out): kept for the Pets tab.
+    local diet
+    pcall(function()
+        if GetPetFoodTypes then
+            local foods = { GetPetFoodTypes() }
+            if #foods > 0 then diet = table.concat(foods, ", ") end
+        end
+    end)
     if rec then
         rec.lv = petLevel
         if family then rec.fam = family end
+        if diet then rec.diet = diet end
     end
     if not rec then
-        rec = { t = time(), fam = family, lv = petLevel }
+        rec = { t = time(), fam = family, lv = petLevel, diet = diet }
         db.pets[name] = rec
         local alone = next(db.pets, nil) == name and next(db.pets, name) == nil
         if firstLook and myLevel > 12 then
@@ -3853,8 +3862,45 @@ Mile.BuildPets = function(panel)
     detail:SetWidth(K.CW - 58)
     detail:SetJustifyH("LEFT")
     detail:SetTextColor(K.C_BODY[1], K.C_BODY[2], K.C_BODY[3])
-    local since = NoteText(panel, 0, -150)
-    local total = NoteText(panel, 0, -178)
+    local since = NoteText(panel, 0, -134)
+    local diet = NoteText(panel, 0, -152)
+
+    -- The companion itself, turning in an arched alcove like the character on the cover. Only the pet
+    -- that is out can be drawn; for any other the paw takes its place.
+    local holder = CreateFrame("Frame", nil, panel)
+    holder:SetSize(210, 250)
+    holder:SetPoint("TOPLEFT", (K.CW - 210) / 2, -176)
+    local okModel, model = pcall(CreateFrame, "PlayerModel", nil, holder)
+    if okModel and model then
+        model:SetAllPoints()
+        local angle = 0.6
+        model:SetScript("OnUpdate", function(self, elapsed)
+            angle = (angle + (elapsed or 0) * 0.35) % (math.pi * 2)
+            pcall(self.SetFacing, self, angle)
+        end)
+    end
+    local placeholder = holder:CreateTexture(nil, "ARTWORK")
+    placeholder:SetSize(110, 110)
+    placeholder:SetPoint("CENTER")
+    placeholder:SetTexture("Interface\\AddOns\\Skald\\Textures\\ev_pet")
+    placeholder:SetAlpha(0.55)
+    local alcove = CreateFrame("Frame", nil, panel)
+    alcove:SetFrameLevel(holder:GetFrameLevel() + 5)
+    alcove:SetSize(230, 271)
+    alcove:SetPoint("TOPLEFT", (K.CW - 230) / 2, -166)
+    local alcoveTex = alcove:CreateTexture(nil, "OVERLAY")
+    alcoveTex:SetAllPoints()
+    alcoveTex:SetTexture(K.TEX .. "alcove")
+    alcoveTex:SetTexCoord(0, 316 / 512, 0, 372 / 512)
+    local function ShowPet(petName)
+        local out = false
+        if okModel and model and petName and UnitExists("pet") and Safe(UnitName("pet")) == petName then
+            out = pcall(model.SetUnit, model, "pet")
+            if out then pcall(model.SetCamDistanceScale, model, 1.0) end
+        end
+        if model then model:SetShown(out) end
+        placeholder:SetShown(not out)
+    end
 
     PageHeading(panel, L.PETS_ALL, K.RIGHT_X)
     local rows = {}
@@ -3873,6 +3919,7 @@ Mile.BuildPets = function(panel)
         rows[i] = { a, b }
     end
     local empty = NoteText(panel, 0, -80)
+    local total = NoteText(panel, K.RIGHT_X, -420)
 
     return function()
         local db = Journal()
@@ -3883,8 +3930,9 @@ Mile.BuildPets = function(panel)
         empty:SetShown(#list == 0)
         if #list == 0 then
             empty:SetText(L.PETS_NONE)
-            name:SetText(""); detail:SetText(""); since:SetText(""); total:SetText("")
+            name:SetText(""); detail:SetText(""); since:SetText(""); diet:SetText(""); total:SetText("")
             icon:Hide()
+            ShowPet(nil)
         else
             icon:Show()
             name:SetText(now.name)
@@ -3893,7 +3941,9 @@ Mile.BuildPets = function(panel)
             if now.rec.lv and now.rec.lv > 0 then parts[#parts + 1] = string.format(L.TIP_LEVEL, now.rec.lv) end
             detail:SetText(table.concat(parts, "  -  "))
             since:SetText(string.format(L.PETS_SINCE, date(L.DAY_DATE, now.rec.t or time())))
+            diet:SetText(now.rec.diet and string.format(L.PET_DIET, now.rec.diet) or "")
             total:SetText(string.format(L.PETS_TOTAL, #list))
+            ShowPet(now.name)
         end
         for i = 1, 12 do
             local item = list[i]

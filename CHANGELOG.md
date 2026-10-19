@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.31.7-beta
+
+- **Pets tab:** the companion at your side is shown in 3D, turning in an arched frame like your character on the cover (when the pet is not out, the paw takes its place), together with its diet. The total number of companions moved to the right page.
+
 ## 0.31.6-beta
 
 - **Faster book:** turning pages in a long diary no longer measures every line again (the layout is kept until something changes): about a hundred times faster in a diary of 3000 pages.
