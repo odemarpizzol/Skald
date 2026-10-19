@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.31.15-beta
+
+- **Pets tab:** the facts of the companion no longer touch the arched frame (more room between them); the pet is drawn a little larger.
+- **A renamed pet is followed:** renaming the pet in the game updates its name in the Pets tab at once, instead of adding a second companion. (The tab also looks at the pet each time it is opened.)
+- `/skald forgetpet <name>` takes a companion out of the list (a loaned pet, a duplicate).
+
 ## 0.31.14-beta
 
 - **Pets tab, tidier:** the facts of the companion (family, level, diet, together since) are laid out in two columns, each with a small label over its value, under the name; the arched frame moved below them.

@@ -3009,6 +3009,7 @@ end
 for _, ev in ipairs({ "UNIT_PET", "UNIT_SPELLCAST_SUCCEEDED" }) do
     if not pcall(frame.RegisterUnitEvent, frame, ev, "player") then pcall(frame.RegisterEvent, frame, ev) end
 end
+pcall(frame.RegisterUnitEvent, frame, "UNIT_NAME_UPDATE", "pet")   -- a pet that is renamed
 
 -- Becomes true a few seconds after login, once guild, group and skill data have
 -- loaded; nothing that compares against saved state runs before then.
@@ -3581,8 +3582,17 @@ Mile.CheckPet = function()
     local family
     pcall(function() family = Safe(UnitCreatureFamily("pet")) end)
     local petLevel, myLevel = UnitLevel("pet") or 0, UnitLevel("player") or 0
+    -- The same pet under a new name (renamed while out): its record moves to the new name, no new page.
+    local guid
+    pcall(function() guid = Safe(UnitGUID("pet")) end)
+    local previous = db.petNow and db.pets[db.petNow]
+    if previous and db.petNow ~= name and guid and previous.guid == guid and not db.pets[name] then
+        db.pets[name] = previous
+        db.pets[db.petNow] = nil
+    end
     local rec = db.pets[name]
     db.petNow = name
+    if rec and guid then rec.guid = guid end
     -- What the pet eats (the game tells it only for the pet that is out): kept for the Pets tab.
     local diet
     pcall(function()
@@ -3602,7 +3612,7 @@ Mile.CheckPet = function()
         if diet then rec.diet = diet end
     end
     if not rec then
-        rec = { t = time(), fam = family, lv = petLevel, diet = diet }
+        rec = { t = time(), fam = family, lv = petLevel, diet = diet, guid = guid }
         db.pets[name] = rec
         local alone = next(db.pets, nil) == name and next(db.pets, name) == nil
         if firstLook and myLevel > 12 then
@@ -3932,7 +3942,7 @@ Mile.BuildPets = function(panel)
 
     -- The facts, in two columns: a small label over each value.
     local function Cell(col, row, label)
-        local x, y = (col - 1) * 170, -134 - (row - 1) * 38
+        local x, y = (col - 1) * 170, -126 - (row - 1) * 34
         local l = panel:CreateFontString(nil, "OVERLAY", "SkaldSec")
         l:SetPoint("TOPLEFT", x, y)
         l:SetWidth(160)
@@ -3950,13 +3960,13 @@ Mile.BuildPets = function(panel)
     local lvlV, lvlL = Cell(2, 1, L.PETL_LEVEL)
     local dietV, dietL = Cell(1, 2, L.PETL_DIET)
     local sinceV, sinceL = Cell(2, 2, L.PETL_SINCE)
-    local lastLine = NoteText(panel, 0, -134)
+    local lastLine = NoteText(panel, 0, -126)
 
     -- The companion itself, standing in an arched frame like the character on the cover. Only the pet
     -- that is out can be drawn; for any other the paw takes its place.
     local holder = CreateFrame("Frame", nil, panel)
-    holder:SetSize(196, 232)
-    holder:SetPoint("TOPLEFT", (K.CW - 214) / 2 + 9, -206)
+    holder:SetSize(191, 226)
+    holder:SetPoint("TOPLEFT", (K.CW - 209) / 2 + 9, -212)
     local okModel, model = pcall(CreateFrame, "PlayerModel", nil, holder)
     if okModel and model then
         model:SetAllPoints()
@@ -3978,7 +3988,7 @@ Mile.BuildPets = function(panel)
             end
         end)
         model:SetScript("OnMouseWheel", function(self, delta)
-            self.skaldZoom = math.max(0.8, math.min(5, (self.skaldZoom or 1.25) - (delta or 0) * 0.25))
+            self.skaldZoom = math.max(0.8, math.min(5, (self.skaldZoom or 1.3) - (delta or 0) * 0.25))
             pcall(self.SetCamDistanceScale, self, self.skaldZoom)
         end)
     end
@@ -3989,8 +3999,8 @@ Mile.BuildPets = function(panel)
     placeholder:SetAlpha(0.55)
     local alcove = CreateFrame("Frame", nil, panel)
     alcove:SetFrameLevel(holder:GetFrameLevel() + 5)
-    alcove:SetSize(214, 252)
-    alcove:SetPoint("TOPLEFT", (K.CW - 214) / 2, -198)
+    alcove:SetSize(209, 246)
+    alcove:SetPoint("TOPLEFT", (K.CW - 209) / 2, -204)
     local alcoveTex = alcove:CreateTexture(nil, "OVERLAY")
     alcoveTex:SetAllPoints()
     alcoveTex:SetTexture(K.TEX .. "alcove")
@@ -4000,7 +4010,7 @@ Mile.BuildPets = function(panel)
         if okModel and model and petName and UnitExists("pet") and Safe(UnitName("pet")) == petName then
             out = pcall(model.SetUnit, model, "pet")
             if out then
-                model.skaldZoom, model.skaldAngle = 1.25, 0.6
+                model.skaldZoom, model.skaldAngle = 1.3, 0.6
                 pcall(model.SetCamDistanceScale, model, model.skaldZoom)
                 pcall(model.SetFacing, model, model.skaldAngle)
             end
@@ -4034,6 +4044,7 @@ Mile.BuildPets = function(panel)
     end
 
     return function()
+        pcall(Mile.CheckPet)   -- the pet may have changed since the last look (a new name, a new pet)
         local db = Journal()
         local pets, list = (db and db.pets) or {}, {}
         for pname, rec in pairs(pets) do list[#list + 1] = { name = pname, rec = rec } end
@@ -4366,6 +4377,9 @@ local function HandleEvent(self, event, ...)
 
     elseif event == "UNIT_PET" then
         if ready and (...) == "player" then C_Timer.After(1.5, function() pcall(Mile.CheckPet) end) end
+
+    elseif event == "UNIT_NAME_UPDATE" then
+        if ready and (...) == "pet" then C_Timer.After(0.5, function() pcall(Mile.CheckPet) end) end
 
     elseif event == "LEARNED_SPELL_IN_TAB" then
         -- only recorded by the probe (above)
@@ -5144,6 +5158,20 @@ SlashCmdList["SKALD"] = function(msg)
         local info = Mile.PetInfo()
         Say(string.format("pet out: %s; %d pet functions found. Food: %s. Type /reload to save the report.",
             tostring(info.out), #info.names, tostring(info.C_PetInfo_calls.GetPetFoodTypes)))
+    elseif msg:match("^forgetpet") then
+        -- /skald forgetpet <name>: takes a companion out of the list (a loaned pet, a duplicate).
+        local target = strtrim(raw:sub(10))
+        local db = Journal()
+        local removed
+        for pname in pairs((db and db.pets) or {}) do
+            if pname:lower() == target:lower() then
+                db.pets[pname] = nil
+                if db.petNow == pname then db.petNow = nil end
+                removed = pname
+                break
+            end
+        end
+        Say(removed and (removed .. ": removed from the companions.") or "no companion with that name (/skald forgetpet <name>).")
     elseif msg == "tidy" then
         pcall(Mile.Relocalize)
         Say(string.format("%d repeated page(s) removed.", Mile.Tidy()))
