@@ -4220,6 +4220,7 @@ local function Expand(t)
     end
     return t ~= "" and t or nil
 end
+ns.ExpandQuestText = Expand
 local TIP_TIER = { [0] = { 0.62, 0.62, 0.62 }, { 1, 1, 1 }, { 0.12, 1, 0 }, { 0, 0.44, 0.87 }, { 0.64, 0.21, 0.93 }, { 1, 0.5, 0 } }
 ns.QuestTip = function(tip, e)
     local col = TIP_TIER[e.tier or 1] or TIP_TIER[1]
@@ -4233,7 +4234,9 @@ ns.QuestTip = function(tip, e)
         local okQ, q = pcall(qdb.GetQuest, qdb, e.q)
         if okQ and type(q) == "table" then level = tonumber(q.questLevel) end
         local okT, text = pcall(qdb.GetQuestText, qdb, e.q)
-        if okT and type(text) == "table" then objective = Expand(text.objectives) end
+        -- QuestDB only has English: used when the client is in English and the page did not keep the
+        -- text in the client's language (as pages written since 0.34 do).
+        if okT and type(text) == "table" and GetLocale() == "enUS" then objective = Expand(text.objectives) end
         local okR, rw = pcall(qdb.GetRewards, qdb, e.q)
         if okR and type(rw) == "table" then xp, money = rw.xp, rw.money end
     end
@@ -4243,6 +4246,7 @@ ns.QuestTip = function(tip, e)
     if left ~= "" or right ~= "" then
         tip:AddDoubleLine(left, right, 1, 0.82, 0, col[1], col[2], col[3])
     end
+    objective = (type(e.ot) == "string" and e.ot ~= "" and Expand(e.ot)) or objective
     if objective then tip:AddLine(objective, 0.9, 0.9, 0.9, true) end
 
     local reward = {}
@@ -4728,6 +4732,7 @@ H.PLAYER_ENTERING_WORLD = H.ZONE_CHANGED_NEW_AREA
 
 H.QUEST_DETAIL = function(self, event, ...)
     pendingQuestTitle = GetTitleText()
+    ns.pendingObjective = Safe(GetObjectiveText and GetObjectiveText()) or ns.pendingObjective
     pendingNPC = Safe(UnitName and UnitName("npc")) or pendingNPC
     Mile.npcId = Mile.NpcId("npc") or Mile.npcId
     if event == "QUEST_COMPLETE" then
@@ -4800,11 +4805,13 @@ H.QUEST_TURNED_IN = function(self, event, ...)
         end
         AddEntry("quest", QuestName(questID), nil,
             { tier = tier, q = questID, npc = pendingNPC, qtype = qtype or false, cend = cend, since = since,
+              ot = (type(ns.pendingObjective) == "string" and ns.pendingObjective ~= "") and ns.pendingObjective:sub(1, 400) or nil,
               ql = pendingQuestLevel, pl = UnitLevel and UnitLevel("player"), nid = Mile.npcId })
     else
         CountOnly("quest", tier)
     end
     pendingQuestTitle, pendingNPC, pendingQuestLevel = nil, nil, nil
+    ns.pendingObjective = nil
     pendingObjectiveTypes = nil
     Mile.npcId = nil
 end
