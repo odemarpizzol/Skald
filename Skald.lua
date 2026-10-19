@@ -182,6 +182,7 @@ local function PickFlavor(kind, entry)
     return keys[math.random(#keys)]
 end
 
+K.CRAFT_MERGE = 1200   -- seconds: making the same thing again within this time adds to the page of the last one
 K.QUEST_START_MAX, K.QUEST_START_DAYS = 300, 60   -- quests whose acceptance is kept, and for how long
 K.FALLS_FORGOTTEN = 7200   -- seconds after the last fall in a dungeon, when it no longer counts for a boss
 
@@ -551,6 +552,7 @@ function PoolFor(e)
         return PHRASES.tame
     end
     if e.kind == "loot" then
+        if e.src == "craft" and (e.n or 1) >= 2 and PHRASES.lootCraftMany then return PHRASES.lootCraftMany end
         if (e.tier or 0) >= 4 and PHRASES.lootEpic then return PHRASES.lootEpic end
         if e.src == "craft" and PHRASES.lootCraft then return PHRASES.lootCraft end
         if e.src == "gift" and PHRASES.lootGift then return PHRASES.lootGift end
@@ -815,6 +817,7 @@ local function RenderEntry(e)
     text = text:gsub("{steps}", function() return tostring(e.cend or "") end)
     text = text:gsub("{tries}", function() return tostring(e.tries or "") end)
     text = text:gsub("{days}", function() return tostring(e.since or "") end)
+    text = text:gsub("{count}", function() return tostring(e.n or "") end)
     text = text:gsub("{place}", function()
         return tostring((e.pz and ns.ZoneNameOfMap and ns.ZoneNameOfMap(e.pz)) or e.pn or L.UNKNOWN_ZONE)
     end)
@@ -3357,23 +3360,28 @@ CheckFlightPaths = function()
     local nodes = C_TaxiMap.GetAllTaxiNodes(mapID)
     if type(nodes) ~= "table" then return end
     local state = Enum and Enum.FlightPathState
-    local known = {}
+    local known, here, count = {}, nil, 0
     for _, node in ipairs(nodes) do
-        local isKnown = (state and (node.state == state.Current or node.state == state.Reachable))
-            or (not state and (node.state == 0 or node.state == 1))
-        if isKnown and node.nodeID then known[node.nodeID] = node.name or "?" end
+        local isCurrent = (state and node.state == state.Current) or (not state and node.state == 0)
+        local isKnown = isCurrent or (state and node.state == state.Reachable) or (not state and node.state == 1)
+        if isKnown and node.nodeID then
+            known[node.nodeID] = node.name or "?"
+            count = count + 1
+            if isCurrent then here = node.nodeID end
+        end
     end
     local firstLook = db.taxi == nil
     db.taxi = db.taxi or {}
+    -- Only the master I am standing at can have just taught me its path: the other paths the map shows were
+    -- known before the diary looked, so they are kept without a page. (A first look that shows several known
+    -- paths is a character that knew them already, the one here included.)
     local fresh = {}
     for id, name in pairs(known) do
         if not db.taxi[id] then
             db.taxi[id] = true
-            fresh[#fresh + 1] = name
+            if id == here and not (firstLook and count > 1) then fresh[#fresh + 1] = name end
         end
     end
-    -- A character that already knew many paths is not told about all of them.
-    if firstLook and #fresh > 2 then return end
     for _, name in ipairs(fresh) do
         AddEntry("flight", name, nil, { m = false, x = false, y = false })
     end
@@ -3752,13 +3760,29 @@ local function OnLoot(text)
 
     if s.lootGear ~= false and not IsGear(cat) and quality < K.LOOT_RARE_TIER then return end
 
+    -- Making the same thing again and again is one page that counts them, not a page for each.
+    local iid = tonumber(tostring(item):match("item:(%d+)"))
+    local qty = tonumber(text:match("|h|rx(%d+)")) or 1
+    if src == "craft" and iid then
+        local last = db.entries[#db.entries]
+        if last and last.kind == "loot" and last.src == "craft" and last.iid == iid
+            and time() - (last.t2 or last.t or 0) < K.CRAFT_MERGE then
+            if (last.n or 1) < 2 and PHRASES.lootCraftMany then last.idx = math.random(#PHRASES.lootCraftMany) end
+            last.n = (last.n or 1) + qty
+            last.t2 = time()
+            ns.layoutRev = (ns.layoutRev or 0) + 1
+            if window and window:IsShown() then window:Refresh() end
+            return
+        end
+    end
+
     local d = db.days and db.days[DayKey()]
     if d then
         if (d.lo or 0) >= K.LOOT_DAY_CAP then return end
         d.lo = (d.lo or 0) + 1
     end
     -- No position: loot is not pinned on the map.
-    AddEntry("loot", item, nil, { iid = tonumber(tostring(item):match("item:(%d+)")), tier = quality, cat = cat, src = src, ic = icon, mat = mat, m = false, x = false, y = false })
+    AddEntry("loot", item, nil, { iid = iid, n = (src == "craft" and qty > 1) and qty or nil, tier = quality, cat = cat, src = src, ic = icon, mat = mat, m = false, x = false, y = false })
 end
 
 -- What the client reports for each turned-in quest, kept in SkaldDB for
@@ -3979,6 +4003,37 @@ end
 
 -- /skald tidy: removes the pages that repeat an earlier one only because the client's language
 -- changed (a profession taken up again, a land discovered again). The first page of each stays.
+-- Pages of the same thing made again and again, written one by one before they were counted, become one page.
+Mile.MergeCrafts = function()
+    local db = Journal()
+    if not db then return 0 end
+    local kept, merged, last = {}, 0, nil
+    for _, e in ipairs(db.entries) do
+        if e.kind == "loot" and e.src == "craft" and e.iid and last and last.iid == e.iid
+            and (e.t or 0) - (last.t2 or last.t or 0) < K.CRAFT_MERGE then
+            last.n = (last.n or 1) + (e.n or 1)
+            last.t2 = e.t
+            merged = merged + 1
+            local counts = db.stats and db.stats.counts
+            if counts and (counts.loot or 0) > 0 then counts.loot = counts.loot - 1 end
+        else
+            last = (e.kind == "loot" and e.src == "craft" and e.iid) and e or nil
+            kept[#kept + 1] = e
+        end
+    end
+    if merged > 0 then
+        for _, e in ipairs(kept) do
+            if e.kind == "loot" and e.src == "craft" and (e.n or 1) >= 2 and PHRASES.lootCraftMany and not e.manyIdx then
+                e.idx, e.manyIdx = math.random(#PHRASES.lootCraftMany), true
+            end
+        end
+        db.entries = kept
+        ns.layoutRev = (ns.layoutRev or 0) + 1
+        if window and window:IsShown() then window:Refresh() end
+    end
+    return merged
+end
+
 Mile.Tidy = function()
     local db = Journal()
     if not db then return 0 end
@@ -4019,7 +4074,7 @@ Mile.Tidy = function()
         ns.layoutRev = (ns.layoutRev or 0) + 1
         if window and window:IsShown() then window:Refresh() end
     end
-    return removed
+    return removed + Mile.MergeCrafts()
 end
 
 -- Pages keep the names the client used when they were written. Quests, items, professions and
@@ -4638,6 +4693,7 @@ H.PLAYER_LOGIN = function(self, event, ...)
         CheckReputation()
         CheckMarks()
         pcall(Mile.CheckPet)
+        pcall(Mile.MergeCrafts)
         pcall(Mile.Relocalize)
         C_Timer.After(10, function() pcall(Mile.Relocalize) end)   -- items load a little later
         if C_Timer.NewTicker then C_Timer.NewTicker(60, function() pcall(CheckMarks); pcall(Mile.CheckPet) end) end
