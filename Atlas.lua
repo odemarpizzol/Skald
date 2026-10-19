@@ -50,14 +50,14 @@ local activePins = 0
 local KIND_TIER = {
     zone = 1, level = 2, milestone = 4, death = 1, dungeon = 3, boss = 4,
     mount = 3, guild = 3, guildleave = 1, party = 2, achievement = 5,
-    skill = 2, profession = 2, quest = 1,
+    skill = 2, profession = 2, quest = 1, tame = 2,
 }
 
 -- Which symbol sits inside the medallion.
 local GLYPH = {
     quest = "quest", level = "level", milestone = "milestone", death = "death",
     boss = "boss", dungeon = "dungeon", zone = "zone", mount = "mount",
-    guild = "guild", guildleave = "guild", party = "party",
+    guild = "guild", guildleave = "guild", party = "party", tame = "pet",
     achievement = "achievement", skill = "profession", profession = "profession",
 }
 
@@ -74,7 +74,7 @@ local UI_TEXT = {
         KIND = {
             quest = "Quests", level = "Levels", milestone = "Milestones", death = "Deaths",
             boss = "Foes", dungeon = "Dungeons", zone = "Lands", mount = "Mounts",
-            guild = "Guild", party = "Group", achievement = "Deeds", profession = "Crafts",
+            guild = "Guild", party = "Group", pet = "Pets", achievement = "Deeds", profession = "Crafts",
         },
     },
     ptBR = {
@@ -88,7 +88,7 @@ local UI_TEXT = {
         KIND = {
             quest = "Missões", level = "Níveis", milestone = "Marcos", death = "Mortes",
             boss = "Inimigos", dungeon = "Masmorras", zone = "Terras", mount = "Montarias",
-            guild = "Guild", party = "Grupo", achievement = "Feitos", profession = "Ofícios",
+            guild = "Guild", party = "Grupo", pet = "Companheiros", achievement = "Feitos", profession = "Ofícios",
         },
     },
     frFR = {
@@ -102,14 +102,14 @@ local UI_TEXT = {
         KIND = {
             quest = "Quêtes", level = "Niveaux", milestone = "Jalons", death = "Morts",
             boss = "Ennemis", dungeon = "Donjons", zone = "Régions", mount = "Montures",
-            guild = "Guilde", party = "Groupe", achievement = "Hauts faits", profession = "Métiers",
+            guild = "Guilde", party = "Groupe", pet = "Familiers", achievement = "Hauts faits", profession = "Métiers",
         },
     },
 }
 local UI = UI_TEXT[GetLocale()] or UI_TEXT.enUS
 local KIND_ORDER = {
     "quest", "level", "milestone", "death", "boss", "dungeon",
-    "zone", "mount", "guild", "party", "achievement", "profession",
+    "zone", "mount", "guild", "party", "pet", "achievement", "profession",
 }
 
 -- A page's rarity (0 Trivial .. 5 Legendary): a quest carries its own.

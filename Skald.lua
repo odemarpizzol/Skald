@@ -679,6 +679,9 @@ Extras = function(e)
         local list = L.AMBIENT[PartOfDay(e.hr)]
         if list then out = out .. " " .. list[idx % #list + 1] end
     end
+    if e.kind == "tame" and type(e.fam) == "string" and e.fam ~= "" and L.PET_FAMILY then
+        out = out .. " " .. string.format(L.PET_FAMILY, e.fam)
+    end
     if type(e.pet) == "string" and idx % 3 == 1 and L.PET then
         out = out .. " " .. string.format(L.PET[idx % #L.PET + 1], e.pet)
     end
@@ -944,7 +947,7 @@ local EVENT_ICON = {
     skill = "profession", profession = "profession",
     day = "milestone",   -- until a sun or moon icon of its own is drawn
     mark = "milestone", home = "st_hearth", rep = "achievement", flight = "st_flight",
-    tame = "party",   -- until a paw is drawn
+    tame = "pet",
     revive = "milestone", hearth = "st_hearth",
 }
 -- Professions: the game's skill line id says which one it is whatever the language; the
@@ -3493,6 +3496,11 @@ Mile.CheckPet = function()
     pcall(function() family = Safe(UnitCreatureFamily("pet")) end)
     local petLevel, myLevel = UnitLevel("pet") or 0, UnitLevel("player") or 0
     local rec = db.pets[name]
+    db.petNow = name
+    if rec then
+        rec.lv = petLevel
+        if family then rec.fam = family end
+    end
     if not rec then
         rec = { t = time(), fam = family, lv = petLevel }
         db.pets[name] = rec
@@ -3802,6 +3810,83 @@ Mile.NpcId = function(unit)
     return tonumber(guid:match("^%a+%-%d+%-%d+%-%d+%-%d+%-(%d+)%-"))
 end
 
+-- The hunter's tab: the companion at one's side, and every pet there has been.
+Mile.BuildPets = function(panel)
+    PageHeading(panel, L.TAB_PETS, 0)
+    SectionLabel(panel, L.PETS_NOW, 0, -52)
+    local icon = panel:CreateTexture(nil, "ARTWORK")
+    icon:SetSize(44, 44)
+    icon:SetPoint("TOPLEFT", 0, -78)
+    icon:SetTexture("Interface\\AddOns\\Skald\\Textures\\ev_pet")
+    local name = panel:CreateFontString(nil, "OVERLAY", "SkaldHead")
+    name:SetPoint("TOPLEFT", 58, -80)
+    name:SetWidth(CW - 58)
+    name:SetJustifyH("LEFT")
+    name:SetTextColor(C_HEAD[1], C_HEAD[2], C_HEAD[3])
+    local detail = panel:CreateFontString(nil, "OVERLAY", "SkaldBody")
+    detail:SetPoint("TOPLEFT", 58, -108)
+    detail:SetWidth(CW - 58)
+    detail:SetJustifyH("LEFT")
+    detail:SetTextColor(C_BODY[1], C_BODY[2], C_BODY[3])
+    local since = NoteText(panel, 0, -150)
+    local total = NoteText(panel, 0, -178)
+
+    PageHeading(panel, L.PETS_ALL, RIGHT_X)
+    local rows = {}
+    for i = 1, 12 do
+        local top = -56 - (i - 1) * 36
+        local a = panel:CreateFontString(nil, "OVERLAY", "SkaldBody")
+        a:SetPoint("TOPLEFT", RIGHT_X, top)
+        a:SetWidth(CW)
+        a:SetJustifyH("LEFT")
+        a:SetTextColor(C_BODY[1], C_BODY[2], C_BODY[3])
+        local b = panel:CreateFontString(nil, "OVERLAY", "SkaldSmall")
+        b:SetPoint("TOPLEFT", RIGHT_X, top - 17)
+        b:SetWidth(CW)
+        b:SetJustifyH("LEFT")
+        b:SetTextColor(C_MUTED[1], C_MUTED[2], C_MUTED[3])
+        rows[i] = { a, b }
+    end
+    local empty = NoteText(panel, 0, -80)
+
+    return function()
+        local db = Journal()
+        local pets, list = (db and db.pets) or {}, {}
+        for pname, rec in pairs(pets) do list[#list + 1] = { name = pname, rec = rec } end
+        table.sort(list, function(x, y) return (x.rec.t or 0) > (y.rec.t or 0) end)
+        local now = db and db.petNow and pets[db.petNow] and { name = db.petNow, rec = pets[db.petNow] } or list[1]
+        empty:SetShown(#list == 0)
+        if #list == 0 then
+            empty:SetText(L.PETS_NONE)
+            name:SetText(""); detail:SetText(""); since:SetText(""); total:SetText("")
+            icon:Hide()
+        else
+            icon:Show()
+            name:SetText(now.name)
+            local parts = {}
+            if now.rec.fam then parts[#parts + 1] = now.rec.fam end
+            if now.rec.lv and now.rec.lv > 0 then parts[#parts + 1] = string.format(L.TIP_LEVEL, now.rec.lv) end
+            detail:SetText(table.concat(parts, "  -  "))
+            since:SetText(string.format(L.PETS_SINCE, date(L.DAY_DATE, now.rec.t or time())))
+            total:SetText(string.format(L.PETS_TOTAL, #list))
+        end
+        for i = 1, 12 do
+            local item = list[i]
+            if item then
+                rows[i][1]:SetText(item.name)
+                local parts = {}
+                if item.rec.fam then parts[#parts + 1] = item.rec.fam end
+                if item.rec.lv and item.rec.lv > 0 then parts[#parts + 1] = string.format(L.TIP_LEVEL, item.rec.lv) end
+                parts[#parts + 1] = date(L.DAY_DATE, item.rec.t or time())
+                rows[i][2]:SetText(table.concat(parts, "  -  "))
+                rows[i][1]:Show(); rows[i][2]:Show()
+            else
+                rows[i][1]:Hide(); rows[i][2]:Hide()
+            end
+        end
+    end
+end
+
 Mile.SetNext = function(text)
     local db = Journal()
     if not db then return end
@@ -3873,6 +3958,10 @@ local function HandleEvent(self, event, ...)
         window = CreateWindow()
         for _, t in ipairs(pendingTabs) do window:AddTab(t[1], t[2], t[3]) end
         pendingTabs = {}
+        do
+            local okClass, _, classFile = pcall(UnitClass, "player")
+            if okClass and classFile == "HUNTER" then window:AddTab("pets", L.TAB_PETS, Mile.BuildPets) end
+        end
         lastZone = GetZoneText()
         VisitZone(lastZone)
         C_Timer.After(8, function()
@@ -3885,7 +3974,7 @@ local function HandleEvent(self, event, ...)
             pcall(Mile.CheckPet)
             pcall(Mile.Relocalize)
             C_Timer.After(10, function() pcall(Mile.Relocalize) end)   -- items load a little later
-            if C_Timer.NewTicker then C_Timer.NewTicker(60, function() pcall(CheckMarks) end) end
+            if C_Timer.NewTicker then C_Timer.NewTicker(60, function() pcall(CheckMarks); pcall(Mile.CheckPet) end) end
             C_Timer.After(2, function() pcall(Mile.ShowResume) end)
         end)
         if not Settings().quiet then

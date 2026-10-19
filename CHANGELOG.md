@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.31.3-beta
+
+- **Hunters: the companions tab.** A new "Companions" tab in the book shows the pet at your side (name, family, level, since when) and every pet you have had. Pet pages now have their own paw icon and tell the family of the animal.
+- Skald's map pins: pets have their own kind of marker and filter.
+
 ## 0.31.2-beta
 
 - While your character is a spirit, the cover shows the portrait in a round medallion (the model returns when you are alive again).
