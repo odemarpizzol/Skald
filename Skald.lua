@@ -127,7 +127,8 @@ local Notify, PulseMinimap   -- the toast and the glow of the minimap button (de
 K.FLAVOR_KINDS = { quest = true, level = true, death = true, boss = true, zone = true, dungeon = true }
 local AddContext
 do
-local CONTEXT_KINDS = { dungeon = true, boss = true, death = true, zone = true, level = true }
+local CONTEXT_KINDS = { dungeon = true, boss = true, death = true, zone = true, level = true,
+    hearth = true, revive = true, flight = true, home = true, mount = true }   -- the hour of the day, for the line that sets the scene
 local WITH_KINDS = { dungeon = true, boss = true, death = true }
 -- What surrounded the moment: the hour of the game, the names in the group, the pet.
 AddContext = function(kind, entry)
