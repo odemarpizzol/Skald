@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.31.16-beta
+
+- **Smaller saved file:** pin positions on the map are kept with four decimals instead of fifteen (old pages are shortened once at login).
+- Developer: events are handled by one function each instead of a long chain of comparisons; twelve regression scenarios (language change, renamed or loaned pets, old pages told by id, the old Atlas, the reminder, a failing event...) now run before every release.
+
 ## 0.31.15-beta
 
 - **Pets tab:** the facts of the companion no longer touch the arched frame (more room between them); the pet is drawn a little larger.

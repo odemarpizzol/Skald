@@ -101,7 +101,8 @@ local function GetPosition()
         return m, px, py
     end)
     if ok and mapID and type(x) == "number" and type(y) == "number" and (x > 0 or y > 0) then
-        return mapID, x, y
+        -- four decimals are plenty for a pin on a map, and keep the saved file small
+        return mapID, math.floor(x * 10000 + 0.5) / 10000, math.floor(y * 10000 + 0.5) / 10000
     end
 end
 
@@ -4214,6 +4215,289 @@ Mile.ProbeEvent = function(event, ...)
 end
 end
 
+-- One function per event, looked up by name (instead of a long chain of comparisons).
+local EVENT_HANDLERS = {}
+do
+local H = EVENT_HANDLERS
+H.ADDON_LOADED = function(self, event, ...)
+    local name = ...
+    if name ~= ADDON_NAME then return end
+    SkaldDB = SkaldDB or {}
+    SkaldDB.version = SkaldDB.version or 1
+    ApplyFonts()   -- the saved text size (the files ran before the saved variables loaded)
+    SkaldCharDB = SkaldCharDB or {}
+    local db = SkaldCharDB
+    db.entries = db.entries or {}
+    db.visited = db.visited or {}
+    db.flags = db.flags or {}
+    MigrateStats(db)
+end
+
+H.PLAYER_LOGIN = function(self, event, ...)
+    loginTime = time()
+    if EnsureOwnDiary() then Say(L.NEW_CHARACTER) end
+    ConvertOldNotes()
+    -- Positions saved before were kept with fifteen decimals: shortened once.
+    do
+        local db = Journal()
+        if db and not db.posRounded then
+            for _, e in ipairs(db.entries) do
+                if type(e.x) == "number" then e.x = math.floor(e.x * 10000 + 0.5) / 10000 end
+                if type(e.y) == "number" then e.y = math.floor(e.y * 10000 + 0.5) / 10000 end
+            end
+            db.posRounded = true
+        end
+    end
+    sessionMark = time()
+    RollDay()   -- closes any earlier day with a summary page
+    window = CreateWindow()
+    for _, t in ipairs(pendingTabs) do window:AddTab(t[1], t[2], t[3]) end
+    pendingTabs = {}
+    do
+        local okClass, _, classFile = pcall(UnitClass, "player")
+        if okClass and classFile == "HUNTER" then window:AddTab("pets", L.TAB_PETS, Mile.BuildPets) end
+    end
+    lastZone = GetZoneText()
+    VisitZone(lastZone)
+    C_Timer.After(8, function()
+        lastXP, lastXPLevel = ReadXP()
+        ready = true
+        CheckGuild()
+        CheckSkills()
+        CheckReputation()
+        CheckMarks()
+        pcall(Mile.CheckPet)
+        pcall(Mile.Relocalize)
+        C_Timer.After(10, function() pcall(Mile.Relocalize) end)   -- items load a little later
+        if C_Timer.NewTicker then C_Timer.NewTicker(60, function() pcall(CheckMarks); pcall(Mile.CheckPet) end) end
+        C_Timer.After(2, function() pcall(Mile.ShowResume) end)
+    end)
+    if not Settings().quiet then
+        Say(L.LOADED)
+    end
+end
+
+H.PLAYER_LOGOUT = function(self, event, ...)
+    -- Bank this session's time on the road, and where the creature count stands.
+    pcall(Mile.SaveResume)
+    BankPlayed()
+    do
+        local log = Journal()
+        local day = log and log.days and log.days[log.today or ""]
+        local count = day and KillStat()
+        if count then day.kEnd = count end
+    end
+    local db = Journal()
+    if db and loginTime then
+        db.stats.played = db.stats.played + (time() - loginTime)
+        loginTime = nil
+    end
+end
+
+H.ZONE_CHANGED_NEW_AREA = function(self, event, ...)
+    if window then CheckZone() end
+end
+H.PLAYER_ENTERING_WORLD = H.ZONE_CHANGED_NEW_AREA
+
+H.QUEST_DETAIL = function(self, event, ...)
+    pendingQuestTitle = GetTitleText()
+    pendingNPC = Safe(UnitName and UnitName("npc")) or pendingNPC
+    Mile.npcId = Mile.NpcId("npc") or Mile.npcId
+    if event == "QUEST_COMPLETE" then
+        local id = GetQuestID and GetQuestID()
+        if id and id ~= 0 then
+            if C_QuestLog and C_QuestLog.GetQuestDifficultyLevel then
+                pendingQuestLevel = Try(C_QuestLog.GetQuestDifficultyLevel, id)
+            end
+            -- What the quest asked for, while it is still in the log.
+            pendingObjectiveTypes = nil
+            if C_QuestLog and C_QuestLog.GetQuestObjectives then
+                local objectives = Try(C_QuestLog.GetQuestObjectives, id)
+                if type(objectives) == "table" then
+                    pendingObjectiveTypes = {}
+                    for _, o in ipairs(objectives) do
+                        pendingObjectiveTypes[#pendingObjectiveTypes + 1] = o.type
+                    end
+                end
+            end
+        end
+    end
+end
+H.QUEST_COMPLETE = H.QUEST_DETAIL
+
+H.PLAYER_XP_UPDATE = function(self, event, ...)
+    if ready then OnXPChanged() end
+end
+
+H.QUEST_TURNED_IN = function(self, event, ...)
+    lastQuestAt = Clock()
+    local questID, xpReward, moneyReward = ...
+    local tier, signals = QuestTier(questID, xpReward)
+    local qtype = QuestTypeFromDB(questID) or QuestTypeFromObjectives(pendingObjectiveTypes)
+    signals.qtype = qtype
+    ProbeQuest(questID, xpReward, moneyReward, tier, signals)
+    local minTier = Settings().minTier or K.DETAIL_MIN_TIER[Settings().detail or "normal"] or K.DETAIL_MIN_TIER.normal
+    if tier >= minTier then
+        -- A quest that ends a chain remembers how long the chain was.
+        local cend
+        if signals.qdb and (signals.chainBack or 0) >= 1 and (signals.chainFwd or 0) == 0 then
+            cend = signals.chainBack + 1
+        end
+        AddEntry("quest", QuestName(questID), nil,
+            { tier = tier, q = questID, npc = pendingNPC, qtype = qtype or false, cend = cend,
+              ql = pendingQuestLevel, pl = UnitLevel and UnitLevel("player"), nid = Mile.npcId })
+    else
+        CountOnly("quest", tier)
+    end
+    pendingQuestTitle, pendingNPC, pendingQuestLevel = nil, nil, nil
+    pendingObjectiveTypes = nil
+    Mile.npcId = nil
+end
+
+H.PLAYER_LEVEL_UP = function(self, event, ...)
+    local level = tonumber((...))
+    if level and level % 10 == 0 then
+        AddEntry("milestone", level)
+    else
+        AddEntry("level", level)
+    end
+    if ready then C_Timer.After(3, function() pcall(Mile.CheckPet) end) end
+end
+
+H.UNIT_SPELLCAST_SUCCEEDED = function(self, event, ...)
+    -- The Hearthstone (item 6948) casts spell 8690. A page only when it takes the character
+    -- somewhere else: using it while already at the inn's place writes nothing.
+    local unit, _, spellID = ...
+    if ready and unit == "player" and Safe(spellID) == 8690 then
+        local okBind, bind = pcall(GetBindLocation)
+        bind = okBind and Safe(bind) or nil
+        local here = GetZoneText()
+        if type(bind) == "string" and bind ~= "" and bind ~= here then
+            AddEntry("hearth", bind, nil, { m = false, x = false, y = false })
+        end
+    end
+end
+
+H.CONFIRM_XP_LOSS = function(self, event, ...)
+    Mile.healerAt = time()   -- the spirit healer is offering to bring the character back
+end
+
+H.PLAYER_UNGHOST = function(self, event, ...)
+    -- Seen in the client: PLAYER_ALIVE when the spirit is released, CONFIRM_XP_LOSS when the
+    -- healer's offer is accepted, and PLAYER_UNGHOST a moment later.
+    if ready then
+        local fromHealer = Mile.healerAt and (time() - Mile.healerAt) < 120
+        Mile.healerAt = nil
+        local where = GetZoneText()
+        if not where or where == "" then where = L.UNKNOWN_ZONE end
+        AddEntry("revive", where, nil, { sub = fromHealer and "healer" or "corpse" })
+    end
+end
+
+H.PLAYER_ALIVE = function(self, event, ...)
+    -- only recorded by the probe (above)
+end
+H.RESURRECT_REQUEST = H.PLAYER_ALIVE
+
+H.UNIT_PET = function(self, event, ...)
+    if ready and (...) == "player" then C_Timer.After(1.5, function() pcall(Mile.CheckPet) end) end
+end
+
+H.UNIT_NAME_UPDATE = function(self, event, ...)
+    if ready and (...) == "pet" then C_Timer.After(0.5, function() pcall(Mile.CheckPet) end) end
+end
+
+H.LEARNED_SPELL_IN_TAB = function(self, event, ...)
+    -- only recorded by the probe (above)
+end
+
+H.CHAT_MSG_LOOT = function(self, event, ...)
+    if ready then pcall(OnLoot, ...) end
+end
+
+H.PLAYER_DEAD = function(self, event, ...)
+    -- The zone text can be empty at the moment of death: fall back to the minimap's.
+    local where = GetZoneText()
+    if not where or where == "" then where = GetMinimapZoneText and GetMinimapZoneText() end
+    if not where or where == "" then where = L.UNKNOWN_ZONE end
+    AddEntry("death", where)
+end
+
+H.PLAYER_GUILD_UPDATE = function(self, event, ...)
+    if ready then CheckGuild() end
+end
+
+H.GROUP_ROSTER_UPDATE = function(self, event, ...)
+    local db = Journal()
+    if ready and db and not db.flags.party and IsInGroup() then
+        db.flags.party = true
+        AddEntry("party")
+    end
+end
+
+H.ENCOUNTER_END = function(self, event, ...)
+    local _, name, _, _, success = ...
+    if success == 1 then BossDown(name) end
+end
+
+H.BOSS_KILL = function(self, event, ...)
+    local _, name = ...
+    BossDown(name)
+end
+
+H.HEARTHSTONE_BOUND = function(self, event, ...)
+    local ok, where = pcall(GetBindLocation)
+    where = ok and Safe(where) or nil
+    if ready then AddEntry("home", (type(where) == "string" and where ~= "") and where or (GetZoneText() or "?"), nil, { m = false, x = false, y = false }) end
+end
+
+H.UPDATE_FACTION = function(self, event, ...)
+    if ready and not ns.repPending then
+        ns.repPending = true
+        C_Timer.After(2, CheckReputation)
+    end
+end
+
+H.TAXIMAP_OPENED = function(self, event, ...)
+    if ready then pcall(CheckFlightPaths) end
+end
+
+H.PLAYER_MONEY = function(self, event, ...)
+    -- Money changes on every sale and pick-up: one look at the milestones is enough per few seconds.
+    if ready and not ns.moneyPending then
+        ns.moneyPending = true
+        C_Timer.After(3, function() ns.moneyPending = false; CheckMarks() end)
+    end
+end
+
+H.NEW_MOUNT_ADDED = function(self, event, ...)
+    local mountID = ...
+    local ok, name = pcall(function()
+        return (C_MountJournal.GetMountInfoByID(mountID))
+    end)
+    name = ok and Safe(name) or nil
+    if name then AddEntry("mount", name) end
+end
+
+H.ACHIEVEMENT_EARNED = function(self, event, ...)
+    local achievementID = ...
+    local ok, name = pcall(function()
+        return (select(2, GetAchievementInfo(achievementID)))
+    end)
+    name = ok and Safe(name) or nil
+    if name then AddEntry("achievement", name) end
+end
+
+H.SKILL_LINES_CHANGED = function(self, event, ...)
+    -- Fires in bursts; look once, shortly after the last.
+    if ready and not skillPending then
+        skillPending = true
+        C_Timer.After(2, CheckSkills)
+    end
+end
+
+end
+
 local function HandleEvent(self, event, ...)
     if event == "UNIT_SPELLCAST_SUCCEEDED" then
         if (...) == "player" and Settings().probeSpells then pcall(Mile.ProbeEvent, event, ...) end
@@ -4221,241 +4505,8 @@ local function HandleEvent(self, event, ...)
         or event == "CONFIRM_XP_LOSS" or event == "RESURRECT_REQUEST" then
         pcall(Mile.ProbeEvent, event, ...)
     end
-    if event == "ADDON_LOADED" then
-        local name = ...
-        if name ~= ADDON_NAME then return end
-        SkaldDB = SkaldDB or {}
-        SkaldDB.version = SkaldDB.version or 1
-        ApplyFonts()   -- the saved text size (the files ran before the saved variables loaded)
-        SkaldCharDB = SkaldCharDB or {}
-        local db = SkaldCharDB
-        db.entries = db.entries or {}
-        db.visited = db.visited or {}
-        db.flags = db.flags or {}
-        MigrateStats(db)
-
-    elseif event == "PLAYER_LOGIN" then
-        loginTime = time()
-        if EnsureOwnDiary() then Say(L.NEW_CHARACTER) end
-        ConvertOldNotes()
-        sessionMark = time()
-        RollDay()   -- closes any earlier day with a summary page
-        window = CreateWindow()
-        for _, t in ipairs(pendingTabs) do window:AddTab(t[1], t[2], t[3]) end
-        pendingTabs = {}
-        do
-            local okClass, _, classFile = pcall(UnitClass, "player")
-            if okClass and classFile == "HUNTER" then window:AddTab("pets", L.TAB_PETS, Mile.BuildPets) end
-        end
-        lastZone = GetZoneText()
-        VisitZone(lastZone)
-        C_Timer.After(8, function()
-            lastXP, lastXPLevel = ReadXP()
-            ready = true
-            CheckGuild()
-            CheckSkills()
-            CheckReputation()
-            CheckMarks()
-            pcall(Mile.CheckPet)
-            pcall(Mile.Relocalize)
-            C_Timer.After(10, function() pcall(Mile.Relocalize) end)   -- items load a little later
-            if C_Timer.NewTicker then C_Timer.NewTicker(60, function() pcall(CheckMarks); pcall(Mile.CheckPet) end) end
-            C_Timer.After(2, function() pcall(Mile.ShowResume) end)
-        end)
-        if not Settings().quiet then
-            Say(L.LOADED)
-        end
-
-    elseif event == "PLAYER_LOGOUT" then
-        -- Bank this session's time on the road, and where the creature count stands.
-        pcall(Mile.SaveResume)
-        BankPlayed()
-        do
-            local log = Journal()
-            local day = log and log.days and log.days[log.today or ""]
-            local count = day and KillStat()
-            if count then day.kEnd = count end
-        end
-        local db = Journal()
-        if db and loginTime then
-            db.stats.played = db.stats.played + (time() - loginTime)
-            loginTime = nil
-        end
-
-    elseif event == "ZONE_CHANGED_NEW_AREA" or event == "PLAYER_ENTERING_WORLD" then
-        if window then CheckZone() end
-
-    elseif event == "QUEST_DETAIL" or event == "QUEST_COMPLETE" then
-        pendingQuestTitle = GetTitleText()
-        pendingNPC = Safe(UnitName and UnitName("npc")) or pendingNPC
-        Mile.npcId = Mile.NpcId("npc") or Mile.npcId
-        if event == "QUEST_COMPLETE" then
-            local id = GetQuestID and GetQuestID()
-            if id and id ~= 0 then
-                if C_QuestLog and C_QuestLog.GetQuestDifficultyLevel then
-                    pendingQuestLevel = Try(C_QuestLog.GetQuestDifficultyLevel, id)
-                end
-                -- What the quest asked for, while it is still in the log.
-                pendingObjectiveTypes = nil
-                if C_QuestLog and C_QuestLog.GetQuestObjectives then
-                    local objectives = Try(C_QuestLog.GetQuestObjectives, id)
-                    if type(objectives) == "table" then
-                        pendingObjectiveTypes = {}
-                        for _, o in ipairs(objectives) do
-                            pendingObjectiveTypes[#pendingObjectiveTypes + 1] = o.type
-                        end
-                    end
-                end
-            end
-        end
-
-    elseif event == "PLAYER_XP_UPDATE" then
-        if ready then OnXPChanged() end
-
-    elseif event == "QUEST_TURNED_IN" then
-        lastQuestAt = Clock()
-        local questID, xpReward, moneyReward = ...
-        local tier, signals = QuestTier(questID, xpReward)
-        local qtype = QuestTypeFromDB(questID) or QuestTypeFromObjectives(pendingObjectiveTypes)
-        signals.qtype = qtype
-        ProbeQuest(questID, xpReward, moneyReward, tier, signals)
-        local minTier = Settings().minTier or K.DETAIL_MIN_TIER[Settings().detail or "normal"] or K.DETAIL_MIN_TIER.normal
-        if tier >= minTier then
-            -- A quest that ends a chain remembers how long the chain was.
-            local cend
-            if signals.qdb and (signals.chainBack or 0) >= 1 and (signals.chainFwd or 0) == 0 then
-                cend = signals.chainBack + 1
-            end
-            AddEntry("quest", QuestName(questID), nil,
-                { tier = tier, q = questID, npc = pendingNPC, qtype = qtype or false, cend = cend,
-                  ql = pendingQuestLevel, pl = UnitLevel and UnitLevel("player"), nid = Mile.npcId })
-        else
-            CountOnly("quest", tier)
-        end
-        pendingQuestTitle, pendingNPC, pendingQuestLevel = nil, nil, nil
-        pendingObjectiveTypes = nil
-        Mile.npcId = nil
-
-    elseif event == "PLAYER_LEVEL_UP" then
-        local level = tonumber((...))
-        if level and level % 10 == 0 then
-            AddEntry("milestone", level)
-        else
-            AddEntry("level", level)
-        end
-        if ready then C_Timer.After(3, function() pcall(Mile.CheckPet) end) end
-
-    elseif event == "UNIT_SPELLCAST_SUCCEEDED" then
-        -- The Hearthstone (item 6948) casts spell 8690. A page only when it takes the character
-        -- somewhere else: using it while already at the inn's place writes nothing.
-        local unit, _, spellID = ...
-        if ready and unit == "player" and Safe(spellID) == 8690 then
-            local okBind, bind = pcall(GetBindLocation)
-            bind = okBind and Safe(bind) or nil
-            local here = GetZoneText()
-            if type(bind) == "string" and bind ~= "" and bind ~= here then
-                AddEntry("hearth", bind, nil, { m = false, x = false, y = false })
-            end
-        end
-
-    elseif event == "CONFIRM_XP_LOSS" then
-        Mile.healerAt = time()   -- the spirit healer is offering to bring the character back
-
-    elseif event == "PLAYER_UNGHOST" then
-        -- Seen in the client: PLAYER_ALIVE when the spirit is released, CONFIRM_XP_LOSS when the
-        -- healer's offer is accepted, and PLAYER_UNGHOST a moment later.
-        if ready then
-            local fromHealer = Mile.healerAt and (time() - Mile.healerAt) < 120
-            Mile.healerAt = nil
-            local where = GetZoneText()
-            if not where or where == "" then where = L.UNKNOWN_ZONE end
-            AddEntry("revive", where, nil, { sub = fromHealer and "healer" or "corpse" })
-        end
-
-    elseif event == "PLAYER_ALIVE" or event == "RESURRECT_REQUEST" then
-        -- only recorded by the probe (above)
-
-    elseif event == "UNIT_PET" then
-        if ready and (...) == "player" then C_Timer.After(1.5, function() pcall(Mile.CheckPet) end) end
-
-    elseif event == "UNIT_NAME_UPDATE" then
-        if ready and (...) == "pet" then C_Timer.After(0.5, function() pcall(Mile.CheckPet) end) end
-
-    elseif event == "LEARNED_SPELL_IN_TAB" then
-        -- only recorded by the probe (above)
-
-    elseif event == "CHAT_MSG_LOOT" then
-        if ready then pcall(OnLoot, ...) end
-
-    elseif event == "PLAYER_DEAD" then
-        -- The zone text can be empty at the moment of death: fall back to the minimap's.
-        local where = GetZoneText()
-        if not where or where == "" then where = GetMinimapZoneText and GetMinimapZoneText() end
-        if not where or where == "" then where = L.UNKNOWN_ZONE end
-        AddEntry("death", where)
-
-    elseif event == "PLAYER_GUILD_UPDATE" then
-        if ready then CheckGuild() end
-
-    elseif event == "GROUP_ROSTER_UPDATE" then
-        local db = Journal()
-        if ready and db and not db.flags.party and IsInGroup() then
-            db.flags.party = true
-            AddEntry("party")
-        end
-
-    elseif event == "ENCOUNTER_END" then
-        local _, name, _, _, success = ...
-        if success == 1 then BossDown(name) end
-
-    elseif event == "BOSS_KILL" then
-        local _, name = ...
-        BossDown(name)
-
-    elseif event == "HEARTHSTONE_BOUND" then
-        local ok, where = pcall(GetBindLocation)
-        where = ok and Safe(where) or nil
-        if ready then AddEntry("home", (type(where) == "string" and where ~= "") and where or (GetZoneText() or "?"), nil, { m = false, x = false, y = false }) end
-
-    elseif event == "UPDATE_FACTION" then
-        if ready and not ns.repPending then
-            ns.repPending = true
-            C_Timer.After(2, CheckReputation)
-        end
-
-    elseif event == "TAXIMAP_OPENED" then
-        if ready then pcall(CheckFlightPaths) end
-
-    elseif event == "PLAYER_MONEY" then
-        -- Money changes on every sale and pick-up: one look at the milestones is enough per few seconds.
-        if ready and not ns.moneyPending then
-            ns.moneyPending = true
-            C_Timer.After(3, function() ns.moneyPending = false; CheckMarks() end)
-        end
-
-    elseif event == "NEW_MOUNT_ADDED" then
-        local mountID = ...
-        local ok, name = pcall(function()
-            return (C_MountJournal.GetMountInfoByID(mountID))
-        end)
-        name = ok and Safe(name) or nil
-        if name then AddEntry("mount", name) end
-
-    elseif event == "ACHIEVEMENT_EARNED" then
-        local achievementID = ...
-        local ok, name = pcall(function()
-            return (select(2, GetAchievementInfo(achievementID)))
-        end)
-        name = ok and Safe(name) or nil
-        if name then AddEntry("achievement", name) end
-
-    elseif event == "SKILL_LINES_CHANGED" then
-        -- Fires in bursts; look once, shortly after the last.
-        if ready and not skillPending then
-            skillPending = true
-            C_Timer.After(2, CheckSkills)
-        end
-    end
+    local handler = EVENT_HANDLERS[event]
+    if handler then handler(self, event, ...) end
 end
 
 -- A failing event must not stop the others: it is reported once (and kept in SkaldDB.lastError
