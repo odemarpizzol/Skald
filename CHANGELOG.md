@@ -1,13 +1,15 @@
 # Changelog
 
-## Unreleased
+## 0.35.0-beta
 
-- Quest summaries now choose gender-specific text according to the player instead of always using the masculine variant.
-- Crafted item counts follow the client's loot message format, including localized spacing and multiplication signs.
-- Polished two English boss victory phrases.
-- Exported item pages now contain readable item names without in-game hyperlink codes.
-- Long quest objectives, summaries and exported text no longer split UTF-8 characters at the byte limit.
-- The Portuguese map filter now labels guild pages as "Guilda".
+- **Words that agree with you:** the diary speaks in the first person, and in Portuguese and French the few phrases that carry an agreement ("I fell", "I am glad", "hunter") now follow the sex of your character. The quest descriptions do the same.
+- **Crafts, counted better:** the number of items made is read from the format of your client's own message, so it also works with the spacing and the multiplication sign of other languages.
+- **Commands in your language:** `/skald forgetpet`, `/skald forgetcompanions` and `/skald tidy` answer in the language of the game.
+- Two English sentences about hard-won boss victories read better.
+- **Accents and exports:** long texts (quest descriptions, the export for Discord) are no longer cut in the middle of an accented letter, and item names in the export no longer carry the game's internal link codes.
+- The "Guild" filter of the map is "Guilda" in Portuguese.
+- **The character on the cover:** the model is asked for again a moment after the book opens, so the white patches that showed while the textures of its clothes were still loading go away.
+- **More variety:** the hearthstone page has 21 sentences (it had 9), and pages for the hearthstone, resurrection, flight paths, a new home and mounts can also set the scene with the hour of the day ("The afternoon was long and golden").
 
 ## 0.34.1-beta
 
