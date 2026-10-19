@@ -1,10 +1,16 @@
 # Changelog
 
+## 0.34.1-beta
+
+- **Quest descriptions in your language, again:** the description shown over a quest page is the one the game gave you, kept when you accept the quest (or read from the quest log when you hand it in), so it follows the language of your client. Quests accepted before this version have no description to show outside English.
+
 ## 0.34.0-beta
 
 - **Victory after the hard road:** when a boss falls after you fell to the dungeon before it, the page says so ("After three falls, the boss is finally down"). The falls are counted for the dungeon you are in, and forgotten two hours after the last one. English, Portuguese and French, with many different sentences.
 - **Quests with a story behind them:** the last quest of a chain now tells how long the story took ("Four days ago I agreed to help... today it ends"), from the day the first quest of the chain was accepted.
 - **Old company:** when someone who stood beside you in a dungeon or at a boss joins your group again after a day or more, a page tells where you were together ("I took the road again with Thorgar, who stood beside me in The Deadmines"). One page per person every three days at most. The Options tab has a switch to turn it off, and `/skald forgetcompanions` forgets everybody.
+- **Crafts, counted:** making the same thing again and again is one page that says how many, not one page for each (pages already written are joined when the game starts).
+- **Flight paths:** only the flight master you are standing at is written as learned; paths you already knew before the diary looked are no longer told as new.
 - **A memory on the way back:** returning to a land where something dear happened (a favourite page, a hunter's first pet, a boss that cost some falls) shows a quiet notice at the top ("It was here that I tamed my first companion"). If the favourite page has a note of yours, the notice is your own note. At most one every ten minutes and once a week per land; never in combat or in a dungeon. A switch in Options turns it off.
 
 ## 0.33.5-beta
