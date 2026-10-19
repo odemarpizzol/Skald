@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.31.4-beta
+
+- The hunter's tab is called "Pets" (it was cut off in the tab) and its right page has a shorter title, so the list no longer touches the rule.
+
 ## 0.31.3-beta
 
 - **Hunters: the companions tab.** A new "Companions" tab in the book shows the pet at your side (name, family, level, since when) and every pet you have had. Pet pages now have their own paw icon and tell the family of the animal.

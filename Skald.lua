@@ -3834,7 +3834,7 @@ Mile.BuildPets = function(panel)
     PageHeading(panel, L.PETS_ALL, RIGHT_X)
     local rows = {}
     for i = 1, 12 do
-        local top = -56 - (i - 1) * 36
+        local top = -66 - (i - 1) * 36
         local a = panel:CreateFontString(nil, "OVERLAY", "SkaldBody")
         a:SetPoint("TOPLEFT", RIGHT_X, top)
         a:SetWidth(CW)
