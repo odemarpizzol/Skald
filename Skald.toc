@@ -1,0 +1,22 @@
+## Interface: 16001
+## Title: Skald
+## Title-ptBR: Skald
+## Notes: Automatically writes the epic chronicle of your journey through Azeroth. Use /skald.
+## Notes-ptBR: Escreve automaticamente a crônica épica da sua jornada por Azeroth. Use /skald.
+## Title-frFR: Skald
+## Notes-frFR: Écrit automatiquement la chronique épique de votre voyage à travers Azeroth. Utilisez /skald.
+## Author: Oddynho
+## Version: 0.31.1-beta
+## OptionalDeps: Spoken, QuestDB
+## Category: Roleplay
+## X-Curse-Project-ID: 1748824
+## X-License: MIT
+## IconTexture: Interface\AddOns\Skald\icon.tga
+## SavedVariables: SkaldDB, SkaldAtlasDB
+## SavedVariablesPerCharacter: SkaldCharDB
+
+Locales.lua
+Curated.lua
+XPTiers.lua
+Skald.lua
+Atlas.lua

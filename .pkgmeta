@@ -1,0 +1,12 @@
+# Packager settings (BigWigs packager, used by CurseForge and GitHub Actions).
+# The repository root is the addon folder itself. Not tested here: check against the packager's documentation.
+package-as: Skald
+
+ignore:
+  - README.md
+  - CHANGELOG.md
+  - .github
+
+manual-changelog:
+  filename: CHANGELOG.md
+  markup-type: markdown
