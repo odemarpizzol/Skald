@@ -1978,23 +1978,21 @@ local function CreateWindow()
     local okModel, model = pcall(CreateFrame, "PlayerModel", nil, modelHolder)
     if okModel and model then
         model:SetAllPoints()
-        local angle = 0
         local dragging, lastX
-        -- Hold the left button and drag to turn the character; it goes on turning slowly when let go.
+        -- The character stands still, facing the reader; hold the left button and drag to turn it.
+        model.skaldAngle = 0
         model:EnableMouse(true)
         model:SetScript("OnMouseDown", function(_, button)
             if button == "LeftButton" then dragging, lastX = true, GetCursorPosition() end
         end)
         model:SetScript("OnMouseUp", function() dragging = false end)
-        model:SetScript("OnUpdate", function(self, elapsed)
+        model:SetScript("OnUpdate", function(self)
             if dragging then
                 local x = GetCursorPosition()
-                angle = (angle + (x - (lastX or x)) * 0.012) % (math.pi * 2)
+                self.skaldAngle = ((self.skaldAngle or 0) + (x - (lastX or x)) * 0.012) % (math.pi * 2)
                 lastX = x
-            else
-                angle = (angle + (elapsed or 0) * 0.35) % (math.pi * 2)
+                pcall(self.SetFacing, self, self.skaldAngle)
             end
-            pcall(self.SetFacing, self, angle)
         end)
     end
     local alcove = CreateFrame("Frame", nil, cover1)
@@ -2013,6 +2011,8 @@ local function CreateWindow()
             -- keep the portrait
         elseif okModel and model and pcall(model.SetUnit, model, "player") then
             pcall(model.SetCamDistanceScale, model, 0.8)
+            model.skaldAngle = 0
+            pcall(model.SetFacing, model, 0)
             works = true
         end
         if model then model:SetShown(works) end
@@ -3904,7 +3904,7 @@ Mile.BuildPets = function(panel)
             end
         end)
         model:SetScript("OnMouseWheel", function(self, delta)
-            self.skaldZoom = math.max(1, math.min(5, (self.skaldZoom or 2.6) - (delta or 0) * 0.25))
+            self.skaldZoom = math.max(1, math.min(5, (self.skaldZoom or 1.9) - (delta or 0) * 0.25))
             pcall(self.SetCamDistanceScale, self, self.skaldZoom)
         end)
     end
@@ -3926,7 +3926,7 @@ Mile.BuildPets = function(panel)
         if okModel and model and petName and UnitExists("pet") and Safe(UnitName("pet")) == petName then
             out = pcall(model.SetUnit, model, "pet")
             if out then
-                model.skaldZoom, model.skaldAngle = 2.6, 0.6
+                model.skaldZoom, model.skaldAngle = 1.9, 0.6
                 pcall(model.SetCamDistanceScale, model, model.skaldZoom)
                 pcall(model.SetFacing, model, model.skaldAngle)
             end

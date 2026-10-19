@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.31.9-beta
+
+- **The character on the cover stands still**, facing the reader (drag with the left button to turn it). The pet in the Pets tab is drawn larger inside its frame.
+
 ## 0.31.8-beta
 
 - **Pets tab:** the pet now stands in a three-quarter view instead of turning on its own: hold the left button and drag to turn it, and use the mouse wheel to bring the camera closer or further (big animals no longer overflow the frame). On the cover, your character can be turned the same way by dragging; it keeps turning slowly when let go.
