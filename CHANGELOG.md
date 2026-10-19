@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.32.3-beta
+
+- **Clicking the reminder** "Where was I?" now opens the book at the newest day (it opened the tab used last, for instance Pets). **Clicking the notice of a new page** opens the book at that page and lights it.
+
 ## 0.32.2-beta
 
 - **Map tab, tidier:** the buttons of "When" now say how many pages each choice holds ("All (3)", "This session (0)", "Today (3)"), so an empty choice is no surprise; the controls are spaced so that nothing touches the seals; "This region" shows the name of the land, then its facts (first visit, quests, falls, foes, levels, items, favourites) in the book's own fonts, and a line that says how many of its pages the filters show, or that none matches.

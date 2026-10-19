@@ -1437,7 +1437,10 @@ local function ShowToast(e, titleText, bodyText, lines, seconds)
         fr.bar:SetPoint("BOTTOMLEFT", 4, 4)
         fr:SetScript("OnMouseUp", function(self, button)
             self:Hide()
-            if button == "LeftButton" and window then window:Refresh(); window:Show() end
+            if button == "LeftButton" and window then
+                -- the page that was written, lit; without it, the newest day
+                if not (self.entry and window:OpenEntry(self.entry)) then window:ShowSection("days", true); window:Show() end
+            end
         end)
         -- comes in (a short slide and fade), waits while the mouse is over it, goes out softly
         fr:SetScript("OnUpdate", function(self, elapsed)
@@ -1476,6 +1479,7 @@ local function ShowToast(e, titleText, bodyText, lines, seconds)
         bare.noExtras = true   -- the toast tells the page only, not who was there or the hour
         text = PlainLine(RenderEntry(bare))
     end
+    toastFrame.entry = e
     toastFrame.body:SetText(text or "")
     pcall(toastFrame.body.SetMaxLines, toastFrame.body, lines or 3)
     local bodyHeight = math.max(16, toastFrame.body:GetStringHeight() or 16)
@@ -1530,7 +1534,7 @@ ns.ShowResumeCard = function(data)
         fr.parts = {}
         fr:SetScript("OnMouseUp", function(self, button)
             self:Hide()
-            if button == "LeftButton" and window then window:Refresh(); window:Show() end
+            if button == "LeftButton" and window then window:ShowSection("days", true); window:Show() end   -- the newest day, not the tab last used
         end)
         fr:Hide()
         card = fr
@@ -2881,6 +2885,8 @@ local function CreateWindow()
     end
 
     -- Opens the book at the page of one entry and lights its row for a moment (used by the map pins).
+    function f:GetView() return view end
+
     function f:OpenEntry(e)
         view = "book"
         layout = Layout()
