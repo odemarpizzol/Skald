@@ -1413,13 +1413,23 @@ ns.NineSlice = function(frame, file, texW, texH, border, draw)
     center:SetPoint("TOPLEFT", draw, -draw); center:SetPoint("BOTTOMRIGHT", -draw, draw)
 end
 
-ns.PlaceNotice = function(fr, slide)
-    local pos = SkaldDB and SkaldDB.toastPos
+-- `enter` goes from 1 (just starting to come in) to 0 (in place): the notice slides a little.
+ns.PlaceNotice = function(fr, enter)
+    enter = enter or 0
+    local db = SkaldDB
+    local pos = db and db.toastPos
     fr:ClearAllPoints()
     if pos then
-        fr:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", pos[1] + (slide or 0), pos[2])
+        fr:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", pos[1] - 18 * enter, pos[2])
+        return
+    end
+    local where = db and db.toastAnchor or "top"
+    if where == "left" then
+        fr:SetPoint("LEFT", UIParent, "LEFT", 24 - 18 * enter, 90)
+    elseif where == "bottom" then
+        fr:SetPoint("BOTTOM", UIParent, "BOTTOM", 0, 230 - 14 * enter)
     else
-        fr:SetPoint("LEFT", UIParent, "LEFT", 24 + (slide or 0), 90)
+        fr:SetPoint("TOP", UIParent, "TOP", 0, -8 + 14 * enter)
     end
 end
 
@@ -1509,7 +1519,7 @@ local function ShowToast(e, titleText, bodyText, lines, seconds)
             local alpha = 1
             if age < 0.28 then alpha = age / 0.28 elseif age > life - 0.7 then alpha = (life - age) / 0.7 end
             self:SetAlpha(math.max(0, math.min(1, alpha)))
-            if not rawget(self, "dragging") then ns.PlaceNotice(self, age < 0.28 and -(1 - age / 0.28) * 18 or 0) end
+            if not rawget(self, "dragging") then ns.PlaceNotice(self, age < 0.28 and (1 - age / 0.28) or 0) end
             self.bar:SetWidth(math.max(1, (self:GetWidth() - 60) * (1 - age / life)))
             if age < 0.8 then
                 local t = age / 0.8
@@ -5446,8 +5456,20 @@ local function BuildStyle(panel)
     }
     for i, cb in ipairs(switches) do cb:SetPoint("TOPLEFT", K.RIGHT_X, -262 - (i - 1) * 28) end
     -- Where the notices appear: a sample to drag to the place you like.
+    local placeButtons = {}
+    for i, key in ipairs({ "top", "left", "bottom" }) do
+        local pb = MakeFlatButton(panel, 72, 26, L["TOAST_" .. key:upper()])
+        pb:SetPoint("TOPLEFT", K.RIGHT_X + (i - 1) * 74, -352)
+        pb:SetScript("OnClick", function()
+            Settings().toastAnchor = key
+            Settings().toastPos = nil
+            for k, other in pairs(placeButtons) do other:SetActive(k == key) end
+            if ns.PreviewNotice then ns.PreviewNotice() end
+        end)
+        placeButtons[key] = pb
+    end
     local moveButton = MakeFlatButton(panel, 220, 26, L.TOAST_MOVE)
-    moveButton:SetPoint("TOPLEFT", K.RIGHT_X, -356)
+    moveButton:SetPoint("TOPLEFT", K.RIGHT_X, -384)
     moveButton:SetScript("OnClick", function() if ns.PreviewNotice then ns.PreviewNotice() end end)
     moveButton:HookScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_TOP")
@@ -5465,6 +5487,7 @@ local function BuildStyle(panel)
         sample:SetText(L.TONE_SAMPLE[tone] or "")
         for _, cb in ipairs(colorBoxes) do cb.Sync() end
         for _, cb in ipairs(switches) do cb.Sync() end
+        for key, pb in pairs(placeButtons) do pb:SetActive(not s.toastPos and (s.toastAnchor or "top") == key) end
         if not edit:HasFocus() then edit:SetText(s.coverTitle or "") end
     end
     return refresh

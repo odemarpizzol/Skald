@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.33.2-beta
+
+- **Where the notices appear:** at the top of the screen by default; the Style tab has three places (Top, Left, Bottom) next to the button that lets you drag them anywhere. The notice slides in from its edge.
+
 ## 0.33.1-beta
 
 - **The notices stand at the left edge** of the screen, in the middle, instead of at the top where the game's banners and talking heads are; they slide in from the left.
