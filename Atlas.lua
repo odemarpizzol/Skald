@@ -49,7 +49,7 @@ local activePins = 0
 -- A page that is not a quest has a fixed rarity, so its medallion has a colour too.
 local KIND_TIER = {
     zone = 1, level = 2, milestone = 4, death = 1, dungeon = 3, boss = 4,
-    mount = 3, guild = 3, guildleave = 1, party = 2, achievement = 5,
+    mount = 3, guild = 3, guildleave = 1, party = 2, reunion = 2, achievement = 5,
     skill = 2, profession = 2, quest = 1, tame = 2,
 }
 
@@ -57,7 +57,7 @@ local KIND_TIER = {
 local GLYPH = {
     quest = "quest", level = "level", milestone = "milestone", death = "death",
     boss = "boss", dungeon = "dungeon", zone = "zone", mount = "mount",
-    guild = "guild", guildleave = "guild", party = "party", tame = "pet",
+    guild = "guild", guildleave = "guild", party = "party", reunion = "party", tame = "pet",
     achievement = "achievement", skill = "profession", profession = "profession",
 }
 

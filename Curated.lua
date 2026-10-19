@@ -225,26 +225,67 @@ C[667] = { tier = 3, text = {
 } }
 
 
--- The hunter's first lessons (Taming the Beast): the game lends a beast for a little while. Three texts,
--- spread over the ids of the lessons of every race, told as a class milestone (rare).
-local HUNTER_LESSON_A = { tier = 3, text = {
+-- The hunter's first lessons (Taming the Beast): the game lends a beast for a little while. Each lesson has a
+-- text of its own (a class milestone, rare), so a hunter never reads the same page twice.
+C[6061] = { tier = 3, text = {
     enUS = "A hunter learns the wild by taming it: \"{quest}\". The beast will not stay, but what I learned of it will.",
     ptBR = "Um caçador aprende a natureza domando-a: \"{quest}\". A fera não vai ficar, mas o que aprendi com ela, sim.",
     frFR = "Un chasseur apprend la nature en l'apprivoisant\194\160: «\194\160{quest}\194\160». La bête ne restera pas, mais ce que j'ai appris d'elle, si.",
 } }
-local HUNTER_LESSON_B = { tier = 3, text = {
+C[6062] = { tier = 3, text = {
     enUS = "The beast let itself be led for a little while: \"{quest}\". I learned to read the wild, and the wild learned my name.",
     ptBR = "A fera deixou-se guiar por um tempo: \"{quest}\". Aprendi a ler a natureza, e a natureza aprendeu o meu nome.",
     frFR = "La bête s'est laissé guider un moment\194\160: «\194\160{quest}\194\160». J'ai appris à lire la nature, et la nature a appris mon nom.",
 } }
-local HUNTER_LESSON_C = { tier = 3, text = {
+C[6063] = { tier = 3, text = {
     enUS = "One more lesson in patience: \"{quest}\". A friend borrowed from the wild is still a friend, for as long as it lasts.",
     ptBR = "Mais uma lição de paciência: \"{quest}\". Um amigo emprestado da natureza ainda é um amigo, enquanto dura.",
     frFR = "Une leçon de patience de plus\194\160: «\194\160{quest}\194\160». Un ami emprunté à la nature reste un ami, tant qu'il dure.",
 } }
-local LESSONS = { HUNTER_LESSON_A, HUNTER_LESSON_B, HUNTER_LESSON_C }
-for i, id in ipairs({ 6061, 6062, 6063, 6064, 6082, 6083, 6084, 6085, 6087, 6088, 6101, 6102 }) do
-    C[id] = LESSONS[(i - 1) % 3 + 1]
-end
+C[6064] = { tier = 3, text = {
+    enUS = "\"{quest}\": my first steps as a true hunter. The leash was only a lesson; the bond is what I keep.",
+    ptBR = "\"{quest}\": meus primeiros passos como um verdadeiro caçador. A coleira era só uma lição; o laço é o que fica.",
+    frFR = "«\194\160{quest}\194\160»\194\160: mes premiers pas de vrai chasseur. La laisse n'était qu'une leçon\194\160; le lien, lui, reste.",
+} }
+C[6082] = { tier = 3, text = {
+    enUS = "I did not command the beast in \"{quest}\", I asked, and it listened. That is the whole craft.",
+    ptBR = "Em \"{quest}\" eu não comandei a fera, eu pedi, e ela ouviu. Essa é a arte inteira.",
+    frFR = "Dans «\194\160{quest}\194\160», je n'ai pas commandé la bête, j'ai demandé, et elle a écouté. C'est tout l'art.",
+} }
+C[6083] = { tier = 3, text = {
+    enUS = "Fur, fang and a patient hand: \"{quest}\" taught me what no book could.",
+    ptBR = "Pelo, presa e uma mão paciente: \"{quest}\" me ensinou o que nenhum livro ensina.",
+    frFR = "Fourrure, crocs et main patiente\194\160: «\194\160{quest}\194\160» m'a appris ce qu'aucun livre n'enseigne.",
+} }
+C[6084] = { tier = 3, text = {
+    enUS = "\"{quest}\" is done. The wild lent me its strength for an hour, and I will remember how it felt.",
+    ptBR = "\"{quest}\" está feita. A natureza me emprestou sua força por uma hora, e vou lembrar como foi.",
+    frFR = "«\194\160{quest}\194\160» est accomplie. La nature m'a prêté sa force pour une heure, et je me souviendrai de ce que c'était.",
+} }
+C[6085] = { tier = 3, text = {
+    enUS = "The wild tests every hunter once. \"{quest}\" was my test, and I was not found wanting.",
+    ptBR = "A natureza testa todo caçador uma vez. \"{quest}\" foi o meu teste, e não fui reprovado.",
+    frFR = "La nature éprouve chaque chasseur une fois. «\194\160{quest}\194\160» fut mon épreuve, et je ne fus pas jugé insuffisant.",
+} }
+C[6087] = { tier = 3, text = {
+    enUS = "Quiet steps, steady breath, and a beast that trusted me: \"{quest}\".",
+    ptBR = "Passos silenciosos, respiração firme e uma fera que confiou em mim: \"{quest}\".",
+    frFR = "Pas silencieux, souffle égal, et une bête qui m'a fait confiance\194\160: «\194\160{quest}\194\160».",
+} }
+C[6088] = { tier = 3, text = {
+    enUS = "Before I had a companion of my own, \"{quest}\" showed me what it would be to have one.",
+    ptBR = "Antes de ter um companheiro meu, \"{quest}\" me mostrou como seria ter um.",
+    frFR = "Avant d'avoir un compagnon bien à moi, «\194\160{quest}\194\160» m'a montré ce que ce serait d'en avoir un.",
+} }
+C[6101] = { tier = 3, text = {
+    enUS = "A hunter is made one lesson at a time. \"{quest}\" was another stone in the path.",
+    ptBR = "Um caçador se faz uma lição de cada vez. \"{quest}\" foi mais uma pedra no caminho.",
+    frFR = "On devient chasseur une leçon à la fois. «\194\160{quest}\194\160» fut une pierre de plus sur le chemin.",
+} }
+C[6102] = { tier = 3, text = {
+    enUS = "\"{quest}\": the beast went back to the wild, and I went on a little wiser.",
+    ptBR = "\"{quest}\": a fera voltou à natureza, e eu segui um pouco mais sábio.",
+    frFR = "«\194\160{quest}\194\160»\194\160: la bête est retournée à la nature, et j'ai poursuivi ma route un peu plus sage.",
+} }
 
 ns.CURATED = C

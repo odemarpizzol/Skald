@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.34.0-beta
+
+- **Victory after the hard road:** when a boss falls after you fell to the dungeon before it, the page says so ("After three falls, the boss is finally down"). The falls are counted for the dungeon you are in, and forgotten two hours after the last one. English, Portuguese and French, with many different sentences.
+- **Quests with a story behind them:** the last quest of a chain now tells how long the story took ("Four days ago I agreed to help... today it ends"), from the day the first quest of the chain was accepted.
+- **Old company:** when someone who stood beside you in a dungeon or at a boss joins your group again after a day or more, a page tells where you were together ("I took the road again with Thorgar, who stood beside me in The Deadmines"). One page per person every three days at most. The Options tab has a switch to turn it off, and `/skald forgetcompanions` forgets everybody.
+- **A memory on the way back:** returning to a land where something dear happened (a favourite page, a hunter's first pet, a boss that cost some falls) shows a quiet notice at the top ("It was here that I tamed my first companion"). If the favourite page has a note of yours, the notice is your own note. At most one every ten minutes and once a week per land; never in combat or in a dungeon. A switch in Options turns it off.
+
 ## 0.33.5-beta
 
 - **The hunter's first lessons ("Taming the Beast")** are told as a class milestone: a rare page of their own, in English, Portuguese and French, instead of an ordinary "errand" (the game lends a beast for a little while in each of them). Pages already written get the new rarity and text.

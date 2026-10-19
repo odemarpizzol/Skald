@@ -6,7 +6,7 @@
 ## Title-frFR: Skald
 ## Notes-frFR: Écrit automatiquement la chronique épique de votre voyage à travers Azeroth. Utilisez /skald.
 ## Author: Oddynho
-## Version: 0.33.5-beta
+## Version: 0.34.0-beta
 ## OptionalDeps: Spoken, QuestDB
 ## Category: Roleplay
 ## X-Curse-Project-ID: 1748824

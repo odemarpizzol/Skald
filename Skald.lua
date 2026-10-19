@@ -30,6 +30,7 @@ K.INK = {
     day         = { 0.35, 0.25, 0.12 },
     milestone   = { 0.60, 0.35, 0.00 },
     party       = { 0.12, 0.35, 0.30 },
+    reunion     = { 0.12, 0.35, 0.30 },
     dungeon     = { 0.30, 0.15, 0.40 },
     boss        = { 0.55, 0.05, 0.20 },
     mount       = { 0.30, 0.25, 0.10 },
@@ -135,7 +136,30 @@ AddContext = function(kind, entry)
     end
 end
 end
+-- Who stood beside me in a dungeon or at a boss, so that meeting them again can be told (Options: remember companions).
+K.COMPANIONS_MAX = 200
+local function NoteCompanions(entry)
+    local db = Journal()
+    if not db or Settings().companions == false or type(entry.with) ~= "table" then return end
+    db.companions = db.companions or {}
+    for _, name in ipairs(entry.with) do
+        local c = db.companions[name] or { first = entry.t }
+        c.last, c.seen, c.shared = entry.t, entry.t, true
+        c.pz, c.pn = entry.zm, entry.zone
+        db.companions[name] = c
+    end
+    local n = 0
+    for _ in pairs(db.companions) do n = n + 1 end
+    if n > K.COMPANIONS_MAX + 20 then
+        local list = {}
+        for name, c in pairs(db.companions) do list[#list + 1] = { name, c.seen or c.last or 0 } end
+        table.sort(list, function(a, b) return a[2] < b[2] end)
+        for i = 1, n - K.COMPANIONS_MAX do db.companions[list[i][1]] = nil end
+    end
+end
+
 local function PickFlavor(kind, entry)
+    if kind == "boss" and entry.tries then return nil end
     if kind == "quest" and (entry.cend or (entry.tier or 1) >= 4 or (ns.CURATED and entry.q and ns.CURATED[entry.q])) then
         return nil
     end
@@ -157,6 +181,9 @@ local function PickFlavor(kind, entry)
     if #keys == 0 or math.random() > 0.4 then return nil end
     return keys[math.random(#keys)]
 end
+
+K.QUEST_START_MAX, K.QUEST_START_DAYS = 300, 60   -- quests whose acceptance is kept, and for how long
+K.FALLS_FORGOTTEN = 7200   -- seconds after the last fall in a dungeon, when it no longer counts for a boss
 
 -- Which pages the diary writes at all (Options: What the quill records).
 K.RECORD_FLAG = {
@@ -201,6 +228,7 @@ local function AddEntry(kind, arg, zone, extra)
     -- Draw from the pool this page will be told with, never the phrase used
     -- last time for the same kind and type.
     AddContext(kind, entry)
+    if kind == "dungeon" or kind == "boss" then NoteCompanions(entry) end
     if K.FLAVOR_KINDS[kind] then
         local okClass, _, classFile = pcall(UnitClass, "player")
         local okRace, _, raceFile = pcall(UnitRace, "player")
@@ -212,7 +240,7 @@ local function AddEntry(kind, arg, zone, extra)
     -- Not one of the last few phrases told of this kind (as many as the pool allows, up to five).
     db.recentIdx = db.recentIdx or {}
     local key = table.concat({ kind, tostring(entry.qtype or entry.cat or ""), tostring(entry.src or ""),
-        tostring(entry.tier or ""), tostring(entry.fl or "") }, ":")
+        tostring(entry.tier or ""), tostring(entry.fl or ""), tostring(entry.tries and math.min(entry.tries, 4) or (entry.since and (entry.since >= 2 and "d" or "y")) or "") }, ":")
     local recent = db.recentIdx[key] or {}
     local keep = math.min(5, #list - 1)
     local idx = math.random(#list)
@@ -553,9 +581,25 @@ function PoolFor(e)
         end
         return base
     end
+    if e.kind == "boss" and e.tries and e.tries >= 1 then
+        local key = (e.tries >= 4 and "bossHardMany") or (e.tries >= 2 and "bossHard") or "bossHardOne"
+        if PHRASES[key] then return PHRASES[key] end
+    end
     if e.kind ~= "quest" then return PHRASES[e.kind] end
     local tier = e.tier or 1
     local notable = tier >= 3
+
+    -- A chain that took days to finish says so (the day the first quest was accepted comes from the diary).
+    if e.cend and e.cend >= 2 and e.since and e.since >= 1 then
+        if e.since == 1 and PHRASES.questChainYesterday then return PHRASES.questChainYesterday end
+        if e.since >= 2 and PHRASES.questChainDays then
+            if e.cend >= 6 and notable and PHRASES.questChain then
+                PHRASES.questChainAll = PHRASES.questChainAll or Concat(PHRASES.questChain, PHRASES.questChainDays)
+                return PHRASES.questChainAll
+            end
+            return PHRASES.questChainDays
+        end
+    end
 
     -- The last quest of a long chain is told as the end of a journey, whatever it asked.
     if e.cend and e.cend >= 6 and notable and PHRASES.questChain then
@@ -689,7 +733,9 @@ Extras = function(e)
         local rec = db and db.pets and db.pets[tostring(e.arg or "")]
         local fam = (rec and rec.fam) or e.fam
         if type(fam) == "string" and fam ~= "" and tostring(e.arg or ""):lower() ~= fam:lower() then
-            out = out .. " " .. string.format(L.PET_FAMILY, fam)
+            local forms = L.PET_FAMILY_FORMS
+            local form = forms and forms[((e.idx or 1) - 1) % #forms + 1] or L.PET_FAMILY
+            out = out .. " " .. string.format(form, fam)
         end
     end
     if type(e.pet) == "string" and idx % 3 == 1 and L.PET then
@@ -767,6 +813,11 @@ local function RenderEntry(e)
     end
     local text = string.format(list[((e.idx or 1) - 1) % #list + 1], shown)
     text = text:gsub("{steps}", function() return tostring(e.cend or "") end)
+    text = text:gsub("{tries}", function() return tostring(e.tries or "") end)
+    text = text:gsub("{days}", function() return tostring(e.since or "") end)
+    text = text:gsub("{place}", function()
+        return tostring((e.pz and ns.ZoneNameOfMap and ns.ZoneNameOfMap(e.pz)) or e.pn or L.UNKNOWN_ZONE)
+    end)
     text = text:gsub("{standing}", function() return tostring(e.st or "") end)
     text = text:gsub("{npc}", function() return npc end)
     return text .. (e.noExtras and "" or Extras(e))
@@ -957,6 +1008,7 @@ K.EVENT_ICON = {
     guildleave = "guild", party = "party", achievement = "achievement",
     skill = "profession", profession = "profession",
     day = "milestone",   -- until a sun or moon icon of its own is drawn
+    reunion = "party",
     mark = "milestone", home = "st_hearth", rep = "achievement", flight = "st_flight",
     tame = "pet",
     revive = "revive", hearth = "st_hearth",
@@ -1441,7 +1493,7 @@ end
 -- The rarity of a page that is not a quest, for the colour of its seal (as on the map).
 local TOAST_TIER = {
     zone = 1, level = 2, milestone = 4, death = 1, dungeon = 3, boss = 4, mount = 3, guild = 3,
-    party = 2, achievement = 5, skill = 2, profession = 2, tame = 2, mark = 4, home = 1, rep = 3, flight = 1, hearth = 1,
+    party = 2, reunion = 2, achievement = 5, skill = 2, profession = 2, tame = 2, mark = 4, home = 1, rep = 3, flight = 1, hearth = 1,
 }
 local TEXD = "Interface\\AddOns\\Skald\\Textures\\"
 
@@ -1669,8 +1721,8 @@ end
 end
 
 -- A notice of its own (a title and a few lines), used for the reminder on returning to the game.
-ns.ShowNotice = function(titleText, bodyText, lines, seconds)
-    pcall(ShowToast, nil, titleText, bodyText, lines, seconds)
+ns.ShowNotice = function(titleText, bodyText, lines, seconds, entry)
+    pcall(ShowToast, entry, titleText, bodyText, lines, seconds)
 end
 
 Notify = function(e)
@@ -3206,7 +3258,7 @@ for _, ev in ipairs({
     "PLAYER_ENTERING_WORLD", "GROUP_ROSTER_UPDATE", "ENCOUNTER_END", "BOSS_KILL", "PLAYER_XP_UPDATE",
     "NEW_MOUNT_ADDED", "ACHIEVEMENT_EARNED", "SKILL_LINES_CHANGED", "CHAT_MSG_LOOT",
     "HEARTHSTONE_BOUND", "UPDATE_FACTION", "TAXIMAP_OPENED", "PLAYER_MONEY",
-    "LEARNED_SPELL_IN_TAB",
+    "LEARNED_SPELL_IN_TAB", "QUEST_ACCEPTED",
     "PLAYER_UNGHOST", "PLAYER_ALIVE", "CONFIRM_XP_LOSS", "RESURRECT_REQUEST",
 }) do
     pcall(frame.RegisterEvent, frame, ev)
@@ -3448,12 +3500,37 @@ end
 
 -- Bosses: ENCOUNTER_END and BOSS_KILL can both fire for one kill.
 local lastBoss, lastBossAt = nil, 0
+-- Falls in a dungeon or raid since its last boss went down: the client does not say who struck, so the next
+-- boss of the same instance is credited with them. Old falls (the last one over two hours ago) are forgotten.
+local function InstanceId()
+    local inInstance, instanceType = IsInInstance()
+    if not inInstance or (instanceType ~= "party" and instanceType ~= "raid") then return nil end
+    local ok, _, _, _, _, _, _, _, id = pcall(GetInstanceInfo)
+    return ok and type(id) == "number" and id or nil
+end
+local function NoteFall()
+    local db, id = Journal(), InstanceId()
+    if not db or not id then return end
+    db.attempts = db.attempts or {}
+    local a = db.attempts[id]
+    if a and time() - (a.at or 0) > K.FALLS_FORGOTTEN then a = nil end
+    a = a or { falls = 0 }
+    a.falls, a.at = a.falls + 1, time()
+    db.attempts[id] = a
+end
 local function BossDown(name)
     name = Safe(name)
     if not name or name == "" then return end
     if name == lastBoss and time() - lastBossAt < 30 then return end
     lastBoss, lastBossAt = name, time()
-    AddEntry("boss", name)
+    local db, id = Journal(), InstanceId()
+    local tries
+    local a = db and id and db.attempts and db.attempts[id]
+    if a then
+        if a.falls and a.falls > 0 and time() - (a.at or 0) <= K.FALLS_FORGOTTEN then tries = a.falls end
+        db.attempts[id] = nil
+    end
+    AddEntry("boss", name, nil, tries and { tries = tries } or nil)
 end
 
 -- The quest is already gone from the log when QUEST_TURNED_IN fires, so fall
@@ -3510,9 +3587,11 @@ local function ReadSignals(questID, xpReward)
         -- Position in the quest chain: walk back to its start and forward to its end.
         local back, fwd, seen = 0, 0, { [questID] = true }
         local id = q.preQuestSingle and q.preQuestSingle[1]
+        s.chainIds = {}
         while id and not seen[id] and back < 40 do
             seen[id] = true
             back = back + 1
+            s.chainIds[back] = id
             local p = Try(qdb.GetQuest, qdb, id)
             id = type(p) == "table" and p.preQuestSingle and p.preQuestSingle[1] or nil
         end
@@ -3759,6 +3838,7 @@ local function CheckZone()
     if zone and zone ~= "" and zone ~= lastZone then
         lastZone = zone
         VisitZone(zone)
+        if ns.CheckMemory then pcall(ns.CheckMemory) end
     end
 end
 
@@ -4616,6 +4696,23 @@ H.QUEST_DETAIL = function(self, event, ...)
 end
 H.QUEST_COMPLETE = H.QUEST_DETAIL
 
+-- The day a quest was accepted (kept, so the end of its chain can tell how long the story took).
+-- The event gives the quest id alone (Mainline) or the log index and then the id (Classic).
+H.QUEST_ACCEPTED = function(self, event, a, b)
+    local id = tonumber(b) or tonumber(a)
+    local db = Journal()
+    if not id or id <= 0 or not db then return end
+    db.questStart = db.questStart or {}
+    if db.questStart[id] then return end
+    db.questStart[id] = time()
+    local n = 0
+    for _ in pairs(db.questStart) do n = n + 1 end
+    if n > K.QUEST_START_MAX then
+        local cut = time() - K.QUEST_START_DAYS * 86400
+        for k, t in pairs(db.questStart) do if t < cut then db.questStart[k] = nil end end
+    end
+end
+
 H.PLAYER_XP_UPDATE = function(self, event, ...)
     if ready then OnXPChanged() end
 end
@@ -4634,8 +4731,19 @@ H.QUEST_TURNED_IN = function(self, event, ...)
         if signals.qdb and (signals.chainBack or 0) >= 1 and (signals.chainFwd or 0) == 0 then
             cend = signals.chainBack + 1
         end
+        -- The days since the chain began (the first quest of it that the diary saw being accepted).
+        local since
+        local starts = Journal() and Journal().questStart
+        if cend and starts then
+            local first = starts[questID]
+            for _, pid in ipairs(signals.chainIds or {}) do
+                if starts[pid] and (not first or starts[pid] < first) then first = starts[pid] end
+            end
+            if first then since = math.floor((time() - first) / 86400) end
+            if since and since < 1 then since = nil end
+        end
         AddEntry("quest", QuestName(questID), nil,
-            { tier = tier, q = questID, npc = pendingNPC, qtype = qtype or false, cend = cend,
+            { tier = tier, q = questID, npc = pendingNPC, qtype = qtype or false, cend = cend, since = since,
               ql = pendingQuestLevel, pl = UnitLevel and UnitLevel("player"), nid = Mile.npcId })
     else
         CountOnly("quest", tier)
@@ -4712,14 +4820,89 @@ H.PLAYER_DEAD = function(self, event, ...)
     if not where or where == "" then where = GetMinimapZoneText and GetMinimapZoneText() end
     if not where or where == "" then where = L.UNKNOWN_ZONE end
     AddEntry("death", where)
+    pcall(NoteFall)
 end
 
 H.PLAYER_GUILD_UPDATE = function(self, event, ...)
     if ready then CheckGuild() end
 end
 
+-- Coming back to a land where something worth remembering happened: a quiet notice, now and then.
+-- Pages that qualify: favourites, the first pet of a hunter, a boss that cost some falls.
+K.MEMORY_ZONE_DAYS, K.MEMORY_GAP, K.MEMORY_AFTER_LOGIN, K.MEMORY_MIN_AGE = 7, 600, 20, 86400
+local function Remembered(e)
+    if e.fav then return "memoryFav", 2 end
+    if e.kind == "tame" and e.sub == "first" then return "memoryTame", 1 end
+    if e.kind == "boss" and (e.tries or 0) >= 2 then return "memoryBoss", 1 end
+end
+ns.CheckMemory = function()
+    local db = Journal()
+    if not ready or not db or Settings().memories == false or not window then return end
+    local now = time()
+    if loginTime and now - loginTime < K.MEMORY_AFTER_LOGIN then return end
+    if now - (Mile.lastMemory or 0) < K.MEMORY_GAP then return end
+    if UnitAffectingCombat and UnitAffectingCombat("player") then return end
+    if IsInInstance and IsInInstance() then return end
+    local okMap, mapID = pcall(C_Map.GetBestMapForUnit, "player")
+    local zid = okMap and ns.ZoneIdOfMap(mapID) or nil
+    if not zid then return end
+    db.memoryAt = db.memoryAt or {}
+    if now - (db.memoryAt[zid] or 0) < K.MEMORY_ZONE_DAYS * 86400 then return end
+    -- the pages of this land that deserve it, favourites first
+    local best, bestRank, bestPool
+    for _, e in ipairs(db.entries) do
+        local pool, rank = Remembered(e)
+        if pool and now - (e.t or now) >= K.MEMORY_MIN_AGE and ns.ZoneIdOfEntry(e) == zid then
+            if not best or rank > bestRank or (rank == bestRank and math.random(2) == 1) then best, bestRank, bestPool = e, rank, pool end
+        end
+    end
+    if not best then return end
+    db.memoryAt[zid] = now
+    Mile.lastMemory = now
+    local text = best.fav and type(best.favNote) == "string" and best.favNote ~= "" and ("\"" .. best.favNote .. "\"")
+    if not text then
+        local list = PHRASES[bestPool]
+        if not list or #list == 0 then return end
+        Mile.memoryIdx = Mile.memoryIdx or {}
+        local idx = math.random(#list)
+        if #list > 1 and idx == Mile.memoryIdx[bestPool] then idx = idx % #list + 1 end
+        Mile.memoryIdx[bestPool] = idx
+        text = string.format(list[idx], tostring(ns.ZoneNameOfMap(zid) or best.zone or L.UNKNOWN_ZONE))
+    end
+    ns.ShowNotice(L.MEMORY_TITLE, text, 3, 9, best)
+end
+
+-- Someone I shared a dungeon with has joined my group again after a while: the page tells where we were.
+K.REUNION_GAP, K.REUNION_EVERY = 86400, 3 * 86400
+Mile.reunionTold = {}
+Mile.CheckReunion = function()
+    local db = Journal()
+    if not ready or not db or Settings().companions == false then return end
+    if not (IsInGroup and IsInGroup()) then Mile.reunionTold = {}; return end
+    local comp = db.companions
+    if not comp then return end
+    local now = time()
+    for i = 1, 4 do
+        local name = (not UnitExists or UnitExists("party" .. i)) and Safe(UnitName and UnitName("party" .. i)) or nil
+        local c = type(name) == "string" and comp[name]
+        if c and c.shared and not Mile.reunionTold[name] then
+            Mile.reunionTold[name] = true
+            local away = now - math.max(c.last or 0, c.seen or 0)
+            c.seen = now
+            if away >= K.REUNION_GAP and now - (c.told or 0) >= K.REUNION_EVERY then
+                c.told = now
+                AddEntry("reunion", name, nil, { pz = c.pz, pn = c.pn })
+            end
+        end
+    end
+end
+
 H.GROUP_ROSTER_UPDATE = function(self, event, ...)
     local db = Journal()
+    if not Mile.reunionWait then
+        Mile.reunionWait = true
+        C_Timer.After(3, function() Mile.reunionWait = false; pcall(Mile.CheckReunion) end)
+    end
     if ready and db and not db.flags.party and IsInGroup() then
         db.flags.party = true
         AddEntry("party")
@@ -5337,14 +5520,20 @@ local function BuildOptions(panel)
         MakeWaxCheck(panel, L.OPT_QUIET,
             function() return not Settings().quiet end,
             function(on) Settings().quiet = not on end),
+        MakeWaxCheck(panel, L.OPT_COMPANIONS,
+            function() return Settings().companions ~= false end,
+            function(on) Settings().companions = on and true or false end),
+        MakeWaxCheck(panel, L.OPT_MEMORIES,
+            function() return Settings().memories ~= false end,
+            function(on) Settings().memories = on and true or false end),
     }
-    for i, cb in ipairs(switches) do cb:SetPoint("TOPLEFT", K.RIGHT_X, -244 - (i - 1) * 26) end
+    for i, cb in ipairs(switches) do cb:SetPoint("TOPLEFT", K.RIGHT_X, -244 - (i - 1) * 23) end
 
     local exportButton = MakeFlatButton(panel, 166, 28, L.EXPORT_BTN, "gold")
-    exportButton:SetPoint("TOPLEFT", K.RIGHT_X, -402)
+    exportButton:SetPoint("TOPLEFT", K.RIGHT_X, -410)
     exportButton:SetScript("OnClick", function() ShowExport() end)
     local erase = MakeFlatButton(panel, 166, 28, L.BTN_ERASE, "burn")
-    erase:SetPoint("TOPLEFT", K.RIGHT_X + 176, -402)
+    erase:SetPoint("TOPLEFT", K.RIGHT_X + 176, -410)
     erase:SetScript("OnClick", function() StaticPopup_Show("SKALD_CLEAR") end)
 
     refresh = function()
@@ -5538,6 +5727,11 @@ SlashCmdList["SKALD"] = function(msg)
             end
         end
         Say(removed and (removed .. ": removed from the companions.") or "no companion with that name (/skald forgetpet <name>).")
+    elseif msg == "forgetcompanions" then
+        local db = Journal()
+        if db then db.companions = nil end
+        Mile.reunionTold = {}
+        Say("the companions I remembered are forgotten.")
     elseif msg == "tidy" then
         pcall(Mile.Relocalize)
         Say(string.format("%d repeated page(s) removed.", Mile.Tidy()))
