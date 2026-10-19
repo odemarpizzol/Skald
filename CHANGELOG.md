@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.31.12-beta
+
+- **The notice of a new page is redone:** it names what happened (a new level, a foe defeated, a new companion...), carries the page's own icon, slides in and fades out softly, shows a thin line that shortens with the time left, stays while the mouse is over it, and a click opens the book (a right click only closes it). It tells only the page, not who was there or the hour.
+- A pet called by the name of its family no longer gets "Family: Wolf" added to its page.
+
 ## 0.31.11-beta
 
 - **Pets tab:** when no pet is out (a loaned pet that left, one that was dismissed or died) the page says "No companion at the moment" and names the last one, instead of still showing it at your side.

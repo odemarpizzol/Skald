@@ -682,7 +682,8 @@ Extras = function(e)
         local list = L.AMBIENT[PartOfDay(e.hr)]
         if list then out = out .. " " .. list[idx % #list + 1] end
     end
-    if e.kind == "tame" and type(e.fam) == "string" and e.fam ~= "" and L.PET_FAMILY then
+    if e.kind == "tame" and type(e.fam) == "string" and e.fam ~= "" and L.PET_FAMILY
+        and tostring(e.arg or ""):lower() ~= e.fam:lower() then
         out = out .. " " .. string.format(L.PET_FAMILY, e.fam)
     end
     if type(e.pet) == "string" and idx % 3 == 1 and L.PET then
@@ -762,7 +763,7 @@ local function RenderEntry(e)
     text = text:gsub("{steps}", function() return tostring(e.cend or "") end)
     text = text:gsub("{standing}", function() return tostring(e.st or "") end)
     text = text:gsub("{npc}", function() return npc end)
-    return text .. Extras(e)
+    return text .. (e.noExtras and "" or Extras(e))
 end
 
 -- Hooks for companion addons (e.g. Wayfarer): read the pages, and add a tab to the window.
@@ -1344,7 +1345,7 @@ end
 -- The toast: a small parchment that appears when something worth remembering is written while the
 -- book is closed; a click opens the book.
 do
-local toastFrame, lastToast, toastStamp = nil, 0, 0
+local toastFrame, lastToast = nil, 0
 local NOTIFY_KINDS = {
     level = true, milestone = true, mark = true, boss = true, dungeon = true, achievement = true,
     mount = true, home = true, rep = true, flight = true, guild = true, tame = true,
@@ -1357,7 +1358,7 @@ end
 local function ShowToast(e, titleText, bodyText, lines, seconds)
     if not toastFrame then
         local fr = CreateFrame("Frame", "SkaldToast", UIParent)
-        fr:SetSize(330, 70)
+        fr:SetSize(380, 78)
         fr:SetPoint("TOP", UIParent, "TOP", 0, -150)
         fr:SetFrameStrata("HIGH")
         fr:EnableMouse(true)
@@ -1365,7 +1366,7 @@ local function ShowToast(e, titleText, bodyText, lines, seconds)
         paper:SetPoint("TOPLEFT", 2, -2)
         paper:SetPoint("BOTTOMRIGHT", -2, 2)
         paper:SetTexture(K.TEX .. "parchment", "REPEAT", "REPEAT")
-        paper:SetTexCoord(0, 330 / 256, 0, 70 / 256)
+        paper:SetTexCoord(0, 380 / 256, 0, 78 / 256)
         fr.paper = paper
         for _, side in ipairs({ { "TOPLEFT", "TOPRIGHT", 2, nil }, { "BOTTOMLEFT", "BOTTOMRIGHT", 2, nil },
             { "TOPLEFT", "BOTTOMLEFT", nil, 2 }, { "TOPRIGHT", "BOTTOMRIGHT", nil, 2 } }) do
@@ -1375,40 +1376,84 @@ local function ShowToast(e, titleText, bodyText, lines, seconds)
             line:SetPoint(side[2], 0, 0)
             if side[3] then line:SetHeight(side[3]) else line:SetWidth(side[4]) end
         end
+        -- the icon of what happened (the same drawings as the book), and a thin rule between it and the text
         fr.icon = fr:CreateTexture(nil, "ARTWORK")
-        fr.icon:SetSize(34, 34)
-        fr.icon:SetPoint("LEFT", 12, 0)
+        fr.icon:SetSize(44, 44)
+        fr.icon:SetPoint("LEFT", 14, 2)
         fr.icon:SetTexture(K.TEX .. "quill")
+        local divider = fr:CreateTexture(nil, "ARTWORK")
+        divider:SetColorTexture(0.36, 0.23, 0.10, 0.35)
+        divider:SetWidth(1)
+        divider:SetPoint("TOPLEFT", 70, -12)
+        divider:SetPoint("BOTTOMLEFT", 70, 14)
         fr.title = fr:CreateFontString(nil, "OVERLAY", "SkaldSec")
-        fr.title:SetPoint("TOPLEFT", fr.icon, "TOPRIGHT", 10, -2)
+        fr.title:SetPoint("TOPLEFT", 82, -11)
+        fr.title:SetWidth(280)
+        fr.title:SetJustifyH("LEFT")
         fr.title:SetTextColor(K.C_HEAD[1], K.C_HEAD[2], K.C_HEAD[3])
         fr.body = fr:CreateFontString(nil, "OVERLAY", "SkaldBody")
-        fr.body:SetPoint("TOPLEFT", fr.title, "BOTTOMLEFT", 0, -3)
-        fr.body:SetWidth(250)
+        fr.body:SetPoint("TOPLEFT", fr.title, "BOTTOMLEFT", 0, -4)
+        fr.body:SetWidth(280)
         fr.body:SetJustifyH("LEFT")
         fr.body:SetJustifyV("TOP")
         fr.body:SetWordWrap(true)
-        pcall(fr.body.SetMaxLines, fr.body, 2)
         fr.body:SetTextColor(K.C_BODY[1], K.C_BODY[2], K.C_BODY[3])
-        fr:SetScript("OnMouseUp", function(self)
+        -- how long is left: a thin gold line along the foot that shortens
+        fr.bar = fr:CreateTexture(nil, "OVERLAY")
+        fr.bar:SetColorTexture(0.85, 0.65, 0.10, 0.85)
+        fr.bar:SetHeight(2)
+        fr.bar:SetPoint("BOTTOMLEFT", 4, 4)
+        fr:SetScript("OnMouseUp", function(self, button)
             self:Hide()
-            if window then window:Show() end
+            if button == "LeftButton" and window then window:Refresh(); window:Show() end
+        end)
+        -- comes in (a short slide and fade), waits while the mouse is over it, goes out softly
+        fr:SetScript("OnUpdate", function(self, elapsed)
+            if not self.born then return end
+            if self:IsMouseOver() then self.born = self.born + (elapsed or 0) end
+            local age = ((GetTime and GetTime()) or 0) - self.born
+            local life = self.life or 6.5
+            if age >= life then self.born = nil; self:Hide(); return end
+            local alpha = 1
+            if age < 0.28 then alpha = age / 0.28 elseif age > life - 0.7 then alpha = (life - age) / 0.7 end
+            self:SetAlpha(math.max(0, math.min(1, alpha)))
+            self:ClearAllPoints()
+            self:SetPoint("TOP", UIParent, "TOP", 0, -150 + (age < 0.28 and (1 - age / 0.28) * 14 or 0))
+            self.bar:SetWidth(math.max(1, (self:GetWidth() - 8) * (1 - age / life)))
         end)
         fr:Hide()
         toastFrame = fr
     end
-    lines = lines or 2
-    local height = 70 + (lines - 2) * 14
+
+    -- what it is about: the kind of page names it, the page's own icon marks it
+    local kindLabel = e and L.TOAST_KIND and L.TOAST_KIND[e.kind]
+    if e and (e.kind == "loot" or e.kind == "quest") then kindLabel = L.TOAST_KIND and L.TOAST_KIND[e.kind] end
+    toastFrame.title:SetText(Upper(titleText or kindLabel or L.TOAST_TITLE))
+    local icon
+    if e then
+        if e.kind == "loot" then icon = ItemIcon(e)
+        elseif e.kind == "quest" and e.tier then icon = K.SEAL_PATH .. e.tier
+        else icon = EventIconPath(e.kind, e) end
+    end
+    toastFrame.icon:SetTexture(icon or (K.TEX .. "quill"))
+
+    local text = bodyText
+    if not text and e then
+        local bare = {}
+        for k, v in pairs(e) do bare[k] = v end
+        bare.noExtras = true   -- the toast tells the page only, not who was there or the hour
+        text = PlainLine(RenderEntry(bare))
+    end
+    toastFrame.body:SetText(text or "")
+    pcall(toastFrame.body.SetMaxLines, toastFrame.body, lines or 3)
+    local bodyHeight = math.max(16, toastFrame.body:GetStringHeight() or 16)
+    local height = math.max(78, 11 + 14 + 4 + bodyHeight + 16)
     toastFrame:SetHeight(height)
-    toastFrame.paper:SetTexCoord(0, 330 / 256, 0, height / 256)
-    pcall(toastFrame.body.SetMaxLines, toastFrame.body, lines)
-    toastFrame.title:SetText(titleText or L.TOAST_TITLE)
-    toastFrame.body:SetText(bodyText or PlainLine(RenderEntry(e)))
-    toastFrame:SetAlpha(1)
+    toastFrame.paper:SetTexCoord(0, 380 / 256, 0, height / 256)
+    toastFrame.born = (GetTime and GetTime()) or 0
+    toastFrame.life = seconds or 6.5
+    toastFrame:SetAlpha(0)
     toastFrame:Show()
-    toastStamp = toastStamp + 1
-    local mine = toastStamp
-    C_Timer.After(seconds or 6, function() if toastStamp == mine and toastFrame then toastFrame:Hide() end end)
     if SkaldDB and SkaldDB.sound ~= false then
         pcall(PlaySound, (SOUNDKIT and SOUNDKIT.IG_ABILITY_PAGE_TURN) or 836)
     end
