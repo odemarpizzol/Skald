@@ -1,12 +1,15 @@
-# GitHub Actions workflow: builds the addon zip and uploads it to CurseForge when you push a tag.
-# Put this file in ".github/workflows/release.yml" of the Skald repository.
-# Before it works you need:
-#   1. the CurseForge project page created, and its numeric id added to Skald.toc as
-#        ## X-Curse-Project-ID: 123456
-#   2. a CurseForge API token stored in the GitHub repository secrets as CF_API_KEY
-#      (Settings > Secrets and variables > Actions).
-# A tag like v0.26.0-beta publishes a BETA file; a plain v1.0.0 publishes a release.
-# (Not run here: check the packager's documentation before the first real tag.)
+# Builds the addon zip and uploads it to CurseForge when a tag is pushed.
+#
+# One-time setup (already done: the project id 1748824 is in Skald.toc):
+#   1. CurseForge: create an API token (https://wow.curseforge.com/account/api-tokens).
+#   2. GitHub: Settings > Secrets and variables > Actions > New repository secret
+#        Name: CF_API_KEY      Value: the token
+#
+# To publish a version:
+#   git tag v0.34.0-beta
+#   git push origin v0.34.0-beta
+# A tag with "beta" or "alpha" in it publishes a BETA or ALPHA file; a plain v1.0.0 publishes a release.
+# The file's changelog is CHANGELOG.md (see .pkgmeta). Watch the run in the repository's Actions tab.
 name: Package and release
 
 on:
