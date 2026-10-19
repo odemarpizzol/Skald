@@ -17,6 +17,9 @@ on:
     tags:
       - "v*"
 
+permissions:
+  contents: write   # lets the packager create the GitHub release for the tag
+
 jobs:
   release:
     runs-on: ubuntu-latest
