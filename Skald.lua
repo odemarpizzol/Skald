@@ -2203,11 +2203,9 @@ local function CreateWindow()
     alcoveTex:SetTexCoord(0, 316 / 512, 0, 372 / 512)
     local function ShowModel()
         local works = false
-        -- A spirit is drawn as a pale wisp by the model; its portrait still shows the face.
-        local okGhost, ghost = pcall(UnitIsGhost, "player")
-        if okGhost and ghost then
-            -- keep the portrait
-        elseif okModel and model and pcall(model.SetUnit, model, "player") then
+        -- The third argument asks for the character in its native form: not as a spirit, and not as
+        -- the bear or the cat of a druid. (Where the game ignores it, the model is what it always was.)
+        if okModel and model and pcall(model.SetUnit, model, "player", false, true) then
             pcall(model.SetCamDistanceScale, model, 0.8)
             model.skaldAngle = 0
             pcall(model.SetFacing, model, 0)

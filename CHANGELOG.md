@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.33.4-beta
+
+- **The cover shows your character in 3D also as a spirit** (and a druid in the shape of a bear or a cat shows as the character): the model is asked for the character's native form instead of falling back to the portrait.
+
 ## 0.33.3-beta
 
 - The reminder "Where was I?" keeps its text and its quill clear of the gold corners of the parchment.
