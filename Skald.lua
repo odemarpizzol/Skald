@@ -1387,45 +1387,76 @@ local function PlainLine(s)
     s = s:gsub("|H.-|h(%[.-%])|h", "%1"):gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""):gsub("|T.-|t", "")
     return s
 end
+-- A frame drawn from nine pieces of one texture: four corners, four edges, the middle. `border` is
+-- the width of the corners in the texture, `draw` their size on screen.
+ns.NineSlice = function(frame, file, texW, texH, border, draw)
+    local u, v = border / texW, border / texH
+    local function Piece(l, r, t, b2, u0, u1, v0, v1, layer)
+        local tex = frame:CreateTexture(nil, "BACKGROUND", nil, layer)
+        tex:SetTexture(file)
+        tex:SetTexCoord(u0, u1, v0, v1)
+        return tex
+    end
+    local tl = Piece(0, 0, 0, 0, 0, u, 0, v, 2); tl:SetSize(draw, draw); tl:SetPoint("TOPLEFT")
+    local tr = Piece(0, 0, 0, 0, 1 - u, 1, 0, v, 2); tr:SetSize(draw, draw); tr:SetPoint("TOPRIGHT")
+    local bl = Piece(0, 0, 0, 0, 0, u, 1 - v, 1, 2); bl:SetSize(draw, draw); bl:SetPoint("BOTTOMLEFT")
+    local br = Piece(0, 0, 0, 0, 1 - u, 1, 1 - v, 1, 2); br:SetSize(draw, draw); br:SetPoint("BOTTOMRIGHT")
+    local top = Piece(0, 0, 0, 0, u, 1 - u, 0, v, 1)
+    top:SetPoint("TOPLEFT", draw, 0); top:SetPoint("TOPRIGHT", -draw, 0); top:SetHeight(draw)
+    local bottom = Piece(0, 0, 0, 0, u, 1 - u, 1 - v, 1, 1)
+    bottom:SetPoint("BOTTOMLEFT", draw, 0); bottom:SetPoint("BOTTOMRIGHT", -draw, 0); bottom:SetHeight(draw)
+    local left = Piece(0, 0, 0, 0, 0, u, v, 1 - v, 1)
+    left:SetPoint("TOPLEFT", 0, -draw); left:SetPoint("BOTTOMLEFT", 0, draw); left:SetWidth(draw)
+    local right = Piece(0, 0, 0, 0, 1 - u, 1, v, 1 - v, 1)
+    right:SetPoint("TOPRIGHT", 0, -draw); right:SetPoint("BOTTOMRIGHT", 0, draw); right:SetWidth(draw)
+    local center = Piece(0, 0, 0, 0, u, 1 - u, v, 1 - v, 0)
+    center:SetPoint("TOPLEFT", draw, -draw); center:SetPoint("BOTTOMRIGHT", -draw, draw)
+end
+
+-- The rarity of a page that is not a quest, for the colour of its seal (as on the map).
+local TOAST_TIER = {
+    zone = 1, level = 2, milestone = 4, death = 1, dungeon = 3, boss = 4, mount = 3, guild = 3,
+    party = 2, achievement = 5, skill = 2, profession = 2, tame = 2, mark = 4, home = 1, rep = 3, flight = 1, hearth = 1,
+}
+local TEXD = "Interface\\AddOns\\Skald\\Textures\\"
+
 local function ShowToast(e, titleText, bodyText, lines, seconds)
     if not toastFrame then
         local fr = CreateFrame("Frame", "SkaldToast", UIParent)
-        fr:SetSize(380, 78)
+        fr:SetSize(400, 84)
         fr:SetPoint("TOP", UIParent, "TOP", 0, -64)
         fr:SetFrameStrata("HIGH")
         fr:EnableMouse(true)
-        local paper = fr:CreateTexture(nil, "BACKGROUND", nil, 0)
-        paper:SetPoint("TOPLEFT", 2, -2)
-        paper:SetPoint("BOTTOMRIGHT", -2, 2)
-        paper:SetTexture(K.TEX .. "parchment", "REPEAT", "REPEAT")
-        paper:SetTexCoord(0, 380 / 256, 0, 78 / 256)
-        fr.paper = paper
-        for _, side in ipairs({ { "TOPLEFT", "TOPRIGHT", 2, nil }, { "BOTTOMLEFT", "BOTTOMRIGHT", 2, nil },
-            { "TOPLEFT", "BOTTOMLEFT", nil, 2 }, { "TOPRIGHT", "BOTTOMRIGHT", nil, 2 } }) do
-            local line = fr:CreateTexture(nil, "BORDER")
-            line:SetColorTexture(0.24, 0.13, 0.07, 1)
-            line:SetPoint(side[1], 0, 0)
-            line:SetPoint(side[2], 0, 0)
-            if side[3] then line:SetHeight(side[3]) else line:SetWidth(side[4]) end
-        end
-        -- the icon of what happened (the same drawings as the book), and a thin rule between it and the text
-        fr.icon = fr:CreateTexture(nil, "ARTWORK")
-        fr.icon:SetSize(44, 44)
-        fr.icon:SetPoint("LEFT", 14, 2)
+        ns.NineSlice(fr, TEXD .. "ui_notice", 512, 128, 38, 26)
+        -- the wax seal, with the icon of what happened in its hollow
+        fr.seal = fr:CreateTexture(nil, "ARTWORK", nil, 1)
+        fr.seal:SetSize(60, 60)
+        fr.seal:SetPoint("LEFT", 30, 0)
+        fr.seal:SetTexture(TEXD .. "ui_seal1")
+        fr.icon = fr:CreateTexture(nil, "ARTWORK", nil, 3)
+        fr.icon:SetSize(30, 30)
+        fr.icon:SetPoint("CENTER", fr.seal, "CENTER", 0, 0)
         fr.icon:SetTexture(K.TEX .. "quill")
-        local divider = fr:CreateTexture(nil, "ARTWORK")
-        divider:SetColorTexture(0.36, 0.23, 0.10, 0.35)
-        divider:SetWidth(1)
-        divider:SetPoint("TOPLEFT", 70, -12)
-        divider:SetPoint("BOTTOMLEFT", 70, 14)
+        -- a splash of gold ink that flashes behind the seal as the notice comes in
+        fr.splash = fr:CreateTexture(nil, "ARTWORK", nil, 0)
+        fr.splash:SetSize(110, 110)
+        fr.splash:SetPoint("CENTER", fr.seal, "CENTER", 0, 0)
+        fr.splash:SetTexture(TEXD .. "ui_splash")
+        fr.splash:SetTexCoord(0, 1, 0, 1)
+        fr.splash:SetAlpha(0)
         fr.title = fr:CreateFontString(nil, "OVERLAY", "SkaldSec")
-        fr.title:SetPoint("TOPLEFT", 82, -11)
-        fr.title:SetWidth(280)
+        fr.title:SetPoint("TOPLEFT", 102, -15)
+        fr.title:SetWidth(266)
         fr.title:SetJustifyH("LEFT")
         fr.title:SetTextColor(K.C_HEAD[1], K.C_HEAD[2], K.C_HEAD[3])
+        fr.rule = fr:CreateTexture(nil, "ARTWORK", nil, 1)
+        fr.rule:SetSize(180, 11)
+        fr.rule:SetPoint("TOPLEFT", fr.title, "BOTTOMLEFT", -2, -1)
+        fr.rule:SetTexture(TEXD .. "ui_divider")
+        fr.rule:SetTexCoord(0, 480 / 512, 0, 28 / 32)
         fr.body = fr:CreateFontString(nil, "OVERLAY", "SkaldBody")
-        fr.body:SetPoint("TOPLEFT", fr.title, "BOTTOMLEFT", 0, -4)
-        fr.body:SetWidth(280)
+        fr.body:SetPoint("TOPLEFT", fr.rule, "BOTTOMLEFT", 2, -3)
+        fr.body:SetWidth(266)
         fr.body:SetJustifyH("LEFT")
         fr.body:SetJustifyV("TOP")
         fr.body:SetWordWrap(true)
@@ -1434,7 +1465,7 @@ local function ShowToast(e, titleText, bodyText, lines, seconds)
         fr.bar = fr:CreateTexture(nil, "OVERLAY")
         fr.bar:SetColorTexture(0.85, 0.65, 0.10, 0.85)
         fr.bar:SetHeight(2)
-        fr.bar:SetPoint("BOTTOMLEFT", 4, 4)
+        fr.bar:SetPoint("BOTTOMLEFT", 30, 14)
         fr:SetScript("OnMouseUp", function(self, button)
             self:Hide()
             if button == "LeftButton" and window then
@@ -1442,7 +1473,7 @@ local function ShowToast(e, titleText, bodyText, lines, seconds)
                 if not (self.entry and window:OpenEntry(self.entry)) then window:ShowSection("days", true); window:Show() end
             end
         end)
-        -- comes in (a short slide and fade), waits while the mouse is over it, goes out softly
+        -- comes in (a short slide and fade, and the splash), waits while the mouse is over it, goes out softly
         fr:SetScript("OnUpdate", function(self, elapsed)
             if not self.born then return end
             if self:IsMouseOver() then self.born = self.born + (elapsed or 0) end
@@ -1454,23 +1485,32 @@ local function ShowToast(e, titleText, bodyText, lines, seconds)
             self:SetAlpha(math.max(0, math.min(1, alpha)))
             self:ClearAllPoints()
             self:SetPoint("TOP", UIParent, "TOP", 0, -64 + (age < 0.28 and (1 - age / 0.28) * 14 or 0))
-            self.bar:SetWidth(math.max(1, (self:GetWidth() - 8) * (1 - age / life)))
+            self.bar:SetWidth(math.max(1, (self:GetWidth() - 60) * (1 - age / life)))
+            if age < 0.8 then
+                local t = age / 0.8
+                self.splash:SetAlpha(0.9 * (1 - t))
+                local size = 70 + 60 * t
+                self.splash:SetSize(size, size)
+            else
+                self.splash:SetAlpha(0)
+            end
         end)
         fr:Hide()
         toastFrame = fr
     end
 
-    -- what it is about: the kind of page names it, the page's own icon marks it
+    -- what it is about: the kind of page names it, the page's own icon marks it, the seal shows its rarity
     local kindLabel = e and L.TOAST_KIND and L.TOAST_KIND[e.kind]
-    if e and (e.kind == "loot" or e.kind == "quest") then kindLabel = L.TOAST_KIND and L.TOAST_KIND[e.kind] end
     toastFrame.title:SetText(Upper(titleText or kindLabel or L.TOAST_TITLE))
-    local icon
+    local icon, tier
     if e then
         if e.kind == "loot" then icon = ItemIcon(e)
         elseif e.kind == "quest" and e.tier then icon = K.SEAL_PATH .. e.tier
         else icon = EventIconPath(e.kind, e) end
+        tier = (type(e.tier) == "number" and (e.kind == "quest" or e.kind == "loot") and e.tier) or TOAST_TIER[e.kind] or 1
     end
     toastFrame.icon:SetTexture(icon or (K.TEX .. "quill"))
+    toastFrame.seal:SetTexture(TEXD .. "ui_seal" .. math.max(0, math.min(5, tier or 1)))
 
     local text = bodyText
     if not text and e then
@@ -1483,9 +1523,8 @@ local function ShowToast(e, titleText, bodyText, lines, seconds)
     toastFrame.body:SetText(text or "")
     pcall(toastFrame.body.SetMaxLines, toastFrame.body, lines or 3)
     local bodyHeight = math.max(16, toastFrame.body:GetStringHeight() or 16)
-    local height = math.max(78, 11 + 14 + 4 + bodyHeight + 16)
-    toastFrame:SetHeight(height)
-    toastFrame.paper:SetTexCoord(0, 380 / 256, 0, height / 256)
+    -- the title, its rule, the text, and room for the burnt edge below
+    toastFrame:SetHeight(math.max(84, 15 + 14 + 12 + 3 + bodyHeight + 30))
     toastFrame.born = (GetTime and GetTime()) or 0
     toastFrame.life = seconds or 6.5
     toastFrame:SetAlpha(0)
@@ -1506,19 +1545,8 @@ ns.ShowResumeCard = function(data)
         fr:SetPoint("TOP", UIParent, "TOP", 0, -140)
         fr:SetFrameStrata("HIGH")
         fr:EnableMouse(true)
-        local paper = fr:CreateTexture(nil, "BACKGROUND", nil, 0)
-        paper:SetPoint("TOPLEFT", 2, -2)
-        paper:SetPoint("BOTTOMRIGHT", -2, 2)
-        paper:SetTexture(K.TEX .. "parchment", "REPEAT", "REPEAT")
-        fr.paper = paper
-        for _, side in ipairs({ { "TOPLEFT", "TOPRIGHT", 2, nil }, { "BOTTOMLEFT", "BOTTOMRIGHT", 2, nil },
-            { "TOPLEFT", "BOTTOMLEFT", nil, 2 }, { "TOPRIGHT", "BOTTOMRIGHT", nil, 2 } }) do
-            local line = fr:CreateTexture(nil, "BORDER")
-            line:SetColorTexture(0.24, 0.13, 0.07, 1)
-            line:SetPoint(side[1], 0, 0)
-            line:SetPoint(side[2], 0, 0)
-            if side[3] then line:SetHeight(side[3]) else line:SetWidth(side[4]) end
-        end
+        ns.NineSlice(fr, "Interface\\AddOns\\Skald\\Textures\\ui_notice", 512, 128, 38, 30)
+        fr.paper = { SetTexCoord = function() end }
         fr.icon = fr:CreateTexture(nil, "ARTWORK")
         fr.icon:SetSize(40, 40)
         fr.icon:SetPoint("TOPLEFT", 16, -14)

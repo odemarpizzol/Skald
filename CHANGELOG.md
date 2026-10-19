@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.33.0-beta
+
+- **New look for the notices:** a parchment with burnt edges and gold corners, a wax seal in the colour of the page's rarity holding its icon, an ornamental rule under the title, and a splash of gold ink as it comes in. The reminder "Where was I?" wears the same parchment.
+
 ## 0.32.4-beta
 
 - The notice of a new page moved higher on the screen, above the game's own banners (the "You have reached level N" banner and the like no longer cover it).
