@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.31.6-beta
+
+- **Faster book:** turning pages in a long diary no longer measures every line again (the layout is kept until something changes): about a hundred times faster in a diary of 3000 pages.
+- **Lighter on the game:** spell casts and pet changes are only requested for your own character, so Skald is no longer called for every cast in a raid; money changes are looked at once every few seconds.
+- Fix: reputation changes after the first one were not noticed until the next login (a mistake in the check that avoids repeated looks).
+- Developer: the code was tidied (constants gathered, dead code removed, about 65 free slots of the 200-local limit of Lua), and the release checks now include a lint and a speed test.
+
 ## 0.31.5-beta
 
 - **New icons:** the resurrection page has a winged ankh, the Skinning Knife, the Mining Pick, the blacksmith's hammer and the engineer's spanner have their own drawings, tabards are drawn as a tabard, and the pet's paw matches the new set.

@@ -4,6 +4,9 @@
 
 local ADDON_NAME, ns = ...
 
+-- Constants live in one table: the main chunk of a Lua file may hold only 200 locals.
+local K = {}
+
 local MAX_ENTRIES = 3000
 
 -- Localization: texts live in Locales.lua.
@@ -14,9 +17,9 @@ local PHRASES = L.phrases
 local TITLE = "Skald"
 
 -- Parchment palette (dark inks that read well on paper).
-local HEAD_INK = { 0.45, 0.38, 0.26 }
+K.HEAD_INK = { 0.45, 0.38, 0.26 }
 
-local INK = {
+K.INK = {
     header = { 0.35, 0.27, 0.15 },
     zone   = { 0.10, 0.28, 0.35 },
     quest  = { 0.15, 0.32, 0.12 },
@@ -36,7 +39,7 @@ local INK = {
 }
 
 -- Ink of a quest page by rarity (dark enough to read on parchment).
-local TIER_INK = {
+K.TIER_INK = {
     [0] = { 0.40, 0.40, 0.40 },
     [1] = { 0.15, 0.32, 0.12 },
     [2] = { 0.05, 0.40, 0.08 },
@@ -50,7 +53,7 @@ local TIER_INK = {
 local DB_VERSION = 3
 local lastZone = nil
 local pendingQuestTitle = nil
-local pendingNPC, pendingQuestID, pendingQuestLevel = nil, nil, nil
+local pendingNPC, pendingQuestLevel = nil, nil
 local pendingObjectiveTypes = nil
 local loginTime = nil
 local window = nil
@@ -107,7 +110,7 @@ local Notify, PulseMinimap   -- the toast and the glow of the minimap button (de
 
 -- Who is writing, and how it went, flavour some pages: a class's own words, a race's, a quest that
 -- was hard or easy for your level. The pool chosen is stored with the page, so it reads the same later.
-local FLAVOR_KINDS = { quest = true, level = true, death = true, boss = true, zone = true, dungeon = true }
+K.FLAVOR_KINDS = { quest = true, level = true, death = true, boss = true, zone = true, dungeon = true }
 local AddContext
 do
 local CONTEXT_KINDS = { dungeon = true, boss = true, death = true, zone = true, level = true }
@@ -155,7 +158,7 @@ local function PickFlavor(kind, entry)
 end
 
 -- Which pages the diary writes at all (Options: What the quill records).
-local RECORD_FLAG = {
+K.RECORD_FLAG = {
     quest = "quest", level = "level", milestone = "level", death = "death",
     boss = "boss", dungeon = "boss", zone = "zone", skill = "profession", profession = "profession",
     loot = "loot", mark = "mark", home = "mark", rep = "mark", flight = "zone", tame = "mark", revive = "death", hearth = "mark",
@@ -167,7 +170,7 @@ local function AddEntry(kind, arg, zone, extra)
     local db = Journal()
     if not db then return end
     if not PHRASES[kind] then return end
-    local flag = RECORD_FLAG[kind]
+    local flag = K.RECORD_FLAG[kind]
     if flag and (Settings().rec or {})[flag] == false then return end
     -- A new calendar day closes the one before it (with a summary page) first.
     if kind ~= "day" then RollDay() end
@@ -197,7 +200,7 @@ local function AddEntry(kind, arg, zone, extra)
     -- Draw from the pool this page will be told with, never the phrase used
     -- last time for the same kind and type.
     AddContext(kind, entry)
-    if FLAVOR_KINDS[kind] then
+    if K.FLAVOR_KINDS[kind] then
         local okClass, _, classFile = pcall(UnitClass, "player")
         local okRace, _, raceFile = pcall(UnitRace, "player")
         entry.cls = okClass and type(classFile) == "string" and classFile or nil
@@ -253,7 +256,7 @@ end
 -- counts exactly and from the character's first day. The statistic is found once by its
 -- name among the Statistics categories and its id remembered. Where the name is not known
 -- (other languages) this gives nothing, and the estimate from XP is used instead.
-local KILL_STAT_NAMES = { ["creatures killed"] = true, ["criaturas abatidas"] = true,
+K.KILL_STAT_NAMES = { ["creatures killed"] = true, ["criaturas abatidas"] = true,
     ["créatures tuées"] = true, ["creatures tuees"] = true }
 local killStatId, killStatSearched
 
@@ -272,7 +275,7 @@ local function FindKillStatistic()
         for _, category in ipairs(GetStatisticsCategoryList()) do
             for i = 1, (GetCategoryNumAchievements(category) or 0) do
                 local id, name = GetAchievementInfo(category, i)
-                if id and type(name) == "string" and KILL_STAT_NAMES[name:lower()] then
+                if id and type(name) == "string" and K.KILL_STAT_NAMES[name:lower()] then
                     killStatId = id
                     if SkaldDB then SkaldDB.killStatId = id end
                     return
@@ -296,7 +299,7 @@ end
 
 -- A statistic of the game as a number: its value, 0 when the panel shows "--" (never happened),
 -- nil when the statistic cannot be read at all.
-local STAT_QUESTS, STAT_DEATHS, STAT_DUNGEONS, CATEGORY_BOSS_WINS = 98, 60, 932, 14821
+K.STAT_QUESTS, K.STAT_DEATHS, K.STAT_DUNGEONS, K.CATEGORY_BOSS_WINS = 98, 60, 932, 14821
 local function GameStat(id)
     if not GetStatistic then return nil end
     local ok, text = pcall(GetStatistic, id)
@@ -317,10 +320,10 @@ end
 local function BossWins()
     if not (GetCategoryNumAchievements and GetAchievementInfo) then return nil end
     local ok, total = pcall(function()
-        local sum, count = 0, GetCategoryNumAchievements(CATEGORY_BOSS_WINS) or 0
+        local sum, count = 0, GetCategoryNumAchievements(K.CATEGORY_BOSS_WINS) or 0
         if count == 0 then return nil end
         for i = 1, count do
-            local id = GetAchievementInfo(CATEGORY_BOSS_WINS, i)
+            local id = GetAchievementInfo(K.CATEGORY_BOSS_WINS, i)
             sum = sum + (id and GameStat(id) or 0)
         end
         return sum
@@ -331,7 +334,7 @@ end
 -- Per-day counters, so a day can be closed with a page of its own. A day is closed the
 -- first time anything is written on a later date (or at the next login), and only if it
 -- held enough: three events, or twenty minutes on the road.
-local DAY_FIELD = {
+K.DAY_FIELD = {
     quest = "q", level = "l", milestone = "l", death = "d", zone = "z", kill = "k",
     dungeon = "u", boss = "b", achievement = "a",
 }
@@ -404,7 +407,7 @@ BumpDay = function(kind, where)
     if not db or not db.days then return end
     local d = db.days[db.today or DayKey()]
     if not d then return end
-    local field = DAY_FIELD[kind]
+    local field = K.DAY_FIELD[kind]
     if field then d[field] = (d[field] or 0) + 1 end
     d.last = time()
     if where then d.zone = where end
@@ -412,18 +415,18 @@ end
 
 -- What a quest asks of you decides how it is told: a letter carried across town
 -- is not a battle. Types: fight, gather, explore, delivery.
-local FIGHT_VERBS = {
+K.FIGHT_VERBS = {
     kill = true, slay = true, defeat = true, destroy = true, eliminate = true, attack = true,
     clear = true, exterminate = true, hunt = true, drive = true, battle = true, fight = true,
     rid = true, purge = true, cull = true, protect = true, escort = true, defend = true,
     dispatch = true, rescue = true,
 }
-local EXPLORE_VERBS = {
+K.EXPLORE_VERBS = {
     explore = true, discover = true, scout = true, investigate = true,
     travel = true, go = true, journey = true, venture = true, survey = true, reach = true,
 }
 -- Looking for a person or a thing: told as a search, not as exploring.
-local SEEK_VERBS = { find = true, search = true, locate = true, look = true, seek = true }
+K.SEEK_VERBS = { find = true, search = true, locate = true, look = true, seek = true }
 local function FirstVerb(sentence)
     if type(sentence) ~= "string" then return nil end
     return sentence:lower():gsub("^[^%a]+", ""):match("^(%a+)")
@@ -455,7 +458,7 @@ local function QuestTypeFromDB(questID)
         local sentence = okText and type(t) == "table" and t.objectives
         local verb = FirstVerb(sentence)
         if verb then
-            if FIGHT_VERBS[verb] then
+            if K.FIGHT_VERBS[verb] then
                 return "fight"
             elseif kind == "delivery" then
                 local s = sentence:lower()
@@ -464,9 +467,9 @@ local function QuestTypeFromDB(questID)
                 -- A trip to talk to someone is an errand, not exploring.
                 local talks = s:find("speak", 1, true) or s:find("talk", 1, true)
                     or s:find("contact", 1, true)
-                if EXPLORE_VERBS[verb] and not hands and not talks then
+                if K.EXPLORE_VERBS[verb] and not hands and not talks then
                     return "explore"
-                elseif SEEK_VERBS[verb] and not hands and not talks then
+                elseif K.SEEK_VERBS[verb] and not hands and not talks then
                     return "seek"
                 end
             end
@@ -618,12 +621,12 @@ local function DayText(e)
     return text .. " " .. L.DAY_CLOSE[mood]
 end
 
-local QUALITY_COLOR = {
+K.QUALITY_COLOR = {
     [0] = "9d9d9d", [1] = "ffffff", [2] = "1eff00", [3] = "0070dd", [4] = "a335ee", [5] = "ff8000", [6] = "e6cc80",
     [7] = "00ccff", [8] = "00ccff",
 }
-local QUALITY_BY_COLOR = {}
-for q, hex in pairs(QUALITY_COLOR) do QUALITY_BY_COLOR[hex] = QUALITY_BY_COLOR[hex] or q end
+K.QUALITY_BY_COLOR = {}
+for q, hex in pairs(K.QUALITY_COLOR) do K.QUALITY_BY_COLOR[hex] = K.QUALITY_BY_COLOR[hex] or q end
 
 -- The pieces of an item link: its reference (item:...), its name and its quality (0 grey .. 5 orange).
 local function ItemParts(text)
@@ -633,7 +636,7 @@ local function ItemParts(text)
     local quality = tonumber(text:match("|cnIQ(%d+):"))
     if not quality then
         local color = text:match("|cff(%x%x%x%x%x%x)")
-        quality = color and QUALITY_BY_COLOR[color:lower()]
+        quality = color and K.QUALITY_BY_COLOR[color:lower()]
     end
     if not quality then
         local id = tonumber(ref:match("item:(%d+)"))
@@ -646,12 +649,12 @@ local function ItemParts(text)
     return ref, name, quality or 1
 end
 
-local ITEM_INK = {
+K.ITEM_INK = {
     [0] = { 0.42, 0.42, 0.40 }, [1] = { 0.24, 0.16, 0.09 }, [2] = { 0.05, 0.40, 0.08 },
     [3] = { 0.00, 0.25, 0.70 }, [4] = { 0.45, 0.10, 0.62 }, [5] = { 0.75, 0.32, 0.00 },
 }
 local function ColoredItem(ref, name, quality)
-    local c = ITEM_INK[quality] or ITEM_INK[5]
+    local c = K.ITEM_INK[quality] or K.ITEM_INK[5]
     local hex = string.format("%02x%02x%02x", math.floor(c[1] * 255 + 0.5), math.floor(c[2] * 255 + 0.5), math.floor(c[3] * 255 + 0.5))
     return "|cff" .. hex .. "|H" .. ref .. "|h[" .. name .. "]|h|r"
 end
@@ -938,9 +941,9 @@ local function ZoneIconTag(mapID)
 end
 
 -- Wax seal for a quest's rarity (Textures/seal0..seal5), drawn inline in the page header.
-local SEAL_PATH = "Interface\\AddOns\\Skald\\Textures\\seal"
+K.SEAL_PATH = "Interface\\AddOns\\Skald\\Textures\\seal"
 -- Event icon for every page that is not a quest (Textures/ev_<name>.tga).
-local EVENT_ICON = {
+K.EVENT_ICON = {
     quest = "quest", level = "level", milestone = "milestone", death = "death", boss = "boss",
     dungeon = "dungeon", zone = "zone", mount = "mount", guild = "guild",
     guildleave = "guild", party = "party", achievement = "achievement",
@@ -952,12 +955,12 @@ local EVENT_ICON = {
 }
 -- Professions: the game's skill line id says which one it is whatever the language; the
 -- name is the fallback (and how pages written before this existed are recognised).
-local PROFESSION_BY_LINE = {
+K.PROFESSION_BY_LINE = {
     [171] = "alchemy", [164] = "blacksmithing", [333] = "enchanting", [202] = "engineering",
     [182] = "herbalism", [165] = "leatherworking", [186] = "mining", [393] = "skinning",
     [197] = "tailoring", [185] = "cooking", [129] = "firstaid", [356] = "fishing",
 }
-local PROFESSION_BY_NAME = {
+K.PROFESSION_BY_NAME = {
     -- enUS
     ["alchemy"] = "alchemy", ["blacksmithing"] = "blacksmithing", ["enchanting"] = "enchanting",
     ["engineering"] = "engineering", ["herbalism"] = "herbalism", ["leatherworking"] = "leatherworking",
@@ -975,19 +978,19 @@ local PROFESSION_BY_NAME = {
     ["cuisine"] = "cooking", ["secourisme"] = "firstaid", ["pêche"] = "fishing",
 }
 local function ProfessionKey(skillLine, name)
-    local key = skillLine and PROFESSION_BY_LINE[tonumber(skillLine)]
+    local key = skillLine and K.PROFESSION_BY_LINE[tonumber(skillLine)]
     if key then return key end
     if type(name) == "string" then
         -- A "skill" page carries "Name 150": drop the number.
         local bare = name:gsub("%s+%d+$", ""):lower()
-        return PROFESSION_BY_NAME[bare]
+        return K.PROFESSION_BY_NAME[bare]
     end
 end
 
 SkaldAPI.ProfessionKey = ProfessionKey
 
 local function EventIconPath(kind, entry)
-    local name = EVENT_ICON[kind]
+    local name = K.EVENT_ICON[kind]
     if not name then return nil end
     local file = (name:sub(1, 3) == "st_") and name or ("ev_" .. name)
     if kind == "profession" or kind == "skill" then
@@ -1000,7 +1003,7 @@ end
 -- Parchment buttons ----------------------------------------------------------
 -- Flat leather tabs that sit on the sheet like the index tabs of a book, in place of
 -- the red and gold buttons the game draws, which clash with the parchment.
-local BTN = {
+K.BTN = {
     leather      = { 0.50, 0.36, 0.20 },
     leatherHover = { 0.62, 0.45, 0.25 },
     paper        = { 0.93, 0.85, 0.66 },
@@ -1024,7 +1027,7 @@ local function MakeParchmentButton(parent, width, height, label)
 
     -- A gold bar along the top edge of the one you are on, like a bookmark.
     b.bar = b:CreateTexture(nil, "OVERLAY")
-    b.bar:SetColorTexture(BTN.gold[1], BTN.gold[2], BTN.gold[3], 1)
+    b.bar:SetColorTexture(K.BTN.gold[1], K.BTN.gold[2], K.BTN.gold[3], 1)
     b.bar:SetPoint("TOPLEFT", 1, -1)
     b.bar:SetPoint("TOPRIGHT", -1, -1)
     b.bar:SetHeight(3)
@@ -1033,22 +1036,22 @@ local function MakeParchmentButton(parent, width, height, label)
     function b:SetActive(active)
         self.active = active and true or false
         self.bar:SetShown(self.active)
-        local fill = self.active and BTN.paper or BTN.leather
+        local fill = self.active and K.BTN.paper or K.BTN.leather
         self:SetBackdropColor(fill[1], fill[2], fill[3], 1)
-        self:SetBackdropBorderColor(BTN.edge[1], BTN.edge[2], BTN.edge[3], 1)
-        local ink = self.active and BTN.textActive or BTN.textIdle
+        self:SetBackdropBorderColor(K.BTN.edge[1], K.BTN.edge[2], K.BTN.edge[3], 1)
+        local ink = self.active and K.BTN.textActive or K.BTN.textIdle
         self.text:SetTextColor(ink[1], ink[2], ink[3])
     end
 
     b:SetScript("OnEnter", function(self)
         if not self.active then
-            local c = BTN.leatherHover
+            local c = K.BTN.leatherHover
             self:SetBackdropColor(c[1], c[2], c[3], 1)
         end
     end)
     b:SetScript("OnLeave", function(self)
         if not self.active then
-            local c = BTN.leather
+            local c = K.BTN.leather
             self:SetBackdropColor(c[1], c[2], c[3], 1)
         end
     end)
@@ -1138,7 +1141,7 @@ end
 -- Fonts of the design (Cinzel, EB Garamond, Caveat; SIL Open Font License, see Fonts/).
 -- If the game cannot load one, the quest face of the game stands in at a smaller size.
 -- The size of the text in the book is a setting (Small, Normal, Large).
-local TEXT_SIZES = { [0] = 11, [1] = 13, [2] = 15 }
+K.TEXT_SIZES = { [0] = 11, [1] = 13, [2] = 15 }
 local ApplyFonts
 do
     local FALLBACK = "Fonts\\FRIZQT__.TTF"
@@ -1151,7 +1154,7 @@ do
         if loaded == false then font:SetFont(FALLBACK, fallbackSize, "") end
     end
     ApplyFonts = function()
-        local size = TEXT_SIZES[(SkaldDB and SkaldDB.textSize) or 1] or 14
+        local size = K.TEXT_SIZES[(SkaldDB and SkaldDB.textSize) or 1] or 14
         Make("SkaldBody", "EBGaramond.ttf", size, size - 2)
         Make("SkaldItalic", "EBGaramond-Italic.ttf", size, size - 2)
         Make("SkaldSmall", "EBGaramond.ttf", 11, 10)
@@ -1163,33 +1166,33 @@ do
     ApplyFonts()
 end
 
-local TEX = "Interface\\AddOns\\Skald\\Textures\\skald2\\"
+K.TEX = "Interface\\AddOns\\Skald\\Textures\\skald2\\"
 
 -- Inks (design tokens).
-local C_BODY  = { 0.243, 0.165, 0.086 }   -- #3E2A16
-local C_HEAD  = { 0.431, 0.118, 0.102 }   -- #6E1E1A
-local C_SEC   = C_HEAD
-local C_MUTED = { 0.420, 0.290, 0.165 }   -- #6B4A2A
-local C_TIME  = { 0.541, 0.416, 0.227 }   -- #8A6A3A
-local C_NOTE  = { 0.353, 0.227, 0.102 }   -- #5A3A1A
-local C_HDR   = { 0.478, 0.290, 0.180 }   -- #7A4A2E
-local INKS = { { 0.353, 0.227, 0.102 }, { 0.180, 0.165, 0.227 }, { 0.431, 0.118, 0.102 } }   -- sepia, iron gall, burgundy
-local TAB_OFF = { 0.353, 0.227, 0.141 }   -- #5A3A24
-local TAB_ON  = { 0.722, 0.541, 0.353 }   -- #B88A5A
+K.C_BODY  = { 0.243, 0.165, 0.086 }   -- #3E2A16
+K.C_HEAD  = { 0.431, 0.118, 0.102 }   -- #6E1E1A
+K.C_SEC   = K.C_HEAD
+K.C_MUTED = { 0.420, 0.290, 0.165 }   -- #6B4A2A
+K.C_TIME  = { 0.541, 0.416, 0.227 }   -- #8A6A3A
+K.C_NOTE  = { 0.353, 0.227, 0.102 }   -- #5A3A1A
+K.C_HDR   = { 0.478, 0.290, 0.180 }   -- #7A4A2E
+K.INKS = { { 0.353, 0.227, 0.102 }, { 0.180, 0.165, 0.227 }, { 0.431, 0.118, 0.102 } }   -- sepia, iron gall, burgundy
+K.TAB_OFF = { 0.353, 0.227, 0.141 }   -- #5A3A24
+K.TAB_ON  = { 0.722, 0.541, 0.353 }   -- #B88A5A
 
-local BOOK_W, BOOK_H = 980, 580
-local COVER_X, COVER_W = 88, 892
-local PAGE_SW, PAGE_SH, PAGE_Y = 408, 536, 22
-local PAGE_XS = { 112, 548 }
-local CW = PAGE_SW - 66                  -- the width of text on a page
-local TOP_Y = 48
-local PAGE_H = 438                          -- the height of text on a page
-local ENTRY_X = 80                          -- icon (24) | time (40) | text, gaps of 8
-local NOTE_BTN_H = 52                       -- the room at the foot of a day for the quill button
-local GAP = 11
-local INDEX_ROW = 22
+K.BOOK_W, K.BOOK_H = 980, 580
+K.COVER_X, K.COVER_W = 88, 892
+K.PAGE_SW, K.PAGE_SH, K.PAGE_Y = 408, 536, 22
+K.PAGE_XS = { 112, 548 }
+K.CW = K.PAGE_SW - 66                  -- the width of text on a page
+K.TOP_Y = 48
+K.PAGE_H = 438                          -- the height of text on a page
+K.ENTRY_X = 80                          -- icon (24) | time (40) | text, gaps of 8
+K.NOTE_BTN_H = 52                       -- the room at the foot of a day for the quill button
+K.GAP = 11
+K.INDEX_ROW = 22
 
-local ROMAN = { "I", "II", "III", "IV", "V", "VI", "VII" }
+K.ROMAN = { "I", "II", "III", "IV", "V", "VI", "VII" }
 local function RomanLower(n)
     local out, map = "", { { 10, "x" }, { 9, "ix" }, { 5, "v" }, { 4, "iv" }, { 1, "i" } }
     for _, m in ipairs(map) do
@@ -1252,13 +1255,13 @@ local function BuildDays()
     return days
 end
 
-local ACCENT_UP = { ["á"] = "Á", ["à"] = "À", ["â"] = "Â", ["ã"] = "Ã", ["é"] = "É", ["ê"] = "Ê",
+K.ACCENT_UP = { ["á"] = "Á", ["à"] = "À", ["â"] = "Â", ["ã"] = "Ã", ["é"] = "É", ["ê"] = "Ê",
     ["í"] = "Í", ["ó"] = "Ó", ["ô"] = "Ô", ["õ"] = "Õ", ["ú"] = "Ú", ["ç"] = "Ç",
     ["è"] = "È", ["ë"] = "Ë", ["î"] = "Î", ["ï"] = "Ï", ["û"] = "Û", ["ü"] = "Ü", ["ù"] = "Ù" }
 local function Upper(s)
     s = tostring(s or ""):upper()
     s = s:gsub("\197\147", "\197\146")
-    return (s:gsub("[\195][\128-\191]", ACCENT_UP))
+    return (s:gsub("[\195][\128-\191]", K.ACCENT_UP))
 end
 
 local function Chapter(level) return math.min(#L.CHAPTERS, math.floor((level or 1) / 10) + 1) end
@@ -1272,12 +1275,12 @@ end
 -- The icon of a page of loot: gear (weapons, armour, jewellery, cloaks, bags) has the book's own
 -- icons; anything else (meat, pelts, cloth, recipes) shows the game's own icon of the item, which
 -- says at a glance what it is.
-local WEAPON_CAT = {
+K.WEAPON_CAT = {
     [0] = "axe", [1] = "axe", [2] = "bow", [3] = "gun", [4] = "mace", [5] = "mace", [6] = "polearm", [7] = "sword",
     [8] = "greatsword", [9] = "warglaive", [10] = "staff", [11] = "fist", [12] = "fist", [13] = "fist",
     [14] = "weapon", [15] = "dagger", [16] = "thrown", [17] = "polearm", [18] = "crossbow", [19] = "wand", [20] = "fishing",
 }
-local ARMOR_SLOT = {
+K.ARMOR_SLOT = {
     INVTYPE_HEAD = "helm", INVTYPE_SHOULDER = "shoulder", INVTYPE_CHEST = "armor", INVTYPE_ROBE = "armor",
     INVTYPE_BODY = "armor", INVTYPE_HAND = "hands", INVTYPE_LEGS = "legs", INVTYPE_FEET = "feet",
     INVTYPE_WAIST = "waist", INVTYPE_WRIST = "wrist", INVTYPE_CLOAK = "cloak", INVTYPE_FINGER = "ring",
@@ -1292,7 +1295,7 @@ ns.TOOL_CAT = {
     [6219] = "spanner",  -- Arclight Spanner
 }
 -- The kinds that have an icon of their own in the book; every other item shows the game's own icon.
-local ART_ICON = {
+K.ART_ICON = {
     sword = "it_weapon", greatsword = "it_greatsword", dagger = "it_dagger", axe = "it_axe", mace = "it_mace",
     staff = "it_staff", polearm = "it_polearm", fist = "it_fist", bow = "it_bow", crossbow = "it_crossbow",
     gun = "it_gun", thrown = "it_thrown", wand = "it_wand", fishing = "it_fishing", relic = "it_relic", ammo = "it_ammo",
@@ -1312,14 +1315,14 @@ local function ItemInfo(ref)
     local cat = "other"
     local id = type(ref) == "string" and tonumber(ref:match("item:(%d+)"))
     if id and ns.TOOL_CAT[id] then cat = ns.TOOL_CAT[id]
-    elseif classID == 2 then cat = WEAPON_CAT[subclassID] or "weapon"
+    elseif classID == 2 then cat = K.WEAPON_CAT[subclassID] or "weapon"
     elseif classID == 1 then cat = "bag"
     elseif classID == 6 then cat = "ammo"
     elseif classID == 9 then cat = "recipe"
     elseif classID == 0 and subclassID == 5 then cat = "food"
     elseif classID == 0 and subclassID == 7 then cat = "bandage"
     elseif classID == 7 then cat = "material"
-    elseif classID == 4 then cat = ARMOR_SLOT[equipLoc] or "armor" end
+    elseif classID == 4 then cat = K.ARMOR_SLOT[equipLoc] or "armor" end
     return cat, icon, (classID == 4) and subclassID or nil
 end
 
@@ -1333,7 +1336,7 @@ end
 local function ItemIcon(e)
     local ref = ItemParts(e.arg)
     local cat = ref and select(1, ItemInfo(ref)) or e.cat
-    local art = ART_ICON[cat or ""]
+    local art = K.ART_ICON[cat or ""]
     if art then return "Interface\\AddOns\\Skald\\Textures\\" .. art end
     return e.ic or "Interface\\AddOns\\Skald\\Textures\\it_generic"
 end
@@ -1361,7 +1364,7 @@ local function ShowToast(e, titleText, bodyText, lines, seconds)
         local paper = fr:CreateTexture(nil, "BACKGROUND", nil, 0)
         paper:SetPoint("TOPLEFT", 2, -2)
         paper:SetPoint("BOTTOMRIGHT", -2, 2)
-        paper:SetTexture(TEX .. "parchment", "REPEAT", "REPEAT")
+        paper:SetTexture(K.TEX .. "parchment", "REPEAT", "REPEAT")
         paper:SetTexCoord(0, 330 / 256, 0, 70 / 256)
         fr.paper = paper
         for _, side in ipairs({ { "TOPLEFT", "TOPRIGHT", 2, nil }, { "BOTTOMLEFT", "BOTTOMRIGHT", 2, nil },
@@ -1375,10 +1378,10 @@ local function ShowToast(e, titleText, bodyText, lines, seconds)
         fr.icon = fr:CreateTexture(nil, "ARTWORK")
         fr.icon:SetSize(34, 34)
         fr.icon:SetPoint("LEFT", 12, 0)
-        fr.icon:SetTexture(TEX .. "quill")
+        fr.icon:SetTexture(K.TEX .. "quill")
         fr.title = fr:CreateFontString(nil, "OVERLAY", "SkaldSec")
         fr.title:SetPoint("TOPLEFT", fr.icon, "TOPRIGHT", 10, -2)
-        fr.title:SetTextColor(C_HEAD[1], C_HEAD[2], C_HEAD[3])
+        fr.title:SetTextColor(K.C_HEAD[1], K.C_HEAD[2], K.C_HEAD[3])
         fr.body = fr:CreateFontString(nil, "OVERLAY", "SkaldBody")
         fr.body:SetPoint("TOPLEFT", fr.title, "BOTTOMLEFT", 0, -3)
         fr.body:SetWidth(250)
@@ -1386,7 +1389,7 @@ local function ShowToast(e, titleText, bodyText, lines, seconds)
         fr.body:SetJustifyV("TOP")
         fr.body:SetWordWrap(true)
         pcall(fr.body.SetMaxLines, fr.body, 2)
-        fr.body:SetTextColor(C_BODY[1], C_BODY[2], C_BODY[3])
+        fr.body:SetTextColor(K.C_BODY[1], K.C_BODY[2], K.C_BODY[3])
         fr:SetScript("OnMouseUp", function(self)
             self:Hide()
             if window then window:Show() end
@@ -1425,7 +1428,7 @@ ns.ShowResumeCard = function(data)
         local paper = fr:CreateTexture(nil, "BACKGROUND", nil, 0)
         paper:SetPoint("TOPLEFT", 2, -2)
         paper:SetPoint("BOTTOMRIGHT", -2, 2)
-        paper:SetTexture(TEX .. "parchment", "REPEAT", "REPEAT")
+        paper:SetTexture(K.TEX .. "parchment", "REPEAT", "REPEAT")
         fr.paper = paper
         for _, side in ipairs({ { "TOPLEFT", "TOPRIGHT", 2, nil }, { "BOTTOMLEFT", "BOTTOMRIGHT", 2, nil },
             { "TOPLEFT", "BOTTOMLEFT", nil, 2 }, { "TOPRIGHT", "BOTTOMRIGHT", nil, 2 } }) do
@@ -1438,14 +1441,14 @@ ns.ShowResumeCard = function(data)
         fr.icon = fr:CreateTexture(nil, "ARTWORK")
         fr.icon:SetSize(40, 40)
         fr.icon:SetPoint("TOPLEFT", 16, -14)
-        fr.icon:SetTexture(TEX .. "quill")
+        fr.icon:SetTexture(K.TEX .. "quill")
         fr.title = fr:CreateFontString(nil, "OVERLAY", "SkaldHead")
         fr.title:SetPoint("LEFT", fr.icon, "RIGHT", 12, 0)
-        fr.title:SetTextColor(C_HEAD[1], C_HEAD[2], C_HEAD[3])
+        fr.title:SetTextColor(K.C_HEAD[1], K.C_HEAD[2], K.C_HEAD[3])
         fr.rule = fr:CreateTexture(nil, "ARTWORK")
         fr.rule:SetSize(130, 11)
         fr.rule:SetPoint("TOPLEFT", fr.icon, "BOTTOMLEFT", 0, -4)
-        fr.rule:SetTexture(TEX .. "rule")
+        fr.rule:SetTexture(K.TEX .. "rule")
         fr.rule:SetTexCoord(0, 160 / 256, 0, 14 / 16)
         fr.parts = {}
         fr:SetScript("OnMouseUp", function(self, button)
@@ -1480,20 +1483,20 @@ ns.ShowResumeCard = function(data)
         p:SetPoint("TOPLEFT", card, "TOPLEFT", 24, -(y + (gap or 0)))
         y = y + (gap or 0) + math.max(14, p:GetStringHeight() or 14)
     end
-    Place(Part("SkaldSec", Upper(L.RESUME_LABEL_LAST), C_MUTED[1], C_MUTED[2], C_MUTED[3]))
+    Place(Part("SkaldSec", Upper(L.RESUME_LABEL_LAST), K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3]))
     Place(Part("SkaldBody", string.format(L.RESUME_LAST_VALUE, data.zone or L.UNKNOWN_ZONE, data.level or 0),
-        C_BODY[1], C_BODY[2], C_BODY[3]), 1)
+        K.C_BODY[1], K.C_BODY[2], K.C_BODY[3]), 1)
     if data.quests and #data.quests > 0 then
-        Place(Part("SkaldSec", Upper(L.RESUME_LABEL_QUESTS), C_MUTED[1], C_MUTED[2], C_MUTED[3]), 10)
+        Place(Part("SkaldSec", Upper(L.RESUME_LABEL_QUESTS), K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3]), 10)
         for i, title in ipairs(data.quests) do
-            Place(Part("SkaldBody", "-  " .. title, C_BODY[1], C_BODY[2], C_BODY[3]), i == 1 and 1 or 0)
+            Place(Part("SkaldBody", "-  " .. title, K.C_BODY[1], K.C_BODY[2], K.C_BODY[3]), i == 1 and 1 or 0)
         end
     end
     if data.note and data.note ~= "" then
-        Place(Part("SkaldSec", Upper(L.RESUME_LABEL_NEXT), C_MUTED[1], C_MUTED[2], C_MUTED[3]), 10)
-        Place(Part("SkaldNote", data.note, C_NOTE[1], C_NOTE[2], C_NOTE[3]), 1)
+        Place(Part("SkaldSec", Upper(L.RESUME_LABEL_NEXT), K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3]), 10)
+        Place(Part("SkaldNote", data.note, K.C_NOTE[1], K.C_NOTE[2], K.C_NOTE[3]), 1)
     end
-    Place(Part("SkaldSec", L.RESUME_HINT, C_MUTED[1], C_MUTED[2], C_MUTED[3]), 12)
+    Place(Part("SkaldSec", L.RESUME_HINT, K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3]), 12)
     local height = y + 16
     card:SetHeight(height)
     card.paper:SetTexCoord(0, 380 / 256, 0, height / 256)
@@ -1530,7 +1533,7 @@ end
 local function CreateWindow()
     -- The frame holds the tabs behind the cover; the book is everything else.
     local f = CreateFrame("Frame", "SkaldFrame", UIParent)
-    f:SetSize(BOOK_W, BOOK_H)
+    f:SetSize(K.BOOK_W, K.BOOK_H)
     f:SetFrameStrata("HIGH")
     f:SetClampedToScreen(true)
     f:SetMovable(true)
@@ -1563,43 +1566,43 @@ local function CreateWindow()
         coverParts[#coverParts + 1] = t
         t:SetSize(w, h)
         t:SetPoint("TOPLEFT", x, -y)
-        t:SetTexture(TEX .. "cover9")
+        t:SetTexture(K.TEX .. "cover9")
         t:SetTexCoord(u0 / 256, u1 / 256, v0 / 256, v1 / 256)
         return t
     end
-    Cover(COVER_X, 0, 56, 56, 0, 56, 0, 56)
-    Cover(COVER_X + COVER_W - 56, 0, 56, 56, 136, 192, 0, 56)
-    Cover(COVER_X, BOOK_H - 56, 56, 56, 0, 56, 136, 192)
-    Cover(COVER_X + COVER_W - 56, BOOK_H - 56, 56, 56, 136, 192, 136, 192)
-    Cover(COVER_X + 56, 56, COVER_W - 112, BOOK_H - 112, 56, 136, 56, 136)
-    local x = COVER_X + 56
-    while x < COVER_X + COVER_W - 56 do
-        local w = math.min(80, COVER_X + COVER_W - 56 - x)
+    Cover(K.COVER_X, 0, 56, 56, 0, 56, 0, 56)
+    Cover(K.COVER_X + K.COVER_W - 56, 0, 56, 56, 136, 192, 0, 56)
+    Cover(K.COVER_X, K.BOOK_H - 56, 56, 56, 0, 56, 136, 192)
+    Cover(K.COVER_X + K.COVER_W - 56, K.BOOK_H - 56, 56, 56, 136, 192, 136, 192)
+    Cover(K.COVER_X + 56, 56, K.COVER_W - 112, K.BOOK_H - 112, 56, 136, 56, 136)
+    local x = K.COVER_X + 56
+    while x < K.COVER_X + K.COVER_W - 56 do
+        local w = math.min(80, K.COVER_X + K.COVER_W - 56 - x)
         Cover(x, 0, w, 56, 56, 56 + w, 0, 56)
-        Cover(x, BOOK_H - 56, w, 56, 56, 56 + w, 136, 192)
+        Cover(x, K.BOOK_H - 56, w, 56, 56, 56 + w, 136, 192)
         x = x + 80
     end
     local y = 56
-    while y < BOOK_H - 56 do
-        local h = math.min(80, BOOK_H - 56 - y)
-        Cover(COVER_X, y, 56, h, 0, 56, 56, 56 + h)
-        Cover(COVER_X + COVER_W - 56, y, 56, h, 136, 192, 56, 56 + h)
+    while y < K.BOOK_H - 56 do
+        local h = math.min(80, K.BOOK_H - 56 - y)
+        Cover(K.COVER_X, y, 56, h, 0, 56, 56, 56 + h)
+        Cover(K.COVER_X + K.COVER_W - 56, y, 56, h, 136, 192, 56, 56 + h)
         y = y + 80
     end
 
     -- The spine, the stacked page edges, the clasp.
     local spine = book:CreateTexture(nil, "BACKGROUND", nil, 1)
     spine:SetSize(28, 572)
-    spine:SetPoint("TOPLEFT", PAGE_XS[1] + PAGE_SW, -4)
-    spine:SetTexture(TEX .. "spine", "REPEAT", "REPEAT")
+    spine:SetPoint("TOPLEFT", K.PAGE_XS[1] + K.PAGE_SW, -4)
+    spine:SetTexture(K.TEX .. "spine", "REPEAT", "REPEAT")
     spine:SetTexCoord(0, 28 / 32, 0, 572 / 256)
     -- Behind each page, the dark of the cover shows around the burnt edges (no stack of page
     -- edges: a pale band showed through the corners of the paper).
     for i = 1, 2 do
         local back = book:CreateTexture(nil, "BACKGROUND", nil, 0)
         back:SetColorTexture(0.13, 0.07, 0.035, 1)
-        back:SetSize(PAGE_SW + 6, PAGE_SH + 12)
-        back:SetPoint("TOPLEFT", i == 1 and (PAGE_XS[1] - 6) or PAGE_XS[2], -(PAGE_Y - 6))
+        back:SetSize(K.PAGE_SW + 6, K.PAGE_SH + 12)
+        back:SetPoint("TOPLEFT", i == 1 and (K.PAGE_XS[1] - 6) or K.PAGE_XS[2], -(K.PAGE_Y - 6))
     end
 
     -- Close: a small brass stud pressed into the leather, with a cross scratched on it
@@ -1648,8 +1651,8 @@ local function CreateWindow()
         local s = { texts = {}, rows = {}, lines = {}, padL = (i == 1) and 30 or 36 }
         local fr = CreateFrame("Frame", nil, book)
         s.frame = fr
-        fr:SetSize(PAGE_SW, PAGE_SH)
-        fr:SetPoint("TOPLEFT", PAGE_XS[i], -PAGE_Y)
+        fr:SetSize(K.PAGE_SW, K.PAGE_SH)
+        fr:SetPoint("TOPLEFT", K.PAGE_XS[i], -K.PAGE_Y)
         fr:SetFrameLevel(book:GetFrameLevel() + 3)
         pcall(fr.SetClipsChildren, fr, true)
         local paper = fr:CreateTexture(nil, "BACKGROUND", nil, 0)
@@ -1657,15 +1660,15 @@ local function CreateWindow()
         -- must not show through them (the dark of the cover does).
         paper:SetPoint("TOPLEFT", (i == 1) and 5 or 0, -5)
         paper:SetPoint("BOTTOMRIGHT", (i == 1) and 0 or -5, 5)
-        paper:SetTexture(TEX .. "parchment", "REPEAT", "REPEAT")
+        paper:SetTexture(K.TEX .. "parchment", "REPEAT", "REPEAT")
         local ox, oy = (i == 1) and 0 or 120, (i == 1) and 0 or 80
-        paper:SetTexCoord(ox / 256, (ox + PAGE_SW) / 256, oy / 256, (oy + PAGE_SH) / 256)
+        paper:SetTexCoord(ox / 256, (ox + K.PAGE_SW) / 256, oy / 256, (oy + K.PAGE_SH) / 256)
 
         -- Burnt edges on three sides (the side next to the spine stays clean).
         local BURN = 48
         local function Burn(point1, point2, w, h, u0, u1, v0, v1, x1, y1, x2, y2)
             local t = fr:CreateTexture(nil, "ARTWORK", nil, 1)
-            t:SetTexture(TEX .. "burn9")
+            t:SetTexture(K.TEX .. "burn9")
             t:SetTexCoord(u0 / 256, u1 / 256, v0 / 256, v1 / 256)
             t:SetPoint(point1, x1, y1)
             if point2 then t:SetPoint(point2, x2, y2) end
@@ -1686,19 +1689,19 @@ local function CreateWindow()
             Burn("BOTTOMLEFT", "BOTTOMRIGHT", nil, BURN, 64, 192, 192, 256, 0, 0, -BURN, 0)
         end
         local gutter = fr:CreateTexture(nil, "ARTWORK", nil, 2)
-        gutter:SetSize(56, PAGE_SH)
+        gutter:SetSize(56, K.PAGE_SH)
         gutter:SetPoint(i == 1 and "TOPRIGHT" or "TOPLEFT", 0, 0)
-        gutter:SetTexture(TEX .. "gutter")
+        gutter:SetTexture(K.TEX .. "gutter")
         if i == 1 then gutter:SetTexCoord(0, 56 / 64, 0, 1) else gutter:SetTexCoord(56 / 64, 0, 0, 1) end
 
         -- Header: small print either side of a thin double rule.
         local hl = fr:CreateFontString(nil, "OVERLAY", "SkaldSmall")
         hl:SetPoint("TOPLEFT", 30, -15)
-        hl:SetTextColor(C_HDR[1], C_HDR[2], C_HDR[3])
+        hl:SetTextColor(K.C_HDR[1], K.C_HDR[2], K.C_HDR[3])
         hl:SetText(L.HDR_L)
         local hr = fr:CreateFontString(nil, "OVERLAY", "SkaldSmall")
         hr:SetPoint("TOPRIGHT", -30, -15)
-        hr:SetTextColor(C_HDR[1], C_HDR[2], C_HDR[3])
+        hr:SetTextColor(K.C_HDR[1], K.C_HDR[2], K.C_HDR[3])
         hr:SetText(L.HDR_R)
         s.hr = hr
         s.hl = hl
@@ -1712,14 +1715,14 @@ local function CreateWindow()
 
         s.quill = fr:CreateTexture(nil, "ARTWORK", nil, 3)
         s.quill:SetSize(20, 20)
-        s.quill:SetTexture(TEX .. "quill")
+        s.quill:SetTexture(K.TEX .. "quill")
         s.num = fr:CreateFontString(nil, "OVERLAY", "SkaldBody")
         s.num:SetPoint("BOTTOM", 10, 14)
         s.quill:SetPoint("RIGHT", s.num, "LEFT", -3, 0)
         s.quill:Hide()
 
         s.sub = fr:CreateFontString(nil, "OVERLAY", "SkaldBody")
-        s.sub:SetWidth(CW)
+        s.sub:SetWidth(K.CW)
         s.sub:SetJustifyH("CENTER")
         s.sub:SetJustifyV("TOP")
         s.sub:Hide()
@@ -1728,12 +1731,12 @@ local function CreateWindow()
         s.cover:SetAllPoints()
         s.cover:Hide()
         s.rule = fr:CreateTexture(nil, "ARTWORK", nil, 3)
-        s.rule:SetTexture(TEX .. "rule")
+        s.rule:SetTexture(K.TEX .. "rule")
         s.rule:SetTexCoord(0, 160 / 256, 0, 14 / 16)
         s.rule:SetSize(130, 11)
         s.rule:Hide()
         s.line = fr:CreateTexture(nil, "ARTWORK", nil, 3)
-        s.line:SetColorTexture(C_MUTED[1], C_MUTED[2], C_MUTED[3], 0.3)
+        s.line:SetColorTexture(K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3], 0.3)
         s.line:SetHeight(1)
         s.line:Hide()
         return s
@@ -1756,7 +1759,7 @@ local function CreateWindow()
             fs:SetSpacing(2)
             s.texts[n] = fs
         end
-        fs:SetWidth(CW)
+        fs:SetWidth(K.CW)
         fs:SetJustifyH("LEFT")
         fs:SetFontObject("SkaldBody")
         return fs
@@ -1773,7 +1776,7 @@ local function CreateWindow()
             r.time = s.frame:CreateFontString(nil, "OVERLAY", "SkaldBody")
             r.time:SetWidth(40)
             r.time:SetJustifyH("LEFT")
-            r.time:SetTextColor(C_TIME[1], C_TIME[2], C_TIME[3])
+            r.time:SetTextColor(K.C_TIME[1], K.C_TIME[2], K.C_TIME[3])
             r.text = s.frame:CreateFontString(nil, "OVERLAY", "SkaldBody")
             r.text:SetJustifyH("LEFT")
             r.text:SetJustifyV("TOP")
@@ -1838,8 +1841,8 @@ local function CreateWindow()
     editor:SetAutoFocus(false)
     editor:SetMaxLetters(140)
     editor:SetFontObject("SkaldNote")
-    editor:SetTextColor(C_NOTE[1], C_NOTE[2], C_NOTE[3])
-    editor:SetWidth(CW)
+    editor:SetTextColor(K.C_NOTE[1], K.C_NOTE[2], K.C_NOTE[3])
+    editor:SetWidth(K.CW)
     editor:SetHeight(24)
     editor:SetScript("OnTextChanged", function(self)
         for _, side in ipairs(sides) do
@@ -1868,21 +1871,21 @@ local function CreateWindow()
         if not s.note then
             -- Writing: the inkwell becomes a ruled line on the page, and you write on it.
             local area = CreateFrame("Frame", nil, s.frame)
-            area:SetSize(CW, 38)
+            area:SetSize(K.CW, 38)
             area:SetFrameLevel(book:GetFrameLevel() + 8)
             area:Hide()
             local icon = area:CreateTexture(nil, "ARTWORK")
             icon:SetSize(38, 38)
             icon:SetPoint("LEFT", 0, 0)
-            icon:SetTexture(TEX .. "inkwell_writing_128")
+            icon:SetTexture(K.TEX .. "inkwell_writing_128")
             local rule = area:CreateTexture(nil, "ARTWORK")
-            rule:SetColorTexture(C_MUTED[1], C_MUTED[2], C_MUTED[3], 0.45)
+            rule:SetColorTexture(K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3], 0.45)
             rule:SetHeight(1)
             rule:SetPoint("BOTTOMLEFT", 44, 6)
             rule:SetPoint("BOTTOMRIGHT", 0, 6)
             local ph = area:CreateFontString(nil, "OVERLAY", "SkaldNote")
             ph:SetPoint("BOTTOMLEFT", 46, 8)
-            ph:SetTextColor(C_MUTED[1], C_MUTED[2], C_MUTED[3], 0.6)
+            ph:SetTextColor(K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3], 0.6)
             ph:SetText(L.NOTE_PLACEHOLDER)
             area.ph = ph
             s.noteArea = area
@@ -1892,15 +1895,15 @@ local function CreateWindow()
             b:SetSize(46, 46)
             b.icon = b:CreateTexture(nil, "ARTWORK")
             b.icon:SetAllPoints()
-            b.icon:SetTexture(TEX .. "inkwell_idle_128")
+            b.icon:SetTexture(K.TEX .. "inkwell_idle_128")
             b:SetScript("OnEnter", function(self)
-                self.icon:SetTexture(TEX .. "inkwell_hover_128")
+                self.icon:SetTexture(K.TEX .. "inkwell_hover_128")
                 GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
                 GameTooltip:AddLine(L.NOTE_BTN, 1, 1, 1)
                 GameTooltip:Show()
             end)
             b:SetScript("OnLeave", function(self)
-                self.icon:SetTexture(TEX .. "inkwell_idle_128")
+                self.icon:SetTexture(K.TEX .. "inkwell_idle_128")
                 GameTooltip:Hide()
             end)
             b:SetScript("OnClick", function(self)
@@ -1914,7 +1917,7 @@ local function CreateWindow()
                 self:Hide()
                 editor:ClearAllPoints()
                 editor:SetPoint("BOTTOMLEFT", area, "BOTTOMLEFT", 46, 7)
-                editor:SetWidth(CW - 46)
+                editor:SetWidth(K.CW - 46)
                 editor:SetText("")
                 editor:Show()
                 editor:SetFocus()
@@ -1929,14 +1932,14 @@ local function CreateWindow()
         local b = s.lines[n]
         if not b then
             b = CreateFrame("Button", nil, s.frame)
-            b:SetSize(CW, INDEX_ROW)
+            b:SetSize(K.CW, K.INDEX_ROW)
             b.text = b:CreateFontString(nil, "OVERLAY", "SkaldBody")
             b.text:SetJustifyH("LEFT")
             b.page = b:CreateFontString(nil, "OVERLAY", "SkaldBody")
             b.page:SetPoint("RIGHT", 0, 0)
-            b.page:SetTextColor(C_HEAD[1], C_HEAD[2], C_HEAD[3])
+            b.page:SetTextColor(K.C_HEAD[1], K.C_HEAD[2], K.C_HEAD[3])
             b.leader = b:CreateTexture(nil, "ARTWORK")
-            b.leader:SetColorTexture(C_MUTED[1], C_MUTED[2], C_MUTED[3], 0.4)
+            b.leader:SetColorTexture(K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3], 0.4)
             b.leader:SetHeight(1)
             b.hl = b:CreateTexture(nil, "BACKGROUND")
             b.hl:SetAllPoints()
@@ -1956,7 +1959,7 @@ local function CreateWindow()
     local cover1 = sides[1].cover
     local modelHolder = CreateFrame("Frame", nil, cover1)
     modelHolder:SetSize(288, 344)
-    modelHolder:SetPoint("TOPLEFT", (PAGE_SW - 288) / 2, -64)
+    modelHolder:SetPoint("TOPLEFT", (K.PAGE_SW - 288) / 2, -64)
     -- The portrait (used while the character is a spirit) sits in a dark round medallion, so the
     -- black behind a portrait reads as part of the frame.
     local medal = {}
@@ -1984,10 +1987,10 @@ local function CreateWindow()
     local alcove = CreateFrame("Frame", nil, cover1)
     alcove:SetFrameLevel(modelHolder:GetFrameLevel() + 5)
     alcove:SetSize(316, 372)
-    alcove:SetPoint("TOPLEFT", (PAGE_SW - 316) / 2, -48)
+    alcove:SetPoint("TOPLEFT", (K.PAGE_SW - 316) / 2, -48)
     local alcoveTex = alcove:CreateTexture(nil, "OVERLAY")
     alcoveTex:SetAllPoints()
-    alcoveTex:SetTexture(TEX .. "alcove")
+    alcoveTex:SetTexture(K.TEX .. "alcove")
     alcoveTex:SetTexCoord(0, 316 / 512, 0, 372 / 512)
     local function ShowModel()
         local works = false
@@ -2006,16 +2009,16 @@ local function CreateWindow()
     end
     local coverTitle = cover1:CreateFontString(nil, "OVERLAY", "SkaldHead")
     coverTitle:SetPoint("TOP", 0, -428)
-    coverTitle:SetWidth(PAGE_SW - 20)
-    coverTitle:SetTextColor(C_HEAD[1], C_HEAD[2], C_HEAD[3])
+    coverTitle:SetWidth(K.PAGE_SW - 20)
+    coverTitle:SetTextColor(K.C_HEAD[1], K.C_HEAD[2], K.C_HEAD[3])
     local coverRule = cover1:CreateTexture(nil, "ARTWORK")
     coverRule:SetSize(130, 11)
     coverRule:SetPoint("TOP", coverTitle, "BOTTOM", 0, -4)
-    coverRule:SetTexture(TEX .. "rule")
+    coverRule:SetTexture(K.TEX .. "rule")
     coverRule:SetTexCoord(0, 160 / 256, 0, 14 / 16)
     local coverLevel = cover1:CreateFontString(nil, "OVERLAY", "SkaldBody")
     coverLevel:SetPoint("TOP", coverRule, "BOTTOM", 0, -4)
-    coverLevel:SetTextColor(C_BODY[1], C_BODY[2], C_BODY[3])
+    coverLevel:SetTextColor(K.C_BODY[1], K.C_BODY[2], K.C_BODY[3])
 
     -- The cover, right: the journey in numbers and the quests by rarity. -----------------
     local stats = sides[2].cover
@@ -2024,19 +2027,19 @@ local function CreateWindow()
         fs:SetPoint(justify == "RIGHT" and "TOPRIGHT" or "TOPLEFT", x, y)
         fs:SetJustifyH(justify or "LEFT")
         if width then fs:SetWidth(width) end
-        fs:SetTextColor(C_BODY[1], C_BODY[2], C_BODY[3])
+        fs:SetTextColor(K.C_BODY[1], K.C_BODY[2], K.C_BODY[3])
         return fs
     end
     local RX = sides[2].padL
     local journeyTitle = stats:CreateFontString(nil, "OVERLAY", "SkaldHead")
     journeyTitle:SetPoint("TOP", 3, -50)
-    journeyTitle:SetWidth(CW)
-    journeyTitle:SetTextColor(C_HEAD[1], C_HEAD[2], C_HEAD[3])
+    journeyTitle:SetWidth(K.CW)
+    journeyTitle:SetTextColor(K.C_HEAD[1], K.C_HEAD[2], K.C_HEAD[3])
     journeyTitle:SetText(L.S_HEADER)
     local journeyRule = stats:CreateTexture(nil, "ARTWORK")
     journeyRule:SetSize(130, 11)
     journeyRule:SetPoint("TOP", 3, -78)
-    journeyRule:SetTexture(TEX .. "rule")
+    journeyRule:SetTexture(K.TEX .. "rule")
     journeyRule:SetTexCoord(0, 160 / 256, 0, 14 / 16)
 
     local FACTS = {
@@ -2066,9 +2069,9 @@ local function CreateWindow()
         factValues[fact.key] = JText(stats, "SkaldBody", 0, y - 4, "RIGHT")
         factValues[fact.key]:ClearAllPoints()
         factValues[fact.key]:SetPoint("TOPRIGHT", -30, y - 4)
-        factValues[fact.key]:SetTextColor(C_HEAD[1], C_HEAD[2], C_HEAD[3])
+        factValues[fact.key]:SetTextColor(K.C_HEAD[1], K.C_HEAD[2], K.C_HEAD[3])
         local leader = stats:CreateTexture(nil, "ARTWORK")
-        leader:SetColorTexture(C_MUTED[1], C_MUTED[2], C_MUTED[3], 0.4)
+        leader:SetColorTexture(K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3], 0.4)
         leader:SetHeight(1)
         leader:SetPoint("BOTTOMLEFT", factLabels[fact.key], "BOTTOMRIGHT", 6, 3)
         leader:SetPoint("BOTTOMRIGHT", factValues[fact.key], "BOTTOMLEFT", -6, 3)
@@ -2078,7 +2081,7 @@ local function CreateWindow()
     local rarityRule = stats:CreateTexture(nil, "ARTWORK")
     rarityRule:SetSize(110, 9)
     rarityRule:SetPoint("TOP", 3, rarityTop)
-    rarityRule:SetTexture(TEX .. "rule")
+    rarityRule:SetTexture(K.TEX .. "rule")
     rarityRule:SetTexCoord(0, 160 / 256, 0, 14 / 16)
     local rarityCounts = {}
     for tier = 0, 5 do
@@ -2089,10 +2092,10 @@ local function CreateWindow()
         local seal = cell:CreateTexture(nil, "ARTWORK")
         seal:SetSize(38, 38)
         seal:SetPoint("TOP", 0, 0)
-        seal:SetTexture(SEAL_PATH .. tier)
+        seal:SetTexture(K.SEAL_PATH .. tier)
         local count = cell:CreateFontString(nil, "OVERLAY", "SkaldBody")
         count:SetPoint("TOP", seal, "BOTTOM", 0, -2)
-        local ink = TIER_INK[tier]
+        local ink = K.TIER_INK[tier]
         count:SetTextColor(ink[1], ink[2], ink[3])
         cell:SetScript("OnEnter", function(self)
             GameTooltip:SetOwner(self, "ANCHOR_TOP")
@@ -2104,17 +2107,13 @@ local function CreateWindow()
     end
     local footerPlayed = JText(stats, "SkaldBody", RX, rarityTop - 80)
     local footerFirst = JText(stats, "SkaldBody", RX, rarityTop - 98)
-    footerPlayed:SetTextColor(C_MUTED[1], C_MUTED[2], C_MUTED[3])
-    footerFirst:SetTextColor(C_MUTED[1], C_MUTED[2], C_MUTED[3])
+    footerPlayed:SetTextColor(K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3])
+    footerFirst:SetTextColor(K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3])
 
     local function UpdateCover()
         local db = Journal()
         local s = db.stats
         local played = s.played + (loginTime and (time() - loginTime) or 0)
-        local deadly, deadlyN = nil, 0
-        for zone, n in pairs(s.deathZones) do
-            if n > deadlyN then deadly, deadlyN = zone, n end
-        end
         local values = {
             zones = (db.visitedMaps and CountKeys(db.visitedMaps) > 0) and CountKeys(db.visitedMaps) or CountKeys(db.visited),
             quests = s.counts.quest or 0,
@@ -2145,9 +2144,9 @@ local function CreateWindow()
             end
         end
         -- The game's own totals where they can be read (the diary's count stays as the fallback).
-        values.quests = GameStat(STAT_QUESTS) or values.quests
-        values.deaths = GameStat(STAT_DEATHS) or values.deaths
-        values.dungeons = GameStat(STAT_DUNGEONS) or values.dungeons
+        values.quests = GameStat(K.STAT_QUESTS) or values.quests
+        values.deaths = GameStat(K.STAT_DEATHS) or values.deaths
+        values.dungeons = GameStat(K.STAT_DUNGEONS) or values.dungeons
         values.bosses = BossWins() or values.bosses
         local level = UnitLevel and UnitLevel("player")
         if type(level) == "number" and level >= 1 then values.levels = level - 1 end
@@ -2172,7 +2171,7 @@ local function CreateWindow()
     -- Which pages exist: 1-2 cover, the contents, then the days (each from a new page).
     local function Paginate()
         local days = BuildDays()
-        local perPage = math.floor((PAGE_H - 50) / INDEX_ROW)
+        local perPage = math.floor((K.PAGE_H - 50) / K.INDEX_ROW)
         local rows, lastChapter = {}, nil
         local placeCount = {}
         for _, day in ipairs(days) do
@@ -2207,7 +2206,6 @@ local function CreateWindow()
             pages[#pages + 1] = { type = "index", rows = chunk, first = (i == 1), label = RomanLower(i) }
         end
 
-        local today = DayKey()
         local firstDayPage = #pages + 1
         for _, day in ipairs(days) do
             day.page = #pages + 1
@@ -2217,16 +2215,16 @@ local function CreateWindow()
                 local isQuest = e.kind == "quest" and e.tier
                 local ink
                 if isQuest and e.tier >= 2 then
-                    ink = TIER_INK[e.tier]
+                    ink = K.TIER_INK[e.tier]
                 elseif e.kind == "death" then
-                    ink = INK.death
+                    ink = K.INK.death
                 else
-                    ink = INKS[((SkaldDB and SkaldDB.ink) or 0) + 1] or INKS[1]
+                    ink = K.INKS[((SkaldDB and SkaldDB.ink) or 0) + 1] or K.INKS[1]
                 end
                 local head = ""
                 if e.kind ~= "note" and ns.PlaceName(e) ~= lastZone then
                     local place = ns.PlaceName(e)
-                    if KnownZone(place) then head = Hex(C_MUTED) .. ZoneIconTag(e.m) .. place .. "|r" end
+                    if KnownZone(place) then head = Hex(K.C_MUTED) .. ZoneIconTag(e.m) .. place .. "|r" end
                     lastZone = place
                 end
                 if isQuest and e.tier >= 2 and L.TIERS[e.tier] then
@@ -2240,31 +2238,47 @@ local function CreateWindow()
                     time = date("%H:%M", e.t),
                     link = (e.kind == "loot" and type(e.arg) == "string") and e.arg or nil,
                     quest = (e.kind == "quest") and e or nil,
-                    icon = (e.kind == "loot" and ItemIcon(e)) or (e.kind == "note" and (TEX .. "quill")) or (isQuest and (SEAL_PATH .. e.tier)) or EventIconPath(e.kind, e),
+                    icon = (e.kind == "loot" and ItemIcon(e)) or (e.kind == "note" and (K.TEX .. "quill")) or (isQuest and (K.SEAL_PATH .. e.tier)) or EventIconPath(e.kind, e),
                 }
             end
             if day.summary then
-                blocks[#blocks + 1] = { text = Hex(C_HEAD) .. RenderEntry(day.summary) .. "|r", closing = true }
+                blocks[#blocks + 1] = { text = Hex(K.C_HEAD) .. RenderEntry(day.summary) .. "|r", closing = true }
             end
 
             local page = { type = "day", day = day, blocks = {}, first = true }
             local y = 70
             pages[#pages + 1] = page
             for i, block in ipairs(blocks) do
-                block.h = math.max(24, Measure(block.text, block.closing and (CW - 32) or (CW - ENTRY_X)))
-                local limit = PAGE_H - ((i == #blocks) and NOTE_BTN_H or 0)
+                block.h = math.max(24, Measure(block.text, block.closing and (K.CW - 32) or (K.CW - K.ENTRY_X)))
+                local limit = K.PAGE_H - ((i == #blocks) and K.NOTE_BTN_H or 0)
                 if y + block.h > limit and #page.blocks > 0 then
                     page = { type = "day", day = day, blocks = {}, first = false }
                     pages[#pages + 1] = page
                     y = 40
                 end
                 page.blocks[#page.blocks + 1] = block
-                y = y + block.h + GAP
+                y = y + block.h + K.GAP
             end
             page.note = true
         end
         if #pages % 2 == 1 then pages[#pages + 1] = { type = "blank" } end
         return { days = days, pages = pages, indexPages = indexPages, firstDayPage = firstDayPage }
+    end
+
+    -- Paginating measures every line of every page, so the result is kept until something it depends
+    -- on changes: the pages themselves, the ink, the text size, how days are cut, or ns.layoutRev (bumped
+    -- when old pages are rewritten, e.g. brought to a new language).
+    local cachedSig, cachedLayout
+    local function Layout()
+        local entries = Journal().entries
+        local last = entries[#entries]
+        local sig = table.concat({ #entries, last and last.t or 0, last and last.kind or "", (SkaldDB and SkaldDB.ink) or 0,
+            (SkaldDB and SkaldDB.textSize) or 1, (SkaldDB and SkaldDB.dayMode) or 0, ns.layoutRev or 0 }, ":")
+        if sig ~= cachedSig then
+            cachedLayout = Paginate()
+            cachedSig = sig
+        end
+        return cachedLayout
     end
 
     local function Clear(s)
@@ -2299,7 +2313,7 @@ local function CreateWindow()
             return
         end
         if page.type == "blank" then return end
-        s.num:SetText(Hex(C_MUTED) .. tostring(number) .. "|r")
+        s.num:SetText(Hex(K.C_MUTED) .. tostring(number) .. "|r")
         s.quill:Show()
         local px = s.padL
 
@@ -2309,18 +2323,18 @@ local function CreateWindow()
             head:SetPoint("TOPLEFT", px, -y)
             head:SetFontObject(font or "SkaldHead")
             head:SetJustifyH("CENTER")
-            head:SetTextColor(C_HEAD[1], C_HEAD[2], C_HEAD[3])
+            head:SetTextColor(K.C_HEAD[1], K.C_HEAD[2], K.C_HEAD[3])
             head:SetText(text)
             head:Show()
             return head
         end
 
         if page.type == "index" then
-            local y = TOP_Y + 4
+            local y = K.TOP_Y + 4
             if page.first then
-                Heading(L.INDEX_TITLE, TOP_Y + 4)
-                Rule(s, TOP_Y + 32)
-                y = TOP_Y + 56
+                Heading(L.INDEX_TITLE, K.TOP_Y + 4)
+                Rule(s, K.TOP_Y + 32)
+                y = K.TOP_Y + 56
             end
             for n, row in ipairs(page.rows) do
                 local b = SideLine(s, n)
@@ -2331,7 +2345,7 @@ local function CreateWindow()
                     b.target = nil
                     b.text:SetPoint("LEFT", 0, 0)
                     b.text:SetFontObject("SkaldSec")
-                    b.text:SetText(Hex(C_SEC) .. string.format(L.CHAPTER_HEADER, ROMAN[row.chapter] or row.chapter,
+                    b.text:SetText(Hex(K.C_SEC) .. string.format(L.CHAPTER_HEADER, K.ROMAN[row.chapter] or row.chapter,
                         L.CHAPTERS[row.chapter]) .. (row.place and ("  -  " .. row.place) or "") .. "|r")
                     b.page:SetText("")
                     b.leader:Hide()
@@ -2339,7 +2353,7 @@ local function CreateWindow()
                     b.target = row.day.page
                     b.text:SetPoint("LEFT", 18, 0)
                     b.text:SetFontObject("SkaldBody")
-                    b.text:SetText(Hex(C_BODY) .. (DayTitle(row.day, row.day.number):gsub(":", " -", 1)) .. "|r")
+                    b.text:SetText(Hex(K.C_BODY) .. (DayTitle(row.day, row.day.number):gsub(":", " -", 1)) .. "|r")
                     b.page:SetText(tostring(row.day.label))
                     b.leader:ClearAllPoints()
                     b.leader:SetPoint("BOTTOMLEFT", b.text, "BOTTOMRIGHT", 6, 5)
@@ -2347,47 +2361,47 @@ local function CreateWindow()
                     b.leader:Show()
                 end
                 b:Show()
-                y = y + INDEX_ROW
+                y = y + K.INDEX_ROW
             end
             return
         end
 
         -- A day.
         local day = page.day
-        s.num:SetText(Hex(C_MUTED) .. tostring(number - layout.firstDayPage + 1) .. "|r")
+        s.num:SetText(Hex(K.C_MUTED) .. tostring(number - layout.firstDayPage + 1) .. "|r")
         local y
         if page.first then
-            Heading(DayTitle(day, day.number), TOP_Y, "SkaldHead2")
+            Heading(DayTitle(day, day.number), K.TOP_Y, "SkaldHead2")
             local sub = s.sub
             sub:ClearAllPoints()
-            sub:SetPoint("TOPLEFT", px, -(TOP_Y + 28))
+            sub:SetPoint("TOPLEFT", px, -(K.TOP_Y + 28))
             sub:SetTextColor(1, 1, 1)
             local where = KnownZone(day.zone)
-            sub:SetText(string.format("|T%ssun:18:18:0:0:64:64:0:48:0:48|t %s%s%s|r", TEX, Hex(C_MUTED),
+            sub:SetText(string.format("|T%ssun:18:18:0:0:64:64:0:48:0:48|t %s%s%s|r", K.TEX, Hex(K.C_MUTED),
                 date(L.DAY_DATE, day.t), where and ("  -  " .. where) or ""))
             sub:Show()
-            Rule(s, TOP_Y + 52)
+            Rule(s, K.TOP_Y + 52)
             y = 70
         else
-            Heading(string.format(L.CONTINUED, day.number), TOP_Y, "SkaldHead2")
+            Heading(string.format(L.CONTINUED, day.number), K.TOP_Y, "SkaldHead2")
             y = 40
         end
         local n = 0
         for _, block in ipairs(page.blocks) do
-            local top = TOP_Y + y
+            local top = K.TOP_Y + y
             if block.closing then
                 if not s.closeLine then
                     s.closeLine = s.frame:CreateTexture(nil, "ARTWORK", nil, 3)
-                    s.closeLine:SetColorTexture(C_MUTED[1], C_MUTED[2], C_MUTED[3], 0.3)
+                    s.closeLine:SetColorTexture(K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3], 0.3)
                     s.closeLine:SetHeight(1)
                     s.closeIcon = s.frame:CreateTexture(nil, "ARTWORK", nil, 3)
                     s.closeIcon:SetSize(24, 24)
-                    s.closeIcon:SetTexture(TEX .. "moon")
+                    s.closeIcon:SetTexture(K.TEX .. "moon")
                     s.closeIcon:SetTexCoord(0, 48 / 64, 0, 48 / 64)
                 end
                 s.closeLine:ClearAllPoints()
                 s.closeLine:SetPoint("TOPLEFT", px, -(top - 6))
-                s.closeLine:SetPoint("TOPRIGHT", s.frame, "TOPLEFT", px + CW, -(top - 6))
+                s.closeLine:SetPoint("TOPRIGHT", s.frame, "TOPLEFT", px + K.CW, -(top - 6))
                 s.closeLine:Show()
                 s.closeIcon:ClearAllPoints()
                 s.closeIcon:SetPoint("TOPLEFT", px, -top)
@@ -2396,7 +2410,7 @@ local function CreateWindow()
                 local fs = SideText(s, 2 + n)
                 fs:ClearAllPoints()
                 fs:SetPoint("TOPLEFT", px + 32, -top)
-                fs:SetWidth(CW - 32)
+                fs:SetWidth(K.CW - 32)
                 fs:SetTextColor(1, 1, 1)
                 fs:SetText(block.text)
                 fs:Show()
@@ -2412,18 +2426,18 @@ local function CreateWindow()
                 r.time:SetText(block.time)
                 r.time:Show()
                 r.text:ClearAllPoints()
-                r.text:SetPoint("TOPLEFT", px + ENTRY_X, -(top + 2))
-                r.text:SetWidth(CW - ENTRY_X)
+                r.text:SetPoint("TOPLEFT", px + K.ENTRY_X, -(top + 2))
+                r.text:SetWidth(K.CW - K.ENTRY_X)
                 r.text:SetText(block.text)
                 r.text:Show()
                 r.hit:ClearAllPoints()
                 r.hit:SetPoint("TOPLEFT", px, -top)
-                r.hit:SetSize(CW, block.h)
+                r.hit:SetSize(K.CW, block.h)
                 r.hit.link = block.link
                 r.hit.entry = block.quest
                 r.hit:SetShown(block.link ~= nil or block.quest ~= nil)
             end
-            y = y + block.h + GAP
+            y = y + block.h + K.GAP
         end
         if page.note then
             local b = SideNote(s)
@@ -2451,7 +2465,7 @@ local function CreateWindow()
         b.top = -(86 + (order - 1) * 40)
         b.tex = b:CreateTexture(nil, "ARTWORK")
         b.tex:SetAllPoints()
-        b.tex:SetTexture(TEX .. "tab")
+        b.tex:SetTexture(K.TEX .. "tab")
         b.tex:SetTexCoord(0, 112 / 128, 0, 34 / 64)
         b.text = b:CreateFontString(nil, "OVERLAY", "SkaldBody")
         b.text:SetPoint("LEFT", 17, 0)
@@ -2460,7 +2474,7 @@ local function CreateWindow()
             self.active = active and true or false
             self:ClearAllPoints()
             self:SetPoint("TOPLEFT", f, "TOPLEFT", self.active and 0 or 12, self.top)
-            local c = self.active and TAB_ON or TAB_OFF
+            local c = self.active and K.TAB_ON or K.TAB_OFF
             self.tex:SetVertexColor(c[1], c[2], c[3])
             if self.active then self.text:SetTextColor(0.14, 0.08, 0.04) else self.text:SetTextColor(0.92, 0.86, 0.72) end
         end
@@ -2479,7 +2493,7 @@ local function CreateWindow()
         local button = MakeTab(id, label, 4 + #panelOrder)
         local panel = CreateFrame("Frame", nil, book)
         panel:SetFrameLevel(book:GetFrameLevel() + 5)
-        panel:SetPoint("TOPLEFT", f, "TOPLEFT", PAGE_XS[1] + 30, -(PAGE_Y + TOP_Y))
+        panel:SetPoint("TOPLEFT", f, "TOPLEFT", K.PAGE_XS[1] + 30, -(K.PAGE_Y + K.TOP_Y))
         panel:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -54, 70)
         panel:Hide()
         local entry = { button = button, frame = panel }
@@ -2496,10 +2510,10 @@ local function CreateWindow()
         b:SetFrameLevel(book:GetFrameLevel() + 6)
         b:SetSize(56, 56)
         b:SetPoint(i == 1 and "BOTTOMLEFT" or "BOTTOMRIGHT", f, "TOPLEFT",
-            i == 1 and PAGE_XS[1] or (PAGE_XS[2] + PAGE_SW), -(PAGE_Y + PAGE_SH))
+            i == 1 and K.PAGE_XS[1] or (K.PAGE_XS[2] + K.PAGE_SW), -(K.PAGE_Y + K.PAGE_SH))
         b.tex = b:CreateTexture(nil, "ARTWORK")
         b.tex:SetAllPoints()
-        b.tex:SetTexture(TEX .. "curl")
+        b.tex:SetTexture(K.TEX .. "curl")
         if i == 1 then b.tex:SetTexCoord(56 / 64, 0, 0, 56 / 64) else b.tex:SetTexCoord(0, 56 / 64, 0, 56 / 64) end
         b:SetScript("OnEnter", function(self) self.tex:SetVertexColor(1.15, 1.15, 1.15) end)
         b:SetScript("OnLeave", function(self) self.tex:SetVertexColor(1, 1, 1) end)
@@ -2513,8 +2527,8 @@ local function CreateWindow()
     -- The clasp over the spine.
     local clasp = book:CreateTexture(nil, "OVERLAY", nil, 2)
     clasp:SetSize(26, 64)
-    clasp:SetPoint("TOPLEFT", PAGE_XS[1] + PAGE_SW + 1, -258)
-    clasp:SetTexture(TEX .. "clasp")
+    clasp:SetPoint("TOPLEFT", K.PAGE_XS[1] + K.PAGE_SW + 1, -258)
+    clasp:SetTexture(K.TEX .. "clasp")
     clasp:SetTexCoord(0, 26 / 32, 0, 1)
 
     local function SpreadCount() return layout and math.floor(#layout.pages / 2) or 1 end
@@ -2523,13 +2537,13 @@ local function CreateWindow()
     local todayButton = CreateFrame("Button", nil, book)
     todayButton:SetFrameLevel(book:GetFrameLevel() + 6)
     todayButton:SetSize(70, 24)
-    todayButton:SetPoint("TOPLEFT", f, "TOPLEFT", PAGE_XS[2] + PAGE_SW - 132, -(PAGE_Y + PAGE_SH - 38))
+    todayButton:SetPoint("TOPLEFT", f, "TOPLEFT", K.PAGE_XS[2] + K.PAGE_SW - 132, -(K.PAGE_Y + K.PAGE_SH - 38))
     todayButton.text = todayButton:CreateFontString(nil, "OVERLAY", "SkaldBody")
     todayButton.text:SetPoint("RIGHT", 0, 0)
-    todayButton.text:SetTextColor(C_MUTED[1], C_MUTED[2], C_MUTED[3])
+    todayButton.text:SetTextColor(K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3])
     todayButton.text:SetText(L.TODAY)
-    todayButton:SetScript("OnEnter", function(self) self.text:SetTextColor(C_HEAD[1], C_HEAD[2], C_HEAD[3]) end)
-    todayButton:SetScript("OnLeave", function(self) self.text:SetTextColor(C_MUTED[1], C_MUTED[2], C_MUTED[3]) end)
+    todayButton:SetScript("OnEnter", function(self) self.text:SetTextColor(K.C_HEAD[1], K.C_HEAD[2], K.C_HEAD[3]) end)
+    todayButton:SetScript("OnLeave", function(self) self.text:SetTextColor(K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3]) end)
     todayButton:SetScript("OnClick", function() f:ShowSection("days") end)
     todayButton:Hide()
 
@@ -2542,7 +2556,7 @@ local function CreateWindow()
         nextButton:SetShown(showBook)
         if not showBook then todayButton:Hide() end
         if showBook then
-            layout = Paginate()
+            layout = Layout()
             local count = SpreadCount()
             spread = math.max(1, math.min(spread, count))
             UpdateCover()
@@ -2552,7 +2566,7 @@ local function CreateWindow()
             -- Front matter is numbered i, ii, iii; the days from 1.
             for i, page in ipairs({ lp or false, rp or false }) do
                 if page and page.type == "index" then
-                    sides[i].num:SetText(Hex(C_MUTED) .. page.label .. "|r")
+                    sides[i].num:SetText(Hex(K.C_MUTED) .. page.label .. "|r")
                 end
             end
             local newest
@@ -2622,7 +2636,7 @@ local function CreateWindow()
 
         -- the pages
         view = "book"
-        layout = Paginate()
+        layout = Layout()
         for sp = 1, SpreadCount() do
             spread = sp
             f:Refresh()
@@ -2671,12 +2685,12 @@ local function CreateWindow()
             f:Refresh()
             local pl, _, _, pb = Rect(p.frame)
             if pl then
-                local gutterLeft = pl + CW
+                local gutterLeft = pl + K.CW
                 local rightPageLeft = pl + (SkaldAPI.RIGHT_X or 0)
                 Walk(p.frame, function(r)
                     if r.GetStringWidth and r:IsShown() then
                         local text = r:GetText()
-                        local l, rt, tp, bt = Rect(r)
+                        local l, rt, _, bt = Rect(r)
                         if text and text ~= "" and l then
                             local w = r:GetStringWidth() or 0
                             local right = math.min(rt, l + math.max(w, 1))
@@ -2684,7 +2698,7 @@ local function CreateWindow()
                                 Issue("tab " .. id, Name(r) .. " crosses the gutter")
                             end
                             if bt < pb - 2 then Issue("tab " .. id, Name(r) .. " runs below the page") end
-                            if right > rightPageLeft + CW + 2 then Issue("tab " .. id, Name(r) .. " sticks out on the right") end
+                            if right > rightPageLeft + K.CW + 2 then Issue("tab " .. id, Name(r) .. " sticks out on the right") end
                         end
                     end
                 end)
@@ -2712,7 +2726,7 @@ local function CreateWindow()
             return
         end
         view = "book"
-        layout = Paginate()
+        layout = Layout()
         if id == "cover" then
             spread = 1
         elseif id == "index" then
@@ -2752,7 +2766,7 @@ end
 -- with its rule, section labels, wax-seal check boxes, and flat buttons in the book's inks.
 -- A tab panel covers both pages: the left page starts at x = 0, the right page at RIGHT_X.
 
-local RIGHT_X = PAGE_XS[2] + 36 - (PAGE_XS[1] + 30)
+K.RIGHT_X = K.PAGE_XS[2] + 36 - (K.PAGE_XS[1] + 30)
 
 -- Flat button: "seg" (outlined, burgundy when on), "gold" or "burn" (filled, for the big actions).
 local function MakeFlatButton(parent, width, height, label, style)
@@ -2776,13 +2790,13 @@ local function MakeFlatButton(parent, width, height, label, style)
             self:SetBackdropBorderColor(border[1], border[2], border[3], 1)
             self.text:SetTextColor(ink[1], ink[2], ink[3])
         elseif self.active then
-            self:SetBackdropColor(C_HEAD[1], C_HEAD[2], C_HEAD[3], 1)
-            self:SetBackdropBorderColor(C_MUTED[1], C_MUTED[2], C_MUTED[3], 1)
+            self:SetBackdropColor(K.C_HEAD[1], K.C_HEAD[2], K.C_HEAD[3], 1)
+            self:SetBackdropBorderColor(K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3], 1)
             self.text:SetTextColor(0.96, 0.91, 0.80)
         else
             self:SetBackdropColor(1, 0.97, 0.88, 0.15)
-            self:SetBackdropBorderColor(C_MUTED[1], C_MUTED[2], C_MUTED[3], 1)
-            self.text:SetTextColor(C_BODY[1], C_BODY[2], C_BODY[3])
+            self:SetBackdropBorderColor(K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3], 1)
+            self.text:SetTextColor(K.C_BODY[1], K.C_BODY[2], K.C_BODY[3])
         end
     end
     b:SetScript("OnEnter", function(self) self:SetAlpha(0.88) end)
@@ -2808,7 +2822,7 @@ end
 -- A round wax check box: burgundy with a gold dot when on, pale when off.
 local function MakeWaxCheck(parent, label, get, set, iconPath, swatch, width)
     local b = CreateFrame("Button", nil, parent)
-    b:SetSize(width or CW, 24)
+    b:SetSize(width or K.CW, 24)
     local function Round(layer, size, r, g, bl)
         local t = b:CreateTexture(nil, layer)
         t:SetSize(size, size)
@@ -2822,7 +2836,7 @@ local function MakeWaxCheck(parent, label, get, set, iconPath, swatch, width)
         end
         return t
     end
-    local ring = Round("BACKGROUND", 18, C_BODY[1], C_BODY[2], C_BODY[3])
+    local ring = Round("BACKGROUND", 18, K.C_BODY[1], K.C_BODY[2], K.C_BODY[3])
     local fill = Round("ARTWORK", 14, 0.91, 0.855, 0.71)
     local mid = Round("ARTWORK", 10, 0.75, 0.29, 0.26)
     local dot = Round("OVERLAY", 6, 0.88, 0.72, 0.29)
@@ -2839,7 +2853,7 @@ local function MakeWaxCheck(parent, label, get, set, iconPath, swatch, width)
     local fs = b:CreateFontString(nil, "OVERLAY", "SkaldBody")
     b.caption = label
     fs:SetPoint("LEFT", anchor, "LEFT", textX, 0)
-    fs:SetTextColor(C_BODY[1], C_BODY[2], C_BODY[3])
+    fs:SetTextColor(K.C_BODY[1], K.C_BODY[2], K.C_BODY[3])
     fs:SetText(label)
     function b.Sync()
         local on = get() and true or false
@@ -2865,14 +2879,14 @@ end
 local function PageHeading(panel, text, x)
     local fs = panel:CreateFontString(nil, "OVERLAY", "SkaldHead")
     fs:SetPoint("TOPLEFT", x, 0)
-    fs:SetWidth(CW)
+    fs:SetWidth(K.CW)
     fs:SetJustifyH("CENTER")
-    fs:SetTextColor(C_HEAD[1], C_HEAD[2], C_HEAD[3])
+    fs:SetTextColor(K.C_HEAD[1], K.C_HEAD[2], K.C_HEAD[3])
     fs:SetText(text)
     local rule = panel:CreateTexture(nil, "ARTWORK")
     rule:SetSize(130, 11)
     rule:SetPoint("TOP", fs, "BOTTOM", 0, -4)
-    rule:SetTexture(TEX .. "rule")
+    rule:SetTexture(K.TEX .. "rule")
     rule:SetTexCoord(0, 160 / 256, 0, 14 / 16)
     return fs
 end
@@ -2880,9 +2894,9 @@ end
 local function SectionLabel(panel, text, x, y)
     local fs = panel:CreateFontString(nil, "OVERLAY", "SkaldSec")
     fs:SetPoint("TOPLEFT", x, y)
-    fs:SetWidth(CW)
+    fs:SetWidth(K.CW)
     fs:SetJustifyH("LEFT")
-    fs:SetTextColor(C_SEC[1], C_SEC[2], C_SEC[3])
+    fs:SetTextColor(K.C_SEC[1], K.C_SEC[2], K.C_SEC[3])
     fs:SetText(text)
     return fs
 end
@@ -2890,10 +2904,10 @@ end
 local function NoteText(panel, x, y)
     local fs = panel:CreateFontString(nil, "OVERLAY", "SkaldSmall")
     fs:SetPoint("TOPLEFT", x, y)
-    fs:SetWidth(CW)
+    fs:SetWidth(K.CW)
     fs:SetJustifyH("LEFT")
     fs:SetWordWrap(true)
-    fs:SetTextColor(C_MUTED[1], C_MUTED[2], C_MUTED[3])
+    fs:SetTextColor(K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3])
     return fs
 end
 
@@ -2903,8 +2917,8 @@ SkaldAPI.PageHeading = PageHeading
 SkaldAPI.SectionLabel = SectionLabel
 SkaldAPI.NoteText = NoteText
 SkaldAPI.MakeDisc = MakeDisc
-SkaldAPI.RIGHT_X = RIGHT_X
-SkaldAPI.PAGE_W = CW
+SkaldAPI.RIGHT_X = K.RIGHT_X
+SkaldAPI.PAGE_W = K.CW
 
 
 -- Events ---------------------------------------------------------------------
@@ -2927,10 +2941,15 @@ for _, ev in ipairs({
     "PLAYER_ENTERING_WORLD", "GROUP_ROSTER_UPDATE", "ENCOUNTER_END", "BOSS_KILL", "PLAYER_XP_UPDATE",
     "NEW_MOUNT_ADDED", "ACHIEVEMENT_EARNED", "SKILL_LINES_CHANGED", "CHAT_MSG_LOOT",
     "HEARTHSTONE_BOUND", "UPDATE_FACTION", "TAXIMAP_OPENED", "PLAYER_MONEY",
-    "UNIT_PET", "LEARNED_SPELL_IN_TAB",
-    "PLAYER_UNGHOST", "PLAYER_ALIVE", "CONFIRM_XP_LOSS", "RESURRECT_REQUEST", "UNIT_SPELLCAST_SUCCEEDED",
+    "LEARNED_SPELL_IN_TAB",
+    "PLAYER_UNGHOST", "PLAYER_ALIVE", "CONFIRM_XP_LOSS", "RESURRECT_REQUEST",
 }) do
     pcall(frame.RegisterEvent, frame, ev)
+end
+-- Spell casts and pet changes fire for every unit in sight (a raid sends hundreds a second): only the
+-- player's own are asked for, so the game does not even call this addon for the others.
+for _, ev in ipairs({ "UNIT_PET", "UNIT_SPELLCAST_SUCCEEDED" }) do
+    if not pcall(frame.RegisterUnitEvent, frame, ev, "player") then pcall(frame.RegisterEvent, frame, ev) end
 end
 
 -- Becomes true a few seconds after login, once guild, group and skill data have
@@ -2944,8 +2963,8 @@ local CheckMarks, CheckReputation, CheckFlightPaths
 do
 local MARKS = {
     kills = { steps = { 100, 500, 1000, 2500, 5000, 10000 }, get = function() return KillStat() or GameStat(107) end },
-    quests = { steps = { 10, 25, 50, 100, 250, 500 }, get = function() return GameStat(STAT_QUESTS) end },
-    deaths = { steps = { 10, 25, 50, 100 }, get = function() return GameStat(STAT_DEATHS) end },
+    quests = { steps = { 10, 25, 50, 100, 250, 500 }, get = function() return GameStat(K.STAT_QUESTS) end },
+    deaths = { steps = { 10, 25, 50, 100 }, get = function() return GameStat(K.STAT_DEATHS) end },
     gold = { steps = { 1, 10, 50, 100, 500, 1000 },
         get = function() return GetMoney and math.floor(GetMoney() / 10000) or nil end },
 }
@@ -2973,7 +2992,6 @@ end
 
 -- Reputation: a standing of Friendly or better, newly reached, becomes a page. (Not seen in the
 -- Forever client yet: written with both the old and the new reputation functions.)
-local repPending = false
 local function ReadFactions()
     local list = {}
     if C_Reputation and C_Reputation.GetNumFactions and C_Reputation.GetFactionDataByIndex then
@@ -2990,7 +3008,7 @@ local function ReadFactions()
     return list
 end
 CheckReputation = function()
-    repPending = false
+    ns.repPending = false   -- (a field of ns: this is read by the event handler further down)
     local db = Journal()
     if not db or not ready or (Settings().rec or {}).mark == false then return end
     local ok, now = pcall(ReadFactions)
@@ -3245,8 +3263,8 @@ local function ReadSignals(questID, xpReward)
 end
 
 -- The game's own quest categories (QuestSort, shown as a negative zoneOrSort).
-local SORT_EPIC, SORT_LEGENDARY = -1, -344
-local SORT_CLASS = {
+K.SORT_EPIC, K.SORT_LEGENDARY = -1, -344
+K.SORT_CLASS = {
     [-61] = true, [-81] = true, [-82] = true, [-141] = true, [-161] = true,
     [-162] = true, [-261] = true, [-262] = true, [-263] = true,
 }
@@ -3302,9 +3320,9 @@ local function QuestTier(questID, xpReward)
         end
 
         -- The game's own category: Legendary, Epic, and class quests (the later ones count more).
-        if s.sort == SORT_LEGENDARY then tier = 5
-        elseif s.sort == SORT_EPIC then tier = math.max(tier, 4)
-        elseif s.sort and SORT_CLASS[s.sort] then
+        if s.sort == K.SORT_LEGENDARY then tier = 5
+        elseif s.sort == K.SORT_EPIC then tier = math.max(tier, 4)
+        elseif s.sort and K.SORT_CLASS[s.sort] then
             tier = math.max(tier, (questLevel or 0) >= 20 and 3 or 2)
         end
 
@@ -3337,16 +3355,16 @@ local function QuestTier(questID, xpReward)
 end
 
 -- Pages written at each detail level: the lowest tier that becomes a page.
-local DETAIL_MIN_TIER = { low = 2, normal = 1, high = 0 }
+K.DETAIL_MIN_TIER = { low = 2, normal = 1, high = 0 }
 
 -- Loot -----------------------------------------------------------------------------
 -- Items you receive become pages from a rarity up (Options), with a line chosen by what
 -- the item is. A day writes only so many, so a busy day does not drown the diary.
-local LOOT_MIN_TIER = 2      -- green and better, unless Options says otherwise
-local LOOT_DAY_CAP = 12
+K.LOOT_MIN_TIER = 2      -- green and better, unless Options says otherwise
+K.LOOT_DAY_CAP = 12
 -- What counts as gear. Anything else (meat, pelts, cloth, herbs, quest papers) is left out
 -- unless it is rare (blue or better): that keeps the diary free of junk.
-local LOOT_RARE_TIER = 3
+K.LOOT_RARE_TIER = 3
 
 -- The game's own loot messages ("You receive loot: %s."), turned into patterns.
 local function LootPattern(fmt)
@@ -3382,16 +3400,16 @@ local function OnLoot(text)
     if not link then return end
     local ref, name, quality = ItemParts(link)
     if not ref then return end
-    local item = "|cff" .. (QUALITY_COLOR[quality] or "ffffff") .. "|H" .. ref .. "|h[" .. name .. "]|h|r"
-    if quality < (s.lootTier or LOOT_MIN_TIER) then return end
+    local item = "|cff" .. (K.QUALITY_COLOR[quality] or "ffffff") .. "|H" .. ref .. "|h[" .. name .. "]|h|r"
+    if quality < (s.lootTier or K.LOOT_MIN_TIER) then return end
 
     local cat, icon, mat = ItemInfo(ref)
 
-    if s.lootGear ~= false and not IsGear(cat) and quality < LOOT_RARE_TIER then return end
+    if s.lootGear ~= false and not IsGear(cat) and quality < K.LOOT_RARE_TIER then return end
 
     local d = db.days and db.days[DayKey()]
     if d then
-        if (d.lo or 0) >= LOOT_DAY_CAP then return end
+        if (d.lo or 0) >= K.LOOT_DAY_CAP then return end
         d.lo = (d.lo or 0) + 1
     end
     -- No position: loot is not pinned on the map.
@@ -3618,8 +3636,11 @@ Mile.Tidy = function()
             kept[#kept + 1] = e
         end
     end
-    db.entries = kept
-    if window and window:IsShown() then window:Refresh() end
+    if removed > 0 then
+        db.entries = kept
+        ns.layoutRev = (ns.layoutRev or 0) + 1
+        if window and window:IsShown() then window:Refresh() end
+    end
     return removed
 end
 
@@ -3732,7 +3753,10 @@ Mile.Relocalize = function()
             end
         end
     end
-    if changed > 0 and window and window:IsShown() then window:Refresh() end
+    if changed > 0 then
+        ns.layoutRev = (ns.layoutRev or 0) + 1
+        if window and window:IsShown() then window:Refresh() end
+    end
     return changed
 end
 
@@ -3821,31 +3845,31 @@ Mile.BuildPets = function(panel)
     icon:SetTexture("Interface\\AddOns\\Skald\\Textures\\ev_pet")
     local name = panel:CreateFontString(nil, "OVERLAY", "SkaldHead")
     name:SetPoint("TOPLEFT", 58, -80)
-    name:SetWidth(CW - 58)
+    name:SetWidth(K.CW - 58)
     name:SetJustifyH("LEFT")
-    name:SetTextColor(C_HEAD[1], C_HEAD[2], C_HEAD[3])
+    name:SetTextColor(K.C_HEAD[1], K.C_HEAD[2], K.C_HEAD[3])
     local detail = panel:CreateFontString(nil, "OVERLAY", "SkaldBody")
     detail:SetPoint("TOPLEFT", 58, -108)
-    detail:SetWidth(CW - 58)
+    detail:SetWidth(K.CW - 58)
     detail:SetJustifyH("LEFT")
-    detail:SetTextColor(C_BODY[1], C_BODY[2], C_BODY[3])
+    detail:SetTextColor(K.C_BODY[1], K.C_BODY[2], K.C_BODY[3])
     local since = NoteText(panel, 0, -150)
     local total = NoteText(panel, 0, -178)
 
-    PageHeading(panel, L.PETS_ALL, RIGHT_X)
+    PageHeading(panel, L.PETS_ALL, K.RIGHT_X)
     local rows = {}
     for i = 1, 12 do
         local top = -66 - (i - 1) * 36
         local a = panel:CreateFontString(nil, "OVERLAY", "SkaldBody")
-        a:SetPoint("TOPLEFT", RIGHT_X, top)
-        a:SetWidth(CW)
+        a:SetPoint("TOPLEFT", K.RIGHT_X, top)
+        a:SetWidth(K.CW)
         a:SetJustifyH("LEFT")
-        a:SetTextColor(C_BODY[1], C_BODY[2], C_BODY[3])
+        a:SetTextColor(K.C_BODY[1], K.C_BODY[2], K.C_BODY[3])
         local b = panel:CreateFontString(nil, "OVERLAY", "SkaldSmall")
-        b:SetPoint("TOPLEFT", RIGHT_X, top - 17)
-        b:SetWidth(CW)
+        b:SetPoint("TOPLEFT", K.RIGHT_X, top - 17)
+        b:SetWidth(K.CW)
         b:SetJustifyH("LEFT")
-        b:SetTextColor(C_MUTED[1], C_MUTED[2], C_MUTED[3])
+        b:SetTextColor(K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3])
         rows[i] = { a, b }
     end
     local empty = NoteText(panel, 0, -80)
@@ -4008,7 +4032,6 @@ local function HandleEvent(self, event, ...)
         if event == "QUEST_COMPLETE" then
             local id = GetQuestID and GetQuestID()
             if id and id ~= 0 then
-                pendingQuestID = id
                 if C_QuestLog and C_QuestLog.GetQuestDifficultyLevel then
                     pendingQuestLevel = Try(C_QuestLog.GetQuestDifficultyLevel, id)
                 end
@@ -4036,7 +4059,7 @@ local function HandleEvent(self, event, ...)
         local qtype = QuestTypeFromDB(questID) or QuestTypeFromObjectives(pendingObjectiveTypes)
         signals.qtype = qtype
         ProbeQuest(questID, xpReward, moneyReward, tier, signals)
-        local minTier = Settings().minTier or DETAIL_MIN_TIER[Settings().detail or "normal"] or DETAIL_MIN_TIER.normal
+        local minTier = Settings().minTier or K.DETAIL_MIN_TIER[Settings().detail or "normal"] or K.DETAIL_MIN_TIER.normal
         if tier >= minTier then
             -- A quest that ends a chain remembers how long the chain was.
             local cend
@@ -4049,7 +4072,7 @@ local function HandleEvent(self, event, ...)
         else
             CountOnly("quest", tier)
         end
-        pendingQuestTitle, pendingNPC, pendingQuestID, pendingQuestLevel = nil, nil, nil, nil
+        pendingQuestTitle, pendingNPC, pendingQuestLevel = nil, nil, nil
         pendingObjectiveTypes = nil
         Mile.npcId = nil
 
@@ -4132,8 +4155,8 @@ local function HandleEvent(self, event, ...)
         if ready then AddEntry("home", (type(where) == "string" and where ~= "") and where or (GetZoneText() or "?"), nil, { m = false, x = false, y = false }) end
 
     elseif event == "UPDATE_FACTION" then
-        if ready and not repPending then
-            repPending = true
+        if ready and not ns.repPending then
+            ns.repPending = true
             C_Timer.After(2, CheckReputation)
         end
 
@@ -4141,7 +4164,11 @@ local function HandleEvent(self, event, ...)
         if ready then pcall(CheckFlightPaths) end
 
     elseif event == "PLAYER_MONEY" then
-        if ready then C_Timer.After(3, CheckMarks) end
+        -- Money changes on every sale and pick-up: one look at the milestones is enough per few seconds.
+        if ready and not ns.moneyPending then
+            ns.moneyPending = true
+            C_Timer.After(3, function() ns.moneyPending = false; CheckMarks() end)
+        end
 
     elseif event == "NEW_MOUNT_ADDED" then
         local mountID = ...
@@ -4222,7 +4249,7 @@ end
 
 -- Own minimap button (LibDataBroker + LibDBIcon). Spoken embeds both; without
 -- them there is simply no button and /skald keeps working.
-local MINIMAP_NAME = "Skald"
+K.MINIMAP_NAME = "Skald"
 
 -- Without those libraries (Skald installed alone) the addon makes a round button of its own on the
 -- edge of the minimap: click to open the book, drag to move it around the minimap.
@@ -4293,7 +4320,7 @@ local function RegisterMinimapButton()
     local s = Settings()
     s.minimap = s.minimap or {}
 
-    local object = ldb:GetDataObjectByName(MINIMAP_NAME) or ldb:NewDataObject(MINIMAP_NAME, {
+    local object = ldb:GetDataObjectByName(K.MINIMAP_NAME) or ldb:NewDataObject(K.MINIMAP_NAME, {
         type = "launcher",
         text = TITLE,
         icon = "Interface\\AddOns\\Skald\\icon.tga",
@@ -4303,8 +4330,8 @@ local function RegisterMinimapButton()
             tooltip:AddLine(L.MINIMAP_TIP, 1, 1, 1)
         end,
     })
-    if not dbIcon:IsRegistered(MINIMAP_NAME) then
-        dbIcon:Register(MINIMAP_NAME, object, s.minimap)
+    if not dbIcon:IsRegistered(K.MINIMAP_NAME) then
+        dbIcon:Register(K.MINIMAP_NAME, object, s.minimap)
     end
 end
 
@@ -4312,7 +4339,7 @@ end
 PulseMinimap = function()
     local stub = _G.LibStub
     local dbIcon = stub and stub("LibDBIcon-1.0", true)
-    local button = dbIcon and dbIcon:IsRegistered(MINIMAP_NAME) and dbIcon:GetMinimapButton(MINIMAP_NAME)
+    local button = dbIcon and dbIcon:IsRegistered(K.MINIMAP_NAME) and dbIcon:GetMinimapButton(K.MINIMAP_NAME)
     button = button or ns.minimapButton
     if not button then return end
     if not button.skaldGlow then
@@ -4348,16 +4375,16 @@ local function SetMinimapButtonShown(show)
         ns.minimapButton:SetShown(show and true or false)
         return true
     end
-    if not (dbIcon and dbIcon:IsRegistered(MINIMAP_NAME)) then return false end
+    if not (dbIcon and dbIcon:IsRegistered(K.MINIMAP_NAME)) then return false end
     Settings().minimap.hide = not show
-    if show then dbIcon:Show(MINIMAP_NAME) else dbIcon:Hide(MINIMAP_NAME) end
+    if show then dbIcon:Show(K.MINIMAP_NAME) else dbIcon:Hide(K.MINIMAP_NAME) end
     return true
 end
 
 -- Export -----------------------------------------------------------------------
 -- The diary as text to copy (an addon cannot write files or post to Discord). Pages go
 -- oldest first, in parts that fit a Discord message.
-local EXPORT_LIMIT = 1900   -- Discord takes 2000 characters a message; the rest is margin
+K.EXPORT_LIMIT = 1900   -- Discord takes 2000 characters a message; the rest is margin
 
 local function PlainText(s)
     s = tostring(s or "")
@@ -4366,13 +4393,13 @@ local function PlainText(s)
 end
 
 -- "Notable": rare quests and above, and the events that mark a journey.
-local NOTABLE_KINDS = {
+K.NOTABLE_KINDS = {
     milestone = true, dungeon = true, boss = true, achievement = true,
     mount = true, guild = true, day = true, note = true,
 }
 local function IsNotable(e)
     if e.kind == "quest" then return (e.tier or 1) >= 3 end
-    return NOTABLE_KINDS[e.kind] == true
+    return K.NOTABLE_KINDS[e.kind] == true
 end
 
 local function SelectEntries(scope)
@@ -4416,8 +4443,8 @@ local function BuildExport(format, scope)
 
     local chunks, current = {}, ""
     for _, block in ipairs(blocks) do
-        if #block > EXPORT_LIMIT then block = block:sub(1, EXPORT_LIMIT) end
-        if #current > 0 and #current + #block + 2 > EXPORT_LIMIT then
+        if #block > K.EXPORT_LIMIT then block = block:sub(1, K.EXPORT_LIMIT) end
+        if #current > 0 and #current + #block + 2 > K.EXPORT_LIMIT then
             chunks[#chunks + 1] = current
             current = ""
         end
@@ -4467,7 +4494,7 @@ local function ShowExport()
 
     local title = f:CreateFontString(nil, "OVERLAY", "QuestTitleFont")
     title:SetPoint("TOP", 0, -14)
-    title:SetTextColor(HEAD_INK[1], HEAD_INK[2], HEAD_INK[3])
+    title:SetTextColor(K.HEAD_INK[1], K.HEAD_INK[2], K.HEAD_INK[3])
     title:SetText(L.EXPORT_TITLE)
     local rule = f:CreateTexture(nil, "ARTWORK")
     rule:SetPoint("TOPLEFT", 20, -42)
@@ -4479,7 +4506,7 @@ local function ShowExport()
     local function Label(text, x, y)
         local fs = f:CreateFontString(nil, "OVERLAY", "QuestFont")
         fs:SetPoint("TOPLEFT", x, y)
-        fs:SetTextColor(HEAD_INK[1], HEAD_INK[2], HEAD_INK[3])
+        fs:SetTextColor(K.HEAD_INK[1], K.HEAD_INK[2], K.HEAD_INK[3])
         fs:SetText(text)
         return fs
     end
@@ -4515,7 +4542,7 @@ local function ShowExport()
     nextButton:SetScript("OnClick", function() part = math.min(#chunks, part + 1); f:Refresh() end)
     local partLabel = f:CreateFontString(nil, "OVERLAY", "QuestFont")
     partLabel:SetPoint("LEFT", nextButton, "RIGHT", 10, 0)
-    partLabel:SetTextColor(HEAD_INK[1], HEAD_INK[2], HEAD_INK[3])
+    partLabel:SetTextColor(K.HEAD_INK[1], K.HEAD_INK[2], K.HEAD_INK[3])
 
     -- The text: dark box, light letters, selected so Ctrl+C is all that is left to do.
     local box = CreateFrame("Frame", nil, f, "BackdropTemplate")
@@ -4593,13 +4620,13 @@ local function BuildOptions(panel)
             local b = CreateFrame("Button", nil, panel)
             b:SetSize(34, 34)
             b:SetPoint("TOPLEFT", tier * 56 + 4, y)
-            local ring = MakeDisc(b, "BACKGROUND", 44, C_HEAD[1], C_HEAD[2], C_HEAD[3], 0)
+            local ring = MakeDisc(b, "BACKGROUND", 44, K.C_HEAD[1], K.C_HEAD[2], K.C_HEAD[3], 0)
             ring:SetPoint("CENTER", 0, 0)
             local inner = MakeDisc(b, "BACKGROUND", 40, 0.93, 0.87, 0.72, 1)
             inner:SetPoint("CENTER", 0, 0)
             local icon = b:CreateTexture(nil, "ARTWORK")
             icon:SetAllPoints()
-            icon:SetTexture(SEAL_PATH .. tier)
+            icon:SetTexture(K.SEAL_PATH .. tier)
             b.ring, b.inner, b.icon = ring, inner, icon
             b:SetScript("OnClick", function() set(tier); Redraw() end)
             b:SetScript("OnEnter", function(self)
@@ -4659,32 +4686,32 @@ local function BuildOptions(panel)
     discard:SetScript("OnClick", function() StaticPopup_Show("SKALD_DISCARD") end)
 
     -- Right page: the page itself, and the switches.
-    PageHeading(panel, L.OPT_PAGE, RIGHT_X)
-    SectionLabel(panel, L.OPT_SIZE, RIGHT_X, -52)
+    PageHeading(panel, L.OPT_PAGE, K.RIGHT_X)
+    SectionLabel(panel, L.OPT_SIZE, K.RIGHT_X, -52)
     local sizeButtons = {}
     for i = 0, 2 do
         local b = MakeFlatButton(panel, 114, 26, L.SIZE_NAMES[i + 1])
-        b:SetPoint("TOPLEFT", RIGHT_X + i * 114, -76)
+        b:SetPoint("TOPLEFT", K.RIGHT_X + i * 114, -76)
         b:SetScript("OnClick", function() Settings().textSize = i; ApplyFonts(); Redraw() end)
         sizeButtons[i] = b
     end
 
-    SectionLabel(panel, L.OPT_INK, RIGHT_X, -116)
+    SectionLabel(panel, L.OPT_INK, K.RIGHT_X, -116)
     local inkBoxes = {}
     for i = 0, 2 do
-        local c = INKS[i + 1]
+        local c = K.INKS[i + 1]
         local cb = MakeWaxCheck(panel, L.INK_NAMES[i + 1],
             function() return (Settings().ink or 0) == i end,
             function() Settings().ink = i; Redraw() end, nil, c, 114)
-        cb:SetPoint("TOPLEFT", RIGHT_X + i * 114, -140)
+        cb:SetPoint("TOPLEFT", K.RIGHT_X + i * 114, -140)
         inkBoxes[#inkBoxes + 1] = cb
     end
 
-    SectionLabel(panel, L.OPT_DAYMODE, RIGHT_X, -180)
+    SectionLabel(panel, L.OPT_DAYMODE, K.RIGHT_X, -180)
     local modeButtons = {}
     for i = 0, 1 do
         local b = MakeFlatButton(panel, 171, 26, L.DAYMODE_NAMES[i + 1])
-        b:SetPoint("TOPLEFT", RIGHT_X + i * 171, -204)
+        b:SetPoint("TOPLEFT", K.RIGHT_X + i * 171, -204)
         b:SetScript("OnClick", function() Settings().dayMode = i; Redraw() end)
         modeButtons[i] = b
     end
@@ -4706,21 +4733,21 @@ local function BuildOptions(panel)
             function() return not Settings().quiet end,
             function(on) Settings().quiet = not on end),
     }
-    for i, cb in ipairs(switches) do cb:SetPoint("TOPLEFT", RIGHT_X, -244 - (i - 1) * 26) end
+    for i, cb in ipairs(switches) do cb:SetPoint("TOPLEFT", K.RIGHT_X, -244 - (i - 1) * 26) end
 
     local exportButton = MakeFlatButton(panel, 166, 28, L.EXPORT_BTN, "gold")
-    exportButton:SetPoint("TOPLEFT", RIGHT_X, -402)
+    exportButton:SetPoint("TOPLEFT", K.RIGHT_X, -402)
     exportButton:SetScript("OnClick", function() ShowExport() end)
     local erase = MakeFlatButton(panel, 166, 28, L.BTN_ERASE, "burn")
-    erase:SetPoint("TOPLEFT", RIGHT_X + 176, -402)
+    erase:SetPoint("TOPLEFT", K.RIGHT_X + 176, -402)
     erase:SetScript("OnClick", function() StaticPopup_Show("SKALD_CLEAR") end)
 
     refresh = function()
         local s = Settings()
-        local tier = s.minTier or DETAIL_MIN_TIER[s.detail or "normal"] or 1
+        local tier = s.minTier or K.DETAIL_MIN_TIER[s.detail or "normal"] or 1
         ShowSeals(questSeals, tier)
         hint:SetText(string.format(L.TIER_HINT, L.TIERS[tier] or tostring(tier)))
-        local loot = s.lootTier or LOOT_MIN_TIER
+        local loot = s.lootTier or K.LOOT_MIN_TIER
         ShowSeals(lootSeals, loot)
         lootHint:SetText(string.format(L.LOOT_HINT, L.TIERS[loot] or tostring(loot)))
         for _, cb in ipairs(boxes) do cb.Sync() end
@@ -4769,15 +4796,15 @@ local function BuildStyle(panel)
     SectionLabel(panel, L.TONE_SAMPLE_LABEL, 0, -168)
     local sample = panel:CreateFontString(nil, "OVERLAY", "SkaldNote")
     sample:SetPoint("TOPLEFT", 0, -192)
-    sample:SetWidth(CW)
+    sample:SetWidth(K.CW)
     sample:SetJustifyH("LEFT")
     sample:SetJustifyV("TOP")
     sample:SetWordWrap(true)
-    sample:SetTextColor(C_NOTE[1], C_NOTE[2], C_NOTE[3])
+    sample:SetTextColor(K.C_NOTE[1], K.C_NOTE[2], K.C_NOTE[3])
 
     -- Right page: the cover, and the notices.
-    PageHeading(panel, L.OPT_COVER, RIGHT_X)
-    SectionLabel(panel, L.OPT_COLOR, RIGHT_X, -52)
+    PageHeading(panel, L.OPT_COVER, K.RIGHT_X)
+    SectionLabel(panel, L.OPT_COLOR, K.RIGHT_X, -52)
     local SWATCH = {
         brown = { 0.42, 0.26, 0.15 }, blue = { 0.25, 0.35, 0.65 }, green = { 0.25, 0.5, 0.28 },
         wine = { 0.55, 0.15, 0.18 }, grey = { 0.45, 0.46, 0.52 }, faction = { 0.85, 0.7, 0.3 },
@@ -4791,22 +4818,22 @@ local function BuildStyle(panel)
                 if window then window:ApplyCover() end
                 refresh()
             end, nil, SWATCH[key], 114)
-        cb:SetPoint("TOPLEFT", RIGHT_X + ((i - 1) % 3) * 114, -78 - math.floor((i - 1) / 3) * 28)
+        cb:SetPoint("TOPLEFT", K.RIGHT_X + ((i - 1) % 3) * 114, -78 - math.floor((i - 1) / 3) * 28)
         colorBoxes[#colorBoxes + 1] = cb
     end
 
-    SectionLabel(panel, L.OPT_COVERTITLE, RIGHT_X, -150)
+    SectionLabel(panel, L.OPT_COVERTITLE, K.RIGHT_X, -150)
     local edit = CreateFrame("EditBox", nil, panel, "BackdropTemplate")
-    edit:SetSize(CW, 28)
-    edit:SetPoint("TOPLEFT", RIGHT_X, -176)
+    edit:SetSize(K.CW, 28)
+    edit:SetPoint("TOPLEFT", K.RIGHT_X, -176)
     edit:SetAutoFocus(false)
     edit:SetMaxLetters(28)
     edit:SetFontObject("SkaldBody")
-    edit:SetTextColor(C_BODY[1], C_BODY[2], C_BODY[3])
+    edit:SetTextColor(K.C_BODY[1], K.C_BODY[2], K.C_BODY[3])
     edit:SetTextInsets(8, 8, 0, 0)
     edit:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Buttons\\WHITE8X8", edgeSize = 1 })
     edit:SetBackdropColor(1, 0.97, 0.88, 0.2)
-    edit:SetBackdropBorderColor(C_MUTED[1], C_MUTED[2], C_MUTED[3], 1)
+    edit:SetBackdropBorderColor(K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3], 1)
     local function SaveTitle()
         local text = (edit:GetText() or ""):gsub("^%s+", ""):gsub("%s+$", "")
         Settings().coverTitle = (text ~= "") and text or nil
@@ -4815,7 +4842,7 @@ local function BuildStyle(panel)
     edit:SetScript("OnEnterPressed", function(self) SaveTitle(); self:ClearFocus() end)
     edit:SetScript("OnEscapePressed", function(self) self:SetText(Settings().coverTitle or ""); self:ClearFocus() end)
     edit:SetScript("OnEditFocusLost", SaveTitle)
-    NoteText(panel, RIGHT_X, -210):SetText(L.COVERTITLE_HINT)
+    NoteText(panel, K.RIGHT_X, -210):SetText(L.COVERTITLE_HINT)
 
     local switches = {
         MakeWaxCheck(panel, L.OPT_TOAST,
@@ -4831,7 +4858,7 @@ local function BuildStyle(panel)
             function() return Settings().resume ~= false end,
             function(on) Settings().resume = on and true or false end),
     }
-    for i, cb in ipairs(switches) do cb:SetPoint("TOPLEFT", RIGHT_X, -262 - (i - 1) * 28) end
+    for i, cb in ipairs(switches) do cb:SetPoint("TOPLEFT", K.RIGHT_X, -262 - (i - 1) * 28) end
 
     refresh = function()
         local s = Settings()
@@ -4880,7 +4907,7 @@ SlashCmdList["SKALD"] = function(msg)
         Say(s.quiet and L.QUIET_ON or L.QUIET_OFF)
     elseif msg:match("^detail") then
         local choice = strtrim(msg:sub(7))
-        if DETAIL_MIN_TIER[choice] then
+        if K.DETAIL_MIN_TIER[choice] then
             Settings().detail = choice
             Settings().minTier = nil
             Say(string.format(L.DETAIL_SET, choice))
