@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.33.1-beta
+
+- **The notices stand at the left edge** of the screen, in the middle, instead of at the top where the game's banners and talking heads are; they slide in from the left.
+- **Move the notices:** in the Style tab, the button "Move the notices" shows a sample for half a minute: drag it where you want the notices to appear (the reminder "Where was I?" uses the same place). Dragging does not open the book.
+
 ## 0.33.0-beta
 
 - **New look for the notices:** a parchment with burnt edges and gold corners, a wax seal in the colour of the page's rarity holding its icon, an ornamental rule under the title, and a splash of gold ink as it comes in. The reminder "Where was I?" wears the same parchment.

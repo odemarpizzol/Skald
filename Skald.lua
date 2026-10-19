@@ -1413,6 +1413,16 @@ ns.NineSlice = function(frame, file, texW, texH, border, draw)
     center:SetPoint("TOPLEFT", draw, -draw); center:SetPoint("BOTTOMRIGHT", -draw, draw)
 end
 
+ns.PlaceNotice = function(fr, slide)
+    local pos = SkaldDB and SkaldDB.toastPos
+    fr:ClearAllPoints()
+    if pos then
+        fr:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", pos[1] + (slide or 0), pos[2])
+    else
+        fr:SetPoint("LEFT", UIParent, "LEFT", 24 + (slide or 0), 90)
+    end
+end
+
 -- The rarity of a page that is not a quest, for the colour of its seal (as on the map).
 local TOAST_TIER = {
     zone = 1, level = 2, milestone = 4, death = 1, dungeon = 3, boss = 4, mount = 3, guild = 3,
@@ -1424,9 +1434,21 @@ local function ShowToast(e, titleText, bodyText, lines, seconds)
     if not toastFrame then
         local fr = CreateFrame("Frame", "SkaldToast", UIParent)
         fr:SetSize(400, 84)
-        fr:SetPoint("TOP", UIParent, "TOP", 0, -64)
+        ns.PlaceNotice(fr)
         fr:SetFrameStrata("HIGH")
         fr:EnableMouse(true)
+        fr:SetMovable(true)
+        fr:SetClampedToScreen(true)
+        fr:RegisterForDrag("LeftButton")
+        -- Drag the notice where you want it; the place is kept.
+        fr:SetScript("OnDragStart", function(self) self.dragging = true; self:StartMoving() end)
+        fr:SetScript("OnDragStop", function(self)
+            self:StopMovingOrSizing()
+            self.dragging = false
+            self.draggedAt = (GetTime and GetTime()) or 0
+            local left, bottom = self:GetLeft(), self:GetBottom()
+            if left and bottom and SkaldDB then SkaldDB.toastPos = { left, bottom } end
+        end)
         ns.NineSlice(fr, TEXD .. "ui_notice", 512, 128, 38, 26)
         -- the wax seal, with the icon of what happened in its hollow
         fr.seal = fr:CreateTexture(nil, "ARTWORK", nil, 1)
@@ -1467,7 +1489,11 @@ local function ShowToast(e, titleText, bodyText, lines, seconds)
         fr.bar:SetHeight(2)
         fr.bar:SetPoint("BOTTOMLEFT", 30, 14)
         fr:SetScript("OnMouseUp", function(self, button)
+            -- a drag also ends with a mouse up: it must not open the book
+            local draggedAt = rawget(self, "draggedAt")
+            if draggedAt and ((GetTime and GetTime()) or 0) - draggedAt < 0.3 then return end
             self:Hide()
+            if self.entry and self.entry.sample then return end
             if button == "LeftButton" and window then
                 -- the page that was written, lit; without it, the newest day
                 if not (self.entry and window:OpenEntry(self.entry)) then window:ShowSection("days", true); window:Show() end
@@ -1476,15 +1502,14 @@ local function ShowToast(e, titleText, bodyText, lines, seconds)
         -- comes in (a short slide and fade, and the splash), waits while the mouse is over it, goes out softly
         fr:SetScript("OnUpdate", function(self, elapsed)
             if not self.born then return end
-            if self:IsMouseOver() then self.born = self.born + (elapsed or 0) end
+            if rawget(self, "dragging") or self:IsMouseOver() then self.born = self.born + (elapsed or 0) end
             local age = ((GetTime and GetTime()) or 0) - self.born
             local life = self.life or 6.5
             if age >= life then self.born = nil; self:Hide(); return end
             local alpha = 1
             if age < 0.28 then alpha = age / 0.28 elseif age > life - 0.7 then alpha = (life - age) / 0.7 end
             self:SetAlpha(math.max(0, math.min(1, alpha)))
-            self:ClearAllPoints()
-            self:SetPoint("TOP", UIParent, "TOP", 0, -64 + (age < 0.28 and (1 - age / 0.28) * 14 or 0))
+            if not rawget(self, "dragging") then ns.PlaceNotice(self, age < 0.28 and -(1 - age / 0.28) * 18 or 0) end
             self.bar:SetWidth(math.max(1, (self:GetWidth() - 60) * (1 - age / life)))
             if age < 0.8 then
                 local t = age / 0.8
@@ -1534,6 +1559,12 @@ local function ShowToast(e, titleText, bodyText, lines, seconds)
     end
 end
 
+-- Shows a sample notice that stays for half a minute: drag it where you want the notices to appear.
+ns.PreviewNotice = function()
+    local sample = { kind = "level", arg = 5, tier = 2, idx = 1, t = time(), zone = GetZoneText(), sample = true }
+    pcall(ShowToast, sample, nil, nil, 3, 30)
+end
+
 -- The card shown on returning to the game: where the last visit ended, the quests still open and
 -- the note left for this day, laid out in small sections on a parchment. A click opens the book.
 do
@@ -1542,7 +1573,7 @@ ns.ShowResumeCard = function(data)
     if not card then
         local fr = CreateFrame("Frame", "SkaldResume", UIParent)
         fr:SetWidth(380)
-        fr:SetPoint("TOP", UIParent, "TOP", 0, -140)
+        ns.PlaceNotice(fr)
         fr:SetFrameStrata("HIGH")
         fr:EnableMouse(true)
         ns.NineSlice(fr, "Interface\\AddOns\\Skald\\Textures\\ui_notice", 512, 128, 38, 30)
@@ -1609,6 +1640,7 @@ ns.ShowResumeCard = function(data)
     local height = y + 16
     card:SetHeight(height)
     card.paper:SetTexCoord(0, 380 / 256, 0, height / 256)
+    ns.PlaceNotice(card)
     card:SetAlpha(1)
     card:Show()
     local stamp = (card.stamp or 0) + 1
@@ -5413,6 +5445,17 @@ local function BuildStyle(panel)
             function(on) Settings().resume = on and true or false end),
     }
     for i, cb in ipairs(switches) do cb:SetPoint("TOPLEFT", K.RIGHT_X, -262 - (i - 1) * 28) end
+    -- Where the notices appear: a sample to drag to the place you like.
+    local moveButton = MakeFlatButton(panel, 220, 26, L.TOAST_MOVE)
+    moveButton:SetPoint("TOPLEFT", K.RIGHT_X, -356)
+    moveButton:SetScript("OnClick", function() if ns.PreviewNotice then ns.PreviewNotice() end end)
+    moveButton:HookScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_TOP")
+        GameTooltip:AddLine(L.TOAST_MOVE, 1, 0.82, 0)
+        GameTooltip:AddLine(L.TOAST_MOVE_HINT, 1, 1, 1, true)
+        GameTooltip:Show()
+    end)
+    moveButton:HookScript("OnLeave", function() GameTooltip:Hide() end)
 
     refresh = function()
         local s = Settings()
