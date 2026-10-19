@@ -1519,7 +1519,7 @@ ns.LOCALES = {
             reviveHealer = {
                 "O curandeiro de espíritos de %s me trouxe de volta, por um preço. Pago de bom grado.",
                 "Uma mão pálida me devolveu aos vivos em %s. A dívida é pequena; a gratidão, não.",
-                "O mundo me devolveu em %s, um pouco mais fraco, mas respirando.",
+                "O mundo me devolveu em %s, um pouco {g:mais fraco|mais fraca}, mas respirando.",
                 "O curandeiro pediu um pouco da minha força em %s, e me deu a vida.",
                 "O curandeiro de %s pediu pouco e devolveu tudo.",
                 "Em %s, uma voz tranquila me chamou de volta através da linha.",
@@ -2230,7 +2230,7 @@ ns.LOCALES = {
             },
             race_Dwarf_level = {
                 "Nível %s! Isso pede uma bebida.",
-                "Nível %s: mais duro que antes, e eu já era duro.",
+                "Nível %s: mais {g:duro|dura} que antes, e eu já era {g:duro|dura}.",
             },
             race_NightElf_zone = {
                 "O sussurro antigo de %s soou como uma velha canção de ninar.",
@@ -2621,7 +2621,7 @@ ns.LOCALES = {
         DAY_CLOSE = {
             quiet = "Um dia tranquilo, mas não vazio.",
             deadly = "A estrada foi cruel hoje, e me levantei todas as vezes.",
-            levels = "Não sou o mesmo que partiu hoje de manhã.",
+            levels = "Não sou {g:o mesmo|a mesma} que partiu hoje de manhã.",
             busy = "Um longo dia de trabalho, e cada passo dele foi meu.",
             plain = "Amanhã a estrada continua.",
         },
@@ -3877,7 +3877,7 @@ ns.LOCALES = {
             },
             tone_humor_level = {
                 "Niveau %s. Personne ne m'avait dit qu'il y aurait des escaliers.",
-                "Niveau %s\194\160! Je me sens plus fort, ou ce sont les en-cas.",
+                "Niveau %s\194\160! Je me sens plus {g:fort|forte}, ou ce sont les en-cas.",
                 "Je suis niveau %s, désormais. Ma mère me ferait encore mettre une écharpe.",
                 "Niveau %s, et pas un seul discours dramatique de ma part. Je grandis.",
                 "Niveau %s. Officiellement plus dangereux qu'hier. Pour moi-même, surtout.",
