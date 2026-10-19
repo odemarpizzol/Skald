@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.31.5-beta
+
+- **New icons:** the resurrection page has a winged ankh, the Skinning Knife, the Mining Pick, the blacksmith's hammer and the engineer's spanner have their own drawings, tabards are drawn as a tabard, and the pet's paw matches the new set.
+
 ## 0.31.4-beta
 
 - The hunter's tab is called "Pets" (it was cut off in the tab) and its right page has a shorter title, so the list no longer touches the rule.

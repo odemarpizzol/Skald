@@ -948,7 +948,7 @@ local EVENT_ICON = {
     day = "milestone",   -- until a sun or moon icon of its own is drawn
     mark = "milestone", home = "st_hearth", rep = "achievement", flight = "st_flight",
     tame = "pet",
-    revive = "milestone", hearth = "st_hearth",
+    revive = "revive", hearth = "st_hearth",
 }
 -- Professions: the game's skill line id says which one it is whatever the language; the
 -- name is the fallback (and how pages written before this existed are recognised).
@@ -1281,15 +1281,15 @@ local ARMOR_SLOT = {
     INVTYPE_HEAD = "helm", INVTYPE_SHOULDER = "shoulder", INVTYPE_CHEST = "armor", INVTYPE_ROBE = "armor",
     INVTYPE_BODY = "armor", INVTYPE_HAND = "hands", INVTYPE_LEGS = "legs", INVTYPE_FEET = "feet",
     INVTYPE_WAIST = "waist", INVTYPE_WRIST = "wrist", INVTYPE_CLOAK = "cloak", INVTYPE_FINGER = "ring",
-    INVTYPE_NECK = "amulet", INVTYPE_TRINKET = "trinket", INVTYPE_SHIELD = "shield", INVTYPE_HOLDABLE = "offhand", INVTYPE_RELIC = "relic",
+    INVTYPE_NECK = "amulet", INVTYPE_TRINKET = "trinket", INVTYPE_SHIELD = "shield", INVTYPE_HOLDABLE = "offhand", INVTYPE_RELIC = "relic", INVTYPE_TABARD = "tabard",
 }
 -- Professions' tools are weapons of the "miscellaneous" kind in the game; the book draws the knife as a
 -- dagger and the pick and the hammers as a mace.
 ns.TOOL_CAT = {
-    [7005] = "dagger",   -- Skinning Knife
-    [2901] = "mace",     -- Mining Pick
-    [5956] = "mace",     -- Blacksmith Hammer
-    [6219] = "mace",     -- Arclight Spanner
+    [7005] = "skinningknife",
+    [2901] = "pick",     -- Mining Pick
+    [5956] = "hammer",   -- Blacksmith Hammer
+    [6219] = "spanner",  -- Arclight Spanner
 }
 -- The kinds that have an icon of their own in the book; every other item shows the game's own icon.
 local ART_ICON = {
@@ -1300,6 +1300,7 @@ local ART_ICON = {
     feet = "it_feet", waist = "it_waist", wrist = "it_wrist", shield = "it_shield", offhand = "it_offhand",
     ring = "it_ring", jewel = "it_ring", amulet = "it_amulet", cloak = "it_cloak", bag = "it_bag", trinket = "it_trinket",
     weapon = "it_weapon", food = "st_food", bandage = "st_bandage",
+    skinningknife = "it_skinningknife", pick = "it_pick", hammer = "it_hammer", spanner = "it_spanner", tabard = "it_tabard",
 }
 
 -- What an item is, by its reference: a kind (sword, helm, ring, offhand, recipe...) and the game's icon.
