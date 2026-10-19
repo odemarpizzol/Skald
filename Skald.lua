@@ -3904,7 +3904,7 @@ Mile.BuildPets = function(panel)
             end
         end)
         model:SetScript("OnMouseWheel", function(self, delta)
-            self.skaldZoom = math.max(1, math.min(5, (self.skaldZoom or 1.9) - (delta or 0) * 0.25))
+            self.skaldZoom = math.max(0.8, math.min(5, (self.skaldZoom or 1.6) - (delta or 0) * 0.25))
             pcall(self.SetCamDistanceScale, self, self.skaldZoom)
         end)
     end
@@ -3926,7 +3926,7 @@ Mile.BuildPets = function(panel)
         if okModel and model and petName and UnitExists("pet") and Safe(UnitName("pet")) == petName then
             out = pcall(model.SetUnit, model, "pet")
             if out then
-                model.skaldZoom, model.skaldAngle = 1.9, 0.6
+                model.skaldZoom, model.skaldAngle = 1.6, 0.6
                 pcall(model.SetCamDistanceScale, model, model.skaldZoom)
                 pcall(model.SetFacing, model, model.skaldAngle)
             end

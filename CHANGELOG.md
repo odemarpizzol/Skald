@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.31.10-beta
+
+- The pet in the Pets tab is drawn larger in its frame (the mouse wheel still moves the camera).
+
 ## 0.31.9-beta
 
 - **The character on the cover stands still**, facing the reader (drag with the left button to turn it). The pet in the Pets tab is drawn larger inside its frame.
