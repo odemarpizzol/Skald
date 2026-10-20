@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.35.1-beta
+
+- **Map markers under the game's:** the diary's markers now sit below the game's own (quests, flight masters, your arrow), so a quest marker under one of ours can be clicked.
+
 ## 0.35.0-beta
 
 - **Words that agree with you:** the diary speaks in the first person, and in Portuguese and French the few phrases that carry an agreement ("I fell", "I am glad", "hunter") now follow the sex of your character. The quest descriptions do the same.
