@@ -194,9 +194,14 @@ local function PickFlavor(kind, entry)
         end
     end
     if #keys == 0 or math.random() > 0.4 then return nil end
-    return keys[math.random(#keys)]
+    local pick = keys[math.random(#keys)]
+    -- A pool of two or three lines repeats at once: it is used in proportion to its size, up to K.FLAVOR_FULL lines.
+    local size = #PHRASES[pick]
+    if size < K.FLAVOR_FULL and math.random() > size / K.FLAVOR_FULL then return nil end
+    return pick
 end
 
+K.FLAVOR_FULL = 8   -- the lines a class or race pool needs to be drawn as often as the plain ones
 K.CRAFT_MERGE = 1200   -- seconds: making the same thing again within this time adds to the page of the last one
 K.QUEST_START_MAX, K.QUEST_START_DAYS = 300, 60   -- quests whose acceptance is kept, and for how long
 K.MODEL_REUSE, K.MODEL_RETRY = 20, { 1.5, 4 }   -- seconds: the cover model is not asked for again within K.MODEL_REUSE; retries after the first request
@@ -5469,22 +5474,22 @@ end
 -- starts with a header line and carries a checksum of its body, so the page knows when something was copied
 -- half-way.
 K.READER_LIMIT = 40000
-local READER_NL, READER_BS = string.char(10), string.char(92)
-local function ReaderEscape(t)
+K.NL, K.BS = string.char(10), string.char(92)
+K.ReaderEscape = function(t)
     t = tostring(t or "")
-    t = t:gsub(READER_BS, READER_BS .. READER_BS)
-    t = t:gsub("|", READER_BS .. "p")
-    t = t:gsub(READER_NL, READER_BS .. "n")
+    t = t:gsub(K.BS, K.BS .. K.BS)
+    t = t:gsub("|", K.BS .. "p")
+    t = t:gsub(K.NL, K.BS .. "n")
     return t
 end
-local function ReaderChecksum(text)
+K.ReaderChecksum = function(text)
     local h = 5381
     for i = 1, #text do h = (h * 31 + text:byte(i)) % 4294967296 end
     return h
 end
-local function ReaderLine(...)
+K.ReaderLine = function(...)
     local out = {}
-    for i = 1, select("#", ...) do out[i] = ReaderEscape((select(i, ...))) end
+    for i = 1, select("#", ...) do out[i] = K.ReaderEscape((select(i, ...))) end
     return table.concat(out, "|")
 end
 local function BuildReader(scope)
@@ -5495,11 +5500,11 @@ local function BuildReader(scope)
     local hide = Settings().exportHideNames ~= false
     local lines = {}
     local st = db.stats or {}
-    lines[#lines + 1] = ReaderLine("S", st.first or 0, st.played or 0)
-    for kind, n in pairs(st.counts or {}) do lines[#lines + 1] = ReaderLine("N", kind, n) end
-    for tier, n in pairs(st.tiers or {}) do lines[#lines + 1] = ReaderLine("T", tier, n) end
+    lines[#lines + 1] = K.ReaderLine("S", st.first or 0, st.played or 0)
+    for kind, n in pairs(st.counts or {}) do lines[#lines + 1] = K.ReaderLine("N", kind, n) end
+    for tier, n in pairs(st.tiers or {}) do lines[#lines + 1] = K.ReaderLine("T", tier, n) end
     for id, rec in pairs(db.goals or {}) do
-        lines[#lines + 1] = ReaderLine("G", id, type(rec) == "table" and rec.t or 0, (type(rec) == "table" and rec.retro) and 1 or 0)
+        lines[#lines + 1] = K.ReaderLine("G", id, type(rec) == "table" and rec.t or 0, (type(rec) == "table" and rec.retro) and 1 or 0)
     end
     local summary = #lines
     for _, e in ipairs(entries) do
@@ -5507,28 +5512,28 @@ local function BuildReader(scope)
         if hide then body = HideNames(body, e) end
         local note = (e.fav and type(e.favNote) == "string") and PlainText(e.favNote) or ""
         local ic = e.kind == "loot" and ("loot:" .. tostring(e.cat or "")) or tostring(e.kind)
-        lines[#lines + 1] = ReaderLine("P", e.t or 0, e.kind, e.tier or 0, e.fav and 1 or 0,
+        lines[#lines + 1] = K.ReaderLine("P", e.t or 0, e.kind, e.tier or 0, e.fav and 1 or 0,
             PlainText(tostring(ns.PlaceName(e) or "")), ic, K.TextPrefix(body, 700), K.TextPrefix(note, 300))
     end
     -- the parts: the summary lines open the first
     local bodies, current, size = {}, {}, 0
     for _, line in ipairs(lines) do
         if size + #line + 1 > K.READER_LIMIT and #current > 0 then
-            bodies[#bodies + 1] = table.concat(current, READER_NL)
+            bodies[#bodies + 1] = table.concat(current, K.NL)
             current, size = {}, 0
         end
         current[#current + 1] = line
         size = size + #line + 1
     end
-    if #current > 0 then bodies[#bodies + 1] = table.concat(current, READER_NL) end
+    if #current > 0 then bodies[#bodies + 1] = table.concat(current, K.NL) end
     local out = {}
     local name = UnitName and UnitName("player") or "?"
     local class = (UnitClass and select(1, UnitClass("player"))) or ""
     local race = (UnitRace and select(1, UnitRace("player"))) or ""
     for i, body in ipairs(bodies) do
-        local header = ReaderLine("H", "SKALDREADER1", name, class, race, UnitLevel and UnitLevel("player") or 0,
-            (SkaldDB and SkaldDB.tone) or "epic", GetLocale(), #entries, i, #bodies, ReaderChecksum(body))
-        out[i] = header .. READER_NL .. body
+        local header = K.ReaderLine("H", "SKALDREADER1", name, class, race, UnitLevel and UnitLevel("player") or 0,
+            (SkaldDB and SkaldDB.tone) or "epic", GetLocale(), #entries, i, #bodies, K.ReaderChecksum(body))
+        out[i] = header .. K.NL .. body
     end
     return out
 end
