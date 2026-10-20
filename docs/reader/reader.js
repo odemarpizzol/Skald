@@ -168,36 +168,43 @@
       if (!byKey[k]) { byKey[k] = { key: k, t: p.t, list: [] }; groups.push(byKey[k]); }
       byKey[k].list.push(p);
     });
-    var stage = el('div'); stage.style.cssText = 'position:absolute;left:-9999px;top:0;visibility:hidden';
-    document.body.appendChild(stage);
     var pageH = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--page-h'), 10) || 620;
-    var pages = [], days = [];
+    var capacity = pageH - 44;   // what is left above the number at the foot
     function newPage(cont, group, n) {
       var page = pageShell(model, false, fmt(L().day, n));
-      var h = el('h2', 'small', cont ? fmt(L().day, n) + ' (' + '…' + ')' : fmt(L().day, n));
-      page.appendChild(h);
+      page.appendChild(el('h2', 'small', cont ? fmt(L().day, n) + ' (…)' : fmt(L().day, n)));
       if (!cont) page.appendChild(el('div', 'sub', L().date(new Date(group.t * 1000))));
       page.appendChild(el('span', 'rule'));
-      stage.appendChild(page);
       return page;
     }
+    // Measure everything in one go (reading the heights of all the rows after putting them all in, so the browser
+    // lays the text out once), then fill the pages by arithmetic.
+    var stage = el('div');
+    stage.style.cssText = 'position:absolute;left:-9999px;top:0;visibility:hidden;width:' + (parseInt(getComputedStyle(document.documentElement).getPropertyValue('--page-w'), 10) - 60 || 380) + 'px';
+    var rows = groups.map(function (g) { return g.list.map(entryRow); });
+    rows.forEach(function (list) { list.forEach(function (r) { stage.appendChild(r); }); });
+    var sampleFirst = newPage(false, groups[0] || { t: 0 }, 1), sampleCont = newPage(true, groups[0] || { t: 0 }, 1);
+    sampleFirst.style.cssText = sampleCont.style.cssText = 'height:auto';
+    stage.appendChild(sampleFirst); stage.appendChild(sampleCont);
+    document.body.appendChild(stage);
+    var headFirst = sampleFirst.lastElementChild.offsetTop + sampleFirst.lastElementChild.offsetHeight + 8;
+    var headCont = sampleCont.lastElementChild.offsetTop + sampleCont.lastElementChild.offsetHeight + 8;
+    var heights = rows.map(function (list) { return list.map(function (r) { return r.offsetHeight; }); });
+    document.body.removeChild(stage);
+
+    var pages = [], days = [];
     groups.forEach(function (g, gi) {
-      var n = gi + 1, page = newPage(false, g, n), startIndex = pages.length;
-      pages.push(page); days.push({ n: n, group: g, page: startIndex });
-      g.list.forEach(function (p) {
-        var row = entryRow(p);
-        page.appendChild(row);
-        // the page has a fixed height, so its scroll height says nothing: the foot of the last row does
-        if (row.offsetTop + row.offsetHeight > pageH - 44 && page.querySelectorAll('.entry').length > 1) {
-          page.removeChild(row);
-          page = newPage(true, g, n);
-          pages.push(page);
-          page.appendChild(row);
+      var n = gi + 1, page = newPage(false, g, n), used = headFirst, count = 0;
+      days.push({ n: n, group: g, page: pages.length });
+      pages.push(page);
+      rows[gi].forEach(function (row, ri) {
+        var h = heights[gi][ri];
+        if (count > 0 && used + h > capacity) {
+          page = newPage(true, g, n); pages.push(page); used = headCont; count = 0;
         }
+        page.appendChild(row); used += h; count++;
       });
     });
-    pages.forEach(function (pg) { stage.removeChild(pg); });
-    document.body.removeChild(stage);
     return { pages: pages, days: days };
   }
 

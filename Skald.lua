@@ -4852,6 +4852,7 @@ H.PLAYER_ENTERING_WORLD = H.ZONE_CHANGED_NEW_AREA
 -- What the quest asks, in the client's own language: from the quest dialog when it is offered, and from the
 -- quest log when it is handed in. Kept by quest id until the quest is turned in.
 K.OBJECTIVE_KEPT = 150
+K.OBJECTIVE_LEN, K.OBJECTIVE_MIN_TIER = 240, 2   -- the tooltip shows 230 characters; a page keeps the text only from this rarity up (the saved file stays small)
 ns.NoteObjective = function(event)
     if event == "QUEST_COMPLETE" then ns.pendingObjective = nil end
     local id = GetQuestID and tonumber(GetQuestID()) or nil
@@ -4866,7 +4867,7 @@ ns.NoteObjective = function(event)
         end)
     end
     if type(text) ~= "string" or text == "" then return end
-    text = K.TextPrefix(text, 400)
+    text = K.TextPrefix(text, K.OBJECTIVE_LEN)
     if event == "QUEST_COMPLETE" then ns.pendingObjective = text end
     local db = Journal()
     if db and id and id > 0 then
@@ -4955,8 +4956,8 @@ H.QUEST_TURNED_IN = function(self, event, ...)
         end
         AddEntry("quest", QuestName(questID), nil,
             { tier = tier, q = questID, npc = pendingNPC, qtype = qtype or false, cend = cend, since = since,
-              ot = (type(ns.pendingObjective) == "string" and ns.pendingObjective ~= "" and ns.pendingObjective)
-                  or (Journal() and Journal().questObj and Journal().questObj[questID]) or nil,
+              ot = (tier >= K.OBJECTIVE_MIN_TIER) and ((type(ns.pendingObjective) == "string" and ns.pendingObjective ~= "" and ns.pendingObjective)
+                  or (Journal() and Journal().questObj and Journal().questObj[questID])) or nil,
               ql = pendingQuestLevel, pl = UnitLevel and UnitLevel("player"), nid = Mile.npcId })
     else
         CountOnly("quest", tier)
@@ -5431,16 +5432,22 @@ end
 
 -- The names of other players (companions of a dungeon, someone met again) are replaced by "a companion" in what
 -- is exported, unless the player asks to keep them (a switch in the export window).
+-- One pass over the words of the text, looking each one up in a set (a diary of 3000 pages and 200 companions
+-- stays fast); the set of the companions is made once for each export (K.nameSet is cleared where one begins).
 local function HideNames(text, e)
-    local names, seen = {}, {}
-    local function Add(n) if type(n) == "string" and n ~= "" and not seen[n] then seen[n] = true; names[#names + 1] = n end end
-    for _, n in ipairs(e.with or {}) do Add(n) end
-    if e.kind == "reunion" then Add(tostring(e.arg)) end
-    for n in pairs((Journal() and Journal().companions) or {}) do Add(n) end
-    for _, n in ipairs(names) do
-        text = text:gsub(n:gsub("%p", "%%%0"), function() return L.EXPORT_SOMEONE end)
+    if not K.nameSet then
+        K.nameSet = {}
+        for n in pairs((Journal() and Journal().companions) or {}) do K.nameSet[n] = true end
     end
-    return text
+    local set = K.nameSet
+    local extra
+    for _, n in ipairs(e.with or {}) do
+        if not set[n] then extra = extra or {}; extra[n] = true end
+    end
+    if e.kind == "reunion" and not set[tostring(e.arg)] then extra = extra or {}; extra[tostring(e.arg)] = true end
+    return (text:gsub("[%w\128-\255]+", function(word)
+        if set[word] or (extra and extra[word]) then return L.EXPORT_SOMEONE end
+    end))
 end
 ns.HideNames = HideNames
 
@@ -5481,6 +5488,7 @@ local function ReaderLine(...)
     return table.concat(out, "|")
 end
 local function BuildReader(scope)
+    K.nameSet = nil
     local entries = SelectEntries(scope)
     local db = Journal()
     if #entries == 0 or not db then return {} end
@@ -5527,6 +5535,7 @@ end
 
 -- Returns a list of texts, each short enough for one message (empty when there is nothing).
 local function BuildExport(format, scope)
+    K.nameSet = nil
     if format == "reader" then return BuildReader(scope) end
     local entries = SelectEntries(scope)
     if #entries == 0 then return {} end
