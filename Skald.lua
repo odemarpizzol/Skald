@@ -1549,7 +1549,7 @@ local function ShowToast(e, titleText, bodyText, lines, seconds)
         -- the wax seal, with the icon of what happened in its hollow
         fr.seal = fr:CreateTexture(nil, "ARTWORK", nil, 1)
         fr.seal:SetSize(60, 60)
-        fr.seal:SetPoint("LEFT", 30, 0)
+        fr.seal:SetPoint("LEFT", 30, 7)
         fr.seal:SetTexture(TEXD .. "ui_seal1")
         fr.icon = fr:CreateTexture(nil, "ARTWORK", nil, 3)
         fr.icon:SetSize(30, 30)
@@ -1583,7 +1583,7 @@ local function ShowToast(e, titleText, bodyText, lines, seconds)
         fr.bar = fr:CreateTexture(nil, "OVERLAY")
         fr.bar:SetColorTexture(0.85, 0.65, 0.10, 0.85)
         fr.bar:SetHeight(2)
-        fr.bar:SetPoint("BOTTOMLEFT", 30, 14)
+        fr.bar:SetPoint("BOTTOMLEFT", 102, 17)
         fr:SetScript("OnMouseUp", function(self, button)
             -- a drag also ends with a mouse up: it must not open the book
             local draggedAt = rawget(self, "draggedAt")
@@ -1606,7 +1606,7 @@ local function ShowToast(e, titleText, bodyText, lines, seconds)
             if age < 0.28 then alpha = age / 0.28 elseif age > life - 0.7 then alpha = (life - age) / 0.7 end
             self:SetAlpha(math.max(0, math.min(1, alpha)))
             if not rawget(self, "dragging") then ns.PlaceNotice(self, age < 0.28 and (1 - age / 0.28) or 0) end
-            self.bar:SetWidth(math.max(1, (self:GetWidth() - 60) * (1 - age / life)))
+            self.bar:SetWidth(math.max(1, 266 * (1 - age / life)))
             if age < 0.8 then
                 local t = age / 0.8
                 self.splash:SetAlpha(0.9 * (1 - t))
