@@ -11,6 +11,9 @@ local UI_TEXT = {
         TAB = "Goals", OF = "%d of %d", DONE_ON = "Done on %s", BEFORE = "Done before the diary counted", SECRET = "???",
         SECRET_HINT = "A goal still to be found.", DATE = "%m/%d/%Y", TOTAL = "%d of %d goals reached",
         EMPTY = "Nothing here yet.",
+        PAGE = "Page %d of %d", NEAR = "Nearest", ALLDONE = "Every goal of the book is reached.",
+        INTRO_SUMMARY = "Small marks that only this diary can tell. Turn the corner of the page to read the next chapter.",
+        INTRO = { road = "Roads and sky roads: the places I learned to reach.", story = "Some tales are told to the end. These are the ones the diary remembers best.", beasts = "A hunter is never alone for long. Every friend from the wild leaves a mark in the book.", company = "The road is better with someone beside you. The diary remembers who was there." },
         CATS = { explorer = "Exploration", road = "The Road", story = "Stories", war = "War", craft = "Crafts", beasts = "Beasts", company = "Company" },
         FACT = {
             zones = "Discover %d lands.", flights = "Learn %d flight paths.", level = "Reach level %d.",
@@ -41,6 +44,9 @@ local UI_TEXT = {
         TAB = "Metas", OF = "%d de %d", DONE_ON = "Cumprida em %s", BEFORE = "Cumprida antes do diário contar", SECRET = "???",
         SECRET_HINT = "Uma meta ainda por descobrir.", DATE = "%d/%m/%Y", TOTAL = "%d de %d metas cumpridas",
         EMPTY = "Nada aqui ainda.",
+        PAGE = "Página %d de %d", NEAR = "Mais perto", ALLDONE = "Todas as metas do livro foram cumpridas.",
+        INTRO_SUMMARY = "Pequenas marcas que só este diário sabe contar. Vire o canto da página para ler o próximo capítulo.",
+        INTRO = { road = "Estradas e rotas do céu: os lugares que aprendi a alcançar.", story = "Algumas histórias são contadas até o fim. Estas são as que o diário lembra melhor.", beasts = "Um caçador nunca fica sozinho por muito tempo. Cada amigo da natureza deixa uma marca no livro.", company = "A estrada é melhor com alguém ao lado. O diário lembra quem esteve lá." },
         CATS = { explorer = "Exploração", road = "A Estrada", story = "Histórias", war = "Guerra", craft = "Ofícios", beasts = "Feras", company = "Companhia" },
         FACT = {
             zones = "Descubra %d terras.", flights = "Aprenda %d rotas de voo.", level = "Chegue ao nível %d.",
@@ -71,6 +77,9 @@ local UI_TEXT = {
         TAB = "Objectifs", OF = "%d sur %d", DONE_ON = "Accompli le %s", BEFORE = "Accompli avant que le journal compte", SECRET = "???",
         SECRET_HINT = "Un objectif encore à découvrir.", DATE = "%d/%m/%Y", TOTAL = "%d objectifs atteints sur %d",
         EMPTY = "Rien ici pour l'instant.",
+        PAGE = "Page %d sur %d", NEAR = "Les plus proches", ALLDONE = "Tous les objectifs du livre sont atteints.",
+        INTRO_SUMMARY = "De petites marques que seul ce journal sait raconter. Tournez le coin de la page pour lire le chapitre suivant.",
+        INTRO = { road = "Routes de terre et du ciel94p: les lieux que j'ai appris à rejoindre.", story = "Certaines histoires sont menées jusqu'au bout. Ce sont celles dont le journal se souvient le mieux.", beasts = "Un chasseur n'est jamais seul longtemps. Chaque ami de la nature laisse une marque dans le livre.", company = "La route est meilleure avec quelqu'un à ses côtés. Le journal se souvient de qui était là." },
         CATS = { explorer = "Exploration", road = "La Route", story = "Histoires", war = "Guerre", craft = "Métiers", beasts = "Bêtes", company = "Compagnie" },
         FACT = {
             zones = "Découvrez %d contrées.", flights = "Apprenez %d routes aériennes.", level = "Atteignez le niveau %d.",
@@ -225,7 +234,10 @@ SkaldAPI.entryHook = function(kind)
     end)
 end
 
--- The tab: the categories on the left page, the goals of the chosen one on the right page. -------------------
+-- The tab, as a little book of its own: a summary spread, then one chapter for each kind of goal. The corners
+-- of the page (and the mouse wheel) turn the pages; a chapter with more goals than a page holds goes on. ------
+local PER_PAGE = 7
+
 local function BuildGoalsTab(panel)
     local CW = SkaldAPI.CW or 342
     local RIGHT_X = SkaldAPI.RIGHT_X or 402
@@ -234,12 +246,14 @@ local function BuildGoalsTab(panel)
     local muted = SkaldAPI.C_MUTED or { 0.42, 0.29, 0.17 }
     local sealPath = "Interface\\AddOns\\Skald\\Textures\\seal"
 
-    SkaldAPI.PageHeading(panel, UI.TAB, 0)
-    local total = SkaldAPI.NoteText(panel, 0, -34)
-    total:SetJustifyH("CENTER")
-    local rightTitle = SkaldAPI.PageHeading(panel, "", RIGHT_X)
+    local leftHeading = SkaldAPI.PageHeading(panel, UI.TAB, 0)
+    local leftNote = SkaldAPI.NoteText(panel, 0, -34)
+    leftNote:SetJustifyH("CENTER")
+    local rightHeading = SkaldAPI.PageHeading(panel, "", RIGHT_X)
+    local footer = SkaldAPI.NoteText(panel, 0, -412)
+    footer:SetJustifyH("CENTER")
 
-    -- A bar: the frame of the picture over a gold fill.
+    -- A bar: the frame of the picture, with a gold fill over it.
     local function MakeBar(parent, width, height)
         local bar = CreateFrame("Frame", nil, parent)
         bar:SetSize(width, height)
@@ -259,14 +273,15 @@ local function BuildGoalsTab(panel)
         return bar
     end
 
-    local categoryRows, goalRows = {}, {}
-    local chosen = 1
-    local visibleCats
+    local pageIndex = 1
+    local spreads = {}
+    local refreshTab
 
+    -- The left page of the summary: the chapters, each with its count and bar; a click opens the chapter.
+    local chapterRows = {}
     for i, cat in ipairs(CATS) do
         local row = CreateFrame("Button", nil, panel)
         row:SetSize(CW, 46)
-        row:SetPoint("TOPLEFT", 0, -62 - (i - 1) * 50)
         row.icon = row:CreateTexture(nil, "ARTWORK")
         row.icon:SetSize(30, 30)
         row.icon:SetPoint("LEFT", 4, 0)
@@ -280,16 +295,41 @@ local function BuildGoalsTab(panel)
         row.count:SetTextColor(muted[1], muted[2], muted[3])
         row.bar = MakeBar(row, CW - 54, 14)
         row.bar:SetPoint("BOTTOMLEFT", 44, 4)
-        row.mark = row:CreateTexture(nil, "BACKGROUND")
-        row.mark:SetAllPoints()
-        row.mark:SetColorTexture(0.43, 0.12, 0.10, 0.10)
-        row.mark:Hide()
-        row:SetScript("OnClick", function() chosen = i; if refreshTab then refreshTab() end end)
+        row.hover = row:CreateTexture(nil, "BACKGROUND")
+        row.hover:SetAllPoints()
+        row.hover:SetColorTexture(0.43, 0.12, 0.10, 0.10)
+        row.hover:Hide()
+        row:SetScript("OnEnter", function(self) self.hover:Show() end)
+        row:SetScript("OnLeave", function(self) self.hover:Hide() end)
         row.cat = cat
-        categoryRows[i] = row
+        row:SetScript("OnClick", function(self)
+            for n, sp in ipairs(spreads) do
+                if sp.cat == self.cat.key then pageIndex = n; break end
+            end
+            if refreshTab then refreshTab() end
+            if SkaldAPI.RefreshWindow then SkaldAPI.RefreshWindow() end
+        end)
+        chapterRows[i] = row
     end
 
-    for i = 1, 7 do
+    -- The left page of a chapter: a large icon, the count with its bar, and a few lines to open it.
+    local art = panel:CreateTexture(nil, "ARTWORK")
+    art:SetSize(72, 72)
+    art:SetPoint("TOP", panel, "TOPLEFT", CW / 2, -66)
+    local chapterCount = SkaldAPI.NoteText(panel, 0, -146)
+    chapterCount:SetJustifyH("CENTER")
+    local chapterBar = MakeBar(panel, CW - 40, 14)
+    chapterBar:SetPoint("TOPLEFT", 20, -166)
+    local intro = SkaldAPI.NoteText(panel, 12, -200)
+    intro:SetWidth(CW - 24)
+    intro:SetJustifyH("CENTER")
+    local introSummary = SkaldAPI.NoteText(panel, 12, -58)
+    introSummary:SetWidth(CW - 24)
+    introSummary:SetJustifyH("CENTER")
+
+    -- The right page: up to seven goals.
+    local goalRows = {}
+    for i = 1, PER_PAGE do
         local row = CreateFrame("Frame", nil, panel)
         row:SetSize(CW, 50)
         row:SetPoint("TOPLEFT", RIGHT_X, -52 - (i - 1) * 54)
@@ -312,85 +352,151 @@ local function BuildGoalsTab(panel)
         row.count:SetTextColor(muted[1], muted[2], muted[3])
         goalRows[i] = row
     end
+    local allDone = SkaldAPI.NoteText(panel, RIGHT_X, -60)
+    allDone:SetJustifyH("CENTER")
+    allDone:SetText(UI.ALLDONE)
+
+    local function FillRow(row, g, facts, done)
+        row:Show()
+        local rec = done[g.id]
+        local value = facts[g.fact] or 0
+        if rec then
+            row.icon:SetTexture(TEX .. "goal_done")
+            row.icon:SetAlpha(1)
+            row.name:SetText(UI.NAMES[g.id])
+            row.name:SetTextColor(head[1], head[2], head[3])
+            row.desc:SetText(rec.retro and UI.BEFORE or string.format(UI.DONE_ON, date(UI.DATE, rec.t or time())))
+            row.bar:Set(1)
+            row.count:SetText("")
+        elseif g.secret then
+            row.icon:SetTexture(TEX .. "goal_locked")
+            row.icon:SetAlpha(0.8)
+            row.name:SetText(UI.SECRET)
+            row.name:SetTextColor(muted[1], muted[2], muted[3])
+            row.desc:SetText(UI.SECRET_HINT)
+            row.bar:Set(0)
+            row.count:SetText("")
+        else
+            row.icon:SetTexture(sealPath .. g.tier)
+            row.icon:SetAlpha(0.55)
+            row.name:SetText(UI.NAMES[g.id])
+            row.name:SetTextColor(body[1], body[2], body[3])
+            local mult = g.mult or 1
+            row.desc:SetText(string.format(UI.FACT[g.fact], g.target * mult))
+            row.bar:Set(math.min(value, g.target) / g.target)
+            row.count:SetText(string.format(UI.OF, math.min(value, g.target) * mult, g.target * mult))
+        end
+    end
+
+    -- The pages: a summary, then each chapter (a beast chapter only for a hunter, or whoever has had a pet).
+    local function Spreads()
+        local db = SkaldCharDB
+        local list = { { summary = true } }
+        local isHunter = false
+        pcall(function() isHunter = select(2, UnitClass("player")) == "HUNTER" end)
+        for _, cat in ipairs(CATS) do
+            if cat.key ~= "beasts" or isHunter or Count(db and db.pets) > 0 then
+                local goals = {}
+                for _, g in ipairs(GOALS) do if g.cat == cat.key then goals[#goals + 1] = g end end
+                local parts = math.max(1, math.ceil(#goals / PER_PAGE))
+                for part = 1, parts do
+                    local slice = {}
+                    for k = (part - 1) * PER_PAGE + 1, math.min(#goals, part * PER_PAGE) do slice[#slice + 1] = goals[k] end
+                    list[#list + 1] = { cat = cat.key, icon = cat.icon, goals = slice, part = part, parts = parts, all = goals }
+                end
+            end
+        end
+        return list
+    end
 
     refreshTab = function()
         local db = SkaldCharDB
         if not db then return end
         local facts = Facts()
         local done = db.goals or {}
-        local isHunter = false
-        pcall(function() isHunter = select(2, UnitClass("player")) == "HUNTER" end)
-        local totalDone, totalAll = 0, 0
-        -- the categories (the beasts only for a hunter, or whoever has had a pet)
-        local shown = 0
-        visibleCats = {}
-        for i, row in ipairs(categoryRows) do
-            local cat = row.cat
-            local show = cat.key ~= "beasts" or isHunter or Count(db.pets) > 0
-            local n, d = 0, 0
-            for _, g in ipairs(GOALS) do
-                if g.cat == cat.key then n = n + 1; if done[g.id] then d = d + 1 end end
-            end
-            row:SetShown(show)
-            if show then
-                shown = shown + 1
-                visibleCats[#visibleCats + 1] = i
-                row:ClearAllPoints()
-                row:SetPoint("TOPLEFT", 0, -62 - (shown - 1) * 50)
+        spreads = Spreads()
+        pageIndex = math.max(1, math.min(pageIndex, #spreads))
+        local sp = spreads[pageIndex]
+        footer:SetText(string.format(UI.PAGE, pageIndex, #spreads))
+
+        local function Progress(goals)
+            local d = 0
+            for _, g in ipairs(goals) do if done[g.id] then d = d + 1 end end
+            return d, #goals
+        end
+
+        -- the chapters listed on the summary, with their counts
+        local visible = {}
+        for _, s in ipairs(spreads) do if s.cat and s.part == 1 then visible[s.cat] = s end end
+        local totalDone, totalAll, shown = 0, 0, 0
+        for _, row in ipairs(chapterRows) do
+            local s = visible[row.cat.key]
+            if s then
+                local d, n = Progress(s.all)
+                totalDone, totalAll = totalDone + d, totalAll + n
                 row.count:SetText(string.format(UI.OF, d, n))
                 row.bar:Set(n > 0 and d / n or 0)
-                totalDone, totalAll = totalDone + d, totalAll + n
+                shown = shown + 1
+                row:ClearAllPoints()
+                row:SetPoint("TOPLEFT", 0, -112 - (shown - 1) * 50)
             end
+            row:SetShown(sp.summary and s ~= nil)
         end
-        total:SetText(string.format(UI.TOTAL, totalDone, totalAll))
-        if not categoryRows[chosen] or not categoryRows[chosen]:IsShown() then chosen = visibleCats[1] or 1 end
-        for i, row in ipairs(categoryRows) do row.mark:SetShown(i == chosen) end
 
-        -- the goals of the chosen category
-        local cat = CATS[chosen]
-        rightTitle:SetText(UI.CATS[cat.key])
-        local list = {}
-        for _, g in ipairs(GOALS) do if g.cat == cat.key then list[#list + 1] = g end end
-        for i, row in ipairs(goalRows) do
-            local g = list[i]
-            if not g then
-                row:Hide()
-            else
-                row:Show()
-                local rec = done[g.id]
-                local value = facts[g.fact] or 0
-                local target = g.target
-                if rec then
-                    row.icon:SetTexture(TEX .. "goal_done")
-                    row.icon:SetAlpha(1)
-                    row.name:SetText(UI.NAMES[g.id])
-                    row.name:SetTextColor(head[1], head[2], head[3])
-                    row.desc:SetText(rec.retro and UI.BEFORE or string.format(UI.DONE_ON, date(UI.DATE, rec.t or time())))
-                    row.bar:Set(1)
-                    row.count:SetText("")
-                elseif g.secret then
-                    row.icon:SetTexture(TEX .. "goal_locked")
-                    row.icon:SetAlpha(0.8)
-                    row.name:SetText(UI.SECRET)
-                    row.name:SetTextColor(muted[1], muted[2], muted[3])
-                    row.desc:SetText(UI.SECRET_HINT)
-                    row.bar:Set(0)
-                    row.count:SetText("")
-                else
-                    row.icon:SetTexture(sealPath .. g.tier)
-                    row.icon:SetAlpha(0.55)
-                    row.name:SetText(UI.NAMES[g.id])
-                    row.name:SetTextColor(body[1], body[2], body[3])
-                    local shownTarget = target * (g.mult or 1)
-                    row.desc:SetText(string.format(UI.FACT[g.fact], shownTarget))
-                    row.bar:Set(math.min(value, target) / target)
-                    row.count:SetText(string.format(UI.OF, math.min(value, target) * (g.mult or 1), shownTarget))
+        art:SetShown(not sp.summary)
+        chapterCount:SetShown(not sp.summary)
+        chapterBar:SetShown(not sp.summary)
+        intro:SetShown(not sp.summary)
+        introSummary:SetShown(sp.summary and true or false)
+        for _, row in ipairs(goalRows) do row:Hide() end
+        allDone:Hide()
+
+        if sp.summary then
+            leftHeading:SetText(UI.TAB)
+            leftNote:SetText(string.format(UI.TOTAL, totalDone, totalAll))
+            introSummary:SetText(UI.INTRO_SUMMARY)
+            -- on the right page: the goals nearest to being reached
+            rightHeading:SetText(UI.NEAR)
+            local open = {}
+            for _, s in ipairs(spreads) do
+                for _, g in ipairs(s.goals or {}) do
+                    if not done[g.id] and not g.secret then
+                        open[#open + 1] = { g = g, f = math.min(1, (facts[g.fact] or 0) / g.target) }
+                    end
                 end
             end
+            table.sort(open, function(a, b) return a.f > b.f end)
+            for i = 1, math.min(PER_PAGE, #open) do FillRow(goalRows[i], open[i].g, facts, done) end
+            if #open == 0 then allDone:Show() end
+        else
+            local d, n = Progress(sp.all)
+            local title = UI.CATS[sp.cat]
+            if sp.parts > 1 then title = title .. " " .. sp.part .. "/" .. sp.parts end
+            leftHeading:SetText(UI.CATS[sp.cat])
+            leftNote:SetText("")
+            art:SetTexture(TEX .. sp.icon)
+            chapterCount:SetText(string.format(UI.OF, d, n))
+            chapterBar:Set(n > 0 and d / n or 0)
+            intro:SetText(UI.INTRO[sp.cat] or "")
+            rightHeading:SetText(title)
+            for i, g in ipairs(sp.goals) do FillRow(goalRows[i], g, facts, done) end
         end
     end
+
+    local pager = {
+        Turn = function(delta)
+            spreads = Spreads()
+            pageIndex = math.max(1, math.min(pageIndex + delta, #spreads))
+        end,
+        CanPrev = function() return pageIndex > 1 end,
+        CanNext = function()
+            if #spreads == 0 then spreads = Spreads() end
+            return pageIndex < #spreads
+        end,
+    }
+    ns.GoalPageInfo = function() return pageIndex, #spreads end   -- for the regression scenarios
     pcall(Check)
-    return refreshTab
+    return refreshTab, pager
 end
 
 SkaldAPI.AddTab("goals", UI.TAB, BuildGoalsTab)

@@ -2848,8 +2848,9 @@ local function CreateWindow()
         local entry = { button = button, frame = panel }
         panels[id] = entry
         panelOrder[#panelOrder + 1] = id
-        local ok, refresh = pcall(build, panel)
+        local ok, refresh, pager = pcall(build, panel)
         if ok and type(refresh) == "function" then entry.refresh = refresh end
+        if ok and type(pager) == "table" then entry.pager = pager end   -- { Turn(delta), CanPrev(), CanNext() }
         return panel
     end
 
@@ -2900,9 +2901,10 @@ local function CreateWindow()
         if not Journal() then return end
         for _, p in pairs(panels) do p.frame:Hide() end
         local showBook = panels[view] == nil
+        local pager = panels[view] and panels[view].pager
         for _, s in ipairs(sides) do s.frame:Show() end
-        prevButton:SetShown(showBook)
-        nextButton:SetShown(showBook)
+        prevButton:SetShown(showBook or pager ~= nil)
+        nextButton:SetShown(showBook or pager ~= nil)
         if not showBook then todayButton:Hide() end
         if showBook then
             layout = Layout()
@@ -2929,6 +2931,13 @@ local function CreateWindow()
             for _, s in ipairs(sides) do Clear(s) end
             panels[view].frame:Show()
             if panels[view].refresh then pcall(panels[view].refresh) end
+            if pager then
+                local canPrev, canNext = pager.CanPrev(), pager.CanNext()
+                prevButton:SetEnabled(canPrev)
+                nextButton:SetEnabled(canNext)
+                prevButton:SetAlpha(canPrev and 1 or 0.35)
+                nextButton:SetAlpha(canNext and 1 or 0.35)
+            end
         end
         local current = showBook and SectionOf(spread) or view
         for id, t in pairs(tabs) do t:SetActive(id == current) end
@@ -3107,10 +3116,33 @@ local function CreateWindow()
         f:Refresh()
     end
 
-    prevButton:SetScript("OnClick", function() view = "book"; spread = spread - 1; TurnSound(); f:Refresh() end)
-    nextButton:SetScript("OnClick", function() view = "book"; spread = spread + 1; TurnSound(); f:Refresh() end)
+    -- The corners turn the pages of the book, or those of a tab that has pages of its own.
+    local function Corner(delta)
+        local pager = panels[view] and panels[view].pager
+        if pager then
+            if (delta < 0 and pager.CanPrev()) or (delta > 0 and pager.CanNext()) then
+                pager.Turn(delta)
+                TurnSound()
+            end
+            f:Refresh()
+            return
+        end
+        view = "book"; spread = spread + delta; TurnSound(); f:Refresh()
+    end
+    prevButton:SetScript("OnClick", function() Corner(-1) end)
+    nextButton:SetScript("OnClick", function() Corner(1) end)
     f:EnableMouseWheel(true)
     f:SetScript("OnMouseWheel", function(_, delta)
+        local pager = panels[view] and panels[view].pager
+        if pager then
+            local step = delta > 0 and -1 or 1
+            if (step < 0 and pager.CanPrev()) or (step > 0 and pager.CanNext()) then
+                pager.Turn(step)
+                TurnSound()
+                f:Refresh()
+            end
+            return
+        end
         if panels[view] then return end
         local before = spread
         spread = math.max(1, math.min(spread - delta, SpreadCount()))
@@ -3287,6 +3319,7 @@ SkaldAPI.MakeDisc = MakeDisc
 SkaldAPI.RIGHT_X = K.RIGHT_X
 SkaldAPI.CW = K.CW
 SkaldAPI.AddEntry = AddEntry
+SkaldAPI.RefreshWindow = function() if window and window:IsShown() then window:Refresh() end end
 -- What the game itself counts (creatures, dungeons, bosses): more exact than the diary's own estimate.
 SkaldAPI.GameFacts = function()
     local out = {}
