@@ -98,3 +98,6 @@ h2.small { font-size: 1.1rem; }
   .spread .page { box-shadow: none; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
 @media (max-width: 760px) { .card { padding: 22px 18px 18px; } h1 { font-size: 1.6rem; } }
+
+#lang { position: absolute; left: 24px; top: 14px; background: rgba(255,250,235,.6); color: var(--muted); border: 1px solid #a58552; border-radius: 4px; padding: 3px 6px; font-size: .85rem; }
+.card h1 { margin-top: 18px; }

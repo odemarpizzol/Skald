@@ -401,6 +401,8 @@
 
   function start() {
     applyLanguage();
+    $('lang').value = lang;
+    $('lang').addEventListener('change', function (e) { lang = e.target.value; applyLanguage(); update(); });
     $('paste').addEventListener('input', update);
     $('clear').addEventListener('click', function () { $('paste').value = ''; update(); });
     $('open').addEventListener('click', function () { openBook(build(orderedParts())); });
