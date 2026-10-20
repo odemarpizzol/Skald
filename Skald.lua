@@ -200,6 +200,7 @@ end
 K.CRAFT_MERGE = 1200   -- seconds: making the same thing again within this time adds to the page of the last one
 K.QUEST_START_MAX, K.QUEST_START_DAYS = 300, 60   -- quests whose acceptance is kept, and for how long
 K.MODEL_REUSE, K.MODEL_RETRY = 20, { 1.5, 4 }   -- seconds: the cover model is not asked for again within K.MODEL_REUSE; retries after the first request
+K.GHOST_ART = { default = "ev_revive", humor = "ev_death" }   -- the picture of the cover for a spirit (the humorous one waits for a gravestone)
 K.FALLS_FORGOTTEN = 7200   -- seconds after the last fall in a dungeon, when it no longer counts for a boss
 
 -- Which pages the diary writes at all (Options: What the quill records).
@@ -2260,6 +2261,11 @@ local function CreateWindow()
     local portrait = modelHolder:CreateTexture(nil, "ARTWORK")
     portrait:SetPoint("CENTER")
     portrait:SetSize(186, 186)
+    -- What stands in the arch while the character is a spirit: a picture, in place of the model of the spirit.
+    local ghostArt = modelHolder:CreateTexture(nil, "ARTWORK")
+    ghostArt:SetPoint("CENTER", 0, 4)
+    ghostArt:SetSize(150, 150)
+    ghostArt:Hide()
     local okModel, model = pcall(CreateFrame, "PlayerModel", nil, modelHolder)
     if okModel and model then
         model:SetAllPoints()
@@ -2304,10 +2310,12 @@ local function CreateWindow()
         local works = false
         local now = (GetTime and GetTime()) or 0
         local loadedAt = model and rawget(model, "skaldLoadedAt")
-        if UnitIsGhost and UnitIsGhost("player") then
+        local ghost = UnitIsGhost and UnitIsGhost("player") and true or false
+        if ghost then
             -- As a spirit the character is the model of the spirit (a white wisp, blown out in the frame):
-            -- the portrait is shown instead until the body is back.
+            -- a picture stands in the arch instead until the body is back (a gravestone, in the humorous voice).
             works = false
+            ghostArt:SetTexture(K.TEX .. ((SkaldDB and SkaldDB.tone == "humor") and K.GHOST_ART.humor or K.GHOST_ART.default))
         elseif loadedAt and now - loadedAt < K.MODEL_REUSE then
             works = true   -- asked for a moment ago: asking again would only restart the loading
         elseif LoadModel() then
@@ -2321,9 +2329,10 @@ local function CreateWindow()
             end
         end
         if model then model:SetShown(works) end
-        portrait:SetShown(not works)
-        for _, t in ipairs(medal) do t:SetShown(not works) end
-        if not works then pcall(SetPortraitTexture, portrait, "player") end
+        ghostArt:SetShown(ghost)
+        portrait:SetShown(not works and not ghost)
+        for _, t in ipairs(medal) do t:SetShown(not works and not ghost) end
+        if not works and not ghost then pcall(SetPortraitTexture, portrait, "player") end
     end
     local coverTitle = cover1:CreateFontString(nil, "OVERLAY", "SkaldHead")
     coverTitle:SetPoint("TOP", 0, -428)
