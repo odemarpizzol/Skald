@@ -3287,6 +3287,19 @@ SkaldAPI.MakeDisc = MakeDisc
 SkaldAPI.RIGHT_X = K.RIGHT_X
 SkaldAPI.CW = K.CW
 SkaldAPI.AddEntry = AddEntry
+-- What the game itself counts (creatures, dungeons, bosses): more exact than the diary's own estimate.
+SkaldAPI.GameFacts = function()
+    local out = {}
+    local kills = KillStat()
+    if not kills then
+        local byId = GameStat(107)
+        if byId and byId > 0 then kills = byId end
+    end
+    out.kills = kills
+    out.bosses = BossWins()
+    out.dungeons = GameStat(K.STAT_DUNGEONS)
+    return out
+end
 SkaldAPI.C_BODY, SkaldAPI.C_HEAD, SkaldAPI.C_MUTED = K.C_BODY, K.C_HEAD, K.C_MUTED
 SkaldAPI.PAGE_W = K.CW
 

@@ -38,7 +38,7 @@ local UI_TEXT = {
         },
     },
     ptBR = {
-        TAB = "Façanhas", OF = "%d de %d", DONE_ON = "Cumprida em %s", BEFORE = "Cumprida antes de o diário contar", SECRET = "???",
+        TAB = "Façanhas", OF = "%d de %d", DONE_ON = "Cumprida em %s", BEFORE = "Cumprida antes do diário contar", SECRET = "???",
         SECRET_HINT = "Uma façanha ainda por descobrir.", DATE = "%d/%m/%Y", TOTAL = "%d de %d façanhas escritas",
         EMPTY = "Nada aqui ainda.",
         CATS = { explorer = "Exploração", road = "A Estrada", story = "Histórias", war = "Guerra", craft = "Ofícios", beasts = "Feras", company = "Companhia" },
@@ -179,6 +179,11 @@ local function Facts()
     f.dungeons = counts.dungeon or 0
     f.bosses = counts.boss or 0
     f.kills = counts.kill or 0
+    -- the game's own numbers, when it gives them (the diary's are an estimate for creatures)
+    local exact = SkaldAPI.GameFacts and SkaldAPI.GameFacts() or {}
+    if type(exact.kills) == "number" then f.kills = math.max(f.kills, exact.kills) end
+    if type(exact.bosses) == "number" then f.bosses = math.max(f.bosses, exact.bosses) end
+    if type(exact.dungeons) == "number" then f.dungeons = math.max(f.dungeons, exact.dungeons) end
     f.profs = Count(db.skills)
     local best = 0
     for _, step in pairs(db.skills or {}) do if type(step) == "number" and step > best then best = step end end
@@ -266,14 +271,14 @@ local function BuildGoalsTab(panel)
     local function MakeBar(parent, width, height)
         local bar = CreateFrame("Frame", nil, parent)
         bar:SetSize(width, height)
-        bar.fill = bar:CreateTexture(nil, "ARTWORK")
-        bar.fill:SetColorTexture(0.85, 0.65, 0.10, 0.85)
-        bar.fill:SetPoint("TOPLEFT", 4, -3)
-        bar.fill:SetHeight(height - 6)
-        bar.frame = bar:CreateTexture(nil, "OVERLAY")
+        bar.frame = bar:CreateTexture(nil, "ARTWORK")
         bar.frame:SetAllPoints()
         bar.frame:SetTexture(TEX .. "ui_bar")
-        bar.max = width - 8
+        bar.fill = bar:CreateTexture(nil, "OVERLAY")
+        bar.fill:SetColorTexture(0.80, 0.58, 0.08, 0.95)
+        bar.fill:SetPoint("TOPLEFT", 6, -4)
+        bar.fill:SetHeight(height - 8)
+        bar.max = width - 12
         function bar:Set(fraction)
             fraction = math.max(0, math.min(1, fraction or 0))
             self.fill:SetWidth(math.max(0.01, self.max * fraction))
