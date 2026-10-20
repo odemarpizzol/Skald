@@ -2315,7 +2315,7 @@ local function CreateWindow()
             -- As a spirit the character is the model of the spirit (a white wisp, blown out in the frame):
             -- a picture stands in the arch instead until the body is back (a gravestone, in the humorous voice).
             works = false
-            ghostArt:SetTexture(K.TEX .. (K.GHOST_ART[(SkaldDB and SkaldDB.tone) or "epic"] or K.GHOST_ART.epic))
+            ghostArt:SetTexture("Interface\\AddOns\\Skald\\Textures\\" .. (K.GHOST_ART[(SkaldDB and SkaldDB.tone) or "epic"] or K.GHOST_ART.epic))
         elseif loadedAt and now - loadedAt < K.MODEL_REUSE then
             works = true   -- asked for a moment ago: asking again would only restart the loading
         elseif LoadModel() then
