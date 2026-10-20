@@ -21,7 +21,11 @@ Made for **World of Warcraft: Forever** (beta). Texts in **English**, **Brazilia
 - **Your own notes.** Reach for the inkwell at the foot of a day and write a line in your own hand; it becomes a page of the diary, dated and kept in order.
 - **The journey in numbers.** Lands discovered, quests, levels, deaths, dungeons, creatures slain (read from the game's own Statistics panel), bosses, achievements, your deadliest land, time on the road, and a count of quests by rarity.
 - **One diary per character.** If a new character takes the name of an old one, the old diary is set aside and can be restored.
-- **Export.** Copy your diary as plain text or Discord-ready markdown, split into parts that fit a message.
+- **Story, not just a log.** A boss beaten after you fell to the dungeon says so; the last quest of a chain tells how many days the story took; someone who stood beside you in a dungeon and joins your group again is told as old company; coming back to a land where something dear happened brings a quiet memory (all can be switched off in Options).
+- **Goals.** A tab of goals only a diary can tell (flight paths, quest chains finished, a hard-won boss, companions of the road, and for hunters the pets). The diary checks them by itself, so what you did before counts; each goal reached becomes a page. Levels, dungeons, bosses and trade skills are left to the game's own achievements.
+- **Crafts counted.** Making the same thing again and again is one page that says how many.
+- **Skald Reader.** Read your diary as a book outside the game: type , copy the text and paste it on the Reader page (odemarpizzol.github.io/Skald/reader). It runs in your browser, sends nothing anywhere, and can be saved as a PDF.
+- **Export.** Copy your diary as plain text or Discord-ready markdown, split into parts that fit a message. The names of other players are hidden unless you choose to show them.
 - **Works with Spoken and QuestDB (optional).** QuestDB gives Skald the quest data used for rarity and quest type; without it Skald still works. Spoken gets a menu entry.
 
 ## Companion addons
@@ -44,6 +48,8 @@ Open the book with the minimap button, or type `/skald` (or `/sk`).
 | `/skald quiet` | toggle the message at login |
 | `/skald minimap` | show or hide the minimap button |
 | `/skald export` | export the diary as text |
+| `/skald reader` | the whole diary as text for the web Reader |
+| `/skald forgetcompanions` | forget the companions the diary remembers |
 | `/skald help` | list the commands |
 
 The **Options** tab holds the same switches, the text size, the ink, whether a new day starts each real day or each login, the page-turn sound,, the export button and the archive of old diaries.
