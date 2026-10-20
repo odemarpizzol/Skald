@@ -1306,6 +1306,8 @@ K.TAB_OFF = { 0.353, 0.227, 0.141 }   -- #5A3A24
 K.TAB_ON  = { 0.722, 0.541, 0.353 }   -- #B88A5A
 
 K.BOOK_W, K.BOOK_H = 980, 580
+K.BOOK_FIT_W, K.BOOK_FIT_H, K.BOOK_MIN_SCALE = 0.96, 0.94, 0.5   -- how much of the screen the book may take, and the smallest it is drawn
+K.BOOK_SIZES = { "auto", 0.8, 1, 1.25, 1.5 }
 K.COVER_X, K.COVER_W = 88, 892
 K.PAGE_SW, K.PAGE_SH, K.PAGE_Y = 408, 536, 22
 K.PAGE_XS = { 112, 548 }
@@ -1789,6 +1791,16 @@ local function CreateWindow()
         local point, _, relPoint, x, y = self:GetPoint()
         Settings().pos = { point, relPoint, x, y }
     end)
+    -- The book is 980 x 580 of the game's units. A small window, a 4:3 screen or a large interface scale could
+    -- leave part of it off the screen, so its scale follows what fits (and the size the player chose, if any).
+    function f:FitScale()
+        local w, h = UIParent:GetWidth(), UIParent:GetHeight()
+        if type(w) ~= "number" or type(h) ~= "number" or w <= 0 or h <= 0 then return end
+        local fit = math.min(w * K.BOOK_FIT_W / K.BOOK_W, h * K.BOOK_FIT_H / K.BOOK_H)
+        local want = Settings().bookScale
+        self:SetScale(math.max(K.BOOK_MIN_SCALE, math.min(type(want) == "number" and want or 1, fit)))
+    end
+    f:FitScale()
     f:Hide()
     tinsert(UISpecialFrames, "SkaldFrame")
 
@@ -3169,6 +3181,7 @@ local function CreateWindow()
 
     -- Opening the book lands on the newest day (or the cover while it is empty).
     f:SetScript("OnShow", function()
+        f:FitScale()
         if panels[view] then f:Refresh() else f:ShowSection(#Journal().entries > 0 and "days" or "cover", true) end
     end)
 
@@ -3369,7 +3382,7 @@ frame:RegisterEvent("PLAYER_GUILD_UPDATE")
 -- Events that may not exist on every client build: a missing one must not
 -- break the addon, so each is registered on its own.
 for _, ev in ipairs({
-    "PLAYER_ENTERING_WORLD", "GROUP_ROSTER_UPDATE", "ENCOUNTER_START", "ENCOUNTER_END", "BOSS_KILL", "PLAYER_XP_UPDATE",
+    "PLAYER_ENTERING_WORLD", "GROUP_ROSTER_UPDATE", "ENCOUNTER_START", "ENCOUNTER_END", "BOSS_KILL", "PLAYER_XP_UPDATE", "UI_SCALE_CHANGED", "DISPLAY_SIZE_CHANGED",
     "NEW_MOUNT_ADDED", "ACHIEVEMENT_EARNED", "SKILL_LINES_CHANGED", "CHAT_MSG_LOOT",
     "HEARTHSTONE_BOUND", "UPDATE_FACTION", "TAXIMAP_OPENED", "PLAYER_MONEY",
     "LEARNED_SPELL_IN_TAB", "QUEST_ACCEPTED",
@@ -4849,6 +4862,11 @@ H.PLAYER_LOGOUT = function(self, event, ...)
     end
 end
 
+H.UI_SCALE_CHANGED = function(self, event, ...)
+    if window then window:FitScale() end
+end
+H.DISPLAY_SIZE_CHANGED = H.UI_SCALE_CHANGED
+
 H.ZONE_CHANGED_NEW_AREA = function(self, event, ...)
     if window then CheckZone() end
 end
@@ -5970,6 +5988,20 @@ local function BuildStyle(panel)
     edit:SetScript("OnEditFocusLost", SaveTitle)
     NoteText(panel, K.RIGHT_X, -210):SetText(L.COVERTITLE_HINT)
 
+    -- The size of the book (never more than the screen holds).
+    SectionLabel(panel, L.OPT_SIZE, 0, -330)
+    local sizeButtons = {}
+    for i, size in ipairs(K.BOOK_SIZES) do
+        local b = MakeFlatButton(panel, 64, 26, size == "auto" and L.SIZE_AUTO or string.format("%d%%", size * 100))
+        b:SetPoint("TOPLEFT", (i - 1) * 68, -356)
+        b:SetScript("OnClick", function()
+            Settings().bookScale = (size ~= "auto") and size or nil
+            if window then window:FitScale() end
+            for j, other in ipairs(sizeButtons) do other:SetActive(j == i) end
+        end)
+        sizeButtons[i] = b
+    end
+
     local switches = {
         MakeWaxCheck(panel, L.OPT_TOAST,
             function() return Settings().toast ~= false end,
@@ -6018,6 +6050,10 @@ local function BuildStyle(panel)
         for _, cb in ipairs(colorBoxes) do cb.Sync() end
         for _, cb in ipairs(switches) do cb.Sync() end
         for key, pb in pairs(placeButtons) do pb:SetActive(not s.toastPos and (s.toastAnchor or "top") == key) end
+        for i, b in ipairs(sizeButtons) do
+            local size = K.BOOK_SIZES[i]
+            b:SetActive((size == "auto" and not s.bookScale) or size == s.bookScale)
+        end
         if not edit:HasFocus() then edit:SetText(s.coverTitle or "") end
     end
     return refresh
@@ -6132,6 +6168,15 @@ SlashCmdList["SKALD"] = function(msg)
         end
     elseif msg == "export" then
         ShowExport()
+    elseif msg:match("^size") then
+        -- /skald size auto|80|100|125|150
+        local arg = strtrim(raw:sub(5)):lower():gsub("%%", "")
+        local value = tonumber(arg)
+        if arg == "auto" then Settings().bookScale = nil
+        elseif value and value >= 50 and value <= 200 then Settings().bookScale = value / 100
+        else Say(L.CMD_SIZE_HINT); return end
+        if window then window:FitScale() end
+        Say(L.CMD_SIZE_DONE)
     elseif msg == "reader" then
         -- the whole diary in the form the web Reader takes, ready to copy
         Settings().exportFormat, Settings().exportScope = "reader", "all"
