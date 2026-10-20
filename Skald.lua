@@ -1669,6 +1669,7 @@ ns.ShowResumeCard = function(data)
     if not card then
         local fr = CreateFrame("Frame", "SkaldResume", UIParent)
         fr:SetWidth(380)
+        fr:SetClampedToScreen(true)   -- taller than a notice: where the notices were dragged to, it must not leave the screen
         ns.PlaceNotice(fr)
         fr:SetFrameStrata("HIGH")
         fr:EnableMouse(true)
