@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.36.0-beta
+
+- **Goals:** a new tab with 12 goals that only the diary can tell, in four groups: The Road (flight paths), Stories (quest chains finished, a boss beaten after falling to it), Beasts (companions tamed, one that reaches your level; for hunters) and Company (companions of the road remembered, meeting one again). Click a group on the left page to see its goals on the right, each with a progress bar. A goal reached says what it was about (the quest chain, the boss, the companion) and opens its page in the book. The diary checks them by itself from what it already knows, so what you did before counts too; the ones already reached are marked quietly, and every goal reached from now on is written as a page of its own with the parchment notice. Names and texts in English, Portuguese and French. Some stay hidden ("???") until they are done. Levels, dungeons, bosses and trade skills are left to the game's own achievements.
+- **The cover as a spirit:** while your character is a ghost, the cover shows the portrait instead of the model of the spirit (a blown-out white wisp).
+
 ## 0.35.1-beta
 
 - **Map markers under the game's:** the diary's markers now sit below the game's own (quests, flight masters, your arrow), so a quest marker under one of ours can be clicked.
