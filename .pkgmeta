@@ -6,6 +6,7 @@ ignore:
   - README.md
   - CHANGELOG.md
   - .github
+  - docs
 
 manual-changelog:
   filename: CHANGELOG.md

@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Skald Leitor</title>
+<meta name="description" content="Leia o diário do seu personagem do WoW como um livro, no navegador. Nada é enviado a servidor.">
+<link rel="icon" href="img/b_quill.png">
+<link rel="stylesheet" href="reader.css">
+</head>
+<body>
+<div id="intake">
+  <div class="card">
+    <img class="quill" src="img/b_quill.png" alt="">
+    <h1 id="t-title">Skald Leitor</h1>
+    <p id="t-intro" class="lead"></p>
+    <ol id="t-steps"></ol>
+    <label for="paste" id="t-label"></label>
+    <textarea id="paste" spellcheck="false" autocomplete="off"></textarea>
+    <div id="parts" aria-live="polite"></div>
+    <div class="row">
+      <button id="open" type="button" disabled></button>
+      <button id="clear" type="button" class="quiet"></button>
+    </div>
+    <p id="status" class="status" role="status"></p>
+    <p id="t-privacy" class="privacy"></p>
+  </div>
+</div>
+
+<div id="reader" hidden>
+  <div id="stage"><div id="book">
+    <div class="spine"></div>
+    <div id="left" class="page left"></div>
+    <div id="right" class="page right"></div>
+  </div></div>
+  <nav id="nav">
+    <button id="prev" type="button" title="←">‹</button>
+    <span id="where"></span>
+    <button id="next" type="button" title="→">›</button>
+    <select id="jump" aria-label="Dia"></select>
+    <button id="print" type="button" class="quiet"></button>
+    <button id="back" type="button" class="quiet"></button>
+  </nav>
+</div>
+<div id="sheet" aria-hidden="true"></div>
+<script src="reader.js"></script>
+</body>
+</html>

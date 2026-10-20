@@ -3364,7 +3364,7 @@ frame:RegisterEvent("PLAYER_GUILD_UPDATE")
 -- Events that may not exist on every client build: a missing one must not
 -- break the addon, so each is registered on its own.
 for _, ev in ipairs({
-    "PLAYER_ENTERING_WORLD", "GROUP_ROSTER_UPDATE", "ENCOUNTER_END", "BOSS_KILL", "PLAYER_XP_UPDATE",
+    "PLAYER_ENTERING_WORLD", "GROUP_ROSTER_UPDATE", "ENCOUNTER_START", "ENCOUNTER_END", "BOSS_KILL", "PLAYER_XP_UPDATE",
     "NEW_MOUNT_ADDED", "ACHIEVEMENT_EARNED", "SKILL_LINES_CHANGED", "CHAT_MSG_LOOT",
     "HEARTHSTONE_BOUND", "UPDATE_FACTION", "TAXIMAP_OPENED", "PLAYER_MONEY",
     "LEARNED_SPELL_IN_TAB", "QUEST_ACCEPTED",
@@ -3630,9 +3630,15 @@ local function NoteFall()
     if a and time() - (a.at or 0) > K.FALLS_FORGOTTEN then a = nil end
     a = a or { falls = 0 }
     a.falls, a.at = a.falls + 1, time()
+    -- With an encounter under way (where the client announces them), the fall is also credited to that boss.
+    local enc = ns.encounter
+    if enc and not enc.ended and enc.id and time() - (enc.at or 0) < K.FALLS_FORGOTTEN then
+        a.enc = a.enc or {}
+        a.enc[enc.id] = (a.enc[enc.id] or 0) + 1
+    end
     db.attempts[id] = a
 end
-local function BossDown(name)
+local function BossDown(name, encounterID)
     name = Safe(name)
     if not name or name == "" then return end
     if name == lastBoss and time() - lastBossAt < 30 then return end
@@ -3641,7 +3647,11 @@ local function BossDown(name)
     local tries
     local a = db and id and db.attempts and db.attempts[id]
     if a then
-        if a.falls and a.falls > 0 and time() - (a.at or 0) <= K.FALLS_FORGOTTEN then tries = a.falls end
+        if a.falls and a.falls > 0 and time() - (a.at or 0) <= K.FALLS_FORGOTTEN then
+            -- the falls at this very boss when the client told us which one it was; else all those of the dungeon
+            local own = encounterID and a.enc and a.enc[encounterID]
+            tries = own or (not (a.enc and next(a.enc)) and a.falls) or nil
+        end
         db.attempts[id] = nil
     end
     AddEntry("boss", name, nil, tries and { tries = tries } or nil)
@@ -5114,14 +5124,20 @@ H.GROUP_ROSTER_UPDATE = function(self, event, ...)
     end
 end
 
+H.ENCOUNTER_START = function(self, event, ...)
+    local id, name = ...
+    ns.encounter = { id = tonumber(id), name = Safe(name), at = time() }
+end
+
 H.ENCOUNTER_END = function(self, event, ...)
-    local _, name, _, _, success = ...
-    if success == 1 then BossDown(name) end
+    local id, name, _, _, success = ...
+    if ns.encounter then ns.encounter.ended = true end
+    if success == 1 then BossDown(name, tonumber(id)) end
 end
 
 H.BOSS_KILL = function(self, event, ...)
-    local _, name = ...
-    BossDown(name)
+    local id, name = ...
+    BossDown(name, tonumber(id))
 end
 
 H.HEARTHSTONE_BOUND = function(self, event, ...)
@@ -5180,6 +5196,8 @@ end
 local function HandleEvent(self, event, ...)
     if event == "UNIT_SPELLCAST_SUCCEEDED" then
         if (...) == "player" and Settings().probeSpells then pcall(Mile.ProbeEvent, event, ...) end
+    elseif event == "ENCOUNTER_START" or event == "ENCOUNTER_END" then
+        if Settings().probeSpells then pcall(Mile.ProbeEvent, event, ...) end
     elseif event == "UNIT_PET" or event == "LEARNED_SPELL_IN_TAB" or event == "PLAYER_UNGHOST" or event == "PLAYER_ALIVE"
         or event == "CONFIRM_XP_LOSS" or event == "RESURRECT_REQUEST" then
         pcall(Mile.ProbeEvent, event, ...)
@@ -5411,20 +5429,105 @@ local function SelectEntries(scope)
     return picked
 end
 
+-- The names of other players (companions of a dungeon, someone met again) are replaced by "a companion" in what
+-- is exported, unless the player asks to keep them (a switch in the export window).
+local function HideNames(text, e)
+    local names, seen = {}, {}
+    local function Add(n) if type(n) == "string" and n ~= "" and not seen[n] then seen[n] = true; names[#names + 1] = n end end
+    for _, n in ipairs(e.with or {}) do Add(n) end
+    if e.kind == "reunion" then Add(tostring(e.arg)) end
+    for n in pairs((Journal() and Journal().companions) or {}) do Add(n) end
+    for _, n in ipairs(names) do
+        text = text:gsub(n:gsub("%p", "%%%0"), function() return L.EXPORT_SOMEONE end)
+    end
+    return text
+end
+ns.HideNames = HideNames
+
 local function ExportBlock(e, format)
     local head = date(L.DATE_FMT, e.t) .. " - " .. PlainText(ns.PlaceName(e))
     if e.kind == "quest" and e.tier and e.tier >= 2 and L.TIERS[e.tier] then
         head = head .. "  -  " .. L.TIERS[e.tier]
     end
     local body = PlainText(RenderEntry(e))
+    if Settings().exportHideNames ~= false then body = HideNames(body, e) end
     if format == "discord" then
         return "> **" .. head .. "**\n> " .. body
     end
     return "[" .. head .. "]\n" .. body
 end
 
+-- The text for the web Reader (the diary read as a book outside the game): one line per field-group, fields
+-- separated by "|" (a "|" inside is written backslash-p, a newline backslash-n, a backslash twice). Each part
+-- starts with a header line and carries a checksum of its body, so the page knows when something was copied
+-- half-way.
+K.READER_LIMIT = 40000
+local READER_NL, READER_BS = string.char(10), string.char(92)
+local function ReaderEscape(t)
+    t = tostring(t or "")
+    t = t:gsub(READER_BS, READER_BS .. READER_BS)
+    t = t:gsub("|", READER_BS .. "p")
+    t = t:gsub(READER_NL, READER_BS .. "n")
+    return t
+end
+local function ReaderChecksum(text)
+    local h = 5381
+    for i = 1, #text do h = (h * 31 + text:byte(i)) % 4294967296 end
+    return h
+end
+local function ReaderLine(...)
+    local out = {}
+    for i = 1, select("#", ...) do out[i] = ReaderEscape((select(i, ...))) end
+    return table.concat(out, "|")
+end
+local function BuildReader(scope)
+    local entries = SelectEntries(scope)
+    local db = Journal()
+    if #entries == 0 or not db then return {} end
+    local hide = Settings().exportHideNames ~= false
+    local lines = {}
+    local st = db.stats or {}
+    lines[#lines + 1] = ReaderLine("S", st.first or 0, st.played or 0)
+    for kind, n in pairs(st.counts or {}) do lines[#lines + 1] = ReaderLine("N", kind, n) end
+    for tier, n in pairs(st.tiers or {}) do lines[#lines + 1] = ReaderLine("T", tier, n) end
+    for id, rec in pairs(db.goals or {}) do
+        lines[#lines + 1] = ReaderLine("G", id, type(rec) == "table" and rec.t or 0, (type(rec) == "table" and rec.retro) and 1 or 0)
+    end
+    local summary = #lines
+    for _, e in ipairs(entries) do
+        local body = PlainText(RenderEntry(e))
+        if hide then body = HideNames(body, e) end
+        local note = (e.fav and type(e.favNote) == "string") and PlainText(e.favNote) or ""
+        local ic = e.kind == "loot" and ("loot:" .. tostring(e.cat or "")) or tostring(e.kind)
+        lines[#lines + 1] = ReaderLine("P", e.t or 0, e.kind, e.tier or 0, e.fav and 1 or 0,
+            PlainText(tostring(ns.PlaceName(e) or "")), ic, K.TextPrefix(body, 700), K.TextPrefix(note, 300))
+    end
+    -- the parts: the summary lines open the first
+    local bodies, current, size = {}, {}, 0
+    for _, line in ipairs(lines) do
+        if size + #line + 1 > K.READER_LIMIT and #current > 0 then
+            bodies[#bodies + 1] = table.concat(current, READER_NL)
+            current, size = {}, 0
+        end
+        current[#current + 1] = line
+        size = size + #line + 1
+    end
+    if #current > 0 then bodies[#bodies + 1] = table.concat(current, READER_NL) end
+    local out = {}
+    local name = UnitName and UnitName("player") or "?"
+    local class = (UnitClass and select(1, UnitClass("player"))) or ""
+    local race = (UnitRace and select(1, UnitRace("player"))) or ""
+    for i, body in ipairs(bodies) do
+        local header = ReaderLine("H", "SKALDREADER1", name, class, race, UnitLevel and UnitLevel("player") or 0,
+            (SkaldDB and SkaldDB.tone) or "epic", GetLocale(), #entries, i, #bodies, ReaderChecksum(body))
+        out[i] = header .. READER_NL .. body
+    end
+    return out
+end
+
 -- Returns a list of texts, each short enough for one message (empty when there is nothing).
 local function BuildExport(format, scope)
+    if format == "reader" then return BuildReader(scope) end
     local entries = SelectEntries(scope)
     if #entries == 0 then return {} end
 
@@ -5513,7 +5616,7 @@ local function ShowExport()
     -- Choosers: one button per choice, the chosen one lit.
     local formatButtons, scopeButtons = {}, {}
     Label(L.EXPORT_FORMAT, 20, -58)
-    for i, choice in ipairs({ { "discord", L.FORMAT_DISCORD }, { "plain", L.FORMAT_PLAIN } }) do
+    for i, choice in ipairs({ { "discord", L.FORMAT_DISCORD }, { "plain", L.FORMAT_PLAIN }, { "reader", L.FORMAT_READER } }) do
         local b = MakeParchmentButton(f, 120, 24, choice[2])
         b:SetPoint("TOPLEFT", 110 + (i - 1) * 124, -54)
         b:SetScript("OnClick", function() format = choice[1]; settings.exportFormat = format; part = 1; f:Refresh() end)
@@ -5537,6 +5640,13 @@ local function ShowExport()
     local partLabel = f:CreateFontString(nil, "OVERLAY", "QuestFont")
     partLabel:SetPoint("LEFT", nextButton, "RIGHT", 10, 0)
     partLabel:SetTextColor(K.HEAD_INK[1], K.HEAD_INK[2], K.HEAD_INK[3])
+    local namesButton = MakeParchmentButton(f, 210, 24, "")
+    namesButton:SetPoint("TOPRIGHT", -20, -120)
+    namesButton:SetScript("OnClick", function()
+        settings.exportHideNames = not (settings.exportHideNames ~= false)
+        part = 1
+        f:Refresh()
+    end)
 
     -- The text: dark box, light letters, selected so Ctrl+C is all that is left to do.
     local box = CreateFrame("Frame", nil, f, "BackdropTemplate")
@@ -5591,6 +5701,8 @@ local function ShowExport()
         prev:SetShown(many)
         nextButton:SetShown(many)
         partLabel:SetText(many and string.format(L.EXPORT_PART, part, #chunks) or "")
+        namesButton:SetText(settings.exportHideNames ~= false and L.EXPORT_NAMES_HIDDEN or L.EXPORT_NAMES_SHOWN)
+        hint:SetText(format == "reader" and L.EXPORT_HINT_READER or L.EXPORT_HINT)
     end
 
     exportFrame = f
@@ -6005,6 +6117,10 @@ SlashCmdList["SKALD"] = function(msg)
             Say(L.MINIMAP_NONE)
         end
     elseif msg == "export" then
+        ShowExport()
+    elseif msg == "reader" then
+        -- the whole diary in the form the web Reader takes, ready to copy
+        Settings().exportFormat, Settings().exportScope = "reader", "all"
         ShowExport()
     elseif msg == "help" or msg == "?" then
         Say(L.HELP)
