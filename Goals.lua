@@ -1,4 +1,4 @@
--- Skald: the feats tab. Goals the diary checks by itself, from what it already knows (pages, counters, pets,
+-- Skald: the goals tab. Goals the diary checks by itself, from what it already knows (pages, counters, pets,
 -- companions, trades, flight paths, lands). A goal reached is written as a page of its own; the ones already
 -- reached when the diary first looks are marked quietly, without a page.
 --
@@ -8,8 +8,8 @@ local _, ns = ...
 -- Texts of the tab and of every goal (the page of a goal reached has its own phrases in Locales.lua).
 local UI_TEXT = {
     enUS = {
-        TAB = "Feats", OF = "%d of %d", DONE_ON = "Done on %s", BEFORE = "Done before the diary counted", SECRET = "???",
-        SECRET_HINT = "A feat still to be found.", DATE = "%m/%d/%Y", TOTAL = "%d of %d feats written",
+        TAB = "Goals", OF = "%d of %d", DONE_ON = "Done on %s", BEFORE = "Done before the diary counted", SECRET = "???",
+        SECRET_HINT = "A goal still to be found.", DATE = "%m/%d/%Y", TOTAL = "%d of %d goals reached",
         EMPTY = "Nothing here yet.",
         CATS = { explorer = "Exploration", road = "The Road", story = "Stories", war = "War", craft = "Crafts", beasts = "Beasts", company = "Company" },
         FACT = {
@@ -38,8 +38,8 @@ local UI_TEXT = {
         },
     },
     ptBR = {
-        TAB = "Façanhas", OF = "%d de %d", DONE_ON = "Cumprida em %s", BEFORE = "Cumprida antes do diário contar", SECRET = "???",
-        SECRET_HINT = "Uma façanha ainda por descobrir.", DATE = "%d/%m/%Y", TOTAL = "%d de %d façanhas escritas",
+        TAB = "Metas", OF = "%d de %d", DONE_ON = "Cumprida em %s", BEFORE = "Cumprida antes do diário contar", SECRET = "???",
+        SECRET_HINT = "Uma meta ainda por descobrir.", DATE = "%d/%m/%Y", TOTAL = "%d de %d metas cumpridas",
         EMPTY = "Nada aqui ainda.",
         CATS = { explorer = "Exploração", road = "A Estrada", story = "Histórias", war = "Guerra", craft = "Ofícios", beasts = "Feras", company = "Companhia" },
         FACT = {
@@ -68,8 +68,8 @@ local UI_TEXT = {
         },
     },
     frFR = {
-        TAB = "Exploits", OF = "%d sur %d", DONE_ON = "Accompli le %s", BEFORE = "Accompli avant que le journal compte", SECRET = "???",
-        SECRET_HINT = "Un exploit encore à découvrir.", DATE = "%d/%m/%Y", TOTAL = "%d exploits écrits sur %d",
+        TAB = "Objectifs", OF = "%d sur %d", DONE_ON = "Accompli le %s", BEFORE = "Accompli avant que le journal compte", SECRET = "???",
+        SECRET_HINT = "Un objectif encore à découvrir.", DATE = "%d/%m/%Y", TOTAL = "%d objectifs atteints sur %d",
         EMPTY = "Rien ici pour l'instant.",
         CATS = { explorer = "Exploration", road = "La Route", story = "Histoires", war = "Guerre", craft = "Métiers", beasts = "Bêtes", company = "Compagnie" },
         FACT = {
@@ -103,45 +103,18 @@ local TEX = "Interface\\AddOns\\Skald\\Textures\\"
 
 -- The categories, with the page icon that stands for each.
 local CATS = {
-    { key = "explorer", icon = "ev_zone" }, { key = "road", icon = "ev_level" }, { key = "story", icon = "ev_quest" },
-    { key = "war", icon = "ev_boss" }, { key = "craft", icon = "ev_profession" }, { key = "beasts", icon = "ev_pet" },
-    { key = "company", icon = "ev_party" },
+    { key = "road", icon = "ev_level" }, { key = "story", icon = "ev_quest" },
+    { key = "beasts", icon = "ev_pet" }, { key = "company", icon = "ev_party" },
 }
 
 -- The goals: `fact` is read from the diary, `target` is what it must reach, `tier` is the rarity of the seal,
 -- `secret` keeps the name hidden until the feat is done.
 local GOALS = {
-    { id = "zones3", cat = "explorer", tier = 1, fact = "zones", target = 3 },
-    { id = "zones8", cat = "explorer", tier = 2, fact = "zones", target = 8 },
-    { id = "zones15", cat = "explorer", tier = 3, fact = "zones", target = 15 },
-    { id = "flights5", cat = "explorer", tier = 1, fact = "flights", target = 5 },
-    { id = "flights15", cat = "explorer", tier = 3, fact = "flights", target = 15 },
-    { id = "level10", cat = "road", tier = 2, fact = "level", target = 10 },
-    { id = "level20", cat = "road", tier = 3, fact = "level", target = 20 },
-    { id = "level30", cat = "road", tier = 3, fact = "level", target = 30 },
-    { id = "level40", cat = "road", tier = 4, fact = "level", target = 40 },
-    { id = "level50", cat = "road", tier = 4, fact = "level", target = 50 },
-    { id = "level60", cat = "road", tier = 5, fact = "level", target = 60 },
-    { id = "quests50", cat = "story", tier = 1, fact = "quests", target = 50 },
-    { id = "quests150", cat = "story", tier = 2, fact = "quests", target = 150 },
-    { id = "quests400", cat = "story", tier = 3, fact = "quests", target = 400 },
+    { id = "flights5", cat = "road", tier = 1, fact = "flights", target = 5 },
+    { id = "flights15", cat = "road", tier = 3, fact = "flights", target = 15 },
     { id = "chains1", cat = "story", tier = 3, fact = "chains", target = 1, secret = true },
     { id = "chains5", cat = "story", tier = 4, fact = "chains", target = 5, secret = true },
-    { id = "rareQ", cat = "story", tier = 3, fact = "rareQ", target = 1 },
-    { id = "epicQ", cat = "story", tier = 4, fact = "epicQ", target = 1 },
-    { id = "dungeons1", cat = "war", tier = 2, fact = "dungeons", target = 1 },
-    { id = "dungeons5", cat = "war", tier = 3, fact = "dungeons", target = 5 },
-    { id = "bosses1", cat = "war", tier = 2, fact = "bosses", target = 1 },
-    { id = "bosses10", cat = "war", tier = 3, fact = "bosses", target = 10 },
-    { id = "hardBoss", cat = "war", tier = 3, fact = "hardBoss", target = 1, secret = true },
-    { id = "kills500", cat = "war", tier = 1, fact = "kills", target = 500 },
-    { id = "kills2500", cat = "war", tier = 2, fact = "kills", target = 2500 },
-    { id = "profs1", cat = "craft", tier = 1, fact = "profs", target = 1 },
-    { id = "profs2", cat = "craft", tier = 2, fact = "profs", target = 2 },
-    { id = "skill1", cat = "craft", tier = 1, fact = "skillStep", target = 1, mult = 75 },
-    { id = "skill2", cat = "craft", tier = 2, fact = "skillStep", target = 2, mult = 75 },
-    { id = "skill3", cat = "craft", tier = 3, fact = "skillStep", target = 3, mult = 75 },
-    { id = "skill4", cat = "craft", tier = 4, fact = "skillStep", target = 4, mult = 75 },
+    { id = "hardBoss", cat = "story", tier = 3, fact = "hardBoss", target = 1, secret = true },
     { id = "pets1", cat = "beasts", tier = 1, fact = "pets", target = 1 },
     { id = "pets5", cat = "beasts", tier = 2, fact = "pets", target = 5 },
     { id = "pets10", cat = "beasts", tier = 3, fact = "pets", target = 10 },
@@ -149,9 +122,8 @@ local GOALS = {
     { id = "companions1", cat = "company", tier = 2, fact = "companions", target = 1 },
     { id = "companions5", cat = "company", tier = 3, fact = "companions", target = 5 },
     { id = "reunions", cat = "company", tier = 3, fact = "reunions", target = 1, secret = true },
-    { id = "guild", cat = "company", tier = 2, fact = "guild", target = 1 },
-    { id = "party", cat = "company", tier = 1, fact = "party", target = 1 },
 }
+-- (The names of feats dropped from the list stay in the texts below: a page already written may name one.)
 local GOAL_BY_ID = {}
 for _, g in ipairs(GOALS) do GOAL_BY_ID[g.id] = g end
 
