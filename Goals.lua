@@ -11,6 +11,8 @@ local UI_TEXT = {
         TAB = "Goals", OF = "%d of %d", DONE_ON = "Done on %s", BEFORE = "Done before the diary counted", SECRET = "???",
         SECRET_HINT = "A goal still to be found.", DATE = "%m/%d/%Y", TOTAL = "%d of %d goals reached",
         EMPTY = "Nothing here yet.",
+        EVID = { chain = "\"%s\", a chain of %d quests.", hard = "%s (falls before it: %d).", reunion = "Met again: %s.", pet = "%s (%s).", petlevel = "%s reached my level.", with = "With: %s." },
+        OPEN_HINT = "Click to open the page in the book.",
         CATS = { explorer = "Exploration", road = "The Road", story = "Stories", war = "War", craft = "Crafts", beasts = "Beasts", company = "Company" },
         FACT = {
             zones = "Discover %d lands.", flights = "Learn %d flight paths.", level = "Reach level %d.",
@@ -41,6 +43,8 @@ local UI_TEXT = {
         TAB = "Metas", OF = "%d de %d", DONE_ON = "Cumprida em %s", BEFORE = "Cumprida antes do diário contar", SECRET = "???",
         SECRET_HINT = "Uma meta ainda por descobrir.", DATE = "%d/%m/%Y", TOTAL = "%d de %d metas cumpridas",
         EMPTY = "Nada aqui ainda.",
+        EVID = { chain = "\"%s\", uma cadeia de %d missões.", hard = "%s (quedas antes dele: %d).", reunion = "Reencontro com %s.", pet = "%s (%s).", petlevel = "%s alcançou o meu nível.", with = "Com: %s." },
+        OPEN_HINT = "Clique para abrir a página no livro.",
         CATS = { explorer = "Exploração", road = "A Estrada", story = "Histórias", war = "Guerra", craft = "Ofícios", beasts = "Feras", company = "Companhia" },
         FACT = {
             zones = "Descubra %d terras.", flights = "Aprenda %d rotas de voo.", level = "Chegue ao nível %d.",
@@ -71,6 +75,8 @@ local UI_TEXT = {
         TAB = "Objectifs", OF = "%d sur %d", DONE_ON = "Accompli le %s", BEFORE = "Accompli avant que le journal compte", SECRET = "???",
         SECRET_HINT = "Un objectif encore à découvrir.", DATE = "%d/%m/%Y", TOTAL = "%d objectifs atteints sur %d",
         EMPTY = "Rien ici pour l'instant.",
+        EVID = { chain = "«94p%s94p», une chaîne de %d quêtes.", hard = "%s (chutes avant lui94p: %d).", reunion = "Retrouvailles avec %s.", pet = "%s (%s).", petlevel = "%s a atteint mon niveau.", with = "Avec94p: %s." },
+        OPEN_HINT = "Cliquez pour ouvrir la page dans le livre.",
         CATS = { explorer = "Exploration", road = "La Route", story = "Histoires", war = "Guerre", craft = "Métiers", beasts = "Bêtes", company = "Compagnie" },
         FACT = {
             zones = "Découvrez %d contrées.", flights = "Apprenez %d routes aériennes.", level = "Atteignez le niveau %d.",
@@ -212,6 +218,53 @@ local function Check()
 end
 ns.CheckGoals = Check
 
+-- What a goal reached was about: a line naming the quest, the boss, the companion, and the page it is written
+-- on (to open it in the book). Read from the pages of the diary, so goals reached before it counted have it too.
+local function Evidence(g, db)
+    local entries = db.entries or {}
+    local function nth(match, n)
+        local c = 0
+        for _, e in ipairs(entries) do
+            if match(e) then
+                c = c + 1
+                if c == n then return e end
+            end
+        end
+    end
+    local fact = g.fact
+    local e
+    if fact == "chains" then
+        e = nth(function(x) return x.kind == "quest" and (x.cend or 0) >= 2 end, g.target)
+        if e then return string.format(UI.EVID.chain, tostring(e.arg), e.cend), e end
+    elseif fact == "hardBoss" then
+        e = nth(function(x) return x.kind == "boss" and (x.tries or 0) >= 1 end, g.target)
+        if e then return string.format(UI.EVID.hard, tostring(e.arg), e.tries), e end
+    elseif fact == "reunions" then
+        e = nth(function(x) return x.kind == "reunion" end, g.target)
+        if e then return string.format(UI.EVID.reunion, tostring(e.arg)), e end
+    elseif fact == "pets" then
+        e = nth(function(x) return x.kind == "tame" end, g.target)
+        if e then
+            local rec = db.pets and db.pets[tostring(e.arg)]
+            local fam = rec and rec.fam or e.fam
+            if type(fam) == "string" and fam ~= "" and fam:lower() ~= tostring(e.arg):lower() then
+                return string.format(UI.EVID.pet, tostring(e.arg), fam), e
+            end
+            return tostring(e.arg), e
+        end
+    elseif fact == "petLevel" then
+        e = nth(function(x) return x.kind == "tame" and x.sub == "level" end, g.target)
+        if e then return string.format(UI.EVID.petlevel, tostring(e.arg)), e end
+    elseif fact == "companions" then
+        local names = {}
+        for name, c in pairs(db.companions or {}) do names[#names + 1] = { name, c.first or 0 } end
+        table.sort(names, function(a, b) if a[2] ~= b[2] then return a[2] < b[2] end return a[1] < b[1] end)
+        local list = {}
+        for i = 1, math.min(#names, g.target, 5) do list[#list + 1] = names[i][1] end
+        if #list > 0 then return string.format(UI.EVID["with"], table.concat(list, ", ")) end
+    end
+end
+
 -- Pages and counters change often: one look a moment after the last change is enough.
 local refreshTab
 local pending = false
@@ -290,7 +343,7 @@ local function BuildGoalsTab(panel)
     end
 
     for i = 1, 7 do
-        local row = CreateFrame("Frame", nil, panel)
+        local row = CreateFrame("Button", nil, panel)
         row:SetSize(CW, 50)
         row:SetPoint("TOPLEFT", RIGHT_X, -52 - (i - 1) * 54)
         row.icon = row:CreateTexture(nil, "ARTWORK")
@@ -310,6 +363,23 @@ local function BuildGoalsTab(panel)
         row.count = row:CreateFontString(nil, "OVERLAY", "SkaldSmall")
         row.count:SetPoint("LEFT", row.bar, "RIGHT", 6, 0)
         row.count:SetTextColor(muted[1], muted[2], muted[3])
+        row.hover = row:CreateTexture(nil, "BACKGROUND")
+        row.hover:SetAllPoints()
+        row.hover:SetColorTexture(0.43, 0.12, 0.10, 0.08)
+        row.hover:Hide()
+        row:SetScript("OnEnter", function(self)
+            if not self.evidence then return end
+            self.hover:Show()
+            GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+            GameTooltip:AddLine(self.title or "", 1, 0.82, 0)
+            GameTooltip:AddLine(self.evidence, 1, 1, 1, true)
+            if self.entry then GameTooltip:AddLine(UI.OPEN_HINT, 0.7, 0.7, 0.7, true) end
+            GameTooltip:Show()
+        end)
+        row:SetScript("OnLeave", function(self) self.hover:Hide(); GameTooltip:Hide() end)
+        row:SetScript("OnClick", function(self)
+            if self.entry and SkaldAPI.OpenEntry then SkaldAPI.OpenEntry(self.entry) end
+        end)
         goalRows[i] = row
     end
 
@@ -360,14 +430,17 @@ local function BuildGoalsTab(panel)
                 local rec = done[g.id]
                 local value = facts[g.fact] or 0
                 local target = g.target
+                row.evidence, row.entry = nil, nil
                 if rec then
                     row.icon:SetTexture(TEX .. "goal_done")
                     row.icon:SetAlpha(1)
                     row.name:SetText(UI.NAMES[g.id])
                     row.name:SetTextColor(head[1], head[2], head[3])
-                    row.desc:SetText(rec.retro and UI.BEFORE or string.format(UI.DONE_ON, date(UI.DATE, rec.t or time())))
+                    local line, entry = Evidence(g, db)
+                    row.evidence, row.entry, row.title = line, entry, UI.NAMES[g.id]
+                    row.desc:SetText(line or (rec.retro and UI.BEFORE or string.format(UI.DONE_ON, date(UI.DATE, rec.t or time()))))
                     row.bar:Set(1)
-                    row.count:SetText("")
+                    row.count:SetText((not rec.retro and rec.t) and date(UI.DATE, rec.t) or "")
                 elseif g.secret then
                     row.icon:SetTexture(TEX .. "goal_locked")
                     row.icon:SetAlpha(0.8)
