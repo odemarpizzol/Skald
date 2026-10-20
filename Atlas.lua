@@ -397,8 +397,10 @@ local function Refresh()
     local w, h = canvas:GetSize()
     if not w or w == 0 then return end
 
-    -- Above the map's own pins, which are stacked from a few hundred upward.
-    local level = math.min(9000, canvas:GetFrameLevel() + 3000)
+    -- Below the map's own pins (quests, flight masters, the player's arrow), which are stacked from a few
+    -- hundred upward: where a marker of the game and one of the diary meet, the game's is the one that is
+    -- clicked, and the diary's stays visible around it.
+    local level = canvas:GetFrameLevel() + 10
     local n = 0
     for _, c in ipairs(CollectPins(SkaldAPI.GetEntries(), mapID, w, h, CurrentFilter())) do
         n = n + 1
