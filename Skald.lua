@@ -43,6 +43,7 @@ K.INK = {
     milestone   = { 0.60, 0.35, 0.00 },
     party       = { 0.12, 0.35, 0.30 },
     reunion     = { 0.12, 0.35, 0.30 },
+    goal        = { 0.65, 0.40, 0.00 },
     dungeon     = { 0.30, 0.15, 0.40 },
     boss        = { 0.55, 0.05, 0.20 },
     mount       = { 0.30, 0.25, 0.10 },
@@ -95,6 +96,7 @@ local function CountOnly(kind, tier)
     BumpDay(kind)
     local stats = db.stats
     stats.counts[kind] = (stats.counts[kind] or 0) + 1
+    if SkaldAPI.entryHook then SkaldAPI.entryHook(kind) end
     if kind == "quest" and tier then
         stats.tiers = stats.tiers or {}
         stats.tiers[tier] = (stats.tiers[tier] or 0) + 1
@@ -291,6 +293,7 @@ local function AddEntry(kind, arg, zone, extra)
     if kind ~= "day" then BumpDay(kind, where) end
 
     if Notify then Notify(entry) end
+    if SkaldAPI.entryHook then SkaldAPI.entryHook(kind) end
     if window and window:IsShown() then
         window:Refresh()
     end
@@ -820,6 +823,7 @@ local function RenderEntry(e)
     if not list then return "" end
     local shown = tostring(e.arg)
     if (e.kind == "zone" or e.kind == "death" or e.kind == "revive") and e.arg == e.zone then shown = tostring(ns.PlaceName(e) or e.arg) end
+    if e.kind == "goal" and ns.GoalName then shown = ns.GoalName(e.arg) end
     if e.kind == "loot" then
         local ref, name, quality = ItemParts(e.arg)
         if ref then
@@ -1033,7 +1037,7 @@ K.EVENT_ICON = {
     guildleave = "guild", party = "party", achievement = "achievement",
     skill = "profession", profession = "profession",
     day = "milestone",   -- until a sun or moon icon of its own is drawn
-    reunion = "party",
+    reunion = "party", goal = "goal",
     mark = "milestone", home = "st_hearth", rep = "achievement", flight = "st_flight",
     tame = "pet",
     revive = "revive", hearth = "st_hearth",
@@ -1462,7 +1466,7 @@ do
 local toastFrame, lastToast = nil, 0
 local NOTIFY_KINDS = {
     level = true, milestone = true, mark = true, boss = true, dungeon = true, achievement = true,
-    mount = true, home = true, rep = true, flight = true, guild = true, tame = true,
+    mount = true, home = true, rep = true, flight = true, guild = true, tame = true, goal = true,
 }
 local function PlainLine(s)
     s = tostring(s or "")
@@ -1518,7 +1522,7 @@ end
 -- The rarity of a page that is not a quest, for the colour of its seal (as on the map).
 local TOAST_TIER = {
     zone = 1, level = 2, milestone = 4, death = 1, dungeon = 3, boss = 4, mount = 3, guild = 3,
-    party = 2, reunion = 2, achievement = 5, skill = 2, profession = 2, tame = 2, mark = 4, home = 1, rep = 3, flight = 1, hearth = 1,
+    party = 2, reunion = 2, goal = 3, achievement = 5, skill = 2, profession = 2, tame = 2, mark = 4, home = 1, rep = 3, flight = 1, hearth = 1,
 }
 local TEXD = "Interface\\AddOns\\Skald\\Textures\\"
 
@@ -1624,7 +1628,7 @@ local function ShowToast(e, titleText, bodyText, lines, seconds)
         if e.kind == "loot" then icon = ItemIcon(e)
         elseif e.kind == "quest" and e.tier then icon = K.SEAL_PATH .. e.tier
         else icon = EventIconPath(e.kind, e) end
-        tier = (type(e.tier) == "number" and (e.kind == "quest" or e.kind == "loot") and e.tier) or TOAST_TIER[e.kind] or 1
+        tier = (type(e.tier) == "number" and (e.kind == "quest" or e.kind == "loot" or e.kind == "goal") and e.tier) or TOAST_TIER[e.kind] or 1
     end
     toastFrame.icon:SetTexture(icon or (K.TEX .. "quill"))
     toastFrame.seal:SetTexture(TEXD .. "ui_seal" .. math.max(0, math.min(5, tier or 1)))
@@ -3281,6 +3285,8 @@ SkaldAPI.SectionLabel = SectionLabel
 SkaldAPI.NoteText = NoteText
 SkaldAPI.MakeDisc = MakeDisc
 SkaldAPI.RIGHT_X = K.RIGHT_X
+SkaldAPI.CW = K.CW
+SkaldAPI.AddEntry = AddEntry
 SkaldAPI.C_BODY, SkaldAPI.C_HEAD, SkaldAPI.C_MUTED = K.C_BODY, K.C_HEAD, K.C_MUTED
 SkaldAPI.PAGE_W = K.CW
 
