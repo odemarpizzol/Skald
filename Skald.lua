@@ -2299,7 +2299,11 @@ local function CreateWindow()
         local works = false
         local now = (GetTime and GetTime()) or 0
         local loadedAt = model and rawget(model, "skaldLoadedAt")
-        if loadedAt and now - loadedAt < K.MODEL_REUSE then
+        if UnitIsGhost and UnitIsGhost("player") then
+            -- As a spirit the character is the model of the spirit (a white wisp, blown out in the frame):
+            -- the portrait is shown instead until the body is back.
+            works = false
+        elseif loadedAt and now - loadedAt < K.MODEL_REUSE then
             works = true   -- asked for a moment ago: asking again would only restart the loading
         elseif LoadModel() then
             model.skaldAngle = 0
