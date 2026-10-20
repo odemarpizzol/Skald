@@ -198,6 +198,7 @@ local function GetPin(i, canvas)
     local pin = pins[i]
     if pin then return pin end
     pin = CreateFrame("Frame", nil, canvas)
+    pin.skaldPin = true
     pin:SetSize(PIN_SIZE, PIN_SIZE)
     pin:EnableMouse(true)
 
@@ -385,6 +386,22 @@ local function CollectPins(entries, mapID, w, h, filter)
     return pins
 end
 
+local function PinLevel(canvas)
+    local base = canvas:GetFrameLevel()
+    local lowest
+    for _, child in ipairs({ canvas:GetChildren() }) do
+        if not rawget(child, "skaldPin") and child:IsShown() and child:IsMouseEnabled() then
+            local w = child:GetWidth()
+            if w and w > 0 and w < 120 then   -- a marker, not a layer that covers the whole map
+                local lv = child:GetFrameLevel()
+                if not lowest or lv < lowest then lowest = lv end
+            end
+        end
+    end
+    if lowest then return math.max(base + 150, lowest - 1) end   -- never down among the terrain layers
+    return base + 600
+end
+
 local function Refresh()
     HideAll()
     activePins = 0
@@ -397,10 +414,10 @@ local function Refresh()
     local w, h = canvas:GetSize()
     if not w or w == 0 then return end
 
-    -- Below the map's own pins (quests, flight masters, the player's arrow), which are stacked from a few
-    -- hundred upward: where a marker of the game and one of the diary meet, the game's is the one that is
-    -- clicked, and the diary's stays visible around it.
-    local level = canvas:GetFrameLevel() + 10
+    -- Just below the lowest of the map's own pins (quests, flight masters, the player's arrow): where a marker
+    -- of the game and one of the diary meet, the game's is the one that is clicked, and the diary's stays
+    -- visible around it. With none of the game's pins to be seen, well above the terrain.
+    local level = PinLevel(canvas)
     local n = 0
     for _, c in ipairs(CollectPins(SkaldAPI.GetEntries(), mapID, w, h, CurrentFilter())) do
         n = n + 1
@@ -425,7 +442,7 @@ end
 -- once shortly after.
 local function RefreshSoon()
     Refresh()
-    if C_Timer and C_Timer.After then C_Timer.After(0.2, Refresh) end
+    if C_Timer and C_Timer.After then C_Timer.After(0.2, Refresh); C_Timer.After(1, Refresh) end   -- the game's quest markers can arrive late
 end
 
 -- A star marked or unmarked in the book changes the pins at once.
