@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.36.1-beta
+
+- **More variety in the humorous voice:** six new sentences for each kind of page (quests, levels, falls, lands, bosses, dungeons) in English, Portuguese and French, so the jokes come back less often.
+- **The cover as a spirit:** while your character is a ghost, a picture stands in the arch instead of the white model of the spirit: a gravestone in the humorous voice, a smiling wisp in the humble one, a candle in the epic one.
+- **Tidier notices:** the timer line now runs under the text and the seal stands level with it; the reminder "Where was I?" always stays inside the screen, even where the notices were dragged to.
+
 ## 0.36.0-beta
 
 - **Goals:** a new tab with 12 goals that only the diary can tell, in four groups: The Road (flight paths), Stories (quest chains finished, a boss beaten after falling to it), Beasts (companions tamed, one that reaches your level; for hunters) and Company (companions of the road remembered, meeting one again). Click a group on the left page to see its goals on the right, each with a progress bar. A goal reached says what it was about (the quest chain, the boss, the companion) and opens its page in the book. The diary checks them by itself from what it already knows, so what you did before counts too; the ones already reached are marked quietly, and every goal reached from now on is written as a page of its own with the parchment notice. Names and texts in English, Portuguese and French. Some stay hidden ("???") until they are done. Levels, dungeons, bosses and trade skills are left to the game's own achievements.
