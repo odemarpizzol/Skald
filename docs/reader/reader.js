@@ -58,7 +58,7 @@
 
   // ---- reading the text ----------------------------------------------------------------------------------------
   function unescapeField(s) {
-    return s.replace(/\\(.)/g, function (_, c) { return c === 'p' ? '|' : c === 'n' ? '\n' : c; });
+    return s.replace(/\\(.)/g, function (_, c) { return c === 'p' ? '^' : c === 'n' ? '\n' : c; });
   }
   function checksum(text) {
     var bytes = new TextEncoder().encode(text);
@@ -71,11 +71,11 @@
     var lines = String(text).replace(/\r\n?/g, '\n').split('\n');
     var parts = [], cur = null;
     lines.forEach(function (line) {
-      if (line.indexOf('H|SKALDREADER1|') === 0) { cur = { header: line, body: [] }; parts.push(cur); }
+      if (line.indexOf('H^SKALDREADER1^') === 0) { cur = { header: line, body: [] }; parts.push(cur); }
       else if (cur) cur.body.push(line);
     });
     return parts.map(function (p) {
-      var f = p.header.split('|');
+      var f = p.header.split('^');
       var body = p.body.join('\n').replace(/\s+$/, '');
       return {
         name: unescapeField(f[2] || ''), cls: unescapeField(f[3] || ''), race: unescapeField(f[4] || ''), level: f[5], tone: f[6], locale: f[7],
@@ -90,7 +90,7 @@
     parts.forEach(function (p) {
       p.body.split('\n').forEach(function (line) {
         if (!line) return;
-        var f = line.split('|').map(unescapeField);
+        var f = line.split('^').map(unescapeField);
         switch (f[0]) {
           case 'S': model.first = +f[1]; model.played = +f[2]; break;
           case 'N': model.counts[f[1]] = +f[2]; break;

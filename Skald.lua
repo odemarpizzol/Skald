@@ -5488,15 +5488,15 @@ local function ExportBlock(e, format)
 end
 
 -- The text for the web Reader (the diary read as a book outside the game): one line per field-group, fields
--- separated by "|" (a "|" inside is written backslash-p, a newline backslash-n, a backslash twice). Each part
+-- separated by "^" (a "^" inside is written backslash-p, a newline backslash-n, a backslash twice). Each part
 -- starts with a header line and carries a checksum of its body, so the page knows when something was copied
 -- half-way.
-K.READER_LIMIT = 40000
+K.READER_LIMIT = 16000   -- characters of a part: a text box with much more than this is slow to draw
 K.NL, K.BS = string.char(10), string.char(92)
 K.ReaderEscape = function(t)
     t = tostring(t or "")
     t = t:gsub(K.BS, K.BS .. K.BS)
-    t = t:gsub("|", K.BS .. "p")
+    t = t:gsub("%^", K.BS .. "p")
     t = t:gsub(K.NL, K.BS .. "n")
     return t
 end
@@ -5508,7 +5508,7 @@ end
 K.ReaderLine = function(...)
     local out = {}
     for i = 1, select("#", ...) do out[i] = K.ReaderEscape((select(i, ...))) end
-    return table.concat(out, "|")
+    return table.concat(out, "^")
 end
 local function BuildReader(scope)
     K.nameSet = nil
