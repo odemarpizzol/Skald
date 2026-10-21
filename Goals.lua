@@ -422,6 +422,8 @@ local function BuildGoalsTab(panel)
     header:SetSize(CW, 48)
     header:SetPoint("TOPLEFT", 0, -32)
     header:EnableMouse(true)
+    local emblem = header:CreateTexture(nil, "ARTWORK")
+    emblem:SetSize(26, 26)
     titleLine = header:CreateFontString(nil, "OVERLAY", "SkaldSec")
     titleLine:SetPoint("TOP", 0, 0)
     titleLine:SetWidth(CW)
@@ -490,6 +492,10 @@ local function BuildGoalsTab(panel)
         row.ptsLabel:SetText(UI.PTS_WORD)
         row.points = row:CreateFontString(nil, "OVERLAY", "SkaldSec")
         row.points:SetPoint("RIGHT", row.ptsLabel, "LEFT", -3, 1)
+        row.gem = row:CreateTexture(nil, "ARTWORK")
+        row.gem:SetSize(20, 20)
+        row.gem:SetPoint("RIGHT", row.points, "LEFT", -3, -1)
+        row.gem:SetTexture(TEX .. "pt_gem")
         row.name:SetWidth(CW - 100)
         row.desc = row:CreateFontString(nil, "OVERLAY", "SkaldSmall")
         row.desc:SetPoint("TOPLEFT", 46, -20)
@@ -551,6 +557,17 @@ local function BuildGoalsTab(panel)
         local earned, possible = ns.GoalScore()
         total:SetText(string.format(UI.TOTAL, totalDone, totalAll) .. "  -  " .. string.format(UI.POINTS, earned, possible))
         titleLine:SetText(ns.GoalTitle(earned))
+        -- the emblem of the title sits before it (the steps in order: one emblem for each)
+        local steps = {}
+        for step in pairs(UI.TITLES) do steps[#steps + 1] = step end
+        table.sort(steps)
+        local rank = 1
+        for i, step in ipairs(steps) do if earned >= step then rank = i end end
+        emblem:SetTexture(TEX .. "pt_title" .. (rank - 1))
+        local tw = titleLine.GetStringWidth and titleLine:GetStringWidth()
+        if type(tw) ~= "number" then tw = 80 end
+        emblem:ClearAllPoints()
+        emblem:SetPoint("RIGHT", titleLine, "CENTER", -tw / 2 - 5, 0)
         local current, nextAt = 0, nil
         for step in pairs(UI.TITLES) do
             if step <= earned and step > current then current = step end
@@ -580,8 +597,10 @@ local function BuildGoalsTab(panel)
                 row.points:SetText(tostring(POINTS[g.tier] or 0))
                 if rec then
                     row.points:SetTextColor(head[1], head[2], head[3])
+                    row.gem:SetAlpha(1)
                 else
                     row.points:SetTextColor(muted[1], muted[2], muted[3])
+                    row.gem:SetAlpha(0.45)
                 end
                 if rec then
                     row.icon:SetTexture(TEX .. "goal_done")

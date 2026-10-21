@@ -2480,7 +2480,7 @@ local function CreateWindow()
         { key = "topkind",      label = L.S_TOPKIND,      icon = "st_topkind" },
         { key = "flights",      label = L.S_FLIGHTS,      icon = "st_flight" },
         { key = "camps",        label = L.S_CAMPS,        icon = "st_camp" },
-        { key = "points",       label = L.S_POINTS,       icon = "ev_goal" },
+        { key = "points",       label = L.S_POINTS,       icon = "pt_gem" },
     }
     local FACT_H = 20
     local factValues, factLabels = {}, {}
