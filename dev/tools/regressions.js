@@ -363,6 +363,18 @@ SlashCmdList["SKALD"]("report")
 RES = (ok and ns.reportFrame and ns.reportFrame.edit) and "ok" or ("report: " .. text)`,
 });
 
+run('the comms probe sends on the channels that apply, keeps what came back and shows it in the report', {
+  body: `local sent = {}
+C_ChatInfo = { RegisterAddonMessagePrefix = function() return true end,
+  SendAddonMessage = function(prefix, text, channel, target) sent[#sent + 1] = channel; fire("CHAT_MSG_ADDON", prefix, text, channel, "Tester") return 0 end }
+function IsInGroup() return true end; function IsInRaid() return false end; function IsInGuild() return false end
+SlashCmdList["SKALD"]("probe comms")
+runTimers()
+local text = ns.BuildReport()
+RES = (#sent == 2 and sent[1] == "WHISPER" and sent[2] == "PARTY" and #SkaldDB.commsProbe.received == 2
+  and text:find("comms probe: register ok true", 1, true) and text:find("received: WHISPER", 1, true)) and "ok" or ("sent " .. #sent .. " " .. text)`,
+});
+
 const DUNGEON = `function IsInInstance() return true, "party" end
 function GetInstanceInfo() return "The Deadmines", "party", 1, "", 5, 0, false, 36 end`;
 const BOSSES = `local function boss(name) fire("BOSS_KILL", 1, name); runTimers() end

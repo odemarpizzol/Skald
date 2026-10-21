@@ -1,5 +1,10 @@
 {
  "Skald/Skald.lua": [
+    "C_ChatInfo",
+    "IsInGuild",
+    "IsInRaid",
+    "RegisterAddonMessagePrefix",
+    "SendAddonMessage",
     "C_AddOns",
     "GetAddOnMetadata",
     "GetBuildInfo",

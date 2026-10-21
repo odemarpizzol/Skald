@@ -3520,7 +3520,7 @@ K.OPTIONAL_EVENTS = {
     "PLAYER_ENTERING_WORLD", "GROUP_ROSTER_UPDATE", "ENCOUNTER_START", "ENCOUNTER_END", "BOSS_KILL", "PLAYER_XP_UPDATE", "UI_SCALE_CHANGED", "DISPLAY_SIZE_CHANGED",
     "NEW_MOUNT_ADDED", "ACHIEVEMENT_EARNED", "SKILL_LINES_CHANGED", "CHAT_MSG_LOOT",
     "HEARTHSTONE_BOUND", "UPDATE_FACTION", "TAXIMAP_OPENED", "PLAYER_MONEY",
-    "LEARNED_SPELL_IN_TAB", "QUEST_ACCEPTED",
+    "LEARNED_SPELL_IN_TAB", "QUEST_ACCEPTED", "CHAT_MSG_ADDON",
     "PLAYER_UNGHOST", "PLAYER_ALIVE", "CONFIRM_XP_LOSS", "RESURRECT_REQUEST",
 }
 for _, ev in ipairs(K.OPTIONAL_EVENTS) do
@@ -5408,6 +5408,45 @@ H.GROUP_ROSTER_UPDATE = function(self, event, ...)
     end
 end
 
+-- Probe for talking to other addons (the shared chronicle is only worth planning if the client lets addons
+-- talk): /skald probe comms sends one tiny message on each channel that makes sense and keeps what came back.
+K.COMMS_PREFIX = "SKALD1"
+H.CHAT_MSG_ADDON = function(self, event, prefix, text, channel, sender)
+    local probe = SkaldDB and SkaldDB.commsProbe
+    if not probe or prefix ~= K.COMMS_PREFIX then return end
+    probe.received = probe.received or {}
+    if #probe.received < 10 then
+        probe.received[#probe.received + 1] = tostring(channel) .. " <- " .. tostring(Safe(sender) and "sender" or "?") .. ": " .. tostring(Safe(text) or "")
+    end
+end
+
+ns.ProbeComms = function()
+    local api = C_ChatInfo or {}
+    local send = api.SendAddonMessage or SendAddonMessage
+    local probe = { when = time(), api = {}, sent = {}, received = {} }
+    SkaldDB.commsProbe = probe
+    for _, name in ipairs({ "RegisterAddonMessagePrefix", "SendAddonMessage", "IsAddonMessagePrefixRegistered" }) do
+        probe.api[name] = (type(api[name]) == "function") and "yes" or "no"
+    end
+    local reg = api.RegisterAddonMessagePrefix or RegisterAddonMessagePrefix
+    local okReg, resReg = false, "no function"
+    if reg then okReg, resReg = pcall(reg, K.COMMS_PREFIX); resReg = tostring(resReg) end
+    probe.register = (okReg and "ok " or "error ") .. tostring(resReg)
+    if send then
+        local me = UnitName and UnitName("player")
+        local targets = { { "WHISPER", me } }
+        if IsInGroup and IsInGroup() then targets[#targets + 1] = { IsInRaid and IsInRaid() and "RAID" or "PARTY" } end
+        if IsInGuild and IsInGuild() then targets[#targets + 1] = { "GUILD" } end
+        for _, t in ipairs(targets) do
+            local ok, res = pcall(send, K.COMMS_PREFIX, "probe", t[1], t[2])
+            probe.sent[#probe.sent + 1] = t[1] .. " " .. (ok and "ok " or "error ") .. tostring(res)
+        end
+    end
+    C_Timer.After(4, function()
+        Say(string.format(L.COMMS_RESULT, #probe.received, #probe.sent))
+    end)
+end
+
 H.ENCOUNTER_START = function(self, event, ...)
     local id, name = ...
     ns.encounter = { id = tonumber(id), name = Safe(name), at = time() }
@@ -6501,6 +6540,13 @@ ns.BuildReport = function()
     end
     Add("events seen: %s", #seen > 0 and table.concat(seen, " ") or "none")
     Add("events never seen: %s", #never > 0 and table.concat(never, " ") or "none")
+    local cp = set.commsProbe
+    if cp then
+        Add("comms probe: register %s | api %s %s %s", tostring(cp.register), tostring(cp.api.RegisterAddonMessagePrefix),
+            tostring(cp.api.SendAddonMessage), tostring(cp.api.IsAddonMessagePrefixRegistered))
+        Add("  sent: %s", #cp.sent > 0 and table.concat(cp.sent, "; ") or "nothing")
+        Add("  received: %s", #cp.received > 0 and table.concat(cp.received, "; ") or "nothing")
+    end
     local errs = set.errors or {}
     Add("errors caught: %d", #errs)
     for _, e in ipairs(errs) do Add("  %s", e) end
@@ -6652,6 +6698,9 @@ SlashCmdList["SKALD"] = function(msg)
         end)
         Settings().statDump = dump
         Say(ok and string.format("%d statistics listed. Type /reload to save them.", #dump) or "could not read the statistics.")
+    elseif msg == "probe comms" then
+        ns.ProbeComms()
+        Say(L.COMMS_SENT)
     elseif msg:match("^probe") then
         local arg = strtrim(msg:sub(6))
         if arg == "clear" then
