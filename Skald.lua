@@ -771,10 +771,6 @@ Extras = function(e)
             out = out .. " " .. string.format(form, fam)
         end
     end
-    if e.kind == "goal" and ns.GoalPoints and L.GOAL_GAIN then
-        local points = ns.GoalPoints(e.arg)
-        if points then out = out .. " " .. string.format(L.GOAL_GAIN, points) end
-    end
     if type(e.pet) == "string" and idx % 3 == 1 and L.PET then
         out = out .. " " .. string.format(L.PET[idx % #L.PET + 1], e.pet)
     end
@@ -859,7 +855,13 @@ local function RenderEntry(e)
     end)
     text = text:gsub("{standing}", function() return tostring(e.st or "") end)
     text = text:gsub("{npc}", function() return npc end)
-    return ns.Gendered(text) .. (e.noExtras and "" or Extras(e))
+    -- what a goal reached is worth belongs to the page itself, so the notice tells it too
+    local gain = ""
+    if e.kind == "goal" and ns.GoalPoints and L.GOAL_GAIN then
+        local points = ns.GoalPoints(e.arg)
+        if points then gain = " " .. string.format(L.GOAL_GAIN, points) end
+    end
+    return ns.Gendered(text) .. gain .. (e.noExtras and "" or Extras(e))
 end
 
 -- Hooks for companion addons (e.g. Wayfarer): read the pages, and add a tab to the window.

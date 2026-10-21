@@ -145,6 +145,7 @@
   "CreateFrame",
   "GameTooltip",
   "GetLocale",
+  "GetMoney",
   "SkaldAPI",
   "SkaldCharDB",
   "UnitClass",

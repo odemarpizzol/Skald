@@ -15,7 +15,7 @@ local UI_TEXT = {
         EMPTY = "Nothing here yet.",
         EVID = { chain = "\"%s\", a chain of %d quests.", hard = "%s (falls before it: %d).", reunion = "Met again: %s.", pet = "%s (%s).", petlevel = "%s reached my level.", with = "With: %s." },
         OPEN_HINT = "Click to open the page in the book.",
-        CATS = { explorer = "Exploration", road = "The Road", story = "Stories", war = "War", craft = "Crafts", beasts = "Beasts", company = "Company" },
+        CATS = { explorer = "Exploration", road = "The Road", story = "Stories", war = "War", craft = "Crafts", beasts = "Beasts", company = "Company", renown = "Fortune & Renown" },
         FACT = {
             zones = "Discover %d lands.", flights = "Learn %d flight paths.", level = "Reach level %d.",
             quests = "Complete %d quests.", chains = "Quest chains finished: %d.", rareQ = "Complete a rare quest or better.",
@@ -24,6 +24,7 @@ local UI_TEXT = {
             skillStep = "Reach %d skill in a trade.", pets = "Companions tamed: %d.", petLevel = "See a companion reach your level.",
             companions = "Companions of the road remembered: %d.", reunions = "Meet again someone from a dungeon.",
             guild = "Join a guild.", party = "Join a group for the first time.",
+            gold = "Hold %d gold.", repFriendly = "Become Friendly with a faction.", repHonored = "Become Honored with a faction.", repExalted = "Reach Exalted with a faction.",
         },
         NAMES = {
             zones3 = "First Horizons", zones8 = "Boots on Many Roads", zones15 = "The Map Has My Name",
@@ -39,6 +40,8 @@ local UI_TEXT = {
             pets1 = "A Friend from the Wild", pets5 = "A Pack on the Road", pets10 = "The Whole Bestiary",
             petLevel = "Side by Side, Level for Level", companions1 = "The Road Has Company", companions5 = "A Circle of Friends",
             reunions = "Old Company, Met Again", guild = "Under One Banner", party = "Strength in Numbers",
+            gold10 = "A Few Good Coins", gold100 = "A Heavy Purse", gold1000 = "A Dragon's Hoard",
+            repFriendly = "A Friendly Face", repHonored = "Honored Guest", repExalted = "Among the Exalted",
         },
     },
     ptBR = {
@@ -49,7 +52,7 @@ local UI_TEXT = {
         EMPTY = "Nada aqui ainda.",
         EVID = { chain = "\"%s\", uma cadeia de %d missões.", hard = "%s (quedas antes dele: %d).", reunion = "Reencontro com %s.", pet = "%s (%s).", petlevel = "%s alcançou o meu nível.", with = "Com: %s." },
         OPEN_HINT = "Clique para abrir a página no livro.",
-        CATS = { explorer = "Exploração", road = "A Estrada", story = "Histórias", war = "Guerra", craft = "Ofícios", beasts = "Feras", company = "Companhia" },
+        CATS = { explorer = "Exploração", road = "A Estrada", story = "Histórias", war = "Guerra", craft = "Ofícios", beasts = "Feras", company = "Companhia", renown = "Fortuna e Renome" },
         FACT = {
             zones = "Descubra %d terras.", flights = "Aprenda %d rotas de voo.", level = "Chegue ao nível %d.",
             quests = "Cumpra %d missões.", chains = "Cadeias de missões concluídas: %d.", rareQ = "Cumpra uma missão rara ou melhor.",
@@ -58,6 +61,7 @@ local UI_TEXT = {
             skillStep = "Alcance %d de habilidade num ofício.", pets = "Companheiros domados: %d.", petLevel = "Veja um companheiro alcançar o seu nível.",
             companions = "Companheiros de estrada lembrados: %d.", reunions = "Reencontre alguém de uma masmorra.",
             guild = "Entre numa guilda.", party = "Junte-se a um grupo pela primeira vez.",
+            gold = "Tenha %d de ouro.", repFriendly = "Torne-se Amistoso com uma facção.", repHonored = "Torne-se Honrado com uma facção.", repExalted = "Chegue a Exaltado com uma facção.",
         },
         NAMES = {
             zones3 = "Primeiros Horizontes", zones8 = "Botas em Muitas Estradas", zones15 = "O Mapa Tem o Meu Nome",
@@ -73,17 +77,19 @@ local UI_TEXT = {
             pets1 = "Um Amigo da Natureza", pets5 = "Uma Matilha na Estrada", pets10 = "Todo o Bestiário",
             petLevel = "Lado a Lado, Nível a Nível", companions1 = "A Estrada Tem Companhia", companions5 = "Um Círculo de Amigos",
             reunions = "Velha Companhia, Reencontrada", guild = "Sob Uma Só Bandeira", party = "A Força do Grupo",
+            gold10 = "Algumas Boas Moedas", gold100 = "Uma Bolsa Pesada", gold1000 = "O Tesouro de um Dragão",
+            repFriendly = "Um Rosto Amigo", repHonored = "Hóspede de Honra", repExalted = "Entre os Exaltados",
         },
     },
     frFR = {
         TAB = "Objectifs", OF = "%d sur %d", DONE_ON = "Accompli le %s", BEFORE = "Accompli avant que le journal compte", SECRET = "???",
         SECRET_HINT = "Un objectif encore à découvrir.", DATE = "%d/%m/%Y", TOTAL = "%d objectifs atteints sur %d",
         POINTS = "%d points sur %d", PTS = "%d pts",
-        TITLES = { [0] = "Nouvel arrivant{g:|e}", [50] = "Voyageur{g:|se}", [150] = "Routier{g:|ère}", [300] = "Pionni{g:er|ère}", [500] = "Personnage de légende", [750] = "Légende de la route" },
+        TITLES = { [0] = "Nouv{g:el|elle} arrivant{g:|e}", [50] = "Voyageu{g:r|se}", [150] = "Routi{g:er|ère}", [300] = "Pionni{g:er|ère}", [500] = "Personnage de légende", [750] = "Légende de la route" },
         EMPTY = "Rien ici pour l'instant.",
         EVID = { chain = "«\194\160%s\194\160», une chaîne de %d quêtes.", hard = "%s (chutes avant lui\194\160: %d).", reunion = "Retrouvailles avec %s.", pet = "%s (%s).", petlevel = "%s a atteint mon niveau.", with = "Avec\194\160: %s." },
         OPEN_HINT = "Cliquez pour ouvrir la page dans le livre.",
-        CATS = { explorer = "Exploration", road = "La Route", story = "Histoires", war = "Guerre", craft = "Métiers", beasts = "Bêtes", company = "Compagnie" },
+        CATS = { explorer = "Exploration", road = "La Route", story = "Histoires", war = "Guerre", craft = "Métiers", beasts = "Bêtes", company = "Compagnie", renown = "Fortune et renom" },
         FACT = {
             zones = "Découvrez %d contrées.", flights = "Apprenez %d routes aériennes.", level = "Atteignez le niveau %d.",
             quests = "Accomplissez %d quêtes.", chains = "Chaînes de quêtes terminées\194\160: %d.", rareQ = "Accomplissez une quête rare ou mieux.",
@@ -92,6 +98,7 @@ local UI_TEXT = {
             skillStep = "Atteignez %d de compétence dans un métier.", pets = "Compagnons apprivoisés\194\160: %d.", petLevel = "Voyez un compagnon atteindre votre niveau.",
             companions = "Compagnons de route dont on se souvient\194\160: %d.", reunions = "Retrouvez quelqu'un d'un donjon.",
             guild = "Rejoignez une guilde.", party = "Rejoignez un groupe pour la première fois.",
+            gold = "Possédez %d pièces d'or.", repFriendly = "Devenez Amical avec une faction.", repHonored = "Devenez Honoré avec une faction.", repExalted = "Atteignez Exalté avec une faction.",
         },
         NAMES = {
             zones3 = "Premiers horizons", zones8 = "Des bottes sur bien des routes", zones15 = "La carte porte mon nom",
@@ -107,6 +114,8 @@ local UI_TEXT = {
             pets1 = "Un ami de la nature", pets5 = "Une meute sur la route", pets10 = "Tout le bestiaire",
             petLevel = "Côte à côte, niveau pour niveau", companions1 = "La route a de la compagnie", companions5 = "Un cercle d'amis",
             reunions = "Vieille compagnie, retrouvée", guild = "Sous une seule bannière", party = "La force du nombre",
+            gold10 = "Quelques bonnes pièces", gold100 = "Une bourse bien lourde", gold1000 = "Le trésor d'un dragon",
+            repFriendly = "Un visage ami", repHonored = "Hôte d'honneur", repExalted = "Parmi les exaltés",
         },
     },
 }
@@ -117,7 +126,7 @@ local TEX = "Interface\\AddOns\\Skald\\Textures\\"
 local CATS = {
     { key = "road", icon = "ev_level" }, { key = "explorer", icon = "ev_zone" }, { key = "story", icon = "ev_quest" },
     { key = "war", icon = "ev_boss" }, { key = "craft", icon = "ev_profession" },
-    { key = "beasts", icon = "ev_pet" }, { key = "company", icon = "ev_party" },
+    { key = "beasts", icon = "ev_pet" }, { key = "company", icon = "ev_party" }, { key = "renown", icon = "st_gold" },
 }
 
 -- The goals: `fact` is read from the diary, `target` is what it must reach, `tier` is the rarity of the seal,
@@ -166,6 +175,12 @@ local GOALS = {
     { id = "reunions", cat = "company", tier = 3, fact = "reunions", target = 1, secret = true },
     { id = "guild", cat = "company", tier = 1, fact = "guild", target = 1, since = 2 },
     { id = "party", cat = "company", tier = 1, fact = "party", target = 1, since = 2 },
+    { id = "gold10", cat = "renown", tier = 1, fact = "gold", target = 10, since = 2 },
+    { id = "gold100", cat = "renown", tier = 3, fact = "gold", target = 100, since = 2 },
+    { id = "gold1000", cat = "renown", tier = 4, fact = "gold", target = 1000, since = 2 },
+    { id = "repFriendly", cat = "renown", tier = 2, fact = "repFriendly", target = 1, since = 2 },
+    { id = "repHonored", cat = "renown", tier = 3, fact = "repHonored", target = 1, since = 2 },
+    { id = "repExalted", cat = "renown", tier = 5, fact = "repExalted", target = 1, since = 2 },
 }
 -- Points follow the rarity of the seal (common .. legendary). They are worked out when shown, from the goals reached,
 -- so a change of value needs no change to what is saved.
@@ -180,11 +195,21 @@ ns.GoalPoints = function(id)
     return g and POINTS[g.tier] or nil
 end
 -- What the goals reached are worth, and what all of them are worth.
+-- (the beasts are shown only to a hunter, or to whoever has had a pet: the same rule for the tab and the points)
+local function CategoryShown(key, db)
+    if key ~= "beasts" then return true end
+    local isHunter = false
+    pcall(function() isHunter = select(2, UnitClass("player")) == "HUNTER" end)
+    if isHunter then return true end
+    for _ in pairs((db and db.pets) or {}) do return true end
+    return false
+end
 ns.GoalScore = function()
     local db = SkaldCharDB
     local done, all = 0, 0
     for _, g in ipairs(GOALS) do
         local p = POINTS[g.tier] or 0
+        if not CategoryShown(g.cat, db) then p = 0 end
         all = all + p
         if db and db.goals and db.goals[g.id] then done = done + p end
     end
@@ -231,6 +256,18 @@ local function Facts()
     for _, step in pairs(db.skills or {}) do if type(step) == "number" and step > best then best = step end end
     f.skillStep = best
     f.pets = Count(db.pets)
+    -- gold held now (once a goal is reached it is kept, whatever is spent later) and the standings the diary has seen
+    local copper = GetMoney and GetMoney()
+    f.gold = type(copper) == "number" and math.floor(copper / 10000) or 0
+    local friendly, honored, exalted = 0, 0, 0
+    for _, standing in pairs(db.rep or {}) do
+        if type(standing) == "number" then
+            if standing >= 5 then friendly = friendly + 1 end
+            if standing >= 6 then honored = honored + 1 end
+            if standing >= 8 then exalted = exalted + 1 end
+        end
+    end
+    f.repFriendly, f.repHonored, f.repExalted = friendly, honored, exalted
     f.companions = Count(db.companions)
     f.guild = (db.guild and 1) or 0
     f.party = (db.flags and db.flags.party) and 1 or 0
@@ -315,6 +352,7 @@ local function Evidence(g, db)
         if e then
             local rec = db.pets and db.pets[tostring(e.arg)]
             local fam = rec and rec.fam or e.fam
+            if ns.FamilyLabel then fam = ns.FamilyLabel(fam) end
             if type(fam) == "string" and fam ~= "" and fam:lower() ~= tostring(e.arg):lower() then
                 return string.format(UI.EVID.pet, tostring(e.arg), fam), e
             end
@@ -389,8 +427,8 @@ local function BuildGoalsTab(panel)
 
     for i, cat in ipairs(CATS) do
         local row = CreateFrame("Button", nil, panel)
-        row:SetSize(CW, 44)
-        row:SetPoint("TOPLEFT", 0, -78 - (i - 1) * 48)
+        row:SetSize(CW, 40)
+        row:SetPoint("TOPLEFT", 0, -78 - (i - 1) * 44)
         row.icon = row:CreateTexture(nil, "ARTWORK")
         row.icon:SetSize(30, 30)
         row.icon:SetPoint("LEFT", 4, 0)
@@ -463,15 +501,13 @@ local function BuildGoalsTab(panel)
         if not db then return end
         local facts = Facts()
         local done = db.goals or {}
-        local isHunter = false
-        pcall(function() isHunter = select(2, UnitClass("player")) == "HUNTER" end)
         local totalDone, totalAll = 0, 0
         -- the categories (the beasts only for a hunter, or whoever has had a pet)
         local shown = 0
         visibleCats = {}
         for i, row in ipairs(categoryRows) do
             local cat = row.cat
-            local show = cat.key ~= "beasts" or isHunter or Count(db.pets) > 0
+            local show = CategoryShown(cat.key, db)
             local n, d = 0, 0
             for _, g in ipairs(GOALS) do
                 if g.cat == cat.key then n = n + 1; if done[g.id] then d = d + 1 end end
@@ -481,7 +517,7 @@ local function BuildGoalsTab(panel)
                 shown = shown + 1
                 visibleCats[#visibleCats + 1] = i
                 row:ClearAllPoints()
-                row:SetPoint("TOPLEFT", 0, -78 - (shown - 1) * 48)
+                row:SetPoint("TOPLEFT", 0, -78 - (shown - 1) * 44)
                 row.count:SetText(string.format(UI.OF, d, n))
                 row.bar:Set(n > 0 and d / n or 0)
                 totalDone, totalAll = totalDone + d, totalAll + n

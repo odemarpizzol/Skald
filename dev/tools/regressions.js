@@ -1069,5 +1069,34 @@ run('the title follows the points and the form of the character', {
 RES = (low ~= "" and mid ~= low and not low:find("{", 1, true) and not mid:find("{", 1, true) and ns.GoalTitle(5000) ~= mid) and "ok" or (low .. " | " .. mid)`,
 });
 
+run('titles come out right for a woman in French and Portuguese, and the notice of a goal tells its points', {
+  pre: `__locale = "frFR"; function UnitSex() return 3 end`,
+  body: `local fr = { ns.GoalTitle(0), ns.GoalTitle(60), ns.GoalTitle(160), ns.GoalTitle(320) }
+local e = { kind = "goal", arg = "level10", tier = 1, idx = 1, t = 1, noExtras = true }
+local text = SkaldAPI.Render(e)
+local want = { "Nouvelle arrivante", "Voyageuse", "Routière", "Pionnière" }
+for i = 1, 4 do if fr[i] ~= want[i] then RES = "fr " .. i .. ": " .. tostring(fr[i]) return end end
+RES = text:find("(+5 points)", 1, true) and "ok" or ("no points in the notice text: " .. text)`,
+});
+
+run('a character who is not a hunter and has no pets is not counted the beasts in the points', {
+  pre: SAVED('{}', 'goalsInit = true, version = 99, goalsVer = 2, goals = {}, stats = { counts = {}, deathZones = {}, tiers = {}, played = 1, first = 1 }')
+    + '\nfunction UnitClass() return "Mage","MAGE" end',
+  body: `local earned, possible = ns.GoalScore()
+SkaldCharDB.pets = { Wolf = { t = 1 } }
+local _, withPets = ns.GoalScore()
+RES = (withPets - possible == 65) and "ok" or ("without " .. possible .. " with " .. withPets)`,
+});
+
+run('gold held and standings seen count for the goals of fortune and renown', {
+  pre: SAVED('{}', 'version = 99, goalsInit = true, goalsVer = 2, goals = {}, rep = { Stormwind = 8, Darnassus = 5 }, stats = { counts = {}, deathZones = {}, tiers = {}, played = 1, first = 1 }')
+    + '\nfunction GetMoney() return 5000000 end',
+  body: `local f = ns.GoalFacts()
+SkaldAPI.entryHook("quest"); runTimers(); runTimers()
+local g = SkaldCharDB.goals
+RES = (f.gold == 500 and f.repFriendly == 2 and f.repHonored == 1 and f.repExalted == 1 and g.gold100 and not g.gold1000 and g.repExalted and count("goal") >= 3)
+  and "ok" or ("gold=" .. tostring(f.gold) .. " rep=" .. tostring(f.repFriendly) .. "/" .. tostring(f.repHonored) .. "/" .. tostring(f.repExalted) .. " pages=" .. count("goal"))`,
+});
+
 console.log(failed ? `\n${failed} regression(s) FAILED` : '\nAll regressions passed');
 process.exit(failed ? 1 : 0);
