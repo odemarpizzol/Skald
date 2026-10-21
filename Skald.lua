@@ -1172,8 +1172,8 @@ local function MakeParchmentButton(parent, width, height, label)
             self:SetBackdropColor(c[1], c[2], c[3], 1)
         end
     end)
-    b:SetScript("OnMouseDown", function(self) self.text:SetPoint("CENTER", 0, -1) end)
-    b:SetScript("OnMouseUp", function(self) self.text:SetPoint("CENTER", 0, 0) end)
+    b:SetScript("OnMouseDown", function(self) self.text:SetPoint("CENTER", self.textX or 0, -1) end)
+    b:SetScript("OnMouseUp", function(self) self.text:SetPoint("CENTER", self.textX or 0, 0) end)
 
     -- The label lives in our own text; the button's native SetText would write to a font string it does not have.
     function b:SetText(label) self.text:SetText(label) end
@@ -5885,10 +5885,17 @@ local function ShowExport()
         b:SetPoint("TOPLEFT", 110 + (i - 1) * 124, -54)
         b:SetScript("OnClick", function() format = choice[1]; settings.exportFormat = format; part = 1; f:Refresh() end)
         if choice[1] == "reader" then
+            -- the icon and the word sit together in the middle of the button
             local icon = b:CreateTexture(nil, "OVERLAY")
             icon:SetSize(20, 20)
-            icon:SetPoint("LEFT", 6, 0)
             icon:SetTexture(TEXR .. "rd_icon")
+            local tw = b.text.GetStringWidth and b.text:GetStringWidth()
+            if type(tw) ~= "number" then tw = 40 end
+            local total = 20 + 6 + tw
+            icon:SetPoint("CENTER", b, "CENTER", -total / 2 + 10, 0)
+            b.textX = -total / 2 + 26 + tw / 2
+            b.text:ClearAllPoints()
+            b.text:SetPoint("CENTER", b.textX, 0)
         end
         formatButtons[choice[1]] = b
     end
@@ -5949,6 +5956,13 @@ local function ShowExport()
         if byUser then self:SetText(shown); self:HighlightText() end
     end)
 
+    -- In the Reader format the text is not for reading: a card says what is ready, and the text sits small below it.
+    local card = f:CreateFontString(nil, "OVERLAY", "QuestFont")
+    card:SetPoint("TOPLEFT", 20, -158)
+    card:SetPoint("TOPRIGHT", -20, -158)
+    card:SetJustifyH("CENTER")
+    card:SetTextColor(K.HEAD_INK[1], K.HEAD_INK[2], K.HEAD_INK[3])
+    card:Hide()
     local pasteIcon = f:CreateTexture(nil, "OVERLAY")
     pasteIcon:SetSize(30, 30)
     pasteIcon:SetPoint("BOTTOMLEFT", 20, 14)
@@ -5972,8 +5986,10 @@ local function ShowExport()
         shown = chunks[part] or L.EXPORT_EMPTY
         edit:SetText(shown)
         -- Tall enough for the text, so the scroll frame can scroll it.
+        local isReader = format == "reader"
         local _, newlines = shown:gsub("\n", "")
-        edit:SetHeight(math.max(260, (newlines + math.ceil(#shown / 62) + 2) * 14))
+        edit:SetFontObject(isReader and GameFontHighlightSmall or ChatFontNormal)
+        edit:SetHeight(math.max(260, (newlines + math.ceil(#shown / (isReader and 84 or 62)) + 2) * (isReader and 12 or 14)))
         scroll:SetVerticalScroll(0)
         edit:HighlightText()
         for key, b in pairs(formatButtons) do b:SetActive(key == format) end
@@ -5984,8 +6000,12 @@ local function ShowExport()
         partLabel:SetText(many and string.format(L.EXPORT_PART, part, #chunks) or "")
         namesButton:SetText(settings.exportHideNames ~= false and L.EXPORT_NAMES_HIDDEN or L.EXPORT_NAMES_SHOWN)
         hint:SetText(format == "reader" and L.EXPORT_HINT_READER or L.EXPORT_HINT)
-        local isReader = format == "reader"
         readerHeader:SetShown(isReader)
+        box:ClearAllPoints()
+        box:SetPoint("TOPLEFT", 20, isReader and -190 or -152)
+        box:SetPoint("BOTTOMRIGHT", -20, 62)
+        card:SetShown(isReader)
+        if isReader then card:SetText(string.format(L.EXPORT_READER_CARD, #SelectEntries(scope), #chunks)) end
         rule:SetShown(not isReader)
         pasteIcon:SetShown(isReader)
         readyIcon:SetShown(isReader and #chunks > 0)

@@ -16,6 +16,7 @@
   "CreateFont",
   "CreateFrame",
   "Enum",
+  "GameFontHighlightSmall",
   "GameTooltip",
   "GetAchievementInfo",
   "GetBindLocation",
