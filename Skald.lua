@@ -6546,6 +6546,25 @@ ns.BuildReport = function()
     end
     Add("events seen: %s", #seen > 0 and table.concat(seen, " ") or "none")
     Add("events never seen: %s", #never > 0 and table.concat(never, " ") or "none")
+    -- how the client hands out names (a name may have two words in this client): only the shape is shown, the
+    -- letters are masked, so the report still carries no real name
+    local function Shape(v)
+        if v == nil then return "nil" end
+        return (tostring(Safe(v) or "?"):gsub("%u", "A"):gsub("%l", "a"))
+    end
+    local shapes = {}
+    for _, unit in ipairs({ "player", "target", "party1" }) do
+        if unit == "player" or not UnitExists or UnitExists(unit) then
+            local un, ur = nil, nil
+            if UnitName then un, ur = UnitName(unit) end
+            local fn, fr
+            if UnitFullName then fn, fr = UnitFullName(unit) end
+            local gn = GetUnitName and GetUnitName(unit, true) or nil
+            shapes[#shapes + 1] = string.format("%s: UnitName=%s realm=%s | UnitFullName=%s realm=%s | GetUnitName=%s", unit,
+                Shape(un), Shape(ur), Shape(fn), Shape(fr), Shape(gn))
+        end
+    end
+    for _, line in ipairs(shapes) do Add("names %s", line) end
     local cp = set.commsProbe
     if cp then
         Add("comms probe (run %s, %ds ago): register %s | api %s %s %s", date("%H:%M:%S", cp.when or 0), math.max(0, time() - (cp.when or 0)), tostring(cp.register), tostring(cp.api.RegisterAddonMessagePrefix),

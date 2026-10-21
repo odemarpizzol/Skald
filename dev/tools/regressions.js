@@ -359,6 +359,7 @@ local text = ns.BuildReport()
 local ok = text:find("events seen:", 1, true) and text:find("PLAYER_DEAD=", 1, true) and text:find("events never seen:", 1, true)
   and text:find("BOSS_KILL", 1, true) and text:find("errors caught: 1", 1, true) and text:find("boom", 1, true)
   and not text:find("Tester", 1, true)
+  and text:find("names player: UnitName=Aaaaaa", 1, true)
 SlashCmdList["SKALD"]("report")
 RES = (ok and ns.reportFrame and ns.reportFrame.edit) and "ok" or ("report: " .. text)`,
 });

@@ -1,5 +1,7 @@
 {
  "Skald/Skald.lua": [
+    "GetUnitName",
+    "UnitFullName",
     "C_ChatInfo",
     "IsInGuild",
     "IsInRaid",
