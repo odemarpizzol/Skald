@@ -6544,7 +6544,7 @@ ns.BuildReport = function()
     Add("events never seen: %s", #never > 0 and table.concat(never, " ") or "none")
     local cp = set.commsProbe
     if cp then
-        Add("comms probe: register %s | api %s %s %s", tostring(cp.register), tostring(cp.api.RegisterAddonMessagePrefix),
+        Add("comms probe (run %s, %ds ago): register %s | api %s %s %s", date("%H:%M:%S", cp.when or 0), math.max(0, time() - (cp.when or 0)), tostring(cp.register), tostring(cp.api.RegisterAddonMessagePrefix),
             tostring(cp.api.SendAddonMessage), tostring(cp.api.IsAddonMessagePrefixRegistered))
         Add("  sent: %s", #cp.sent > 0 and table.concat(cp.sent, "; ") or "nothing")
         Add("  received: %s", #cp.received > 0 and table.concat(cp.received, "; ") or "nothing")
