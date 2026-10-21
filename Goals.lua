@@ -10,7 +10,7 @@ local UI_TEXT = {
     enUS = {
         TAB = "Goals", OF = "%d of %d", DONE_ON = "Done on %s", BEFORE = "Done before the diary counted", SECRET = "???",
         SECRET_HINT = "A goal still to be found.", DATE = "%m/%d/%Y", TOTAL = "%d of %d goals reached",
-        POINTS = "%d of %d points", PTS = "%d pts", NEXT_TITLE = "Next title: %s, at %d points.",
+        POINTS = "%d of %d points", PTS = "%d pts", PTS_WORD = "pts", NEXT_TITLE = "Next title: %s, at %d points.",
         TITLES = { [0] = "Newcomer", [50] = "Wanderer", [150] = "Wayfarer", [300] = "Trailblazer", [500] = "Storied One", [750] = "Legend of the Road" },
         EMPTY = "Nothing here yet.",
         EVID = { chain = "\"%s\", a chain of %d quests.", hard = "%s (falls before it: %d).", reunion = "Met again: %s.", pet = "%s (%s).", petlevel = "%s reached my level.", with = "With: %s." },
@@ -47,7 +47,7 @@ local UI_TEXT = {
     ptBR = {
         TAB = "Metas", OF = "%d de %d", DONE_ON = "Cumprida em %s", BEFORE = "Cumprida antes do diário contar", SECRET = "???",
         SECRET_HINT = "Uma meta ainda por descobrir.", DATE = "%d/%m/%Y", TOTAL = "%d de %d metas cumpridas",
-        POINTS = "%d de %d pontos", PTS = "%d pts", NEXT_TITLE = "Próximo título: %s, com %d pontos.",
+        POINTS = "%d de %d pontos", PTS = "%d pts", PTS_WORD = "pts", NEXT_TITLE = "Próximo título: %s, com %d pontos.",
         TITLES = { [0] = "Recém-chegad{g:o|a}", [50] = "Caminhante", [150] = "Viajante", [300] = "Desbravador{g:|a}", [500] = "Personagem de Lendas", [750] = "Lenda da Estrada" },
         EMPTY = "Nada aqui ainda.",
         EVID = { chain = "\"%s\", uma cadeia de %d missões.", hard = "%s (quedas antes dele: %d).", reunion = "Reencontro com %s.", pet = "%s (%s).", petlevel = "%s alcançou o meu nível.", with = "Com: %s." },
@@ -84,7 +84,7 @@ local UI_TEXT = {
     frFR = {
         TAB = "Objectifs", OF = "%d sur %d", DONE_ON = "Accompli le %s", BEFORE = "Accompli avant que le journal compte", SECRET = "???",
         SECRET_HINT = "Un objectif encore à découvrir.", DATE = "%d/%m/%Y", TOTAL = "%d objectifs atteints sur %d",
-        POINTS = "%d points sur %d", PTS = "%d pts", NEXT_TITLE = "Prochain titre\194\160: %s, à %d points.",
+        POINTS = "%d points sur %d", PTS = "%d pts", PTS_WORD = "pts", NEXT_TITLE = "Prochain titre\194\160: %s, à %d points.",
         TITLES = { [0] = "Nouv{g:el|elle} arrivant{g:|e}", [50] = "Voyageu{g:r|se}", [150] = "Routi{g:er|ère}", [300] = "Pionni{g:er|ère}", [500] = "Personnage de légende", [750] = "Légende de la route" },
         EMPTY = "Rien ici pour l'instant.",
         EVID = { chain = "«\194\160%s\194\160», une chaîne de %d quêtes.", hard = "%s (chutes avant lui\194\160: %d).", reunion = "Retrouvailles avec %s.", pet = "%s (%s).", petlevel = "%s a atteint mon niveau.", with = "Avec\194\160: %s." },
@@ -483,9 +483,13 @@ local function BuildGoalsTab(panel)
         row.name:SetPoint("TOPLEFT", 46, -2)
         row.name:SetWidth(CW - 50)
         row.name:SetJustifyH("LEFT")
-        row.points = row:CreateFontString(nil, "OVERLAY", "SkaldSmall")
-        row.points:SetPoint("TOPRIGHT", -4, -4)
-        row.points:SetTextColor(muted[1], muted[2], muted[3])
+        -- the points: the number in the heading type, "pts" small beside it
+        row.ptsLabel = row:CreateFontString(nil, "OVERLAY", "SkaldSmall")
+        row.ptsLabel:SetPoint("TOPRIGHT", -4, -6)
+        row.ptsLabel:SetTextColor(muted[1], muted[2], muted[3])
+        row.ptsLabel:SetText(UI.PTS_WORD)
+        row.points = row:CreateFontString(nil, "OVERLAY", "SkaldSec")
+        row.points:SetPoint("RIGHT", row.ptsLabel, "LEFT", -3, 1)
         row.name:SetWidth(CW - 100)
         row.desc = row:CreateFontString(nil, "OVERLAY", "SkaldSmall")
         row.desc:SetPoint("TOPLEFT", 46, -20)
@@ -573,7 +577,12 @@ local function BuildGoalsTab(panel)
                 local value = facts[g.fact] or 0
                 local target = g.target
                 row.evidence, row.entry = nil, nil
-                row.points:SetText(string.format(UI.PTS, POINTS[g.tier] or 0))
+                row.points:SetText(tostring(POINTS[g.tier] or 0))
+                if rec then
+                    row.points:SetTextColor(head[1], head[2], head[3])
+                else
+                    row.points:SetTextColor(muted[1], muted[2], muted[3])
+                end
                 if rec then
                     row.icon:SetTexture(TEX .. "goal_done")
                     row.icon:SetAlpha(1)
