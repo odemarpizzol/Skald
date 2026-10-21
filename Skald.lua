@@ -5433,8 +5433,7 @@ ns.ProbeComms = function()
     if reg then okReg, resReg = pcall(reg, K.COMMS_PREFIX); resReg = tostring(resReg) end
     probe.register = (okReg and "ok " or "error ") .. tostring(resReg)
     if send then
-        local me = UnitName and UnitName("player")
-        local targets = { { "WHISPER", me } }
+        local targets = { { "SAY" } }   -- a whisper to oneself is refused by the game ("no player named..."); SAY comes back to the sender
         if IsInGroup and IsInGroup() then targets[#targets + 1] = { IsInRaid and IsInRaid() and "RAID" or "PARTY" } end
         if IsInGuild and IsInGuild() then targets[#targets + 1] = { "GUILD" } end
         for _, t in ipairs(targets) do

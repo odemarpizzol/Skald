@@ -3,4 +3,4 @@
 - **Notices:** the Notices tab has a choice of how long a notice stays (4, 6, 10, 15 seconds or until clicked).
 - **Goal points, art:** a gem beside the points of each goal and the cover, and an emblem for each of the six titles beside the title in the Goals tab.
 - **Bug reports:** `/skald report` opens a block of text to copy with the version, language, page counts, the events this client fired and the ones never seen, and the last errors caught (no character name, no page text).
-- **Developers:** `/skald probe comms` tests whether addons can talk to each other in this client (one tiny message on whisper, group and guild); the result appears in `/skald report`. Nothing is sent unless the command is typed.
+- **Developers:** `/skald probe comms` tests whether addons can talk to each other in this client (one tiny message on say, group and guild); the result appears in `/skald report`. Nothing is sent unless the command is typed.

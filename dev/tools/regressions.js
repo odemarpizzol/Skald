@@ -371,8 +371,8 @@ function IsInGroup() return true end; function IsInRaid() return false end; func
 SlashCmdList["SKALD"]("probe comms")
 runTimers()
 local text = ns.BuildReport()
-RES = (#sent == 2 and sent[1] == "WHISPER" and sent[2] == "PARTY" and #SkaldDB.commsProbe.received == 2
-  and text:find("comms probe: register ok true", 1, true) and text:find("received: WHISPER", 1, true)) and "ok" or ("sent " .. #sent .. " " .. text)`,
+RES = (#sent == 2 and sent[1] == "SAY" and sent[2] == "PARTY" and #SkaldDB.commsProbe.received == 2
+  and text:find("comms probe: register ok true", 1, true) and text:find("received: SAY", 1, true)) and "ok" or ("sent " .. #sent .. " " .. text)`,
 });
 
 const DUNGEON = `function IsInInstance() return true, "party" end
