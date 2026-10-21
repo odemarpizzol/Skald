@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.37.1-beta
+
+- **Pets:** a new design for the pets page: an icon of the family for each companion (17 families, drawn for the book), the one at your side in the header with its family and level, the model of the pet beside the facts, and the list of companions with the family icon on each line, the current one in a darker name.
+- **Reader:** a page of a quest or an item shows a tooltip when the mouse is over it (name, level, rarity, what it was about, who gave it, the place), and a click looks it up in the Wowhead Forever database. The cover shows the race and class.
+- **Reader, turning pages:** a curled corner on each page, a click on a page turns it (left back, right forward), the arrows of the bar are now a page icon, and a soft paper sound plays when a page turns (a speaker button switches it off; it is made in the browser, no file).
+- **Export window:** redrawn on one grid, wider and with more air, with the banner art in every format and the title in the middle of it, an icon on each button (formats, pages, parts, names), and in the Reader format a line that says how many pages are ready and in how many parts, with the text itself small below it. The button that hides or shows the names of other players had no label and now has one.
+- **Names in exports:** names of players with their realm (Name-Realm) are hidden too, and so is the note of a favourite page in the Reader text.
+- **Erasing and restoring the diary:** clearing the diary now also clears what it knew about the character (pets, companions, flight paths, goals, standings, boss tries), a diary set aside takes these with it and gives them back when restored, and the book measures its pages again after a restore, an erase or a note added at the limit of pages, so it no longer shows stale pages. An old archive restored in another language no longer writes a zone twice.
+- **Empty diary:** the index says "No pages written yet" instead of showing a blank page.
+- **Combat:** the diary writes a page when the event happens, in combat as well (the README said otherwise).
+
 ## 0.37.0-beta
 
 - **Skald Reader:** your diary read as a book outside the game, on a web page that runs in your browser and sends nothing anywhere. In the game type /skald reader, copy the text and paste it on the page (odemarpizzol.github.io/Skald/reader). It shows the cover, the index and the days with the same icons, and can be saved as a PDF.

@@ -9,6 +9,7 @@ ignore:
   - docs
   - dev
   - .claude
+  - CLAUDE.md
 
 manual-changelog:
   filename: CHANGELOG.md
