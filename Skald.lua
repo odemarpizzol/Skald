@@ -5879,10 +5879,10 @@ local function ShowExport()
 
     -- Choosers: one button per choice, the chosen one lit.
     local formatButtons, scopeButtons = {}, {}
-    Label(L.EXPORT_FORMAT, 20, -58)
+    Label(L.EXPORT_FORMAT, 20, -59)
     for i, choice in ipairs({ { "discord", L.FORMAT_DISCORD }, { "plain", L.FORMAT_PLAIN }, { "reader", L.FORMAT_READER } }) do
         local b = MakeParchmentButton(f, 120, 24, choice[2])
-        b:SetPoint("TOPLEFT", 110 + (i - 1) * 124, -54)
+        b:SetPoint("TOPLEFT", 110 + (i - 1) * 125, -54)
         b:SetScript("OnClick", function() format = choice[1]; settings.exportFormat = format; part = 1; f:Refresh() end)
         if choice[1] == "reader" then
             -- the icon and the word sit together in the middle of the button
@@ -5899,25 +5899,25 @@ local function ShowExport()
         end
         formatButtons[choice[1]] = b
     end
-    Label(L.EXPORT_SCOPE, 20, -90)
+    Label(L.EXPORT_SCOPE, 20, -91)
     for i, choice in ipairs({ { "recent", L.SCOPE_RECENT }, { "notable", L.SCOPE_NOTABLE }, { "all", L.SCOPE_ALL } }) do
-        local b = MakeParchmentButton(f, 100, 24, choice[2])
-        b:SetPoint("TOPLEFT", 110 + (i - 1) * 104, -86)
+        local b = MakeParchmentButton(f, 120, 24, choice[2])
+        b:SetPoint("TOPLEFT", 110 + (i - 1) * 125, -86)
         b:SetScript("OnClick", function() scope = choice[1]; settings.exportScope = scope; part = 1; f:Refresh() end)
         scopeButtons[choice[1]] = b
     end
 
     -- Parts, when the text is longer than one message.
     local prev = MakeParchmentButton(f, 34, 24, "<")
-    prev:SetPoint("TOPLEFT", 20, -120)
+    prev:SetPoint("TOPLEFT", 110, -120)
     prev:SetScript("OnClick", function() part = math.max(1, part - 1); f:Refresh() end)
     local nextButton = MakeParchmentButton(f, 34, 24, ">")
-    nextButton:SetPoint("TOPLEFT", 60, -120)
+    nextButton:SetPoint("TOPLEFT", 149, -120)
     nextButton:SetScript("OnClick", function() part = math.min(#chunks, part + 1); f:Refresh() end)
     local partLabel = f:CreateFontString(nil, "OVERLAY", "QuestFont")
     partLabel:SetPoint("LEFT", nextButton, "RIGHT", 10, 0)
     partLabel:SetTextColor(K.HEAD_INK[1], K.HEAD_INK[2], K.HEAD_INK[3])
-    local namesButton = MakeParchmentButton(f, 270, 24, "")
+    local namesButton = MakeParchmentButton(f, 205, 24, "")
     namesButton:SetPoint("TOPRIGHT", -20, -120)
     namesButton:SetActive(false)
     namesButton:SetScript("OnClick", function()
@@ -5958,8 +5958,8 @@ local function ShowExport()
 
     -- In the Reader format the text is not for reading: a card says what is ready, and the text sits small below it.
     local card = f:CreateFontString(nil, "OVERLAY", "QuestFont")
-    card:SetPoint("TOPLEFT", 20, -158)
-    card:SetPoint("TOPRIGHT", -20, -158)
+    card:SetPoint("TOPLEFT", 20, -156)
+    card:SetPoint("TOPRIGHT", -20, -156)
     card:SetJustifyH("CENTER")
     card:SetTextColor(K.HEAD_INK[1], K.HEAD_INK[2], K.HEAD_INK[3])
     card:Hide()
