@@ -47,8 +47,8 @@ button.quiet:hover:not(:disabled) { background: rgba(120,80,30,.12); }
 #book::after { content: ""; position: absolute; inset: 8px; border: 2px dashed rgba(220,190,130,.35); border-radius: 12px; pointer-events: none; }
 .spine { position: absolute; left: 50%; top: 10px; bottom: 10px; width: 14px; margin-left: -7px; background: linear-gradient(90deg, #1c1008, #4a2c18, #1c1008); z-index: 3; border-radius: 3px; }
 .page { position: relative; width: var(--page-w); height: var(--page-h); background: #f1e4c4 url("img/b_parchment.png") center / 256px; padding: 26px 30px 34px; overflow: hidden; }
-.page.left { border-radius: 8px 0 0 8px; box-shadow: inset -22px 0 30px -18px rgba(70,40,10,.55), inset 0 0 40px rgba(120,80,30,.3); }
-.page.right { border-radius: 0 8px 8px 0; box-shadow: inset 22px 0 30px -18px rgba(70,40,10,.55), inset 0 0 40px rgba(120,80,30,.3); }
+.page.left { cursor: w-resize; border-radius: 8px 0 0 8px; box-shadow: inset -22px 0 30px -18px rgba(70,40,10,.55), inset 0 0 40px rgba(120,80,30,.3); }
+.page.right { cursor: e-resize; border-radius: 0 8px 8px 0; box-shadow: inset 22px 0 30px -18px rgba(70,40,10,.55), inset 0 0 40px rgba(120,80,30,.3); }
 .run { display: flex; justify-content: space-between; font-family: "Cinzel", serif; font-size: .68rem; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid rgba(110,40,30,.45); padding-bottom: 4px; margin-bottom: 10px; }
 .pnum { position: absolute; bottom: 10px; left: 0; right: 0; text-align: center; font-size: .85rem; color: var(--muted); }
 h2 { font-family: "Cinzel", serif; font-weight: 500; text-align: center; color: var(--head); letter-spacing: .06em; font-size: 1.45rem; margin: 6px 0 2px; text-transform: uppercase; }
@@ -84,7 +84,23 @@ h2.small { font-size: 1.1rem; }
 
 #nav { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 10px 12px 14px; flex-wrap: wrap; }
 #nav button { padding: 6px 16px; }
-#nav #prev, #nav #next { font-size: 1.4rem; line-height: 1; padding: 4px 16px; }
+#nav #prev, #nav #next { line-height: 0; padding: 6px 14px; }
+.corner { position: absolute; bottom: 18px; width: 44px; height: 44px; padding: 0; border: 0; background: none; cursor: pointer; z-index: 4; transition: transform .15s; }
+.corner.left { left: 18px; transform: scaleX(-1); }
+.corner.right { right: 18px; }
+.corner:hover { transform: translate(-2px, -2px) scale(1.12); }
+.corner.left:hover { transform: translate(2px, -2px) scaleX(-1) scale(1.12); }
+.corner:disabled { display: none; }
+#sound svg .sp { fill: #d9c59a; }
+#sound svg .sw { fill: none; stroke: #d9c59a; stroke-width: 1.6; stroke-linecap: round; }
+#sound svg .sx { fill: none; stroke: #d9c59a; stroke-width: 1.8; stroke-linecap: round; display: none; }
+#sound.off svg .sw { display: none; }
+#sound.off svg .sx { display: inline; }
+#nav svg { display: block; }
+#nav svg.flip { transform: scaleX(-1); }
+#nav svg .pg { fill: #f1e4c4; stroke: #1a0f06; stroke-width: 1; stroke-linejoin: round; }
+#nav svg .cl { fill: #c9a86a; stroke: #1a0f06; stroke-width: 1; stroke-linejoin: round; }
+#nav svg .ln { fill: none; stroke: #7a5a34; stroke-width: 1.2; stroke-linecap: round; }
 #where { color: #d9c59a; font-family: "Cinzel", serif; font-size: .8rem; letter-spacing: .08em; min-width: 140px; text-align: center; }
 #nav select { background: #2a1a0e; color: #e8d6ab; border: 1px solid #5a3a22; border-radius: 4px; padding: 6px 8px; max-width: 220px; }
 

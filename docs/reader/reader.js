@@ -9,7 +9,7 @@
       title: 'Skald Reader',
       intro: 'Read your World of Warcraft diary as a book, outside the game.',
       steps: ['In the game, type /skald reader.', 'Copy each part of the text (click it, Ctrl+A, Ctrl+C).', 'Paste it below. You can paste the parts one after the other.'],
-      label: 'Paste the text of the diary here', open: 'Open the book', clear: 'Clear', back: 'Paste again', print: 'Save as PDF',
+      label: 'Paste the text of the diary here', open: 'Open the book', clear: 'Clear', back: 'Paste again', print: 'Save as PDF', sound: 'Page-turn sound', turnBack: 'Previous page', turnOn: 'Next page',
       privacy: 'Nothing leaves this page: the text is read by your browser and is not sent anywhere.',
       part: 'Part %1 of %2', partBad: 'Part %1: incomplete copy', waiting: 'waiting for part %1',
       ready: 'All parts are here. You can open the book.', mixed: 'These parts are from different diaries. Clear and paste again.',
@@ -24,7 +24,7 @@
       title: 'Skald Leitor',
       intro: 'Leia o diário do seu personagem de World of Warcraft como um livro, fora do jogo.',
       steps: ['No jogo, digite /skald reader.', 'Copie cada parte do texto (clique nele, Ctrl+A, Ctrl+C).', 'Cole aqui embaixo. Pode colar as partes uma depois da outra.'],
-      label: 'Cole aqui o texto do diário', open: 'Abrir o livro', clear: 'Limpar', back: 'Colar de novo', print: 'Salvar como PDF',
+      label: 'Cole aqui o texto do diário', open: 'Abrir o livro', clear: 'Limpar', back: 'Colar de novo', print: 'Salvar como PDF', sound: 'Som de virar a página', turnBack: 'Página anterior', turnOn: 'Próxima página',
       privacy: 'Nada sai desta página: o texto é lido pelo seu navegador e não é enviado a lugar nenhum.',
       part: 'Parte %1 de %2', partBad: 'Parte %1: cópia incompleta', waiting: 'falta a parte %1',
       ready: 'Todas as partes chegaram. Pode abrir o livro.', mixed: 'Essas partes são de diários diferentes. Limpe e cole de novo.',
@@ -39,7 +39,7 @@
       title: 'Lecteur Skald',
       intro: 'Lisez le journal de votre personnage de World of Warcraft comme un livre, hors du jeu.',
       steps: ['Dans le jeu, tapez /skald reader.', 'Copiez chaque partie du texte (clic, Ctrl+A, Ctrl+C).', 'Collez-la ci-dessous. Vous pouvez coller les parties l’une après l’autre.'],
-      label: 'Collez ici le texte du journal', open: 'Ouvrir le livre', clear: 'Effacer', back: 'Coller à nouveau', print: 'Enregistrer en PDF',
+      label: 'Collez ici le texte du journal', open: 'Ouvrir le livre', clear: 'Effacer', back: 'Coller à nouveau', print: 'Enregistrer en PDF', sound: 'Son des pages', turnBack: 'Page précédente', turnOn: 'Page suivante',
       privacy: 'Rien ne quitte cette page : le texte est lu par votre navigateur et n’est envoyé nulle part.',
       part: 'Partie %1 sur %2', partBad: 'Partie %1 : copie incomplète', waiting: 'partie %1 manquante',
       ready: 'Toutes les parties sont là. Vous pouvez ouvrir le livre.', mixed: 'Ces parties viennent de journaux différents. Effacez et recollez.',
@@ -155,8 +155,8 @@
   var tipBox = null;
   function lookupUrl(p) {
     var i = p.info || {};
-    if (p.kind === 'quest' && i.q) return 'https://www.wowhead.com/classic/quest=' + encodeURIComponent(i.q);
-    if (p.kind === 'loot' && i.iid) return 'https://www.wowhead.com/classic/item=' + encodeURIComponent(i.iid);
+    if (p.kind === 'quest' && i.q) return 'https://www.wowhead.com/forever/quest=' + encodeURIComponent(i.q);
+    if (p.kind === 'loot' && i.iid) return 'https://www.wowhead.com/forever/item=' + encodeURIComponent(i.iid);
     return null;
   }
   function tipLines(p) {
@@ -373,12 +373,42 @@
     $('where').textContent = fmt(L().pages, cur * 2 + 1, cur * 2 + 2, total);
     $('prev').disabled = cur === 0;
     $('next').disabled = cur >= spreads.length - 1;
+    $('cornerL').disabled = cur === 0;
+    $('cornerR').disabled = cur >= spreads.length - 1;
     var sel = $('jump'), here = -1;
     daysIndex.forEach(function (d, k) { if (d.page <= cur * 2 + 1) here = k; });
     sel.selectedIndex = Math.min(here + 1, sel.options.length - 1);   // 0 is the cover
     fit();
   }
-  function goToPage(p) { show(Math.floor(p / 2)); }
+  // The sound of a page: a short burst of filtered noise made in the browser (no file), only when a page really turns.
+  var audio = null, soundOn = true;
+  try { soundOn = window.localStorage.getItem('skaldSound') !== 'off'; } catch (e) {}
+  function flipSound() {
+    if (!soundOn) return;
+    try {
+      audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+      if (audio.state === 'suspended') audio.resume();
+      var n = Math.floor(audio.sampleRate * 0.24), buf = audio.createBuffer(1, n, audio.sampleRate), d = buf.getChannelData(0);
+      for (var k = 0; k < n; k++) {
+        var t = k / n;
+        d[k] = (Math.random() * 2 - 1) * Math.pow(1 - t, 2.2) * (0.55 + 0.45 * Math.sin(t * 38)) * Math.min(1, t * 25);
+      }
+      var src = audio.createBufferSource(), band = audio.createBiquadFilter(), gain = audio.createGain();
+      src.buffer = buf; band.type = 'bandpass'; band.frequency.value = 2400; band.Q.value = 0.6; gain.gain.value = 0.3;
+      src.connect(band); band.connect(gain); gain.connect(audio.destination); src.start();
+    } catch (e) {}
+  }
+  function turn(i) {
+    var to = Math.max(0, Math.min(i, spreads.length - 1));
+    if (to !== cur) flipSound();
+    show(to);
+  }
+  function setSound(on) {
+    soundOn = on;
+    var b = $('sound'); b.classList.toggle('off', !on); b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    try { window.localStorage.setItem('skaldSound', on ? 'on' : 'off'); } catch (e) {}
+  }
+  function goToPage(p) { turn(Math.floor(p / 2)); }
   function fit() {
     var book = $('book');
     var w = book.offsetWidth, h = book.offsetHeight;
@@ -428,6 +458,8 @@
     $('t-privacy').textContent = t.privacy;
     $('back').textContent = t.back;
     $('print').textContent = t.print;
+    $('sound').setAttribute('aria-label', t.sound); $('sound').title = t.sound;
+    $('cornerL').title = t.turnBack; $('cornerR').title = t.turnOn;
   }
 
   var parsed = [];
@@ -469,15 +501,28 @@
     $('paste').addEventListener('input', update);
     $('clear').addEventListener('click', function () { $('paste').value = ''; update(); });
     $('open').addEventListener('click', function () { openBook(build(orderedParts())); });
-    $('prev').addEventListener('click', function () { show(cur - 1); });
-    $('next').addEventListener('click', function () { show(cur + 1); });
+    $('prev').addEventListener('click', function () { turn(cur - 1); });
+    $('next').addEventListener('click', function () { turn(cur + 1); });
+    $('cornerL').addEventListener('click', function () { turn(cur - 1); });
+    $('cornerR').addEventListener('click', function () { turn(cur + 1); });
+    $('sound').addEventListener('click', function () { setSound(!soundOn); });
+    setSound(soundOn);
     $('jump').addEventListener('change', function (e) { goToPage(+e.target.value); });
     $('print').addEventListener('click', printBook);
+    // a click on a page turns it (left page back, right page forward), unless it hit a link or ended a text selection
+    // (the pages are swapped on each turn, so the listener sits on the book)
+    $('book').addEventListener('click', function (e) {
+      var page = e.target.closest('.page');
+      if (!page || e.target.closest('.entry.linked, a, button, select, input')) return;
+      var sel = window.getSelection && window.getSelection();
+      if (sel && String(sel).length) return;
+      turn(cur + (page.classList.contains('left') ? -1 : 1));
+    });
     $('back').addEventListener('click', function () { $('reader').hidden = true; $('intake').hidden = false; });
     document.addEventListener('keydown', function (e) {
       if ($('reader').hidden) return;
-      if (e.key === 'ArrowLeft') show(cur - 1);
-      if (e.key === 'ArrowRight') show(cur + 1);
+      if (e.key === 'ArrowLeft') turn(cur - 1);
+      if (e.key === 'ArrowRight') turn(cur + 1);
     });
     window.addEventListener('resize', function () { if (!$('reader').hidden) fit(); });
     update();

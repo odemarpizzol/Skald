@@ -2724,6 +2724,15 @@ local function CreateWindow()
                 Heading(L.INDEX_TITLE, K.TOP_Y + 4)
                 Rule(s, K.TOP_Y + 32)
                 y = K.TOP_Y + 56
+                if #page.rows == 0 then
+                    local msg = SideText(s, 2)
+                    msg:ClearAllPoints()
+                    msg:SetPoint("TOPLEFT", px, -(y + 24))
+                    msg:SetJustifyH("CENTER")
+                    msg:SetTextColor(K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3])
+                    msg:SetText(L.EMPTY)
+                    msg:Show()
+                end
             end
             for n, row in ipairs(page.rows) do
                 local b = SideLine(s, n)

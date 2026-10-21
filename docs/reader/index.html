@@ -33,12 +33,15 @@
     <div class="spine"></div>
     <div id="left" class="page left"></div>
     <div id="right" class="page right"></div>
+    <button id="cornerL" class="corner left" type="button"><svg viewBox="0 0 48 48" width="44" height="44" aria-hidden="true"><defs><linearGradient id="cgL" x1="1" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#e6d3a2"/><stop offset="1" stop-color="#b89556"/></linearGradient></defs><path d="M48 4 L4 48 H48 Z" fill="rgba(60,30,10,.18)"/><path d="M48 14 Q30 20 22 48 H48 Z" fill="url(#cgL)" stroke="#6b4a26" stroke-width="1"/></svg></button>
+    <button id="cornerR" class="corner right" type="button"><svg viewBox="0 0 48 48" width="44" height="44" aria-hidden="true"><defs><linearGradient id="cgR" x1="1" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#e6d3a2"/><stop offset="1" stop-color="#b89556"/></linearGradient></defs><path d="M48 4 L4 48 H48 Z" fill="rgba(60,30,10,.18)"/><path d="M48 14 Q30 20 22 48 H48 Z" fill="url(#cgR)" stroke="#6b4a26" stroke-width="1"/></svg></button>
   </div></div>
   <nav id="nav">
-    <button id="prev" type="button" title="←">‹</button>
+    <button id="prev" type="button" title="←"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" class="flip"><path class="pg" d="M6 3h10.5A1.5 1.5 0 0 1 18 4.5V14l-6 7H6a1.5 1.5 0 0 1-1.5-1.5v-15A1.5 1.5 0 0 1 6 3z"/><path class="cl" d="M18 14l-6 7v-4.5a2.5 2.5 0 0 1 2.5-2.5z"/><path class="ln" d="M8 7.5h7M8 10.5h7M8 13.5h3"/></svg></button>
     <span id="where"></span>
-    <button id="next" type="button" title="→">›</button>
+    <button id="next" type="button" title="→"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path class="pg" d="M6 3h10.5A1.5 1.5 0 0 1 18 4.5V14l-6 7H6a1.5 1.5 0 0 1-1.5-1.5v-15A1.5 1.5 0 0 1 6 3z"/><path class="cl" d="M18 14l-6 7v-4.5a2.5 2.5 0 0 1 2.5-2.5z"/><path class="ln" d="M8 7.5h7M8 10.5h7M8 13.5h3"/></svg></button>
     <select id="jump" aria-label="Dia"></select>
+    <button id="sound" type="button" class="quiet" aria-pressed="true"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path class="sp" d="M4 9h4l5-4v14l-5-4H4z"/><path class="sw" d="M16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11"/><path class="sx" d="M16 9l5 6M21 9l-5 6"/></svg></button>
     <button id="print" type="button" class="quiet"></button>
     <button id="back" type="button" class="quiet"></button>
   </nav>
