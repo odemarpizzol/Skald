@@ -1,0 +1,2 @@
+- **Pets:** a new design for the pets page: an icon of the family for each companion (17 families, drawn for the book), the one at your side in the header with its family and level, the model of the pet beside the facts, and the list of companions with the family icon on each line, the current one in a darker name.
+- **Reader:** a page of a quest or an item now shows a tooltip in the Reader when the mouse is over it (name, level, rarity, what it was about, who gave it, the place), and a click looks it up on Wowhead. The cover shows the race and class.

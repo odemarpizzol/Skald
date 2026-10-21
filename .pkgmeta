@@ -7,6 +7,7 @@ ignore:
   - CHANGELOG.md
   - .github
   - docs
+  - dev
 
 manual-changelog:
   filename: CHANGELOG.md

@@ -17,7 +17,8 @@
       day: 'Day %1', pages: 'Pages %1–%2 of %3', cover: 'Cover', first: 'First page written', played: 'Time on the road', goals: 'Goals reached',
       stat: { quest: 'Quests completed', level: 'Levels earned', death: 'Times I fell', dungeon: 'Dungeons visited', boss: 'Bosses defeated', kill: 'Creatures defeated' },
       date: function (d) { return d.toLocaleDateString('en-US'); }, hours: '%1h %2min', minutes: '%1min', tier: ['Trivial', 'Common', 'Uncommon', 'Rare', 'Epic', 'Legendary'],
-      truncated: 'The diary has more pages than the ones pasted.'
+      truncated: 'The diary has more pages than the ones pasted.',
+      tip: { level: 'Level %1', giver: 'Given by %1', falls: 'After %1 falls', stack: '%1 made', open: 'Click to look it up on Wowhead' }
     },
     ptBR: {
       title: 'Skald Leitor',
@@ -31,7 +32,8 @@
       day: 'Dia %1', pages: 'Páginas %1–%2 de %3', cover: 'Capa', first: 'Primeira página escrita', played: 'Tempo na estrada', goals: 'Metas cumpridas',
       stat: { quest: 'Missões cumpridas', level: 'Níveis conquistados', death: 'Vezes que caí', dungeon: 'Masmorras visitadas', boss: 'Chefes derrotados', kill: 'Criaturas vencidas' },
       date: function (d) { return d.toLocaleDateString('pt-BR'); }, hours: '%1h %2min', minutes: '%1min', tier: ['Trivial', 'Comum', 'Incomum', 'Rara', 'Épica', 'Lendária'],
-      truncated: 'O diário tem mais páginas do que as coladas.'
+      truncated: 'O diário tem mais páginas do que as coladas.',
+      tip: { level: 'Nível %1', giver: 'Dada por %1', falls: 'Depois de %1 quedas', stack: '%1 feitos', open: 'Clique para procurar no Wowhead' }
     },
     frFR: {
       title: 'Lecteur Skald',
@@ -45,7 +47,8 @@
       day: 'Jour %1', pages: 'Pages %1–%2 sur %3', cover: 'Couverture', first: 'Première page écrite', played: 'Temps sur la route', goals: 'Objectifs atteints',
       stat: { quest: 'Quêtes accomplies', level: 'Niveaux gagnés', death: 'Fois où je suis tombé', dungeon: 'Donjons visités', boss: 'Boss vaincus', kill: 'Créatures vaincues' },
       date: function (d) { return d.toLocaleDateString('fr-FR'); }, hours: '%1 h %2 min', minutes: '%1 min', tier: ['Trivial', 'Commun', 'Peu commun', 'Rare', 'Épique', 'Légendaire'],
-      truncated: 'Le journal compte plus de pages que celles collées.'
+      truncated: 'Le journal compte plus de pages que celles collées.',
+      tip: { level: 'Niveau %1', giver: 'Donnée par %1', falls: 'Après %1 chutes', stack: '%1 fabriqués', open: 'Cliquez pour chercher sur Wowhead' }
     }
   };
   var lang = 'ptBR';
@@ -59,6 +62,13 @@
   // ---- reading the text ----------------------------------------------------------------------------------------
   function unescapeField(s) {
     return s.replace(/\\(.)/g, function (_, c) { return c === 'p' ? '^' : c === 'n' ? '\n' : c; });
+  }
+  // The ninth field of a page: key=value pairs joined by "~" (what the tooltip of the game shows).
+  function parseInfo(s) {
+    var o = {};
+    if (!s) return o;
+    s.split('~').forEach(function (kv) { var i = kv.indexOf('='); if (i > 0) o[kv.slice(0, i)] = kv.slice(i + 1); });
+    return o;
   }
   function checksum(text) {
     var bytes = new TextEncoder().encode(text);
@@ -96,7 +106,7 @@
           case 'N': model.counts[f[1]] = +f[2]; break;
           case 'T': model.tiers[f[1]] = +f[2]; break;
           case 'G': model.goals++; break;
-          case 'P': model.pages.push({ t: +f[1], kind: f[2], tier: +f[3], fav: f[4] === '1', place: f[5], ic: f[6], text: f[7], note: f[8] }); break;
+          case 'P': model.pages.push({ t: +f[1], kind: f[2], tier: +f[3], fav: f[4] === '1', place: f[5], ic: f[6], text: f[7], note: f[8], info: parseInfo(f[9]) }); break;
         }
       });
     });
@@ -141,6 +151,58 @@
     page.appendChild(run);
     return page;
   }
+  // A tooltip over a page, as in the game: the name, the level, what it was about, who gave it; a click looks it up.
+  var tipBox = null;
+  function lookupUrl(p) {
+    var i = p.info || {};
+    if (p.kind === 'quest' && i.q) return 'https://www.wowhead.com/classic/quest=' + encodeURIComponent(i.q);
+    if (p.kind === 'loot' && i.iid) return 'https://www.wowhead.com/classic/item=' + encodeURIComponent(i.iid);
+    return null;
+  }
+  function tipLines(p) {
+    var i = p.info || {}, tr = L().tip, lines = [];
+    if (!i.title && !i.q && !i.iid) return lines;
+    lines.push({ cls: 'tip-title t' + p.tier, text: i.title || '' });
+    var meta = [];
+    if (i.ql) meta.push(fmt(tr.level, i.ql));
+    if (p.kind === 'quest' || p.kind === 'loot') meta.push(L().tier[p.tier] || '');
+    if (i.tries) meta.push(fmt(tr.falls, i.tries));
+    if (i.n) meta.push(fmt(tr.stack, i.n));
+    meta = meta.filter(Boolean);
+    if (meta.length) lines.push({ cls: 'tip-meta', text: meta.join('  ·  ') });
+    if (i.ot) lines.push({ cls: 'tip-text', text: i.ot });
+    var foot = [];
+    if (i.npc) foot.push(fmt(tr.giver, i.npc));
+    if (p.place) foot.push(p.place);
+    if (foot.length) lines.push({ cls: 'tip-foot', text: foot.join('  ·  ') });
+    lines.push({ cls: 'tip-date', text: L().date(new Date(p.t * 1000)) });
+    if (lookupUrl(p)) lines.push({ cls: 'tip-open', text: tr.open });
+    return lines;
+  }
+  function attachTip(row, p) {
+    var lines = tipLines(p);
+    if (!lines.length) return;
+    var url = lookupUrl(p);
+    if (url) { row.classList.add('linked'); row.addEventListener('click', function () { window.open(url, '_blank', 'noopener'); }); }
+    row.addEventListener('mouseenter', function (ev) {
+      if (!tipBox) { tipBox = el('div', 'tip'); document.body.appendChild(tipBox); }
+      tipBox.textContent = '';
+      lines.forEach(function (l) { tipBox.appendChild(el('div', l.cls, l.text)); });
+      tipBox.style.display = 'block';
+      moveTip(ev);
+    });
+    row.addEventListener('mousemove', moveTip);
+    row.addEventListener('mouseleave', function () { if (tipBox) tipBox.style.display = 'none'; });
+  }
+  function moveTip(ev) {
+    if (!tipBox) return;
+    var w = tipBox.offsetWidth, h = tipBox.offsetHeight;
+    var x = ev.clientX + 16, y = ev.clientY + 18;
+    if (x + w > window.innerWidth - 8) x = ev.clientX - w - 16;
+    if (y + h > window.innerHeight - 8) y = ev.clientY - h - 16;
+    tipBox.style.left = Math.max(8, x) + 'px';
+    tipBox.style.top = Math.max(8, y) + 'px';
+  }
   function entryRow(p) {
     var row = el('div', 'entry ' + p.kind + ' t' + (p.kind === 'quest' ? p.tier : ''));
     if (p.kind === 'day') {
@@ -157,6 +219,7 @@
     if (p.note) body.appendChild(el('span', 'note', p.note));
     row.appendChild(body);
     row.appendChild(el('div', 'star', p.fav ? '★' : ''));
+    attachTip(row, p);
     return row;
   }
 
@@ -215,7 +278,7 @@
     c.appendChild(art);
     c.appendChild(el('h2', '', fmt(L().diaryOf, model.name)));
     c.appendChild(el('span', 'rule'));
-    c.appendChild(el('div', 'sub', fmt(L().level, model.level, model.cls)));
+    c.appendChild(el('div', 'sub', fmt(L().level, model.level, (model.race ? model.race + ' ' : '') + model.cls)));
     left.appendChild(c);
 
     var right = pageShell(model, true, 'Skald');

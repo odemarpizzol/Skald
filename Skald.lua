@@ -4474,46 +4474,112 @@ Mile.NpcId = function(unit)
 end
 
 -- The hunter's tab: the companion at one's side, and every pet there has been.
+K.FAMILY_ICONS = {
+    { "bat", "chauve", "morcego" }, { "bear", "urso", "ours" }, { "boar", "javali", "sanglier" },
+    { "carrion", "carni", "charogn", "vulture", "abutre" }, { "croc" }, { "cat", "gato", "f\195\169lin", "felin", "panter" },
+    { "crab", "caranguejo" }, { "gorill" }, { "hyen", "hiena" }, { "owl", "coruja", "chouette" }, { "raptor" },
+    { "scorp", "escorp" }, { "spider", "aranha", "araign" }, { "strider", "moa", "trotteur" }, { "turtle", "tartaruga", "tortue" },
+    { "wind", "vento", "vents" }, { "wolf", "lobo", "loup" },
+}
+-- Our own pet art (Textures\\pet_<family>.tga) is used once it is in the style of the book; until then, the game's icons.
+K.OWN_PET_ART = true
+K.FAMILY_GAME_ICONS = {
+    "Bat", "Bear", "Boar", "Vulture", "Crocolisk", "Cat", "Crab", "Gorilla", "Hyena", "Owl", "Raptor",
+    "Scorpid", "Spider", "TallStrider", "Turtle", "WindSerpent", "Wolf",
+}
+K.FAMILY_ICON_FILES = {
+    "bat", "bear", "boar", "carrion", "crocolisk", "cat", "crab", "gorilla", "hyena", "owl", "raptor",
+    "scorpid", "spider", "tallstrider", "turtle", "windserpent", "wolf",
+}
+-- Where the animal is inside its picture (left, right, top, bottom as fractions): a wide one is drawn
+-- at the full width of its place instead of shrunk into a square.
+K.FAMILY_BOX = {
+    bat = { 0.094, 0.906, 0.164, 0.844 }, bear = { 0.117, 0.883, 0.109, 0.906 }, boar = { 0.109, 0.891, 0.109, 0.906 },
+    carrion = { 0.109, 0.891, 0.109, 0.906 }, cat = { 0.164, 0.836, 0.109, 0.906 }, crab = { 0.094, 0.906, 0.125, 0.891 },
+    crocolisk = { 0.094, 0.906, 0.156, 0.852 }, gorilla = { 0.125, 0.875, 0.109, 0.906 }, hyena = { 0.102, 0.898, 0.117, 0.898 },
+    owl = { 0.172, 0.828, 0.109, 0.906 }, raptor = { 0.156, 0.844, 0.109, 0.906 }, scorpid = { 0.109, 0.891, 0.109, 0.898 },
+    spider = { 0.094, 0.906, 0.102, 0.906 }, tallstrider = { 0.164, 0.836, 0.109, 0.906 }, turtle = { 0.094, 0.906, 0.211, 0.797 },
+    windserpent = { 0.133, 0.867, 0.109, 0.906 }, wolf = { 0.125, 0.875, 0.109, 0.898 },
+}
+-- Puts the picture of a family on a texture, no larger than size x size.
+Mile.SetFamilyIcon = function(tex, family, size)
+    local path, key = Mile.FamilyIcon(family)
+    tex:SetTexture(path)
+    local box = K.OWN_PET_ART and key and K.FAMILY_BOX[key]
+    if not box then
+        tex:SetSize(size, size)
+        tex:SetTexCoord(0.07, 0.93, 0.07, 0.93)
+        return
+    end
+    local pad = 0.01
+    local l, r, t, b = math.max(0, box[1] - pad), math.min(1, box[2] + pad), math.max(0, box[3] - pad), math.min(1, box[4] + pad)
+    local w, h = r - l, b - t
+    local big = math.max(w, h)
+    tex:SetTexCoord(l, r, t, b)
+    tex:SetSize(size * w / big, size * h / big)
+end
+Mile.FamilyIcon = function(family)
+    local name = type(family) == "string" and family:lower() or ""
+    for i, words in ipairs(K.FAMILY_ICONS) do
+        for _, w in ipairs(words) do
+            if name:find(w, 1, true) then
+                if K.OWN_PET_ART then return "Interface\\AddOns\\Skald\\Textures\\pet_" .. K.FAMILY_ICON_FILES[i], K.FAMILY_ICON_FILES[i] end
+                return "Interface\\Icons\\Ability_Hunter_Pet_" .. K.FAMILY_GAME_ICONS[i]
+            end
+        end
+    end
+    return "Interface\\AddOns\\Skald\\Textures\\ev_pet"
+end
+
 Mile.BuildPets = function(panel)
     PageHeading(panel, L.TAB_PETS, 0)
     local nowLabel = SectionLabel(panel, L.PETS_NOW, 0, -52)
+    local iconFrame = panel:CreateTexture(nil, "BACKGROUND")
+    iconFrame:SetSize(56, 56)
+    iconFrame:SetPoint("TOPLEFT", 0, -76)
+    if K.OWN_PET_ART then iconFrame:SetColorTexture(0, 0, 0, 0) else iconFrame:SetColorTexture(K.BTN.gold[1], K.BTN.gold[2], K.BTN.gold[3], 1) end
     local icon = panel:CreateTexture(nil, "ARTWORK")
-    icon:SetSize(44, 44)
-    icon:SetPoint("TOPLEFT", 0, -76)
+    icon:SetSize(K.OWN_PET_ART and 60 or 50, K.OWN_PET_ART and 60 or 50)
+    icon:SetPoint("CENTER", iconFrame, "CENTER")
+    if not K.OWN_PET_ART then icon:SetTexCoord(0.07, 0.93, 0.07, 0.93) end
     icon:SetTexture("Interface\\AddOns\\Skald\\Textures\\ev_pet")
     local name = panel:CreateFontString(nil, "OVERLAY", "SkaldHead")
-    name:SetPoint("LEFT", icon, "RIGHT", 14, 0)
-    name:SetWidth(K.CW - 58)
+    name:SetPoint("TOPLEFT", iconFrame, "TOPRIGHT", 14, -4)
+    name:SetWidth(K.CW - 72)
     name:SetJustifyH("LEFT")
     name:SetTextColor(K.C_HEAD[1], K.C_HEAD[2], K.C_HEAD[3])
 
     -- The facts, in two columns: a small label over each value.
     local function Cell(col, row, label)
-        local x, y = (col - 1) * 170, -126 - (row - 1) * 34
+        local x, y = 218, -230 - (row - 1) * 90
         local l = panel:CreateFontString(nil, "OVERLAY", "SkaldSec")
         l:SetPoint("TOPLEFT", x, y)
-        l:SetWidth(160)
+        l:SetWidth(124)
         l:SetJustifyH("LEFT")
         l:SetTextColor(K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3])
         l:SetText(Upper(label))
         local v = panel:CreateFontString(nil, "OVERLAY", "SkaldBody")
-        v:SetPoint("TOPLEFT", x, y - 15)
-        v:SetWidth(160)
+        v:SetPoint("TOPLEFT", x, y - 16)
+        v:SetWidth(124)
         v:SetJustifyH("LEFT")
         v:SetTextColor(K.C_BODY[1], K.C_BODY[2], K.C_BODY[3])
         return v, l
     end
-    local famV, famL = Cell(1, 1, L.PETL_FAMILY)
-    local lvlV, lvlL = Cell(2, 1, L.PETL_LEVEL)
+    local sinceV, sinceL = Cell(1, 1, L.PETL_SINCE)
     local dietV, dietL = Cell(1, 2, L.PETL_DIET)
-    local sinceV, sinceL = Cell(2, 2, L.PETL_SINCE)
     local lastLine = NoteText(panel, 0, -126)
+    local subLine = panel:CreateFontString(nil, "OVERLAY", "SkaldNote")
+    subLine:SetPoint("TOPLEFT", name, "BOTTOMLEFT", 0, -4)
+    subLine:SetWidth(K.CW - 72)
+    subLine:SetJustifyH("LEFT")
+    subLine:SetTextColor(K.C_NOTE[1], K.C_NOTE[2], K.C_NOTE[3])
+    PageRule(panel, 0, -146)
 
     -- The companion itself, standing in an arched frame like the character on the cover. Only the pet
     -- that is out can be drawn; for any other the paw takes its place.
     local holder = CreateFrame("Frame", nil, panel)
     holder:SetSize(191, 226)
-    holder:SetPoint("TOPLEFT", (K.CW - 209) / 2 + 9, -212)
+    holder:SetPoint("TOPLEFT", 9, -176)
     local okModel, model = pcall(CreateFrame, "PlayerModel", nil, holder)
     if okModel and model then
         model:SetAllPoints()
@@ -4535,7 +4601,7 @@ Mile.BuildPets = function(panel)
             end
         end)
         model:SetScript("OnMouseWheel", function(self, delta)
-            self.skaldZoom = math.max(0.8, math.min(5, (self.skaldZoom or 1.3) - (delta or 0) * 0.25))
+            self.skaldZoom = math.max(0.6, math.min(5, (self.skaldZoom or 1.0) - (delta or 0) * 0.25))
             pcall(self.SetCamDistanceScale, self, self.skaldZoom)
         end)
     end
@@ -4547,7 +4613,7 @@ Mile.BuildPets = function(panel)
     local alcove = CreateFrame("Frame", nil, panel)
     alcove:SetFrameLevel(holder:GetFrameLevel() + 5)
     alcove:SetSize(209, 246)
-    alcove:SetPoint("TOPLEFT", (K.CW - 209) / 2, -204)
+    alcove:SetPoint("TOPLEFT", 0, -168)
     local alcoveTex = alcove:CreateTexture(nil, "OVERLAY")
     alcoveTex:SetAllPoints()
     alcoveTex:SetTexture(K.TEX .. "alcove")
@@ -4557,7 +4623,7 @@ Mile.BuildPets = function(panel)
         if okModel and model and petName and UnitExists("pet") and Safe(UnitName("pet")) == petName then
             out = pcall(model.SetUnit, model, "pet")
             if out then
-                model.skaldZoom, model.skaldAngle = 1.3, 0.6
+                model.skaldZoom, model.skaldAngle = 1.0, 0.6
                 pcall(model.SetCamDistanceScale, model, model.skaldZoom)
                 pcall(model.SetFacing, model, model.skaldAngle)
             end
@@ -4568,24 +4634,39 @@ Mile.BuildPets = function(panel)
 
     PageHeading(panel, L.PETS_ALL, K.RIGHT_X)
     local rows = {}
-    for i = 1, 12 do
-        local top = -66 - (i - 1) * 36
+    for i = 1, 9 do
+        local top = -74 - (i - 1) * 46
+        local frame = panel:CreateTexture(nil, "BACKGROUND")
+        frame:SetSize(36, 36)
+        frame:SetPoint("TOPLEFT", K.RIGHT_X, top)
+        frame:SetColorTexture(K.C_HEAD[1], K.C_HEAD[2], K.C_HEAD[3], K.OWN_PET_ART and 0 or 0.85)
+        local pic = panel:CreateTexture(nil, "ARTWORK")
+        pic:SetSize(K.OWN_PET_ART and 40 or 32, K.OWN_PET_ART and 40 or 32)
+        pic:SetPoint("CENTER", frame, "CENTER")
+        if not K.OWN_PET_ART then pic:SetTexCoord(0.07, 0.93, 0.07, 0.93) end
         local a = panel:CreateFontString(nil, "OVERLAY", "SkaldBody")
-        a:SetPoint("TOPLEFT", K.RIGHT_X, top)
-        a:SetWidth(K.CW)
+        a:SetPoint("TOPLEFT", K.RIGHT_X + 46, top + 1)
+        a:SetWidth(K.CW - 46)
         a:SetJustifyH("LEFT")
         a:SetTextColor(K.C_BODY[1], K.C_BODY[2], K.C_BODY[3])
         local b = panel:CreateFontString(nil, "OVERLAY", "SkaldSmall")
-        b:SetPoint("TOPLEFT", K.RIGHT_X, top - 17)
-        b:SetWidth(K.CW)
+        b:SetPoint("TOPLEFT", K.RIGHT_X + 46, top - 17)
+        b:SetWidth(K.CW - 46)
         b:SetJustifyH("LEFT")
         b:SetTextColor(K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3])
-        rows[i] = { a, b }
+        local line = panel:CreateTexture(nil, "ARTWORK")
+        line:SetPoint("TOPLEFT", K.RIGHT_X, top - 42)
+        line:SetSize(K.CW, 1)
+        line:SetColorTexture(K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3], 0.28)
+        rows[i] = { a, b, frame, pic, line }
     end
     local empty = NoteText(panel, 0, -80)
-    local total = NoteText(panel, K.RIGHT_X, -420)
+    PageRule(panel, K.RIGHT_X, -436)
+    local total = NoteText(panel, K.RIGHT_X, -458)
+    total:SetWidth(K.CW)
+    total:SetJustifyH("CENTER")
 
-    local facts = { famV, famL, lvlV, lvlL, dietV, dietL, sinceV, sinceL }
+    local facts = { dietV, dietL, sinceV, sinceL }
     local function ShowFacts(on)
         for _, fs in ipairs(facts) do fs:SetShown(on) end
     end
@@ -4604,38 +4685,47 @@ Mile.BuildPets = function(panel)
         lastLine:SetText("")
         if #list == 0 then
             empty:SetText(L.PETS_NONE)
-            name:SetText(""); total:SetText("")
-            icon:Hide(); ShowFacts(false)
+            name:SetText(""); subLine:SetText(""); total:SetText("")
+            icon:Hide(); iconFrame:Hide(); ShowFacts(false)
             ShowPet(nil)
         elseif not out then
-            icon:Hide(); ShowFacts(false)
-            name:SetText("")
+            icon:Hide(); iconFrame:Hide(); ShowFacts(false)
+            name:SetText(""); subLine:SetText("")
             lastLine:SetText(string.format(L.PETS_LAST, list[1].name))
             total:SetText(string.format(L.PETS_TOTAL, #list))
             ShowPet(nil)
         else
             local rec = out.rec
-            icon:Show(); ShowFacts(true)
+            icon:Show(); iconFrame:Show(); ShowFacts(true)
+            Mile.SetFamilyIcon(icon, rec.fam, K.OWN_PET_ART and 64 or 50)
             name:SetText(out.name)
-            famV:SetText(rec.fam or "-")
-            lvlV:SetText((rec.lv and rec.lv > 0) and tostring(rec.lv) or "-")
+            subLine:SetText((table.concat({ rec.fam or "", (rec.lv and rec.lv > 0) and string.format(L.TIP_LEVEL, rec.lv) or "" }, "  -  "):gsub("^  %-  ", ""):gsub("  %-  $", "")))
             dietV:SetText(rec.diet or "-")
             sinceV:SetText(date(L.DAY_DATE, rec.t or time()))
             total:SetText(string.format(L.PETS_TOTAL, #list))
             ShowPet(out.name)
         end
-        for i = 1, 12 do
+        for i = 1, 9 do
             local item = list[i]
             if item then
+                Mile.SetFamilyIcon(rows[i][4], item.rec.fam, K.OWN_PET_ART and 44 or 32)
+                local atSide = out and item.name == out.name
+                rows[i][4]:SetVertexColor(1, 1, 1)
+                rows[i][4]:SetAlpha(atSide and 1 or 0.85)
+                if not K.OWN_PET_ART then
+                    local c = atSide and K.BTN.gold or K.C_HEAD
+                    rows[i][3]:SetColorTexture(c[1], c[2], c[3], atSide and 1 or 0.85)
+                end
+                rows[i][1]:SetTextColor(atSide and K.C_HEAD[1] or K.C_BODY[1], atSide and K.C_HEAD[2] or K.C_BODY[2], atSide and K.C_HEAD[3] or K.C_BODY[3])
                 rows[i][1]:SetText(item.name)
                 local parts = {}
                 if item.rec.fam then parts[#parts + 1] = item.rec.fam end
                 if item.rec.lv and item.rec.lv > 0 then parts[#parts + 1] = string.format(L.TIP_LEVEL, item.rec.lv) end
                 parts[#parts + 1] = date(L.DAY_DATE, item.rec.t or time())
                 rows[i][2]:SetText(table.concat(parts, "  -  "))
-                rows[i][1]:Show(); rows[i][2]:Show()
+                for _, part in ipairs(rows[i]) do part:Show() end
             else
-                rows[i][1]:Hide(); rows[i][2]:Hide()
+                for _, part in ipairs(rows[i]) do part:Hide() end
             end
         end
     end
@@ -5568,6 +5658,27 @@ K.ReaderLine = function(...)
     for i = 1, select("#", ...) do out[i] = K.ReaderEscape((select(i, ...))) end
     return table.concat(out, "^")
 end
+-- What the tooltip of a page shows in the game, as key=value pairs joined by "~", for the Reader to show on hover.
+K.ReaderInfo = function(e)
+    local pairsOut = {}
+    local function Add(key, value)
+        if value == nil or value == "" or value == false then return end
+        value = PlainText(tostring(value)):gsub("[~=]", " ")
+        pairsOut[#pairsOut + 1] = key .. "=" .. value
+    end
+    if e.kind == "quest" then
+        Add("title", e.arg); Add("q", e.q); Add("ql", e.ql); Add("npc", e.npc)
+        if type(e.ot) == "string" and e.ot ~= "" then
+            local text = ns.ExpandQuestText and ns.ExpandQuestText(e.ot) or e.ot
+            Add("ot", text and K.TextPrefix(text, 230))
+        end
+    elseif e.kind == "loot" then
+        Add("title", e.arg); Add("iid", e.iid); Add("n", e.n)
+    elseif e.kind == "boss" or e.kind == "dungeon" or e.kind == "tame" or e.kind == "skill" or e.kind == "profession" then
+        Add("title", e.arg); Add("tries", e.tries)
+    end
+    return table.concat(pairsOut, "~")
+end
 local function BuildReader(scope)
     K.nameSet = nil
     local entries = SelectEntries(scope)
@@ -5589,7 +5700,7 @@ local function BuildReader(scope)
         local note = (e.fav and type(e.favNote) == "string") and PlainText(e.favNote) or ""
         local ic = e.kind == "loot" and ("loot:" .. tostring(e.cat or "")) or tostring(e.kind)
         lines[#lines + 1] = K.ReaderLine("P", e.t or 0, e.kind, e.tier or 0, e.fav and 1 or 0,
-            PlainText(tostring(ns.PlaceName(e) or "")), ic, K.TextPrefix(body, 700), K.TextPrefix(note, 300))
+            PlainText(tostring(ns.PlaceName(e) or "")), ic, K.TextPrefix(body, 700), K.TextPrefix(note, 300), K.ReaderInfo(e))
     end
     -- the parts: the summary lines open the first
     local bodies, current, size = {}, {}, 0
