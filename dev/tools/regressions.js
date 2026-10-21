@@ -368,11 +368,11 @@ run('the comms probe sends on the channels that apply, keeps what came back and 
 C_ChatInfo = { RegisterAddonMessagePrefix = function() return true end,
   SendAddonMessage = function(prefix, text, channel, target) sent[#sent + 1] = channel; fire("CHAT_MSG_ADDON", prefix, text, channel, "Tester") return 0 end }
 function IsInGroup() return true end; function IsInRaid() return false end; function IsInGuild() return false end
-SlashCmdList["SKALD"]("probe comms")
+SlashCmdList["SKALD"]("probe comms Amigo")
 runTimers()
 local text = ns.BuildReport()
-RES = (#sent == 2 and sent[1] == "SAY" and sent[2] == "PARTY" and #SkaldDB.commsProbe.received == 2
-  and text:find("register ok true", 1, true) and text:find("received: SAY", 1, true)) and "ok" or ("sent " .. #sent .. " " .. text)`,
+RES = (#sent == 2 and sent[1] == "WHISPER" and sent[2] == "PARTY" and #SkaldDB.commsProbe.received == 2
+  and text:find("register ok true", 1, true) and text:find("received: WHISPER", 1, true)) and "ok" or ("sent " .. #sent .. " " .. text)`,
 });
 
 const DUNGEON = `function IsInInstance() return true, "party" end

@@ -5420,7 +5420,7 @@ H.CHAT_MSG_ADDON = function(self, event, prefix, text, channel, sender)
     end
 end
 
-ns.ProbeComms = function()
+ns.ProbeComms = function(whisperTo)
     local api = C_ChatInfo or {}
     local send = api.SendAddonMessage or SendAddonMessage
     local probe = { when = time(), api = {}, sent = {}, received = {} }
@@ -5433,7 +5433,10 @@ ns.ProbeComms = function()
     if reg then okReg, resReg = pcall(reg, K.COMMS_PREFIX); resReg = tostring(resReg) end
     probe.register = (okReg and "ok " or "error ") .. tostring(resReg)
     if send then
-        local targets = { { "SAY" } }   -- a whisper to oneself is refused by the game ("no player named..."); SAY comes back to the sender
+        -- SAY answers "invalid chat type" (4) in this client and a whisper to oneself is refused by the game, so
+        -- the channels tried are the group, the guild and, if a name is given, a whisper to that player
+        local targets = {}
+        if whisperTo and whisperTo ~= "" then targets[#targets + 1] = { "WHISPER", whisperTo } end
         if IsInGroup and IsInGroup() then targets[#targets + 1] = { IsInRaid and IsInRaid() and "RAID" or "PARTY" } end
         if IsInGuild and IsInGuild() then targets[#targets + 1] = { "GUILD" } end
         for _, t in ipairs(targets) do
@@ -5442,6 +5445,7 @@ ns.ProbeComms = function()
         end
     end
     C_Timer.After(4, function()
+        if #probe.sent == 0 then Say(L.COMMS_NONE); return end
         Say(string.format(L.COMMS_RESULT, #probe.received, #probe.sent))
     end)
 end
@@ -6700,8 +6704,8 @@ SlashCmdList["SKALD"] = function(msg)
         end)
         Settings().statDump = dump
         Say(ok and string.format("%d statistics listed. Type /reload to save them.", #dump) or "could not read the statistics.")
-    elseif msg == "probe comms" then
-        ns.ProbeComms()
+    elseif msg == "probe comms" or msg:match("^probe comms ") then
+        ns.ProbeComms(strtrim(raw:sub(13)))
         Say(L.COMMS_SENT)
     elseif msg:match("^probe") then
         local arg = strtrim(msg:sub(6))
