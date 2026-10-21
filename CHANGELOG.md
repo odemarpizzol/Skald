@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.37.0-beta
+
+- **Skald Reader:** your diary read as a book outside the game, on a web page that runs in your browser and sends nothing anywhere. In the game type /skald reader, copy the text and paste it on the page (odemarpizzol.github.io/Skald/reader). It shows the cover, the index and the days with the same icons, and can be saved as a PDF.
+- **Names in exports:** what is exported for Discord, as plain text or for the Reader hides the names of other players unless you ask to show them (a button in the export window).
+- **Bosses:** where the game announces the encounter, the falls counted for a boss are the ones at that very boss.
+- **French:** the lines that say what a goal was about no longer carry a stray character.
+- **Faster and lighter:** hiding the names of other players in an export now takes one pass over the words (a diary of 3000 pages with 200 companions went from about 7 seconds to under half a second in the test), the text of a quest is kept on the page only from the uncommon rarity up and cut to what the tooltip shows, and the web Reader opens a diary of 3000 pages in about a tenth of a second.
+- **More variety in the humble voice, and in the lines of each class and race:** six new sentences for each kind of page in the humble voice, and every class and every race now has eight lines (they had two or three) for levels, falls and bosses, in English, Portuguese and French; a pool that is still short is drawn in proportion to its size, so the same few lines do not come back one after the other.
+- **Any screen:** the book now fits the screen it is on: on a small window, a 4:3 screen or a large interface scale it is drawn smaller instead of going off the edge, and it follows when you change the resolution or the interface scale. In Style there is a new choice for the size of the book (Auto, 80%, 100%, 125%, 150%), also `/skald size auto|80|100|125|150`; it never takes more than the screen holds.
+- **Art for the Reader window:** the export window has a header, a button icon, a pasting picture and a ready seal when the Reader format is chosen.
+- **Rarity of bosses:** the seal of a boss notice now follows the kill: a dungeon boss is rare, a raid or a heroic run lifts it, so does a fight that took two or more falls, and a boss met away from any dungeon is uncommon. Pages written before keep their epic seal.
+- **Settings in order:** the settings are in three tabs (Style: voice, text, ink, cover and book size; Notices: which ones, the sound and where they appear; Options: what the quill records, the diary and its data, with the archived diaries, export and erase together), set apart below the tabs of the diary itself, with ornamental lines between groups. The size of the book was labelled "text size" by mistake and is fixed.
+- **Notices:** the title no longer sits against the edge, the sample notice comes in front of the book so it can be dragged, the book returns to the middle if a change of size leaves it off the screen, and the open tab is lit in red with a gold line.
+- **Minimap:** the button is always there once the addon is installed; if the library did not draw it, the addon's own button takes its place.
+
 ## 0.36.1-beta
 
 - **More variety in the humorous voice:** six new sentences for each kind of page (quests, levels, falls, lands, bosses, dungeons) in English, Portuguese and French, so the jokes come back less often.

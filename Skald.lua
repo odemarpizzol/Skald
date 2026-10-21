@@ -1303,7 +1303,7 @@ K.C_NOTE  = { 0.353, 0.227, 0.102 }   -- #5A3A1A
 K.C_HDR   = { 0.478, 0.290, 0.180 }   -- #7A4A2E
 K.INKS = { { 0.353, 0.227, 0.102 }, { 0.180, 0.165, 0.227 }, { 0.431, 0.118, 0.102 } }   -- sepia, iron gall, burgundy
 K.TAB_OFF = { 0.353, 0.227, 0.141 }   -- #5A3A24
-K.TAB_ON  = { 0.722, 0.541, 0.353 }   -- #B88A5A
+K.TAB_ON  = { 0.62, 0.30, 0.22 }      -- leather warmed to the red of the lit buttons
 
 K.BOOK_W, K.BOOK_H = 980, 580
 K.BOOK_FIT_W, K.BOOK_FIT_H, K.BOOK_MIN_SCALE = 0.96, 0.94, 0.5   -- how much of the screen the book may take, and the smallest it is drawn
@@ -1539,7 +1539,7 @@ local function ShowToast(e, titleText, bodyText, lines, seconds)
         local fr = CreateFrame("Frame", "SkaldToast", UIParent)
         fr:SetSize(400, 84)
         ns.PlaceNotice(fr)
-        fr:SetFrameStrata("HIGH")
+        fr:SetFrameStrata("DIALOG")
         fr:EnableMouse(true)
         fr:SetMovable(true)
         fr:SetClampedToScreen(true)
@@ -1557,7 +1557,7 @@ local function ShowToast(e, titleText, bodyText, lines, seconds)
         -- the wax seal, with the icon of what happened in its hollow
         fr.seal = fr:CreateTexture(nil, "ARTWORK", nil, 1)
         fr.seal:SetSize(60, 60)
-        fr.seal:SetPoint("LEFT", 30, 7)
+        fr.seal:SetPoint("LEFT", 30, 2)
         fr.seal:SetTexture(TEXD .. "ui_seal1")
         fr.icon = fr:CreateTexture(nil, "ARTWORK", nil, 3)
         fr.icon:SetSize(30, 30)
@@ -1571,7 +1571,7 @@ local function ShowToast(e, titleText, bodyText, lines, seconds)
         fr.splash:SetTexCoord(0, 1, 0, 1)
         fr.splash:SetAlpha(0)
         fr.title = fr:CreateFontString(nil, "OVERLAY", "SkaldSec")
-        fr.title:SetPoint("TOPLEFT", 102, -15)
+        fr.title:SetPoint("TOPLEFT", 102, -19)
         fr.title:SetWidth(266)
         fr.title:SetJustifyH("LEFT")
         fr.title:SetTextColor(K.C_HEAD[1], K.C_HEAD[2], K.C_HEAD[3])
@@ -1591,7 +1591,7 @@ local function ShowToast(e, titleText, bodyText, lines, seconds)
         fr.bar = fr:CreateTexture(nil, "OVERLAY")
         fr.bar:SetColorTexture(0.85, 0.65, 0.10, 0.85)
         fr.bar:SetHeight(2)
-        fr.bar:SetPoint("BOTTOMLEFT", 102, 17)
+        fr.bar:SetPoint("BOTTOMLEFT", 102, 24)
         fr:SetScript("OnMouseUp", function(self, button)
             -- a drag also ends with a mouse up: it must not open the book
             local draggedAt = rawget(self, "draggedAt")
@@ -1636,7 +1636,7 @@ local function ShowToast(e, titleText, bodyText, lines, seconds)
         if e.kind == "loot" then icon = ItemIcon(e)
         elseif e.kind == "quest" and e.tier then icon = K.SEAL_PATH .. e.tier
         else icon = EventIconPath(e.kind, e) end
-        tier = (type(e.tier) == "number" and (e.kind == "quest" or e.kind == "loot" or e.kind == "goal") and e.tier) or TOAST_TIER[e.kind] or 1
+        tier = (type(e.tier) == "number" and (e.kind == "quest" or e.kind == "loot" or e.kind == "goal" or e.kind == "boss") and e.tier) or TOAST_TIER[e.kind] or 1
     end
     toastFrame.icon:SetTexture(icon or (K.TEX .. "quill"))
     toastFrame.seal:SetTexture(TEXD .. "ui_seal" .. math.max(0, math.min(5, tier or 1)))
@@ -1653,7 +1653,7 @@ local function ShowToast(e, titleText, bodyText, lines, seconds)
     pcall(toastFrame.body.SetMaxLines, toastFrame.body, lines or 3)
     local bodyHeight = math.max(16, toastFrame.body:GetStringHeight() or 16)
     -- the title, its rule, the text, and room for the burnt edge below
-    toastFrame:SetHeight(math.max(84, 15 + 14 + 12 + 3 + bodyHeight + 30))
+    toastFrame:SetHeight(math.max(90, 19 + 14 + 12 + 3 + bodyHeight + 37))
     toastFrame.born = (GetTime and GetTime()) or 0
     toastFrame.life = seconds or 6.5
     toastFrame:SetAlpha(0)
@@ -1679,7 +1679,7 @@ ns.ShowResumeCard = function(data)
         fr:SetWidth(380)
         fr:SetClampedToScreen(true)   -- taller than a notice: where the notices were dragged to, it must not leave the screen
         ns.PlaceNotice(fr)
-        fr:SetFrameStrata("HIGH")
+        fr:SetFrameStrata("DIALOG")
         fr:EnableMouse(true)
         ns.NineSlice(fr, "Interface\\AddOns\\Skald\\Textures\\ui_notice", 512, 128, 38, 30)
         fr.paper = { SetTexCoord = function() end }
@@ -1799,6 +1799,18 @@ local function CreateWindow()
         local fit = math.min(w * K.BOOK_FIT_W / K.BOOK_W, h * K.BOOK_FIT_H / K.BOOK_H)
         local want = Settings().bookScale
         self:SetScale(math.max(K.BOOK_MIN_SCALE, math.min(type(want) == "number" and want or 1, fit)))
+        -- A saved position is in units of the old scale: if the new one leaves the top or the left edge (the tabs)
+        -- off the screen, the book goes back to the middle.
+        local left, top, scale = self:GetLeft(), self:GetTop(), self:GetEffectiveScale()
+        local ui = UIParent:GetEffectiveScale()
+        if type(left) == "number" and type(top) == "number" and type(scale) == "number" and type(ui) == "number" and ui > 0 then
+            local x, y = left * scale / ui, top * scale / ui
+            if x < 0 or x + K.BOOK_W * scale / ui > w + 0.5 or y > h + 0.5 or y - K.BOOK_H * scale / ui < -0.5 then
+                self:ClearAllPoints()
+                self:SetPoint("CENTER")
+                Settings().pos = nil
+            end
+        end
     end
     f:FitScale()
     f:Hide()
@@ -2846,13 +2858,20 @@ local function CreateWindow()
         b.text = b:CreateFontString(nil, "OVERLAY", "SkaldBody")
         b.text:SetPoint("LEFT", 17, 0)
         b.text:SetText(label)
+        b.gold = b:CreateTexture(nil, "OVERLAY")   -- the bookmark line of the tab that is open
+        b.gold:SetColorTexture(K.BTN.gold[1], K.BTN.gold[2], K.BTN.gold[3], 1)
+        b.gold:SetPoint("BOTTOMLEFT", 10, 5)
+        b.gold:SetPoint("BOTTOMRIGHT", -14, 5)
+        b.gold:SetHeight(2)
+        b.gold:Hide()
         function b:SetActive(active)
             self.active = active and true or false
             self:ClearAllPoints()
             self:SetPoint("TOPLEFT", f, "TOPLEFT", self.active and 0 or 12, self.top)
             local c = self.active and K.TAB_ON or K.TAB_OFF
             self.tex:SetVertexColor(c[1], c[2], c[3])
-            if self.active then self.text:SetTextColor(0.14, 0.08, 0.04) else self.text:SetTextColor(0.92, 0.86, 0.72) end
+            self.gold:SetShown(self.active)
+            if self.active then self.text:SetTextColor(1, 0.94, 0.78) else self.text:SetTextColor(0.92, 0.86, 0.72) end
         end
         b:SetActive(false)
         b:SetScript("OnClick", function() f:ShowSection(id) end)
@@ -2864,6 +2883,25 @@ local function CreateWindow()
     MakeTab("days", L.SEC_DAYS, 3)
 
     local panels, panelOrder = {}, {}
+    -- The tabs in the order of the book: the diary itself, what it holds, then the settings below, a little apart.
+    local TAB_RANK = { cover = 1, index = 2, days = 3, goals = 4, pets = 5, map = 6, style = 20, notices = 21, options = 22 }
+    local function LayoutTabs()
+        local ids = {}
+        for id in pairs(tabs) do ids[#ids + 1] = id end
+        table.sort(ids, function(a, b)
+            local ra, rb = TAB_RANK[a] or 10, TAB_RANK[b] or 10
+            if ra ~= rb then return ra < rb end
+            return a < b
+        end)
+        local y = 86
+        for _, id in ipairs(ids) do
+            local b = tabs[id]
+            if (TAB_RANK[id] or 10) >= 20 and not ids.gap then ids.gap = true; y = y + 14 end
+            b.top = -y
+            b:SetActive(b.active)
+            y = y + 40
+        end
+    end
     function f:AddTab(id, label, build)
         if panels[id] then return panels[id].frame end
         local button = MakeTab(id, label, 4 + #panelOrder)
@@ -2875,6 +2913,7 @@ local function CreateWindow()
         local entry = { button = button, frame = panel }
         panels[id] = entry
         panelOrder[#panelOrder + 1] = id
+        LayoutTabs()
         local ok, refresh, pager = pcall(build, panel)
         if ok and type(refresh) == "function" then entry.refresh = refresh end
         if ok and type(pager) == "table" then entry.pager = pager end   -- { Turn(delta), CanPrev(), CanNext() }
@@ -3328,6 +3367,16 @@ local function SectionLabel(panel, text, x, y)
     return fs
 end
 
+-- A short ornamental line that parts two groups on a page.
+local function PageRule(panel, x, y)
+    local rule = panel:CreateTexture(nil, "ARTWORK")
+    rule:SetSize(130, 11)
+    rule:SetPoint("TOP", panel, "TOPLEFT", x + K.CW / 2, y)
+    rule:SetTexture(K.TEX .. "rule")
+    rule:SetTexCoord(0, 160 / 256, 0, 14 / 16)
+    return rule
+end
+
 local function NoteText(panel, x, y)
     local fs = panel:CreateFontString(nil, "OVERLAY", "SkaldSmall")
     fs:SetPoint("TOPLEFT", x, y)
@@ -3656,6 +3705,7 @@ local function NoteFall()
     end
     db.attempts[id] = a
 end
+K.HARD_DIFFICULTY = { [2] = true, [5] = true, [6] = true, [8] = true, [15] = true, [16] = true, [23] = true }   -- heroic, mythic, challenge
 local function BossDown(name, encounterID)
     name = Safe(name)
     if not name or name == "" then return end
@@ -3672,7 +3722,15 @@ local function BossDown(name, encounterID)
         end
         db.attempts[id] = nil
     end
-    AddEntry("boss", name, nil, tries and { tries = tries } or nil)
+    -- Rarity of the kill: a dungeon boss is rare; a raid, a heroic or harder run, or a fight that took falls lifts it.
+    local tier = 3
+    local okInfo, _, instanceType, difficultyID = pcall(GetInstanceInfo)
+    if not okInfo then instanceType, difficultyID = nil, nil end
+    if instanceType == "raid" then tier = tier + 1 end
+    if type(difficultyID) == "number" and K.HARD_DIFFICULTY[difficultyID] then tier = tier + 1 end
+    if tries and tries >= 2 then tier = tier + 1 end
+    if not id then tier = 2 end   -- a world boss or an elite met on the road, away from any dungeon
+    AddEntry("boss", name, nil, { tries = tries, tier = math.max(2, math.min(5, tier)) })
 end
 
 -- The quest is already gone from the log when QUEST_TURNED_IN fires, so fall
@@ -5627,8 +5685,8 @@ local function ShowExport()
     title:SetText(L.EXPORT_TITLE)
     local TEXR = "Interface\\AddOns\\Skald\\Textures\\"
     local readerHeader = f:CreateTexture(nil, "ARTWORK")
-    readerHeader:SetPoint("TOPLEFT", 6, -4)
-    readerHeader:SetSize(488, 61)
+    readerHeader:SetPoint("TOPLEFT", 6, -1)
+    readerHeader:SetSize(488, 54)
     readerHeader:SetTexture(TEXR .. "rd_header")
     readerHeader:Hide()
     local rule = f:CreateTexture(nil, "ARTWORK")
@@ -5684,8 +5742,9 @@ local function ShowExport()
     local partLabel = f:CreateFontString(nil, "OVERLAY", "QuestFont")
     partLabel:SetPoint("LEFT", nextButton, "RIGHT", 10, 0)
     partLabel:SetTextColor(K.HEAD_INK[1], K.HEAD_INK[2], K.HEAD_INK[3])
-    local namesButton = MakeParchmentButton(f, 210, 24, "")
+    local namesButton = MakeParchmentButton(f, 270, 24, "")
     namesButton:SetPoint("TOPRIGHT", -20, -120)
+    namesButton:SetActive(false)
     namesButton:SetScript("OnClick", function()
         settings.exportHideNames = not (settings.exportHideNames ~= false)
         part = 1
@@ -5826,60 +5885,27 @@ local function BuildOptions(panel)
                 Settings().rec = Settings().rec or {}
                 Settings().rec[key] = on and true or false
             end, nil, nil, 171)
-        cb:SetPoint("TOPLEFT", ((i - 1) % 2) * 171, -78 - math.floor((i - 1) / 2) * 24)
+        cb:SetPoint("TOPLEFT", ((i - 1) % 2) * 171, -78 - math.floor((i - 1) / 2) * 26)
         boxes[#boxes + 1] = cb
     end
 
-    SectionLabel(panel, L.OPT_TIER, 0, -184)
-    local questSeals = SealRow(-208, function(tier) Settings().minTier = tier end)
-    local hint = NoteText(panel, 0, -248)
+    PageRule(panel, 0, -190)
+    SectionLabel(panel, L.OPT_TIER, 0, -210)
+    local questSeals = SealRow(-236, function(tier) Settings().minTier = tier end)
+    local hint = NoteText(panel, 0, -278)
 
-    SectionLabel(panel, L.OPT_LOOT, 0, -272)
-    local lootSeals = SealRow(-296, function(tier) Settings().lootTier = tier end)
-    local lootHint = NoteText(panel, 0, -336)
+    PageRule(panel, 0, -318)
+    SectionLabel(panel, L.OPT_LOOT, 0, -338)
+    local lootSeals = SealRow(-364, function(tier) Settings().lootTier = tier end)
+    local lootHint = NoteText(panel, 0, -406)
 
-    -- Diaries set aside when another character took this name.
-    SectionLabel(panel, L.OPT_ARCHIVE, 0, -360)
-    local info = NoteText(panel, 0, -380)
-    local restore = MakeFlatButton(panel, 166, 26, L.BTN_RESTORE)
-    restore:SetPoint("TOPLEFT", 0, -410)
-    restore:SetScript("OnClick", function()
-        if RestoreLatestArchive() then
-            Say(L.ARCHIVE_RESTORED)
-            if window then window:Refresh() end
-        end
-    end)
-    local discard = MakeFlatButton(panel, 166, 26, L.BTN_DISCARD)
-    discard:SetPoint("TOPLEFT", 176, -410)
-    discard:SetScript("OnClick", function() StaticPopup_Show("SKALD_DISCARD") end)
-
-    -- Right page: the page itself, and the switches.
+    -- Right page: how the diary behaves, then its data.
     PageHeading(panel, L.OPT_PAGE, K.RIGHT_X)
-    SectionLabel(panel, L.OPT_SIZE, K.RIGHT_X, -52)
-    local sizeButtons = {}
-    for i = 0, 2 do
-        local b = MakeFlatButton(panel, 114, 26, L.SIZE_NAMES[i + 1])
-        b:SetPoint("TOPLEFT", K.RIGHT_X + i * 114, -76)
-        b:SetScript("OnClick", function() Settings().textSize = i; ApplyFonts(); Redraw() end)
-        sizeButtons[i] = b
-    end
-
-    SectionLabel(panel, L.OPT_INK, K.RIGHT_X, -116)
-    local inkBoxes = {}
-    for i = 0, 2 do
-        local c = K.INKS[i + 1]
-        local cb = MakeWaxCheck(panel, L.INK_NAMES[i + 1],
-            function() return (Settings().ink or 0) == i end,
-            function() Settings().ink = i; Redraw() end, nil, c, 114)
-        cb:SetPoint("TOPLEFT", K.RIGHT_X + i * 114, -140)
-        inkBoxes[#inkBoxes + 1] = cb
-    end
-
-    SectionLabel(panel, L.OPT_DAYMODE, K.RIGHT_X, -180)
+    SectionLabel(panel, L.OPT_DAYMODE, K.RIGHT_X, -52)
     local modeButtons = {}
     for i = 0, 1 do
         local b = MakeFlatButton(panel, 171, 26, L.DAYMODE_NAMES[i + 1])
-        b:SetPoint("TOPLEFT", K.RIGHT_X + i * 171, -204)
+        b:SetPoint("TOPLEFT", K.RIGHT_X + i * 171, -78)
         b:SetScript("OnClick", function() Settings().dayMode = i; Redraw() end)
         modeButtons[i] = b
     end
@@ -5888,32 +5914,42 @@ local function BuildOptions(panel)
         MakeWaxCheck(panel, L.OPT_CLOSING,
             function() return Settings().closing ~= false end,
             function(on) Settings().closing = on and true or false end),
-        MakeWaxCheck(panel, L.OPT_SOUND,
-            function() return Settings().sound ~= false end,
-            function(on) Settings().sound = on and true or false end),
         MakeWaxCheck(panel, L.OPT_LOOTGEAR,
             function() return Settings().lootGear ~= false end,
             function(on) Settings().lootGear = on and true or false end),
-        MakeWaxCheck(panel, L.OPT_MINIMAP,
-            function() return not (Settings().minimap and Settings().minimap.hide) end,
-            function(on) SetMinimapButtonShown(on) end),
-        MakeWaxCheck(panel, L.OPT_QUIET,
-            function() return not Settings().quiet end,
-            function(on) Settings().quiet = not on end),
         MakeWaxCheck(panel, L.OPT_COMPANIONS,
             function() return Settings().companions ~= false end,
             function(on) Settings().companions = on and true or false end),
         MakeWaxCheck(panel, L.OPT_MEMORIES,
             function() return Settings().memories ~= false end,
             function(on) Settings().memories = on and true or false end),
+        MakeWaxCheck(panel, L.OPT_MINIMAP,
+            function() return not (Settings().minimap and Settings().minimap.hide) end,
+            function(on) SetMinimapButtonShown(on) end),
     }
-    for i, cb in ipairs(switches) do cb:SetPoint("TOPLEFT", K.RIGHT_X, -244 - (i - 1) * 23) end
+    PageRule(panel, K.RIGHT_X, -116)
+    for i, cb in ipairs(switches) do cb:SetPoint("TOPLEFT", K.RIGHT_X, -138 - (i - 1) * 26) end
 
+    -- The data: diaries set aside when another character took this name, the export, the erase.
+    PageRule(panel, K.RIGHT_X, -278)
+    SectionLabel(panel, L.OPT_ARCHIVE, K.RIGHT_X, -298)
+    local info = NoteText(panel, K.RIGHT_X, -320)
+    local restore = MakeFlatButton(panel, 166, 26, L.BTN_RESTORE)
+    restore:SetPoint("TOPLEFT", K.RIGHT_X, -362)
+    restore:SetScript("OnClick", function()
+        if RestoreLatestArchive() then
+            Say(L.ARCHIVE_RESTORED)
+            if window then window:Refresh() end
+        end
+    end)
+    local discard = MakeFlatButton(panel, 166, 26, L.BTN_DISCARD)
+    discard:SetPoint("TOPLEFT", K.RIGHT_X + 176, -362)
+    discard:SetScript("OnClick", function() StaticPopup_Show("SKALD_DISCARD") end)
     local exportButton = MakeFlatButton(panel, 166, 28, L.EXPORT_BTN, "gold")
-    exportButton:SetPoint("TOPLEFT", K.RIGHT_X, -410)
+    exportButton:SetPoint("TOPLEFT", K.RIGHT_X, -402)
     exportButton:SetScript("OnClick", function() ShowExport() end)
     local erase = MakeFlatButton(panel, 166, 28, L.BTN_ERASE, "burn")
-    erase:SetPoint("TOPLEFT", K.RIGHT_X + 176, -410)
+    erase:SetPoint("TOPLEFT", K.RIGHT_X + 176, -402)
     erase:SetScript("OnClick", function() StaticPopup_Show("SKALD_CLEAR") end)
 
     refresh = function()
@@ -5925,9 +5961,7 @@ local function BuildOptions(panel)
         ShowSeals(lootSeals, loot)
         lootHint:SetText(string.format(L.LOOT_HINT, L.TIERS[loot] or tostring(loot)))
         for _, cb in ipairs(boxes) do cb.Sync() end
-        for _, cb in ipairs(inkBoxes) do cb.Sync() end
         for _, cb in ipairs(switches) do cb.Sync() end
-        for i, b in pairs(sizeButtons) do b:SetActive(i == (s.textSize or 1)) end
         for i, b in pairs(modeButtons) do b:SetActive(i == (s.dayMode or 0)) end
 
         local archive = Journal() and Journal().previous or {}
@@ -5956,7 +5990,7 @@ local function BuildStyle(panel)
         if window then window:Refresh() end
     end
 
-    -- Left page: the narrator's voice.
+    -- Left page: the narrator's voice, with an example, and how the text looks.
     PageHeading(panel, L.TAB_STYLE, 0)
     SectionLabel(panel, L.OPT_TONE, 0, -52)
     local toneButtons = {}
@@ -5966,17 +6000,39 @@ local function BuildStyle(panel)
         b:SetScript("OnClick", function() Settings().tone = key; Redraw() end)
         toneButtons[key] = b
     end
-    local toneHint = NoteText(panel, 0, -114)
-    SectionLabel(panel, L.TONE_SAMPLE_LABEL, 0, -168)
+    local toneHint = NoteText(panel, 0, -112)
+    SectionLabel(panel, L.TONE_SAMPLE_LABEL, 0, -146)
     local sample = panel:CreateFontString(nil, "OVERLAY", "SkaldNote")
-    sample:SetPoint("TOPLEFT", 0, -192)
+    sample:SetPoint("TOPLEFT", 0, -170)
     sample:SetWidth(K.CW)
     sample:SetJustifyH("LEFT")
     sample:SetJustifyV("TOP")
     sample:SetWordWrap(true)
     sample:SetTextColor(K.C_NOTE[1], K.C_NOTE[2], K.C_NOTE[3])
 
-    -- Right page: the cover, and the notices.
+    PageRule(panel, 0, -246)
+    SectionLabel(panel, L.OPT_SIZE, 0, -266)
+    local textSizeButtons = {}
+    for i = 0, 2 do
+        local b = MakeFlatButton(panel, 114, 26, L.SIZE_NAMES[i + 1])
+        b:SetPoint("TOPLEFT", i * 114, -292)
+        b:SetScript("OnClick", function() Settings().textSize = i; ApplyFonts(); Redraw() end)
+        textSizeButtons[i] = b
+    end
+
+    PageRule(panel, 0, -334)
+    SectionLabel(panel, L.OPT_INK, 0, -354)
+    local inkBoxes = {}
+    for i = 0, 2 do
+        local c = K.INKS[i + 1]
+        local cb = MakeWaxCheck(panel, L.INK_NAMES[i + 1],
+            function() return (Settings().ink or 0) == i end,
+            function() Settings().ink = i; Redraw() end, nil, c, 114)
+        cb:SetPoint("TOPLEFT", i * 114, -380)
+        inkBoxes[#inkBoxes + 1] = cb
+    end
+
+    -- Right page: the cover, and the size of the book.
     PageHeading(panel, L.OPT_COVER, K.RIGHT_X)
     SectionLabel(panel, L.OPT_COLOR, K.RIGHT_X, -52)
     local SWATCH = {
@@ -5996,10 +6052,11 @@ local function BuildStyle(panel)
         colorBoxes[#colorBoxes + 1] = cb
     end
 
-    SectionLabel(panel, L.OPT_COVERTITLE, K.RIGHT_X, -150)
+    PageRule(panel, K.RIGHT_X, -142)
+    SectionLabel(panel, L.OPT_COVERTITLE, K.RIGHT_X, -162)
     local edit = CreateFrame("EditBox", nil, panel, "BackdropTemplate")
     edit:SetSize(K.CW, 28)
-    edit:SetPoint("TOPLEFT", K.RIGHT_X, -176)
+    edit:SetPoint("TOPLEFT", K.RIGHT_X, -188)
     edit:SetAutoFocus(false)
     edit:SetMaxLetters(28)
     edit:SetFontObject("SkaldBody")
@@ -6016,14 +6073,15 @@ local function BuildStyle(panel)
     edit:SetScript("OnEnterPressed", function(self) SaveTitle(); self:ClearFocus() end)
     edit:SetScript("OnEscapePressed", function(self) self:SetText(Settings().coverTitle or ""); self:ClearFocus() end)
     edit:SetScript("OnEditFocusLost", SaveTitle)
-    NoteText(panel, K.RIGHT_X, -210):SetText(L.COVERTITLE_HINT)
+    NoteText(panel, K.RIGHT_X, -222):SetText(L.COVERTITLE_HINT)
 
     -- The size of the book (never more than the screen holds).
-    SectionLabel(panel, L.OPT_SIZE, 0, -330)
+    PageRule(panel, K.RIGHT_X, -262)
+    SectionLabel(panel, L.OPT_BOOKSIZE, K.RIGHT_X, -282)
     local sizeButtons = {}
     for i, size in ipairs(K.BOOK_SIZES) do
         local b = MakeFlatButton(panel, 64, 26, size == "auto" and L.SIZE_AUTO or string.format("%d%%", size * 100))
-        b:SetPoint("TOPLEFT", (i - 1) * 68, -356)
+        b:SetPoint("TOPLEFT", K.RIGHT_X + (i - 1) * 68, -308)
         b:SetScript("OnClick", function()
             Settings().bookScale = (size ~= "auto") and size or nil
             if window then window:FitScale() end
@@ -6032,6 +6090,30 @@ local function BuildStyle(panel)
         sizeButtons[i] = b
     end
 
+    refresh = function()
+        local s = Settings()
+        local tone = s.tone or "epic"
+        for key, b in pairs(toneButtons) do b:SetActive(key == tone) end
+        toneHint:SetText(L.TONE_HINT[tone] or "")
+        sample:SetText(L.TONE_SAMPLE[tone] or "")
+        for _, cb in ipairs(colorBoxes) do cb.Sync() end
+        for _, cb in ipairs(inkBoxes) do cb.Sync() end
+        for i, b in pairs(textSizeButtons) do b:SetActive(i == (s.textSize or 1)) end
+        for i, b in ipairs(sizeButtons) do
+            local size = K.BOOK_SIZES[i]
+            b:SetActive((size == "auto" and not s.bookScale) or size == s.bookScale)
+        end
+        if not edit:HasFocus() then edit:SetText(s.coverTitle or "") end
+    end
+    return refresh
+end
+SkaldAPI.AddTab("style", L.TAB_STYLE, BuildStyle)
+
+local function BuildNotices(panel)
+    local refresh
+
+    -- Left page: which notices are shown, and the sound.
+    PageHeading(panel, L.TAB_NOTICES, 0)
     local switches = {
         MakeWaxCheck(panel, L.OPT_TOAST,
             function() return Settings().toast ~= false end,
@@ -6045,13 +6127,23 @@ local function BuildStyle(panel)
         MakeWaxCheck(panel, L.OPT_RESUME,
             function() return Settings().resume ~= false end,
             function(on) Settings().resume = on and true or false end),
+        MakeWaxCheck(panel, L.OPT_SOUND,
+            function() return Settings().sound ~= false end,
+            function(on) Settings().sound = on and true or false end),
+        MakeWaxCheck(panel, L.OPT_QUIET,
+            function() return not Settings().quiet end,
+            function(on) Settings().quiet = not on end),
     }
-    for i, cb in ipairs(switches) do cb:SetPoint("TOPLEFT", K.RIGHT_X, -262 - (i - 1) * 28) end
-    -- Where the notices appear: a sample to drag to the place you like.
+    for i, cb in ipairs(switches) do cb:SetPoint("TOPLEFT", 0, -70 - (i - 1) * 54) end
+
+    -- Right page: where they appear.
+    PageHeading(panel, L.TOAST_PLACE_HEAD, K.RIGHT_X)
+    SectionLabel(panel, L.TOAST_WHERE, K.RIGHT_X, -52)
     local placeButtons = {}
     for i, key in ipairs({ "top", "left", "bottom" }) do
-        local pb = MakeFlatButton(panel, 72, 26, L["TOAST_" .. key:upper()])
-        pb:SetPoint("TOPLEFT", K.RIGHT_X + (i - 1) * 74, -352)
+        local pw = math.floor((K.CW - 8) / 3)
+        local pb = MakeFlatButton(panel, pw, 26, L["TOAST_" .. key:upper()])
+        pb:SetPoint("TOPLEFT", K.RIGHT_X + (i - 1) * (pw + 4), -80)
         pb:SetScript("OnClick", function()
             Settings().toastAnchor = key
             Settings().toastPos = nil
@@ -6060,41 +6152,40 @@ local function BuildStyle(panel)
         end)
         placeButtons[key] = pb
     end
-    local moveButton = MakeFlatButton(panel, 220, 26, L.TOAST_MOVE)
-    moveButton:SetPoint("TOPLEFT", K.RIGHT_X, -384)
+    PageRule(panel, K.RIGHT_X, -150)
+    local moveButton = MakeFlatButton(panel, K.CW, 26, L.TOAST_MOVE)
+    moveButton:SetPoint("TOPLEFT", K.RIGHT_X, -184)
     moveButton:SetScript("OnClick", function() if ns.PreviewNotice then ns.PreviewNotice() end end)
-    moveButton:HookScript("OnEnter", function(self)
-        GameTooltip:SetOwner(self, "ANCHOR_TOP")
-        GameTooltip:AddLine(L.TOAST_MOVE, 1, 0.82, 0)
-        GameTooltip:AddLine(L.TOAST_MOVE_HINT, 1, 1, 1, true)
-        GameTooltip:Show()
-    end)
-    moveButton:HookScript("OnLeave", function() GameTooltip:Hide() end)
+    NoteText(panel, K.RIGHT_X, -228):SetText(L.TOAST_MOVE_HINT)
 
     refresh = function()
         local s = Settings()
-        local tone = s.tone or "epic"
-        for key, b in pairs(toneButtons) do b:SetActive(key == tone) end
-        toneHint:SetText(L.TONE_HINT[tone] or "")
-        sample:SetText(L.TONE_SAMPLE[tone] or "")
-        for _, cb in ipairs(colorBoxes) do cb.Sync() end
         for _, cb in ipairs(switches) do cb.Sync() end
         for key, pb in pairs(placeButtons) do pb:SetActive(not s.toastPos and (s.toastAnchor or "top") == key) end
-        for i, b in ipairs(sizeButtons) do
-            local size = K.BOOK_SIZES[i]
-            b:SetActive((size == "auto" and not s.bookScale) or size == s.bookScale)
-        end
-        if not edit:HasFocus() then edit:SetText(s.coverTitle or "") end
     end
     return refresh
 end
-SkaldAPI.AddTab("style", L.TAB_STYLE, BuildStyle)
+SkaldAPI.AddTab("notices", L.TAB_NOTICES, BuildNotices)
 
 local spokenHook = CreateFrame("Frame")
 spokenHook:RegisterEvent("PLAYER_LOGIN")
 spokenHook:SetScript("OnEvent", function()
     RegisterWithSpoken()
     RegisterMinimapButton()
+    -- The button must be on the minimap once the addon is installed: if the library did not draw it, or the
+    -- player never chose to hide it, the addon's own button takes its place a moment after the login.
+    if C_Timer and C_Timer.After then
+        C_Timer.After(3, function()
+            local hidden = Settings().minimap and Settings().minimap.hide
+            if hidden then return end
+            local stub = _G.LibStub
+            local dbIcon = stub and stub("LibDBIcon-1.0", true)
+            local drawn = dbIcon and dbIcon:IsRegistered(K.MINIMAP_NAME) and dbIcon:GetMinimapButton(K.MINIMAP_NAME)
+            if drawn and drawn:IsShown() then return end
+            pcall(ns.CreateOwnMinimapButton)
+            if ns.minimapButton then ns.minimapButton:Show() end
+        end)
+    end
 end)
 
 -- Commands -------------------------------------------------------------------
