@@ -6590,6 +6590,24 @@ ns.BuildReport = function()
         end
     end
     for _, line in ipairs(shapes) do Add("names %s", line) end
+    -- collections: which of the systems the new client may bring are there (mounts, pets, transmog, toys) and a
+    -- count where one is cheap to ask; only the presence and the numbers, nothing is written
+    local have = {}
+    for _, name in ipairs({ "C_MountJournal", "C_PetJournal", "C_PetBattles", "C_TransmogCollection", "C_Transmog",
+        "C_ToyBox", "C_CollectionsJournal", "C_Item", "C_AddOns", "C_TTSSettings", "C_VoiceChat" }) do
+        have[#have + 1] = name .. "=" .. (type(_G[name]) == "table" and "yes" or "no")
+    end
+    Add("apis: %s", table.concat(have, " "))
+    local counts = {}
+    local function Count(label, fn) local ok, v = pcall(fn); counts[#counts + 1] = label .. "=" .. (ok and tostring(v) or "?") end
+    if C_MountJournal and C_MountJournal.GetNumMounts then Count("mounts", C_MountJournal.GetNumMounts) end
+    if C_MountJournal and C_MountJournal.GetNumDisplayedMounts then Count("mountsShown", C_MountJournal.GetNumDisplayedMounts) end
+    if C_PetJournal and C_PetJournal.GetNumPets then Count("petsOwned", function() local _, owned = C_PetJournal.GetNumPets(); return owned end) end
+    if GetNumCompanions then
+        Count("companionMounts", function() return GetNumCompanions("MOUNT") end)
+        Count("companionCritters", function() return GetNumCompanions("CRITTER") end)
+    end
+    if #counts > 0 then Add("collections: %s", table.concat(counts, " ")) end
     local cp = set.commsProbe
     if cp then
         Add("comms probe (run %s, %ds ago): register %s | api %s %s %s", date("%H:%M:%S", cp.when or 0), math.max(0, time() - (cp.when or 0)), tostring(cp.register), tostring(cp.api.RegisterAddonMessagePrefix),
