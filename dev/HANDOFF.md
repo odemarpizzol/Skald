@@ -28,3 +28,8 @@ Autor Oddynho, MIT, CurseForge ID 1748824. Respostas ao usuario SEMPRE em portug
 
 ## Preferencias do usuario
 Responder em portugues; versoes escolhidas por ele; nada de versoes minusculas; sem integracao com TRP3 por enquanto; Metas como lista clicavel (nao virar pagina); variedade de frases e desejo permanente; arte e feita por ele no Claude Design (peco prompt + ele manda zip em `Interface\Chronicler addon icon WoW.zip` ou Downloads; converto com sharp para TGA); o usuario joga personagem feminina (cliente pt-BR; testa tambem en/fr) e testa no jogo com prints.
+
+## Pendente (revisão do Codex, 2026-10-21)
+- Corrigido e testado em simulação: limpar/arquivar/restaurar o diário agora leva pets, companheiros, rotas, metas etc. (`K.DIARY_STATE`); nomes `Nome-Reino` e notas favoritas são ocultados no export/Leitor; validador de frases lista pools < 8 e reprova < 5; workflow roda `checks.js` antes de publicar.
+- Decidido (opção B): o diário escreve em combate; README e CLAUDE.md ajustados. Sem fila.
+- ABERTO (conteúdo): ampliar para 8+ frases os pools de missão gather/explore/seek (5) e delivery (6) nas raridades 3-5, em en/pt/fr.

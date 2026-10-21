@@ -56,7 +56,7 @@ The **Options** tab holds the same switches, the text size, the ink, whether a n
 
 ## Limits (be aware)
 
-- Skald writes only **out of combat**. Forever limits what addons can read in combat, and the diary never needs it.
+- Skald writes pages as events happen, even in combat (a level gained at the end of a fight, for example), but it never reads anything the game withholds from addons in combat; only the quiet memories wait for the fight to end.
 - Skald is a **beta**. Developed and tested on the Forever beta. Some events (dungeons, bosses, groups, mounts, achievements, guild) are wired up but have not been seen in a real game session yet; if one fails, please report it.
 - Quest rarity is an estimate from the data available; if you see an odd grade, tell us which quest.
 

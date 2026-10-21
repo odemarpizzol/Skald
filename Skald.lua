@@ -926,7 +926,20 @@ end
 
 -- Empties the whole diary: pages, zones seen, counters, and what was remembered
 -- about guild, group and professions, so everything is detected afresh.
+-- Everything else the diary knows about one character (pets, companions, flight paths, goals, standings...).
+-- It is set aside with the pages and brought back with them, and emptied with them, so a cleared diary or a new
+-- character with an old name never inherits it.
+K.DIARY_STATE = { "pets", "petNow", "companions", "questObj", "questStart", "visitedMaps", "resume", "attempts",
+    "taxi", "marks", "goals", "goalsInit", "rep", "memoryAt", "recentIdx" }
+
+local function TakeState(db)
+    local state = {}
+    for _, key in ipairs(K.DIARY_STATE) do state[key] = db[key] end
+    return state
+end
+
 local function ResetJournal(db)
+    for _, key in ipairs(K.DIARY_STATE) do db[key] = nil end
     db.entries, db.visited, db.flags = {}, {}, {}
     db.days, db.today = nil, nil
     db.skills, db.skillsInit = nil, nil
@@ -934,6 +947,7 @@ local function ResetJournal(db)
     db.lastIdx = nil
     db.stats, db.version = nil, nil
     MigrateStats(db)
+    ns.layoutRev = (ns.layoutRev or 0) + 1
 end
 
 -- WoW keeps per-character data by NAME, so a character made again with a name that
@@ -967,7 +981,7 @@ local function EnsureOwnDiary()
         -- Keep the old diary aside (the last three), then start a fresh one.
         db.previous = db.previous or {}
         table.insert(db.previous, { guid = db.guid, t = time(), entries = db.entries,
-            visited = db.visited, stats = db.stats })
+            visited = db.visited, stats = db.stats, state = TakeState(db) })
         while #db.previous > 3 do table.remove(db.previous, 1) end
         ResetJournal(db)
     end
@@ -985,13 +999,18 @@ local function RestoreLatestArchive()
 
     if #db.entries > 0 then
         table.insert(archive, { guid = db.guid, t = time(), entries = db.entries,
-            visited = db.visited, stats = db.stats })
+            visited = db.visited, stats = db.stats, state = TakeState(db) })
         while #archive > 3 do table.remove(archive, 1) end
     end
 
     db.entries = old.entries or {}
     db.visited = old.visited or {}
     db.stats = old.stats
+    -- An archive made before this state was kept has none: those parts start afresh (and are read silently).
+    for _, key in ipairs(K.DIARY_STATE) do db[key] = old.state and old.state[key] or nil end
+    -- Without that state the map keys of the zones are made again from the old pages (else a zone told under its
+    -- name in another language would be written twice).
+    if not old.state then db.mapKeysDone = nil end
     db.flags = {}
     db.days, db.today = nil, nil            -- the days of the restored diary are not kept
     db.skills, db.skillsInit = nil, nil     -- professions are looked at afresh, silently
@@ -1001,8 +1020,11 @@ local function RestoreLatestArchive()
     db.guildSeen = true
     db.version = DB_VERSION                  -- counters are already right: no recount
     MigrateStats(db)
+    ns.layoutRev = (ns.layoutRev or 0) + 1   -- the pages are other ones, whatever their count and last page
     return true
 end
+
+ns.RestoreLatestArchive = RestoreLatestArchive
 
 local function CountKeys(t)
     local n = 0
@@ -1240,6 +1262,9 @@ local function InsertNote(t, zone, text, ses)
     while at > 0 and (db.entries[at].t or 0) > t do at = at - 1 end
     table.insert(db.entries, at + 1, { t = t, zone = zone or "", kind = "note", arg = text, idx = 1, ses = ses })
     while #db.entries > MAX_ENTRIES do table.remove(db.entries, 1) end
+    -- At the cap the oldest page leaves as the note comes in: the count and the last page stay the same, so the
+    -- cached layout would not notice.
+    ns.layoutRev = (ns.layoutRev or 0) + 1
 end
 
 -- A note on a day: now, if it is today; otherwise just after that day's last page.
@@ -5608,16 +5633,35 @@ end
 local function HideNames(text, e)
     if not K.nameSet then
         K.nameSet = {}
-        for n in pairs((Journal() and Journal().companions) or {}) do K.nameSet[n] = true end
+        for n in pairs((Journal() and Journal().companions) or {}) do
+            K.nameSet[n] = true
+            local base = tostring(n):match("^([^%-]+)%-")
+            if base then K.nameSet[base] = true end   -- the page may tell only the name, without the realm
+        end
     end
     local set = K.nameSet
     local extra
-    for _, n in ipairs(e.with or {}) do
-        if not set[n] then extra = extra or {}; extra[n] = true end
+    local function addExtra(n)
+        n = tostring(n)
+        if set[n] then return end
+        extra = extra or {}
+        extra[n] = true
+        local base = n:match("^([^%-]+)%-")
+        if base then extra[base] = true end
     end
-    if e.kind == "reunion" and not set[tostring(e.arg)] then extra = extra or {}; extra[tostring(e.arg)] = true end
-    return (text:gsub("[%w\128-\255]+", function(word)
-        if set[word] or (extra and extra[word]) then return L.EXPORT_SOMEONE end
+    for _, n in ipairs(e.with or {}) do addExtra(n) end
+    if e.kind == "reunion" then addExtra(e.arg) end
+    local function known(word) return set[word] or (extra and extra[word]) end
+    -- "Name-Realm" is one name for the game: it is looked up whole, then by the name alone (and a realm that
+    -- begins with a capital after it goes too).
+    return (text:gsub("([%w\128-\255]+)(%-?)([%w\128-\255]*)", function(a, dash, b)
+        if dash ~= "" and known(a .. dash .. b) then return L.EXPORT_SOMEONE end
+        if known(a) then
+            if dash ~= "" and b:match("^[%u\192-\222]") then return L.EXPORT_SOMEONE end
+            return L.EXPORT_SOMEONE .. dash .. b
+        end
+        if dash == "" then return nil end
+        if known(b) then return a .. dash .. L.EXPORT_SOMEONE end
     end))
 end
 ns.HideNames = HideNames
@@ -5698,6 +5742,7 @@ local function BuildReader(scope)
         local body = PlainText(RenderEntry(e))
         if hide then body = HideNames(body, e) end
         local note = (e.fav and type(e.favNote) == "string") and PlainText(e.favNote) or ""
+        if hide and note ~= "" then note = HideNames(note, e) end
         local ic = e.kind == "loot" and ("loot:" .. tostring(e.cat or "")) or tostring(e.kind)
         lines[#lines + 1] = K.ReaderLine("P", e.t or 0, e.kind, e.tier or 0, e.fav and 1 or 0,
             PlainText(tostring(ns.PlaceName(e) or "")), ic, K.TextPrefix(body, 700), K.TextPrefix(note, 300), K.ReaderInfo(e))

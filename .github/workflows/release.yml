@@ -21,7 +21,26 @@ permissions:
   contents: write   # lets the packager create the GitHub release for the tag
 
 jobs:
+  # The release only goes out when the simulated checks pass (they are not the game, but they catch the plain mistakes).
+  # The tools look for the addon in a folder named Skald, hence the checkout path.
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+        with:
+          path: Skald
+      - name: Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install the tools
+        run: npm ci --prefix Skald/dev/tools
+      - name: Run the checks
+        run: node Skald/dev/tools/checks.js
+
   release:
+    needs: checks
     runs-on: ubuntu-latest
     env:
       CF_API_KEY: ${{ secrets.CF_API_KEY }}
