@@ -61,6 +61,12 @@ ns.CheckGoals()   -- the first look writes the goals that are new; the next ones
 out[#out+1] = clock("goals check, nothing new (3000)", function() ns.CheckGoals() end, 5)
 out[#out+1] = clock("export plain, names hidden (3000)", function() SkaldAPI.BuildExport("plain", "all") end, 1)
 out[#out+1] = clock("text for the Reader (3000 pages)", function() SkaldAPI.BuildExport("reader", "all") end, 1)
+-- the saved file, as the game would write it: about one line per field (a rough serializer, enough to see growth)
+local function Bytes(v)
+  if type(v) == "table" then local n = 4 for k, x in pairs(v) do n = n + #tostring(k) + 6 + Bytes(x) end return n end
+  return #tostring(v) + 2
+end
+out[#out+1] = string.format("saved file (3000) %d KB", math.floor((Bytes(SkaldCharDB) + Bytes(SkaldDB)) / 1024))
 RES = table.concat(out, string.char(10))`);
 lua.lua_getglobal(L, to_luastring('RES'));
 console.log(to_jsstring(lua.lua_tolstring(L, -1)));

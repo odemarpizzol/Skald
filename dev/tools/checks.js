@@ -185,6 +185,7 @@ console.log('Speed');
   else if (!(ms('goals check, nothing new (3000)') < 100)) fail('the check of the goals takes ' + ms('goals check, nothing new (3000)') + ' ms (limit 100): it runs after every change of the pages');
   else if (!(ms('export plain, names hidden (3000)') < 3000)) fail('exporting 3000 pages with the names hidden takes ' + ms('export plain, names hidden (3000)') + ' ms (limit 3000)');
   else if (!(ms('text for the Reader (3000 pages)') < 5000)) fail('the text for the Reader takes ' + ms('text for the Reader (3000 pages)') + ' ms (limit 5000)');
+  else if (!((m => m && Number(m[1]) < 4096)((r.stdout || '').match(/saved file \(3000\) (\d+) KB/)))) fail('the saved file of 3000 pages is over 4 MB: ' + ((r.stdout || '').match(/saved file \(3000\) (\d+) KB/) || [])[1] + ' KB')
   else ok('3000 pages: open ' + first.toFixed(0) + ' ms, turn a page ' + turn.toFixed(1) + ' ms, map markers ' + ms('map markers (3000 pages, one map)').toFixed(0) + ' ms, goals ' + ms('goals check, nothing new (3000)').toFixed(0) + ' ms, export ' + ms('export plain, names hidden (3000)').toFixed(0) + ' ms, Reader text ' + ms('text for the Reader (3000 pages)').toFixed(0) + ' ms');
 }
 
