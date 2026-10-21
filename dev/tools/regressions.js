@@ -732,9 +732,9 @@ run('a goal reached after that is written as a page, with its name', {
   pre: `${GROUP}\n${DUNGEON}`,
   body: `fire("BOSS_KILL", 1, "Edwin VanCleef"); runTimers()
 local e
-for _, x in ipairs(SkaldCharDB.entries) do if x.kind == "goal" then e = x end end
+for _, x in ipairs(SkaldCharDB.entries) do if x.kind == "goal" and x.arg == "companions1" then e = x end end
 local text = e and SkaldAPI.Render(e) or ""
-RES = (e and e.arg == "companions1" and e.tier == 2 and text:find("The Road Has Company", 1, true) and not text:find("{", 1, true)
+RES = (e and e.arg == "companions1" and e.tier == 2 and text:find("The Road Has Company", 1, true) and text:find("(+10 points)", 1, true) and not text:find("{", 1, true)
   and SkaldCharDB.goals.companions1 and not SkaldCharDB.goals.companions1.retro) and "ok" or ("goal page: " .. text)`,
 });
 
@@ -1052,6 +1052,21 @@ SkaldDB.noticeSecs = 10; ns.ShowNotice("T", "b", 3, 9, nil); local ten = life()
 SkaldDB.noticeSecs = 0; ns.ShowNotice("T", "b", 3, 9, nil); local pinned = life()
 SkaldDB.noticeSecs = 4; ns.PreviewNotice(12); local sample = life()
 RES = (standard == 9 and ten == 10 and pinned >= 1e9 and sample == 12) and "ok" or (tostring(standard) .. " " .. tostring(ten) .. " " .. tostring(pinned) .. " " .. tostring(sample))`,
+});
+
+run('goals that came with a later list are marked quietly in a diary that already looked, and the points follow the seals', {
+  pre: SAVED('{}', 'version = 99, goalsInit = true, goals = { flights5 = { t = 5 } }, taxi = { true, true, true, true, true, true, true }, stats = { counts = { quest = 120, dungeon = 3, boss = 2, kill = 600 }, deathZones = {}, tiers = {}, played = 1, first = 1 }'),
+  body: `local g = SkaldCharDB.goals
+local earned, possible = ns.GoalScore()
+-- flights5 was there before (5 points); the new ones (level 10 and 20, quests50, dungeons, bosses1, kills500) came quietly
+local quiet = g.level10 and g.level10.retro and g.level20 and g.level20.retro and g.quests50 and g.quests50.retro and g.kills500 and g.kills500.retro
+RES = (count("goal") == 0 and quiet and SkaldCharDB.goalsVer == 2 and earned > 5 and possible > 800 and ns.GoalPoints("level60") == 100
+  and ns.GoalPoints("flights5") == 5) and "ok" or ("pages=" .. count("goal") .. " quiet=" .. tostring(quiet) .. " ver=" .. tostring(SkaldCharDB.goalsVer) .. " score=" .. earned .. "/" .. possible)`,
+});
+
+run('the title follows the points and the form of the character', {
+  body: `local low, mid = ns.GoalTitle(0), ns.GoalTitle(160)
+RES = (low ~= "" and mid ~= low and not low:find("{", 1, true) and not mid:find("{", 1, true) and ns.GoalTitle(5000) ~= mid) and "ok" or (low .. " | " .. mid)`,
 });
 
 console.log(failed ? `\n${failed} regression(s) FAILED` : '\nAll regressions passed');

@@ -14,7 +14,7 @@
       part: 'Part %1 of %2', partBad: 'Part %1: incomplete copy', waiting: 'waiting for part %1',
       ready: 'All parts are here. You can open the book.', mixed: 'These parts are from different diaries. Clear and paste again.',
       empty: 'Paste the text from the game.', diaryOf: 'Diary of %1', level: 'level %1 %2', story: 'The story so far', days: 'Days', index: 'Index',
-      day: 'Day %1', pages: 'Pages %1–%2 of %3', cover: 'Cover', first: 'First page written', played: 'Time on the road', goals: 'Goals reached',
+      day: 'Day %1', pages: 'Pages %1–%2 of %3', cover: 'Cover', first: 'First page written', played: 'Time on the road', goals: 'Goals reached', points: 'Goal points',
       stat: { quest: 'Quests completed', level: 'Levels earned', death: 'Times I fell', dungeon: 'Dungeons visited', boss: 'Bosses defeated', kill: 'Creatures defeated' },
       date: function (d) { return d.toLocaleDateString('en-US'); }, hours: '%1h %2min', minutes: '%1min', tier: ['Trivial', 'Common', 'Uncommon', 'Rare', 'Epic', 'Legendary'],
       truncated: 'The diary has more pages than the ones pasted.',
@@ -29,7 +29,7 @@
       part: 'Parte %1 de %2', partBad: 'Parte %1: cópia incompleta', waiting: 'falta a parte %1',
       ready: 'Todas as partes chegaram. Pode abrir o livro.', mixed: 'Essas partes são de diários diferentes. Limpe e cole de novo.',
       empty: 'Cole o texto que veio do jogo.', diaryOf: 'Diário de %1', level: 'nível %1 %2', story: 'A história até aqui', days: 'Dias', index: 'Índice',
-      day: 'Dia %1', pages: 'Páginas %1–%2 de %3', cover: 'Capa', first: 'Primeira página escrita', played: 'Tempo na estrada', goals: 'Metas cumpridas',
+      day: 'Dia %1', pages: 'Páginas %1–%2 de %3', cover: 'Capa', first: 'Primeira página escrita', played: 'Tempo na estrada', goals: 'Metas cumpridas', points: 'Pontos de metas',
       stat: { quest: 'Missões cumpridas', level: 'Níveis conquistados', death: 'Vezes que caí', dungeon: 'Masmorras visitadas', boss: 'Chefes derrotados', kill: 'Criaturas vencidas' },
       date: function (d) { return d.toLocaleDateString('pt-BR'); }, hours: '%1h %2min', minutes: '%1min', tier: ['Trivial', 'Comum', 'Incomum', 'Rara', 'Épica', 'Lendária'],
       truncated: 'O diário tem mais páginas do que as coladas.',
@@ -44,7 +44,7 @@
       part: 'Partie %1 sur %2', partBad: 'Partie %1 : copie incomplète', waiting: 'partie %1 manquante',
       ready: 'Toutes les parties sont là. Vous pouvez ouvrir le livre.', mixed: 'Ces parties viennent de journaux différents. Effacez et recollez.',
       empty: 'Collez le texte venu du jeu.', diaryOf: 'Journal de %1', level: 'niveau %1 %2', story: 'L’histoire jusqu’ici', days: 'Jours', index: 'Index',
-      day: 'Jour %1', pages: 'Pages %1–%2 sur %3', cover: 'Couverture', first: 'Première page écrite', played: 'Temps sur la route', goals: 'Objectifs atteints',
+      day: 'Jour %1', pages: 'Pages %1–%2 sur %3', cover: 'Couverture', first: 'Première page écrite', played: 'Temps sur la route', goals: 'Objectifs atteints', points: 'Points d\'objectifs',
       stat: { quest: 'Quêtes accomplies', level: 'Niveaux gagnés', death: 'Fois où je suis tombé', dungeon: 'Donjons visités', boss: 'Boss vaincus', kill: 'Créatures vaincues' },
       date: function (d) { return d.toLocaleDateString('fr-FR'); }, hours: '%1 h %2 min', minutes: '%1 min', tier: ['Trivial', 'Commun', 'Peu commun', 'Rare', 'Épique', 'Légendaire'],
       truncated: 'Le journal compte plus de pages que celles collées.',
@@ -96,7 +96,7 @@
   function build(parts) {
     var first = parts[0];
     var model = { name: first.name, cls: first.cls, race: first.race, level: first.level, tone: first.tone, locale: first.locale, total: first.total,
-      first: 0, played: 0, counts: {}, tiers: {}, goals: 0, pages: [] };
+      first: 0, played: 0, counts: {}, tiers: {}, goals: 0, points: 0, pages: [] };
     parts.forEach(function (p) {
       p.body.split('\n').forEach(function (line) {
         if (!line) return;
@@ -105,7 +105,7 @@
           case 'S': model.first = +f[1]; model.played = +f[2]; break;
           case 'N': model.counts[f[1]] = +f[2]; break;
           case 'T': model.tiers[f[1]] = +f[2]; break;
-          case 'G': model.goals++; break;
+          case 'G': model.goals++; model.points += (+f[4] || 0); break;
           case 'P': model.pages.push({ t: +f[1], kind: f[2], tier: +f[3], fav: f[4] === '1', place: f[5], ic: f[6], text: f[7], note: f[8], info: parseInfo(f[9]) }); break;
         }
       });
@@ -297,6 +297,7 @@
     stat(L().stat.boss, cn.boss || 0);
     stat(L().stat.kill, cn.kill || 0);
     stat(L().goals, model.goals);
+    if (model.points) stat(L().points, model.points);
     if (model.first) stat(L().first, L().date(new Date(model.first * 1000)));
     stat(L().played, duration(model.played));
     right.appendChild(list);

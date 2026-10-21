@@ -10,6 +10,8 @@ local UI_TEXT = {
     enUS = {
         TAB = "Goals", OF = "%d of %d", DONE_ON = "Done on %s", BEFORE = "Done before the diary counted", SECRET = "???",
         SECRET_HINT = "A goal still to be found.", DATE = "%m/%d/%Y", TOTAL = "%d of %d goals reached",
+        POINTS = "%d of %d points", PTS = "%d pts",
+        TITLES = { [0] = "Newcomer", [50] = "Wanderer", [150] = "Wayfarer", [300] = "Trailblazer", [500] = "Storied One", [750] = "Legend of the Road" },
         EMPTY = "Nothing here yet.",
         EVID = { chain = "\"%s\", a chain of %d quests.", hard = "%s (falls before it: %d).", reunion = "Met again: %s.", pet = "%s (%s).", petlevel = "%s reached my level.", with = "With: %s." },
         OPEN_HINT = "Click to open the page in the book.",
@@ -42,6 +44,8 @@ local UI_TEXT = {
     ptBR = {
         TAB = "Metas", OF = "%d de %d", DONE_ON = "Cumprida em %s", BEFORE = "Cumprida antes do diário contar", SECRET = "???",
         SECRET_HINT = "Uma meta ainda por descobrir.", DATE = "%d/%m/%Y", TOTAL = "%d de %d metas cumpridas",
+        POINTS = "%d de %d pontos", PTS = "%d pts",
+        TITLES = { [0] = "Recém-chegad{g:o|a}", [50] = "Caminhante", [150] = "Viajante", [300] = "Desbravador{g:|a}", [500] = "Personagem de Lendas", [750] = "Lenda da Estrada" },
         EMPTY = "Nada aqui ainda.",
         EVID = { chain = "\"%s\", uma cadeia de %d missões.", hard = "%s (quedas antes dele: %d).", reunion = "Reencontro com %s.", pet = "%s (%s).", petlevel = "%s alcançou o meu nível.", with = "Com: %s." },
         OPEN_HINT = "Clique para abrir a página no livro.",
@@ -74,6 +78,8 @@ local UI_TEXT = {
     frFR = {
         TAB = "Objectifs", OF = "%d sur %d", DONE_ON = "Accompli le %s", BEFORE = "Accompli avant que le journal compte", SECRET = "???",
         SECRET_HINT = "Un objectif encore à découvrir.", DATE = "%d/%m/%Y", TOTAL = "%d objectifs atteints sur %d",
+        POINTS = "%d points sur %d", PTS = "%d pts",
+        TITLES = { [0] = "Nouvel arrivant{g:|e}", [50] = "Voyageur{g:|se}", [150] = "Routier{g:|ère}", [300] = "Pionni{g:er|ère}", [500] = "Personnage de légende", [750] = "Légende de la route" },
         EMPTY = "Rien ici pour l'instant.",
         EVID = { chain = "«\194\160%s\194\160», une chaîne de %d quêtes.", hard = "%s (chutes avant lui\194\160: %d).", reunion = "Retrouvailles avec %s.", pet = "%s (%s).", petlevel = "%s a atteint mon niveau.", with = "Avec\194\160: %s." },
         OPEN_HINT = "Cliquez pour ouvrir la page dans le livre.",
@@ -109,18 +115,48 @@ local TEX = "Interface\\AddOns\\Skald\\Textures\\"
 
 -- The categories, with the page icon that stands for each.
 local CATS = {
-    { key = "road", icon = "ev_level" }, { key = "story", icon = "ev_quest" },
+    { key = "road", icon = "ev_level" }, { key = "explorer", icon = "ev_zone" }, { key = "story", icon = "ev_quest" },
+    { key = "war", icon = "ev_boss" }, { key = "craft", icon = "ev_profession" },
     { key = "beasts", icon = "ev_pet" }, { key = "company", icon = "ev_party" },
 }
 
 -- The goals: `fact` is read from the diary, `target` is what it must reach, `tier` is the rarity of the seal,
 -- `secret` keeps the name hidden until the feat is done.
+-- `since` is the version of the list in which a goal came: a diary that already looked at the list marks the ones that
+-- came later quietly (no page, no notice), whatever they find already done.
+local GOALS_VERSION = 2
 local GOALS = {
-    { id = "flights5", cat = "road", tier = 1, fact = "flights", target = 5 },
-    { id = "flights15", cat = "road", tier = 3, fact = "flights", target = 15 },
+    { id = "level10", cat = "road", tier = 1, fact = "level", target = 10, since = 2 },
+    { id = "level20", cat = "road", tier = 2, fact = "level", target = 20, since = 2 },
+    { id = "level30", cat = "road", tier = 3, fact = "level", target = 30, since = 2 },
+    { id = "level40", cat = "road", tier = 3, fact = "level", target = 40, since = 2 },
+    { id = "level50", cat = "road", tier = 4, fact = "level", target = 50, since = 2 },
+    { id = "level60", cat = "road", tier = 5, fact = "level", target = 60, since = 2 },
+    { id = "zones3", cat = "explorer", tier = 1, fact = "zones", target = 3, since = 2 },
+    { id = "zones8", cat = "explorer", tier = 2, fact = "zones", target = 8, since = 2 },
+    { id = "zones15", cat = "explorer", tier = 3, fact = "zones", target = 15, since = 2 },
+    { id = "flights5", cat = "explorer", tier = 1, fact = "flights", target = 5 },
+    { id = "flights15", cat = "explorer", tier = 3, fact = "flights", target = 15 },
+    { id = "quests50", cat = "story", tier = 1, fact = "quests", target = 50, since = 2 },
+    { id = "quests150", cat = "story", tier = 2, fact = "quests", target = 150, since = 2 },
+    { id = "quests400", cat = "story", tier = 4, fact = "quests", target = 400, since = 2 },
+    { id = "rareQ", cat = "story", tier = 2, fact = "rareQ", target = 1, since = 2 },
+    { id = "epicQ", cat = "story", tier = 4, fact = "epicQ", target = 1, since = 2 },
     { id = "chains1", cat = "story", tier = 3, fact = "chains", target = 1, secret = true },
     { id = "chains5", cat = "story", tier = 4, fact = "chains", target = 5, secret = true },
-    { id = "hardBoss", cat = "story", tier = 3, fact = "hardBoss", target = 1, secret = true },
+    { id = "dungeons1", cat = "war", tier = 2, fact = "dungeons", target = 1, since = 2 },
+    { id = "dungeons5", cat = "war", tier = 3, fact = "dungeons", target = 5, since = 2 },
+    { id = "bosses1", cat = "war", tier = 2, fact = "bosses", target = 1, since = 2 },
+    { id = "bosses10", cat = "war", tier = 4, fact = "bosses", target = 10, since = 2 },
+    { id = "hardBoss", cat = "war", tier = 3, fact = "hardBoss", target = 1, secret = true },
+    { id = "kills500", cat = "war", tier = 2, fact = "kills", target = 500, since = 2 },
+    { id = "kills2500", cat = "war", tier = 4, fact = "kills", target = 2500, since = 2 },
+    { id = "profs1", cat = "craft", tier = 1, fact = "profs", target = 1, since = 2 },
+    { id = "profs2", cat = "craft", tier = 2, fact = "profs", target = 2, since = 2 },
+    { id = "skill1", cat = "craft", tier = 1, fact = "skillStep", target = 1, mult = 75, since = 2 },
+    { id = "skill2", cat = "craft", tier = 2, fact = "skillStep", target = 2, mult = 75, since = 2 },
+    { id = "skill3", cat = "craft", tier = 3, fact = "skillStep", target = 3, mult = 75, since = 2 },
+    { id = "skill4", cat = "craft", tier = 4, fact = "skillStep", target = 4, mult = 75, since = 2 },
     { id = "pets1", cat = "beasts", tier = 1, fact = "pets", target = 1 },
     { id = "pets5", cat = "beasts", tier = 2, fact = "pets", target = 5 },
     { id = "pets10", cat = "beasts", tier = 3, fact = "pets", target = 10 },
@@ -128,12 +164,40 @@ local GOALS = {
     { id = "companions1", cat = "company", tier = 2, fact = "companions", target = 1 },
     { id = "companions5", cat = "company", tier = 3, fact = "companions", target = 5 },
     { id = "reunions", cat = "company", tier = 3, fact = "reunions", target = 1, secret = true },
+    { id = "guild", cat = "company", tier = 1, fact = "guild", target = 1, since = 2 },
+    { id = "party", cat = "company", tier = 1, fact = "party", target = 1, since = 2 },
 }
+-- Points follow the rarity of the seal (common .. legendary). They are worked out when shown, from the goals reached,
+-- so a change of value needs no change to what is saved.
+local POINTS = { 5, 10, 25, 50, 100 }
 -- (The names of feats dropped from the list stay in the texts below: a page already written may name one.)
 local GOAL_BY_ID = {}
 for _, g in ipairs(GOALS) do GOAL_BY_ID[g.id] = g end
 
 ns.GoalName = function(id) return UI.NAMES[id] or tostring(id) end
+ns.GoalPoints = function(id)
+    local g = GOAL_BY_ID[id]
+    return g and POINTS[g.tier] or nil
+end
+-- What the goals reached are worth, and what all of them are worth.
+ns.GoalScore = function()
+    local db = SkaldCharDB
+    local done, all = 0, 0
+    for _, g in ipairs(GOALS) do
+        local p = POINTS[g.tier] or 0
+        all = all + p
+        if db and db.goals and db.goals[g.id] then done = done + p end
+    end
+    return done, all
+end
+-- The title the points earn: the highest step reached.
+ns.GoalTitle = function(points)
+    local best
+    for step in pairs(UI.TITLES) do
+        if points >= step and (not best or step > best) then best = step end
+    end
+    return best and ns.Gendered(UI.TITLES[best]) or ""
+end
 ns.GoalList = GOALS
 ns.GoalUI = UI
 
@@ -205,16 +269,20 @@ local function Check()
     if not db or not SkaldAPI or not SkaldAPI.AddEntry then return end
     db.goals = db.goals or {}
     local silent = not db.goalsInit
+    local seenVersion = db.goalsVer or 1
     local facts = Facts()
     for _, g in ipairs(GOALS) do
         if not db.goals[g.id] and (facts[g.fact] or 0) >= g.target then
-            db.goals[g.id] = { t = time(), retro = silent or nil }
-            if not silent then
+            -- a goal that came with a later version of the list is marked quietly the first time it is looked at
+            local quiet = silent or seenVersion < (g.since or 1)
+            db.goals[g.id] = { t = time(), retro = quiet or nil }
+            if not quiet then
                 SkaldAPI.AddEntry("goal", g.id, nil, { tier = g.tier, m = false, x = false, y = false })
             end
         end
     end
     db.goalsInit = true
+    db.goalsVer = GOALS_VERSION
 end
 ns.CheckGoals = Check
 
@@ -290,6 +358,9 @@ local function BuildGoalsTab(panel)
     SkaldAPI.PageHeading(panel, UI.TAB, 0)
     local total = SkaldAPI.NoteText(panel, 0, -34)
     total:SetJustifyH("CENTER")
+    local titleLine = SkaldAPI.NoteText(panel, 0, -50)
+    titleLine:SetJustifyH("CENTER")
+    titleLine:SetTextColor(head[1], head[2], head[3])
     local rightTitle = SkaldAPI.PageHeading(panel, "", RIGHT_X)
 
     -- A bar: the frame of the picture over a gold fill.
@@ -318,8 +389,8 @@ local function BuildGoalsTab(panel)
 
     for i, cat in ipairs(CATS) do
         local row = CreateFrame("Button", nil, panel)
-        row:SetSize(CW, 46)
-        row:SetPoint("TOPLEFT", 0, -62 - (i - 1) * 50)
+        row:SetSize(CW, 44)
+        row:SetPoint("TOPLEFT", 0, -78 - (i - 1) * 48)
         row.icon = row:CreateTexture(nil, "ARTWORK")
         row.icon:SetSize(30, 30)
         row.icon:SetPoint("LEFT", 4, 0)
@@ -353,6 +424,10 @@ local function BuildGoalsTab(panel)
         row.name:SetPoint("TOPLEFT", 46, -2)
         row.name:SetWidth(CW - 50)
         row.name:SetJustifyH("LEFT")
+        row.points = row:CreateFontString(nil, "OVERLAY", "SkaldSmall")
+        row.points:SetPoint("TOPRIGHT", -4, -4)
+        row.points:SetTextColor(muted[1], muted[2], muted[3])
+        row.name:SetWidth(CW - 100)
         row.desc = row:CreateFontString(nil, "OVERLAY", "SkaldSmall")
         row.desc:SetPoint("TOPLEFT", 46, -20)
         row.desc:SetWidth(CW - 50)
@@ -406,13 +481,15 @@ local function BuildGoalsTab(panel)
                 shown = shown + 1
                 visibleCats[#visibleCats + 1] = i
                 row:ClearAllPoints()
-                row:SetPoint("TOPLEFT", 0, -62 - (shown - 1) * 50)
+                row:SetPoint("TOPLEFT", 0, -78 - (shown - 1) * 48)
                 row.count:SetText(string.format(UI.OF, d, n))
                 row.bar:Set(n > 0 and d / n or 0)
                 totalDone, totalAll = totalDone + d, totalAll + n
             end
         end
-        total:SetText(string.format(UI.TOTAL, totalDone, totalAll))
+        local earned, possible = ns.GoalScore()
+        total:SetText(string.format(UI.TOTAL, totalDone, totalAll) .. "  -  " .. string.format(UI.POINTS, earned, possible))
+        titleLine:SetText(ns.GoalTitle(earned))
         if not categoryRows[chosen] or not categoryRows[chosen]:IsShown() then chosen = visibleCats[1] or 1 end
         for i, row in ipairs(categoryRows) do row.mark:SetShown(i == chosen) end
 
@@ -431,6 +508,7 @@ local function BuildGoalsTab(panel)
                 local value = facts[g.fact] or 0
                 local target = g.target
                 row.evidence, row.entry = nil, nil
+                row.points:SetText(string.format(UI.PTS, POINTS[g.tier] or 0))
                 if rec then
                     row.icon:SetTexture(TEX .. "goal_done")
                     row.icon:SetAlpha(1)

@@ -28,7 +28,7 @@ const parts = R.readParts(text);
 check(parts.length === 1 && parts[0].valid, 'the text of the game is one part and its checksum matches', JSON.stringify(parts.map(p => [p.index, p.count, p.valid])));
 const model = R.build(parts);
 check(model.name === 'Tester' && model.total === model.pages.length, 'the header carries the name and the number of pages');
-check(model.counts.quest === 3 && model.tiers[3] === 1 && model.goals === 1 && model.first === 1792000000 && model.played === 3700, 'the summary lines are read');
+check(model.counts.quest === 3 && model.tiers[3] === 1 && model.goals >= 1 && model.points > 0 && model.first === 1792000000 && model.played === 3700, 'the summary lines are read');
 const note = model.pages.find(p => p.kind === 'note');
 check(note && note.text === 'a caret ^ and a line\nbreak, with \\ a backslash' && note.note === 'my note ^ with a caret' && note.fav, 'a caret, a line break and a backslash survive the trip', JSON.stringify(note));
 check(model.pages.length >= 5 && model.pages.every((p, i, a) => i === 0 || a[i - 1].t <= p.t), 'the pages come in time order', String(model.pages.length));

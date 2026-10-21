@@ -771,6 +771,10 @@ Extras = function(e)
             out = out .. " " .. string.format(form, fam)
         end
     end
+    if e.kind == "goal" and ns.GoalPoints and L.GOAL_GAIN then
+        local points = ns.GoalPoints(e.arg)
+        if points then out = out .. " " .. string.format(L.GOAL_GAIN, points) end
+    end
     if type(e.pet) == "string" and idx % 3 == 1 and L.PET then
         out = out .. " " .. string.format(L.PET[idx % #L.PET + 1], e.pet)
     end
@@ -930,7 +934,7 @@ end
 -- It is set aside with the pages and brought back with them, and emptied with them, so a cleared diary or a new
 -- character with an old name never inherits it.
 K.DIARY_STATE = { "pets", "petNow", "companions", "questObj", "questStart", "visitedMaps", "resume", "attempts",
-    "taxi", "marks", "goals", "goalsInit", "rep", "memoryAt", "recentIdx" }
+    "taxi", "marks", "goals", "goalsInit", "goalsVer", "rep", "memoryAt", "recentIdx" }
 
 local function TakeState(db)
     local state = {}
@@ -2474,13 +2478,14 @@ local function CreateWindow()
         { key = "topkind",      label = L.S_TOPKIND,      icon = "st_topkind" },
         { key = "flights",      label = L.S_FLIGHTS,      icon = "st_flight" },
         { key = "camps",        label = L.S_CAMPS,        icon = "st_camp" },
+        { key = "points",       label = L.S_POINTS,       icon = "ev_goal" },
     }
-    local FACT_H = 22
+    local FACT_H = 20
     local factValues, factLabels = {}, {}
     for i, fact in ipairs(FACTS) do
         local y = -98 - (i - 1) * FACT_H
         local icon = stats:CreateTexture(nil, "ARTWORK")
-        icon:SetSize(24, 24)
+        icon:SetSize(20, 20)
         icon:SetPoint("TOPLEFT", RX, y)
         fact.region = icon
         icon:SetTexture(fact.icon:find("\\", 1, true) and fact.icon or ("Interface\\AddOns\\Skald\\Textures\\" .. fact.icon))
@@ -2547,6 +2552,12 @@ local function CreateWindow()
             flights = GameStat(349) or 0,
             camps = GameStat(64222) or 0,
         }
+        if ns.GoalScore then
+            local earned, possible = ns.GoalScore()
+            values.points = earned .. " / " .. possible
+        else
+            values.points = "-"
+        end
         -- Creatures: found by its name, or by its id in the Forever client (107) when the name is unknown.
         local exactKills = KillStat()
         if not exactKills then
@@ -5808,7 +5819,8 @@ local function BuildReader(scope)
     for kind, n in pairs(st.counts or {}) do lines[#lines + 1] = K.ReaderLine("N", kind, n) end
     for tier, n in pairs(st.tiers or {}) do lines[#lines + 1] = K.ReaderLine("T", tier, n) end
     for id, rec in pairs(db.goals or {}) do
-        lines[#lines + 1] = K.ReaderLine("G", id, type(rec) == "table" and rec.t or 0, (type(rec) == "table" and rec.retro) and 1 or 0)
+        lines[#lines + 1] = K.ReaderLine("G", id, type(rec) == "table" and rec.t or 0, (type(rec) == "table" and rec.retro) and 1 or 0,
+            ns.GoalPoints and ns.GoalPoints(id) or 0)
     end
     local summary = #lines
     for _, e in ipairs(entries) do
