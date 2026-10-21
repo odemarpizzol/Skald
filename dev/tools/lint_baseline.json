@@ -1,5 +1,8 @@
 {
  "Skald/Skald.lua": [
+    "C_AddOns",
+    "GetAddOnMetadata",
+    "GetBuildInfo",
   "C_Item",
   "C_Map",
   "C_MountJournal",

@@ -3516,13 +3516,14 @@ frame:RegisterEvent("PLAYER_GUILD_UPDATE")
 
 -- Events that may not exist on every client build: a missing one must not
 -- break the addon, so each is registered on its own.
-for _, ev in ipairs({
+K.OPTIONAL_EVENTS = {
     "PLAYER_ENTERING_WORLD", "GROUP_ROSTER_UPDATE", "ENCOUNTER_START", "ENCOUNTER_END", "BOSS_KILL", "PLAYER_XP_UPDATE", "UI_SCALE_CHANGED", "DISPLAY_SIZE_CHANGED",
     "NEW_MOUNT_ADDED", "ACHIEVEMENT_EARNED", "SKILL_LINES_CHANGED", "CHAT_MSG_LOOT",
     "HEARTHSTONE_BOUND", "UPDATE_FACTION", "TAXIMAP_OPENED", "PLAYER_MONEY",
     "LEARNED_SPELL_IN_TAB", "QUEST_ACCEPTED",
     "PLAYER_UNGHOST", "PLAYER_ALIVE", "CONFIRM_XP_LOSS", "RESURRECT_REQUEST",
-}) do
+}
+for _, ev in ipairs(K.OPTIONAL_EVENTS) do
     pcall(frame.RegisterEvent, frame, ev)
 end
 -- Spell casts and pet changes fire for every unit in sight (a raid sends hundreds a second): only the
@@ -5493,12 +5494,23 @@ end
 -- for a bug report) and the diary carries on.
 local reported = {}
 frame:SetScript("OnEvent", function(self, event, ...)
+    -- which events this client really fires, for /skald report (only a count per name)
+    if SkaldDB then
+        local seen = SkaldDB.seenEvents
+        if not seen then seen = {}; SkaldDB.seenEvents = seen end
+        seen[event] = (seen[event] or 0) + 1
+    end
     local ok, err = pcall(HandleEvent, self, event, ...)
     if not ok then
         local report = tostring(event) .. ": " .. tostring(err)
         if not reported[report] then
             reported[report] = true
-            if SkaldDB then SkaldDB.lastError = report end
+            if SkaldDB then
+                SkaldDB.lastError = report
+                SkaldDB.errors = SkaldDB.errors or {}
+                table.insert(SkaldDB.errors, report)
+                while #SkaldDB.errors > 8 do table.remove(SkaldDB.errors, 1) end
+            end
             Say("|cffff6060" .. L.ERROR_PREFIX .. "|r " .. report)
         end
     end
@@ -6455,6 +6467,108 @@ spokenHook:SetScript("OnEvent", function()
     end
 end)
 
+-- /skald report: what a bug report needs, in one block of text to copy. No character name, no page text. ----
+
+ns.BuildReport = function()
+    local out = {}
+    local function Add(...) out[#out + 1] = string.format(...) end
+    local db, set = Journal() or {}, Settings() or {}
+    local function Meta(field)
+        local fn = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
+        local ok, v = pcall(fn or function() end, ADDON_NAME, field)
+        return ok and v or "?"
+    end
+    local build, _, _, toc = "?", nil, nil, "?"
+    if GetBuildInfo then pcall(function() local v, b, _, t = GetBuildInfo(); build, toc = tostring(v) .. "." .. tostring(b), tostring(t) end) end
+    Add("Skald %s | locale %s | client %s (interface %s)", tostring(Meta("Version")), tostring(GetLocale and GetLocale() or "?"), build, toc)
+    local class, race
+    if UnitClass then class = select(2, UnitClass("player")) end
+    if UnitRace then race = select(2, UnitRace("player")) end
+    Add("level %s %s %s | voice %s | detail %s", tostring(UnitLevel and UnitLevel("player")), tostring(race), tostring(class),
+        tostring(set.voice or "default"), tostring(set.detail or "normal"))
+    local kinds, total = {}, 0
+    for _, e in ipairs(db.entries or {}) do kinds[e.kind or "?"] = (kinds[e.kind or "?"] or 0) + 1; total = total + 1 end
+    local list = {}
+    for k, n in pairs(kinds) do list[#list + 1] = k .. "=" .. n end
+    table.sort(list)
+    Add("pages %d: %s", total, table.concat(list, " "))
+    local seen, never = {}, {}
+    local counts = set.seenEvents or {}
+    local watch = { "PLAYER_LOGIN", "QUEST_TURNED_IN", "PLAYER_LEVEL_UP", "PLAYER_DEAD", "ZONE_CHANGED_NEW_AREA" }
+    for _, ev in ipairs(K.OPTIONAL_EVENTS) do watch[#watch + 1] = ev end
+    for _, ev in ipairs(watch) do
+        if counts[ev] then seen[#seen + 1] = ev .. "=" .. counts[ev] else never[#never + 1] = ev end
+    end
+    Add("events seen: %s", #seen > 0 and table.concat(seen, " ") or "none")
+    Add("events never seen: %s", #never > 0 and table.concat(never, " ") or "none")
+    local errs = set.errors or {}
+    Add("errors caught: %d", #errs)
+    for _, e in ipairs(errs) do Add("  %s", e) end
+    return table.concat(out, "\n")
+end
+
+ns.ShowReport = function()
+    local f = ns.reportFrame
+    if not f then
+        f = CreateFrame("Frame", "SkaldReportFrame", UIParent, "BackdropTemplate")
+        ns.reportFrame = f
+        f:SetSize(560, 300)
+        f:SetPoint("CENTER", 0, 20)
+        f:SetFrameStrata("DIALOG")
+        f:SetClampedToScreen(true)
+        f:SetMovable(true)
+        f:EnableMouse(true)
+        f:RegisterForDrag("LeftButton")
+        f:SetScript("OnDragStart", f.StartMoving)
+        f:SetScript("OnDragStop", f.StopMovingOrSizing)
+        f:SetBackdrop({ edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", edgeSize = 16, insets = { left = 4, right = 4, top = 4, bottom = 4 } })
+        f:SetBackdropBorderColor(0.35, 0.22, 0.10, 1)
+        local paper = f:CreateTexture(nil, "BACKGROUND")
+        paper:SetPoint("TOPLEFT", 4, -4)
+        paper:SetPoint("BOTTOMRIGHT", -4, 4)
+        paper:SetColorTexture(0.86, 0.77, 0.58, 1)
+        tinsert(UISpecialFrames, "SkaldReportFrame")
+        local title = f:CreateFontString(nil, "OVERLAY", "QuestTitleFont")
+        title:SetPoint("TOP", 0, -14)
+        title:SetTextColor(K.HEAD_INK[1], K.HEAD_INK[2], K.HEAD_INK[3])
+        title:SetText(L.REPORT_TITLE)
+        CreateFrame("Button", nil, f, "UIPanelCloseButton"):SetPoint("TOPRIGHT", -2, -2)
+        local hint = f:CreateFontString(nil, "OVERLAY", "QuestFont")
+        hint:SetPoint("TOPLEFT", 20, -44)
+        hint:SetPoint("TOPRIGHT", -20, -44)
+        hint:SetJustifyH("LEFT")
+        hint:SetTextColor(K.HEAD_INK[1], K.HEAD_INK[2], K.HEAD_INK[3])
+        hint:SetText(L.REPORT_HINT)
+        local box = CreateFrame("Frame", nil, f, "BackdropTemplate")
+        box:SetPoint("TOPLEFT", 20, -86)
+        box:SetPoint("BOTTOMRIGHT", -20, 20)
+        box:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Buttons\\WHITE8X8", edgeSize = 1 })
+        box:SetBackdropColor(0.12, 0.08, 0.04, 0.92)
+        box:SetBackdropBorderColor(0.35, 0.22, 0.10, 1)
+        local scroll = CreateFrame("ScrollFrame", nil, box)
+        scroll:SetPoint("TOPLEFT", 6, -6)
+        scroll:SetPoint("BOTTOMRIGHT", -6, 6)
+        scroll:EnableMouseWheel(true)
+        scroll:SetScript("OnMouseWheel", function(self, delta)
+            local range = self:GetVerticalScrollRange() or 0
+            self:SetVerticalScroll(math.max(0, math.min(range, self:GetVerticalScroll() - delta * 40)))
+        end)
+        local edit = CreateFrame("EditBox", nil, scroll)
+        edit:SetMultiLine(true)
+        edit:SetAutoFocus(false)
+        edit:SetFontObject(ChatFontNormal)
+        edit:SetWidth(496)
+        edit:SetTextInsets(2, 2, 2, 2)
+        edit:SetScript("OnEscapePressed", function() f:Hide() end)
+        scroll:SetScrollChild(edit)
+        f.edit = edit
+    end
+    f.edit:SetText(ns.BuildReport())
+    f:Show()
+    f.edit:SetFocus()
+    f.edit:HighlightText()
+end
+
 -- Commands -------------------------------------------------------------------
 
 SLASH_SKALD1 = "/skald"
@@ -6565,6 +6679,8 @@ SlashCmdList["SKALD"] = function(msg)
         else Say(L.CMD_SIZE_HINT); return end
         if window then window:FitScale() end
         Say(L.CMD_SIZE_DONE)
+    elseif msg == "report" then
+        ns.ShowReport()
     elseif msg == "reader" then
         -- the whole diary in the form the web Reader takes, ready to copy
         Settings().exportFormat, Settings().exportScope = "reader", "all"

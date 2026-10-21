@@ -351,6 +351,18 @@ fire("PLAYER_DEAD")
 RES = (printed == 1 and SkaldDB.lastError ~= nil and count("death") >= 1) and "ok" or ("messages: " .. printed .. ", lastError: " .. tostring(SkaldDB.lastError) .. ", deaths: " .. count("death"))`,
 });
 
+run('/skald report lists the events seen and never seen, and the errors, without the character name', {
+  body: `function GetZoneText() error("boom") end
+fire("PLAYER_DEAD")
+function GetZoneText() return "Elwynn Forest" end
+local text = ns.BuildReport()
+local ok = text:find("events seen:", 1, true) and text:find("PLAYER_DEAD=", 1, true) and text:find("events never seen:", 1, true)
+  and text:find("BOSS_KILL", 1, true) and text:find("errors caught: 1", 1, true) and text:find("boom", 1, true)
+  and not text:find("Tester", 1, true)
+SlashCmdList["SKALD"]("report")
+RES = (ok and ns.reportFrame and ns.reportFrame.edit) and "ok" or ("report: " .. text)`,
+});
+
 const DUNGEON = `function IsInInstance() return true, "party" end
 function GetInstanceInfo() return "The Deadmines", "party", 1, "", 5, 0, false, 36 end`;
 const BOSSES = `local function boss(name) fire("BOSS_KILL", 1, name); runTimers() end
