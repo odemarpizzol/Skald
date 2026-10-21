@@ -10,7 +10,7 @@ local UI_TEXT = {
     enUS = {
         TAB = "Goals", OF = "%d of %d", DONE_ON = "Done on %s", BEFORE = "Done before the diary counted", SECRET = "???",
         SECRET_HINT = "A goal still to be found.", DATE = "%m/%d/%Y", TOTAL = "%d of %d goals reached",
-        POINTS = "%d of %d points", PTS = "%d pts", PTS_WORD = "pts", NEXT_TITLE = "Next title: %s, at %d points.",
+        POINTS = "%d of %d points", PTS = "%d pts", WORTH = "Worth %d points", NEXT_TITLE = "Next title: %s, at %d points.",
         TITLES = { [0] = "Newcomer", [50] = "Wanderer", [150] = "Wayfarer", [300] = "Trailblazer", [500] = "Storied One", [750] = "Legend of the Road" },
         EMPTY = "Nothing here yet.",
         EVID = { chain = "\"%s\", a chain of %d quests.", hard = "%s (falls before it: %d).", reunion = "Met again: %s.", pet = "%s (%s).", petlevel = "%s reached my level.", with = "With: %s." },
@@ -47,7 +47,7 @@ local UI_TEXT = {
     ptBR = {
         TAB = "Metas", OF = "%d de %d", DONE_ON = "Cumprida em %s", BEFORE = "Cumprida antes do diário contar", SECRET = "???",
         SECRET_HINT = "Uma meta ainda por descobrir.", DATE = "%d/%m/%Y", TOTAL = "%d de %d metas cumpridas",
-        POINTS = "%d de %d pontos", PTS = "%d pts", PTS_WORD = "pts", NEXT_TITLE = "Próximo título: %s, com %d pontos.",
+        POINTS = "%d de %d pontos", PTS = "%d pts", WORTH = "Vale %d pontos", NEXT_TITLE = "Próximo título: %s, com %d pontos.",
         TITLES = { [0] = "Recém-chegad{g:o|a}", [50] = "Caminhante", [150] = "Viajante", [300] = "Desbravador{g:|a}", [500] = "Personagem de Lendas", [750] = "Lenda da Estrada" },
         EMPTY = "Nada aqui ainda.",
         EVID = { chain = "\"%s\", uma cadeia de %d missões.", hard = "%s (quedas antes dele: %d).", reunion = "Reencontro com %s.", pet = "%s (%s).", petlevel = "%s alcançou o meu nível.", with = "Com: %s." },
@@ -84,7 +84,7 @@ local UI_TEXT = {
     frFR = {
         TAB = "Objectifs", OF = "%d sur %d", DONE_ON = "Accompli le %s", BEFORE = "Accompli avant que le journal compte", SECRET = "???",
         SECRET_HINT = "Un objectif encore à découvrir.", DATE = "%d/%m/%Y", TOTAL = "%d objectifs atteints sur %d",
-        POINTS = "%d points sur %d", PTS = "%d pts", PTS_WORD = "pts", NEXT_TITLE = "Prochain titre\194\160: %s, à %d points.",
+        POINTS = "%d points sur %d", PTS = "%d pts", WORTH = "Vaut %d points", NEXT_TITLE = "Prochain titre\194\160: %s, à %d points.",
         TITLES = { [0] = "Nouv{g:el|elle} arrivant{g:|e}", [50] = "Voyageu{g:r|se}", [150] = "Routi{g:er|ère}", [300] = "Pionni{g:er|ère}", [500] = "Personnage de légende", [750] = "Légende de la route" },
         EMPTY = "Rien ici pour l'instant.",
         EVID = { chain = "«\194\160%s\194\160», une chaîne de %d quêtes.", hard = "%s (chutes avant lui\194\160: %d).", reunion = "Retrouvailles avec %s.", pet = "%s (%s).", petlevel = "%s a atteint mon niveau.", with = "Avec\194\160: %s." },
@@ -485,41 +485,40 @@ local function BuildGoalsTab(panel)
         row.name:SetPoint("TOPLEFT", 46, -2)
         row.name:SetWidth(CW - 50)
         row.name:SetJustifyH("LEFT")
-        -- the points: the number in the heading type, "pts" small beside it
-        row.ptsLabel = row:CreateFontString(nil, "OVERLAY", "SkaldSmall")
-        row.ptsLabel:SetPoint("TOPRIGHT", -4, -6)
-        row.ptsLabel:SetTextColor(muted[1], muted[2], muted[3])
-        row.ptsLabel:SetText(UI.PTS_WORD)
+        -- the points: one column on the right edge (the gem and the number, no "pts": the heading says points); the
+        -- count of the goal sits under it on the same edge, level with the bar
         row.points = row:CreateFontString(nil, "OVERLAY", "SkaldSec")
-        -- one column for the numbers (right-aligned) and one for the gems, the same on every row
-        row.points:SetWidth(30)
+        row.points:SetWidth(32)
         row.points:SetJustifyH("RIGHT")
-        row.points:SetPoint("RIGHT", row.ptsLabel, "LEFT", -3, 1)
+        row.points:SetPoint("TOPRIGHT", -4, -3)
         row.gem = row:CreateTexture(nil, "ARTWORK")
         row.gem:SetSize(20, 20)
-        row.gem:SetPoint("RIGHT", row.points, "LEFT", -4, -1)
+        row.gem:SetPoint("RIGHT", row.points, "LEFT", -4, 0)
         row.gem:SetTexture(TEX .. "pt_gem")
-        row.name:SetWidth(CW - 100)
+        row.name:SetWidth(CW - 112)
         row.desc = row:CreateFontString(nil, "OVERLAY", "SkaldSmall")
         row.desc:SetPoint("TOPLEFT", 46, -20)
         row.desc:SetWidth(CW - 50)
         row.desc:SetJustifyH("LEFT")
         row.desc:SetTextColor(muted[1], muted[2], muted[3])
-        row.bar = MakeBar(row, CW - 110, 14)
+        row.bar = MakeBar(row, CW - 124, 14)
         row.bar:SetPoint("TOPLEFT", 46, -34)
         row.count = row:CreateFontString(nil, "OVERLAY", "SkaldSmall")
-        row.count:SetPoint("LEFT", row.bar, "RIGHT", 6, 0)
+        row.count:SetWidth(72)
+        row.count:SetJustifyH("RIGHT")
+        row.count:SetPoint("RIGHT", row, "TOPRIGHT", -4, -41)
         row.count:SetTextColor(muted[1], muted[2], muted[3])
         row.hover = row:CreateTexture(nil, "BACKGROUND")
         row.hover:SetAllPoints()
         row.hover:SetColorTexture(0.43, 0.12, 0.10, 0.08)
         row.hover:Hide()
         row:SetScript("OnEnter", function(self)
-            if not self.evidence then return end
+            if not self.worth then return end
             self.hover:Show()
             GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
             GameTooltip:AddLine(self.title or "", 1, 0.82, 0)
-            GameTooltip:AddLine(self.evidence, 1, 1, 1, true)
+            GameTooltip:AddLine(string.format(UI.WORTH, self.worth), 0.8, 0.8, 0.8)
+            if self.evidence then GameTooltip:AddLine(self.evidence, 1, 1, 1, true) end
             if self.entry then GameTooltip:AddLine(UI.OPEN_HINT, 0.7, 0.7, 0.7, true) end
             GameTooltip:Show()
         end)
@@ -597,6 +596,7 @@ local function BuildGoalsTab(panel)
                 local value = facts[g.fact] or 0
                 local target = g.target
                 row.evidence, row.entry = nil, nil
+                row.worth, row.title = (not g.secret or rec) and (POINTS[g.tier] or 0) or nil, UI.NAMES[g.id]
                 row.points:SetText(tostring(POINTS[g.tier] or 0))
                 if rec then
                     row.points:SetTextColor(head[1], head[2], head[3])
