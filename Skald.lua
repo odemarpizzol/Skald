@@ -6117,7 +6117,10 @@ local function ShowExport()
         box:SetPoint("TOPLEFT", 20, isReader and -208 or -170)
         box:SetPoint("BOTTOMRIGHT", -20, 62)
         card:SetShown(isReader)
-        if isReader then card:SetText(string.format(L.EXPORT_READER_CARD, #SelectEntries(scope), #chunks)) end
+        if isReader then
+            local pages = #SelectEntries(scope)
+            card:SetText(#chunks == 1 and string.format(L.EXPORT_READER_CARD1, pages) or string.format(L.EXPORT_READER_CARD, pages, #chunks))
+        end
         pasteIcon:SetShown(isReader)
         readyIcon:SetShown(isReader and #chunks > 0)
         hint:ClearAllPoints()
