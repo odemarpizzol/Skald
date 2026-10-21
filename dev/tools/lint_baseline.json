@@ -1,5 +1,6 @@
 {
  "Skald/Skald.lua": [
+    "GetNumGroupMembers",
     "GetUnitName",
     "UnitFullName",
     "C_ChatInfo",

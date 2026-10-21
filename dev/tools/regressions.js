@@ -505,6 +505,17 @@ SlashCmdList.SKALD("forgetcompanions")
 RES = (kept and SkaldCharDB.companions == nil) and "ok" or ("kept=" .. tostring(kept))`,
 });
 
+run('inviting someone who declines is not a group: no page and no goal until another player is in it', {
+  body: `function IsInGroup() return true end
+local members = 1
+function GetNumGroupMembers() return members end
+fire("GROUP_ROSTER_UPDATE"); runTimers()
+local declined = count("party") + (SkaldCharDB.flags.party and 1 or 0)
+members = 2
+fire("GROUP_ROSTER_UPDATE"); runTimers()
+RES = (declined == 0 and count("party") == 1 and SkaldCharDB.flags.party) and "ok" or ("after the invite: " .. declined .. ", after joining: " .. count("party"))`,
+});
+
 run('in a realmless world two players with the same first name and different surnames are two companions, and the page tells only the name', {
   body: `function IsInGroup() return true end
 function UnitExists(u) return u == "party1" or u == "party2" end

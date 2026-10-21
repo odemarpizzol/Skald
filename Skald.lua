@@ -5413,13 +5413,21 @@ Mile.CheckReunion = function()
     end
 end
 
+-- Inviting someone already counts as being in a group for IsInGroup(), even if they decline: the first group
+-- only counts once another player is really in it.
+K.InGroupWithOthers = function()
+    if not (IsInGroup and IsInGroup()) then return false end
+    if GetNumGroupMembers then return (GetNumGroupMembers() or 0) >= 2 end
+    return UnitExists ~= nil and UnitExists("party1") and true or false
+end
+
 H.GROUP_ROSTER_UPDATE = function(self, event, ...)
     local db = Journal()
     if not Mile.reunionWait then
         Mile.reunionWait = true
         C_Timer.After(3, function() Mile.reunionWait = false; pcall(Mile.CheckReunion) end)
     end
-    if ready and db and not db.flags.party and IsInGroup() then
+    if ready and db and not db.flags.party and K.InGroupWithOthers() then
         db.flags.party = true
         AddEntry("party")
     end

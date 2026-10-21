@@ -6,3 +6,4 @@
 - **Developers:** `/skald probe comms` tests whether addons can talk to each other in this client (one tiny message on say, group and guild); the result appears in `/skald report`. Nothing is sent unless the command is typed.
 - **Companions in a realmless world:** players are told apart by name and surname (the part the client gives as the realm), so two players with the same first name are two companions; the pages still tell only the name, and the export hides both.
 - **Variety:** the quest pages of rarity 3 to 5 (gathering, exploring, searching, delivering) have eight sentences or more in English, Portuguese and French.
+- **Group:** inviting someone who declines no longer counts as joining a group (no page, no goal); it counts when another player is really in the group.
