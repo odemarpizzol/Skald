@@ -372,6 +372,8 @@ ns.LOCALES = {
                 "\"%s\": handed over without a scratch.",
             },
             questDeliveryNotable = {
+                "I carried \"%s\" through the long miles and put it in the right hands. {npc} will not forget it.",
+                "A small errand on paper, \"%s\", and a large one in every other way. It is delivered.",
                 "\"%s\" was only words on parchment, but words can change a kingdom. I delivered them.",
                 "{npc} trusted me with \"%s\". Some messages weigh more than armor, and I carried this one to its end.",
                 "No blood was spilled for \"%s\", yet it may matter more than many battles.",
@@ -396,6 +398,9 @@ ns.LOCALES = {
                 "I found each piece where it was always waiting: \"%s\".",
             },
             questGatherNotable = {
+                "Rare things hide well, and \"%s\" asked for the rarest of them. I found every one.",
+                "{npc} did not expect me back so soon with all of \"%s\". Neither did I.",
+                "Some errands are chores and some are quests. \"%s\" was the second kind, and I filled my pack for it.",
                 "What I gathered for \"%s\" was rarer than it looked, and worth every mile.",
                 "{npc} asked for it, and I brought it back. \"%s\" will not be forgotten.",
                 "Hands full, heart steady: \"%s\" was a harvest worth remembering.",
@@ -419,6 +424,9 @@ ns.LOCALES = {
                 "The farther I went, the quieter it grew. \"%s\" is complete.",
             },
             questExploreNotable = {
+                "\"%s\" led me to a place that has no name on any map I carry. I gave it one in my head.",
+                "{npc} wanted to know what lay out there. After \"%s\", I can tell.",
+                "The road to \"%s\" ended in a quiet I will carry for a long time.",
                 "\"%s\" took me somewhere the maps do not reach. I came back with the story.",
                 "{npc} sent me to find out about \"%s\", and what I found will be told for years.",
                 "Few have seen what I saw in \"%s\".",
@@ -453,6 +461,9 @@ ns.LOCALES = {
                 "I did not give up on \"%s\". It did not give up on me either.",
             },
             questSeekNotable = {
+                "I searched until the trail went cold, and then a little longer. \"%s\" was worth it.",
+                "{npc} asked me to find what others had given up on, and \"%s\" is found.",
+                "Every clue of \"%s\" pointed somewhere new, and the last one pointed home.",
                 "{npc} needed answers, and the search for \"%s\" brought them.",
                 "Some searches change what we know of the world: \"%s\".",
                 "The trail of \"%s\" was long, and worth every step.",
@@ -2112,6 +2123,8 @@ ns.LOCALES = {
                 "\"%s\": entregue sem um arranhão.",
             },
             questDeliveryNotable = {
+                "Levei \"%s\" por muitas léguas e o pus nas mãos certas. {npc} não vai esquecer.",
+                "No papel, \"%s\" era um recado pequeno, e em tudo o mais foi grande. Está entregue.",
                 "\"%s\" eram só palavras em pergaminho, mas palavras podem mudar um reino. Eu as entreguei.",
                 "{npc} me confiou \"%s\". Algumas mensagens pesam mais que armaduras, e levei esta até o fim.",
                 "Nenhum sangue foi derramado por \"%s\", mas talvez importe mais que muitas batalhas.",
@@ -2136,6 +2149,9 @@ ns.LOCALES = {
                 "Achei cada peça onde sempre esteve esperando: \"%s\".",
             },
             questGatherNotable = {
+                "As coisas raras se escondem bem, e \"%s\" pedia as mais raras. Encontrei todas.",
+                "{npc} não esperava me ver voltar tão cedo com tudo de \"%s\". Eu também não.",
+                "Há tarefas que são obrigação e há as que são missão. \"%s\" foi da segunda espécie, e encheu a minha mochila.",
                 "O que reuni para \"%s\" era mais raro do que parecia, e valeu cada légua.",
                 "{npc} pediu, e eu trouxe de volta. \"%s\" não será esquecida.",
                 "Mãos cheias, coração firme: \"%s\" foi uma colheita para lembrar.",
@@ -2159,6 +2175,9 @@ ns.LOCALES = {
                 "Quanto mais longe eu ia, mais quieto ficava. \"%s\" está completa.",
             },
             questExploreNotable = {
+                "\"%s\" me levou a um lugar que nenhum mapa meu traz. Dei a ele um nome só meu.",
+                "{npc} queria saber o que havia lá fora. Depois de \"%s\", eu posso contar.",
+                "O caminho de \"%s\" terminou num silêncio que vou carregar por muito tempo.",
                 "\"%s\" me levou aonde os mapas não chegam. Voltei com a história.",
                 "{npc} me mandou descobrir sobre \"%s\", e o que encontrei será contado por anos.",
                 "Poucos viram o que vi em \"%s\".",
@@ -2193,6 +2212,9 @@ ns.LOCALES = {
                 "Não desisti de \"%s\". Ela também não desistiu de mim.",
             },
             questSeekNotable = {
+                "Procurei até a pista esfriar, e um pouco mais. \"%s\" valeu a pena.",
+                "{npc} me pediu o que os outros já tinham dado por perdido, e \"%s\" foi encontrado.",
+                "Cada pista de \"%s\" apontava para um lugar novo, e a última apontava para casa.",
                 "{npc} precisava de respostas, e a busca por \"%s\" as trouxe.",
                 "Algumas buscas mudam o que sabemos do mundo: \"%s\".",
                 "A trilha de \"%s\" foi longa, e valeu cada passo.",
@@ -4428,6 +4450,8 @@ ns.LOCALES = {
                 "«\194\160%s\194\160»\194\160: remise sans une égratignure.",
             },
             questDeliveryNotable = {
+                "J'ai porté \"%s\" sur de longues lieues et je l'ai remis aux bonnes mains. {npc} ne l'oubliera pas.",
+                "Sur le papier, \"%s\" n'était qu'un petit message, et un grand en tout le reste. Il est livré.",
                 "«\194\160%s\194\160» n'était que des mots sur du parchemin, mais des mots peuvent changer un royaume. Je les ai livrés.",
                 "{npc} m'a confié «\194\160%s\194\160». Certains messages pèsent plus qu'une armure, et j'ai porté celui-ci jusqu'au bout.",
                 "Pas une goutte de sang n'a coulé pour «\194\160%s\194\160», et pourtant cela comptera peut-être plus que bien des batailles.",
@@ -4468,6 +4492,9 @@ ns.LOCALES = {
                 "Plus j'allais loin, plus le silence grandissait. «\194\160%s\194\160» est accomplie.",
             },
             questExploreNotable = {
+                "Sur aucune de mes cartes ne figure le lieu de \"%s\". Je lui ai donné un nom à moi.",
+                "{npc} voulait savoir ce qui se trouvait là-bas. Après \"%s\", je peux le dire.",
+                "Le chemin de \"%s\" s'achève dans un silence que je garderai longtemps.",
                 "«\194\160%s\194\160» a dépassé les cartes. J'en rapporte l'histoire.",
                 "{npc} voulait que je me renseigne sur «\194\160%s\194\160», et ce que j'ai trouvé se racontera pendant des années.",
                 "Peu ont vu ce que j'ai vu dans «\194\160%s\194\160».",
@@ -4507,6 +4534,9 @@ ns.LOCALES = {
                 "J'ai trouvé chaque pièce là où elle attendait depuis toujours\194\160: «\194\160%s\194\160».",
             },
             questGatherNotable = {
+                "Les choses rares se cachent bien, et \"%s\" demandait les plus rares. Je les ai toutes trouvées.",
+                "{npc} ne m'attendait pas si tôt avec tout \"%s\". Moi non plus.",
+                "Il y a des corvées et il y a des quêtes. \"%s\" était de la seconde espèce, et mon sac s'en souvient.",
                 "Ce que j'ai rassemblé pour «\194\160%s\194\160» était plus rare qu'il n'y paraissait, et valait chaque lieue.",
                 "{npc} l'avait demandé, et je l'ai rapporté. «\194\160%s\194\160» ne sera pas oubliée.",
                 "Les mains pleines, le cœur calme\194\160: «\194\160%s\194\160» fut une récolte à retenir.",
@@ -4547,6 +4577,9 @@ ns.LOCALES = {
                 "Je n'ai pas renoncé à «\194\160%s\194\160». Elle n'a pas renoncé à moi non plus.",
             },
             questSeekNotable = {
+                "J'ai cherché jusqu'à ce que la piste refroidisse, et un peu plus. \"%s\" en valait la peine.",
+                "{npc} m'a demandé ce que les autres avaient abandonné, et \"%s\" est retrouvé.",
+                "Chaque indice de \"%s\" pointait vers un lieu nouveau, et le dernier pointait vers chez moi.",
                 "{npc} avait besoin de réponses, et la recherche de «\194\160%s\194\160» les a apportées.",
                 "Certaines recherches changent ce que nous savons du monde\194\160: «\194\160%s\194\160».",
                 "La piste de «\194\160%s\194\160» fut longue, et valait chaque pas.",

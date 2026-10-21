@@ -5,3 +5,4 @@
 - **Bug reports:** `/skald report` opens a block of text to copy with the version, language, page counts, the events this client fired and the ones never seen, and the last errors caught (no character name, no page text).
 - **Developers:** `/skald probe comms` tests whether addons can talk to each other in this client (one tiny message on say, group and guild); the result appears in `/skald report`. Nothing is sent unless the command is typed.
 - **Companions in a realmless world:** players are told apart by name and surname (the part the client gives as the realm), so two players with the same first name are two companions; the pages still tell only the name, and the export hides both.
+- **Variety:** the quest pages of rarity 3 to 5 (gathering, exploring, searching, delivering) have eight sentences or more in English, Portuguese and French.
