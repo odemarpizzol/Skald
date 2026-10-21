@@ -1141,6 +1141,7 @@ local function MakeParchmentButton(parent, width, height, label)
     b.text = b:CreateFontString(nil, "OVERLAY", "QuestFont")
     b.text:SetPoint("CENTER", 0, 0)
     b.text:SetText(label)
+    b.label = label
 
     -- A gold bar along the top edge of the one you are on, like a bookmark.
     b.bar = b:CreateTexture(nil, "OVERLAY")
@@ -1176,7 +1177,34 @@ local function MakeParchmentButton(parent, width, height, label)
     b:SetScript("OnMouseUp", function(self) self.text:SetPoint("CENTER", self.textX or 0, 0) end)
 
     -- The label lives in our own text; the button's native SetText would write to a font string it does not have.
-    function b:SetText(label) self.text:SetText(label) end
+    function b:SetText(label)
+        self.text:SetText(label)
+        self.label = label
+        self:Relayout()
+    end
+    -- An icon before the label: icon and word sit together in the middle of the button (the icon alone when there is no word).
+    function b:SetIcon(path, size)
+        self.iconTex = rawget(self, "iconTex") or self:CreateTexture(nil, "OVERLAY")
+        self.iconSize = size or 20
+        self.iconTex:SetSize(self.iconSize, self.iconSize)
+        self.iconTex:SetTexture(path)
+        self:Relayout()
+    end
+    function b:Relayout()
+        if not rawget(self, "iconTex") then return end
+        local tw = 0
+        if self.label and self.label ~= "" then
+            tw = self.text.GetStringWidth and self.text:GetStringWidth()
+            if type(tw) ~= "number" then tw = 40 end
+        end
+        local gap = tw > 0 and 6 or 0
+        local total = self.iconSize + gap + tw
+        self.iconTex:ClearAllPoints()
+        self.iconTex:SetPoint("CENTER", self, "CENTER", -total / 2 + self.iconSize / 2, 0)
+        self.textX = -total / 2 + self.iconSize + gap + tw / 2
+        self.text:ClearAllPoints()
+        self.text:SetPoint("CENTER", self.textX, 0)
+    end
 
     b:SetActive(false)
     return b
@@ -5880,38 +5908,29 @@ local function ShowExport()
     -- Choosers: one button per choice, the chosen one lit.
     local formatButtons, scopeButtons = {}, {}
     Label(L.EXPORT_FORMAT, 20, -59)
-    for i, choice in ipairs({ { "discord", L.FORMAT_DISCORD }, { "plain", L.FORMAT_PLAIN }, { "reader", L.FORMAT_READER } }) do
+    for i, choice in ipairs({ { "discord", L.FORMAT_DISCORD, "ex_discord" }, { "plain", L.FORMAT_PLAIN, "ex_plain" }, { "reader", L.FORMAT_READER, "rd_icon" } }) do
         local b = MakeParchmentButton(f, 120, 24, choice[2])
         b:SetPoint("TOPLEFT", 110 + (i - 1) * 125, -54)
         b:SetScript("OnClick", function() format = choice[1]; settings.exportFormat = format; part = 1; f:Refresh() end)
-        if choice[1] == "reader" then
-            -- the icon and the word sit together in the middle of the button
-            local icon = b:CreateTexture(nil, "OVERLAY")
-            icon:SetSize(20, 20)
-            icon:SetTexture(TEXR .. "rd_icon")
-            local tw = b.text.GetStringWidth and b.text:GetStringWidth()
-            if type(tw) ~= "number" then tw = 40 end
-            local total = 20 + 6 + tw
-            icon:SetPoint("CENTER", b, "CENTER", -total / 2 + 10, 0)
-            b.textX = -total / 2 + 26 + tw / 2
-            b.text:ClearAllPoints()
-            b.text:SetPoint("CENTER", b.textX, 0)
-        end
+        b:SetIcon(TEXR .. choice[3])
         formatButtons[choice[1]] = b
     end
     Label(L.EXPORT_SCOPE, 20, -91)
-    for i, choice in ipairs({ { "recent", L.SCOPE_RECENT }, { "notable", L.SCOPE_NOTABLE }, { "all", L.SCOPE_ALL } }) do
+    for i, choice in ipairs({ { "recent", L.SCOPE_RECENT, "ex_recent" }, { "notable", L.SCOPE_NOTABLE, "ex_notable" }, { "all", L.SCOPE_ALL, "ex_all" } }) do
         local b = MakeParchmentButton(f, 120, 24, choice[2])
         b:SetPoint("TOPLEFT", 110 + (i - 1) * 125, -86)
         b:SetScript("OnClick", function() scope = choice[1]; settings.exportScope = scope; part = 1; f:Refresh() end)
+        b:SetIcon(TEXR .. choice[3])
         scopeButtons[choice[1]] = b
     end
 
     -- Parts, when the text is longer than one message.
-    local prev = MakeParchmentButton(f, 34, 24, "<")
+    local prev = MakeParchmentButton(f, 34, 24, "")
+    prev:SetIcon(TEXR .. "ex_prev")
     prev:SetPoint("TOPLEFT", 110, -120)
     prev:SetScript("OnClick", function() part = math.max(1, part - 1); f:Refresh() end)
-    local nextButton = MakeParchmentButton(f, 34, 24, ">")
+    local nextButton = MakeParchmentButton(f, 34, 24, "")
+    nextButton:SetIcon(TEXR .. "ex_next")
     nextButton:SetPoint("TOPLEFT", 149, -120)
     nextButton:SetScript("OnClick", function() part = math.min(#chunks, part + 1); f:Refresh() end)
     local partLabel = f:CreateFontString(nil, "OVERLAY", "QuestFont")
@@ -5998,7 +6017,9 @@ local function ShowExport()
         prev:SetShown(many)
         nextButton:SetShown(many)
         partLabel:SetText(many and string.format(L.EXPORT_PART, part, #chunks) or "")
-        namesButton:SetText(settings.exportHideNames ~= false and L.EXPORT_NAMES_HIDDEN or L.EXPORT_NAMES_SHOWN)
+        local hiding = settings.exportHideNames ~= false
+        namesButton:SetIcon(TEXR .. (hiding and "ex_names_hidden" or "ex_names_shown"))
+        namesButton:SetText(hiding and L.EXPORT_NAMES_HIDDEN or L.EXPORT_NAMES_SHOWN)
         hint:SetText(format == "reader" and L.EXPORT_HINT_READER or L.EXPORT_HINT)
         readerHeader:SetShown(isReader)
         box:ClearAllPoints()
