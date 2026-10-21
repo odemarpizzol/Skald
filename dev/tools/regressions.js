@@ -1027,5 +1027,16 @@ fire("ZONE_CHANGED_NEW_AREA"); runTimers()
 RES = (before == 1 and count("zone") == 1) and "ok" or ("zones " .. before .. " -> " .. count("zone"))`,
 });
 
+run('the export window shows the label of the player-names button, in every format', {
+  pre: SAVED(`{ { t = 1792000000, kind = "zone", arg = "Elwynn Forest", zone = "x", idx = 1 } }`),
+  body: `SlashCmdList.SKALD("export")
+local hidden = btn("Player names: hidden")
+SkaldDB.exportFormat = "reader"
+SlashCmdList.SKALD("export")
+local inReader = btn("Player names: hidden")
+if hidden then hidden._OnClick(hidden) end
+RES = (hidden and inReader and btn("Player names: shown")) and "ok" or ("hidden=" .. tostring(hidden) .. " reader=" .. tostring(inReader))`,
+});
+
 console.log(failed ? `\n${failed} regression(s) FAILED` : '\nAll regressions passed');
 process.exit(failed ? 1 : 0);

@@ -1175,6 +1175,9 @@ local function MakeParchmentButton(parent, width, height, label)
     b:SetScript("OnMouseDown", function(self) self.text:SetPoint("CENTER", 0, -1) end)
     b:SetScript("OnMouseUp", function(self) self.text:SetPoint("CENTER", 0, 0) end)
 
+    -- The label lives in our own text; the button's native SetText would write to a font string it does not have.
+    function b:SetText(label) self.text:SetText(label) end
+
     b:SetActive(false)
     return b
 end
