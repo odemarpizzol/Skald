@@ -5625,6 +5625,12 @@ local function ShowExport()
     title:SetPoint("TOP", 0, -14)
     title:SetTextColor(K.HEAD_INK[1], K.HEAD_INK[2], K.HEAD_INK[3])
     title:SetText(L.EXPORT_TITLE)
+    local TEXR = "Interface\\AddOns\\Skald\\Textures\\"
+    local readerHeader = f:CreateTexture(nil, "ARTWORK")
+    readerHeader:SetPoint("TOPLEFT", 6, -4)
+    readerHeader:SetSize(488, 61)
+    readerHeader:SetTexture(TEXR .. "rd_header")
+    readerHeader:Hide()
     local rule = f:CreateTexture(nil, "ARTWORK")
     rule:SetPoint("TOPLEFT", 20, -42)
     rule:SetPoint("TOPRIGHT", -20, -42)
@@ -5652,6 +5658,12 @@ local function ShowExport()
         local b = MakeParchmentButton(f, 120, 24, choice[2])
         b:SetPoint("TOPLEFT", 110 + (i - 1) * 124, -54)
         b:SetScript("OnClick", function() format = choice[1]; settings.exportFormat = format; part = 1; f:Refresh() end)
+        if choice[1] == "reader" then
+            local icon = b:CreateTexture(nil, "OVERLAY")
+            icon:SetSize(20, 20)
+            icon:SetPoint("LEFT", 6, 0)
+            icon:SetTexture(TEXR .. "rd_icon")
+        end
         formatButtons[choice[1]] = b
     end
     Label(L.EXPORT_SCOPE, 20, -90)
@@ -5710,6 +5722,16 @@ local function ShowExport()
         if byUser then self:SetText(shown); self:HighlightText() end
     end)
 
+    local pasteIcon = f:CreateTexture(nil, "OVERLAY")
+    pasteIcon:SetSize(30, 30)
+    pasteIcon:SetPoint("BOTTOMLEFT", 20, 14)
+    pasteIcon:SetTexture(TEXR .. "rd_paste")
+    pasteIcon:Hide()
+    local readyIcon = f:CreateTexture(nil, "OVERLAY")
+    readyIcon:SetSize(30, 30)
+    readyIcon:SetPoint("BOTTOMRIGHT", -20, 14)
+    readyIcon:SetTexture(TEXR .. "rd_ready")
+    readyIcon:Hide()
     local hint = f:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     hint:SetPoint("BOTTOMLEFT", 22, 16)
     hint:SetWidth(456)
@@ -5735,6 +5757,14 @@ local function ShowExport()
         partLabel:SetText(many and string.format(L.EXPORT_PART, part, #chunks) or "")
         namesButton:SetText(settings.exportHideNames ~= false and L.EXPORT_NAMES_HIDDEN or L.EXPORT_NAMES_SHOWN)
         hint:SetText(format == "reader" and L.EXPORT_HINT_READER or L.EXPORT_HINT)
+        local isReader = format == "reader"
+        readerHeader:SetShown(isReader)
+        rule:SetShown(not isReader)
+        pasteIcon:SetShown(isReader)
+        readyIcon:SetShown(isReader and #chunks > 0)
+        hint:ClearAllPoints()
+        hint:SetPoint("BOTTOMLEFT", isReader and 56 or 22, 16)
+        hint:SetWidth(isReader and 384 or 456)
     end
 
     exportFrame = f
