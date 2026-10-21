@@ -1,0 +1,1 @@
+- **Pets:** the family of a pet saved in another language (a pet met in an English client, now in a Portuguese one) is shown in the language of the client.

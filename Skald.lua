@@ -764,7 +764,7 @@ Extras = function(e)
         -- the family as the record of the pet has it now (it is read again in the client's language)
         local db = Journal()
         local rec = db and db.pets and db.pets[tostring(e.arg or "")]
-        local fam = (rec and rec.fam) or e.fam
+        local fam = ns.FamilyLabel and ns.FamilyLabel((rec and rec.fam) or e.fam) or (rec and rec.fam) or e.fam
         if type(fam) == "string" and fam ~= "" and tostring(e.arg or ""):lower() ~= fam:lower() then
             local forms = L.PET_FAMILY_FORMS
             local form = forms and forms[((e.idx or 1) - 1) % #forms + 1] or L.PET_FAMILY
@@ -4566,6 +4566,31 @@ K.FAMILY_BOX = {
     spider = { 0.094, 0.906, 0.102, 0.906 }, tallstrider = { 0.164, 0.836, 0.109, 0.906 }, turtle = { 0.094, 0.906, 0.211, 0.797 },
     windserpent = { 0.133, 0.867, 0.109, 0.906 }, wolf = { 0.125, 0.875, 0.109, 0.898 },
 }
+-- The family is saved as the client gave it, in the language of that day: a pet met in an English client stays "Wolf" in a
+-- Portuguese one. A name we know in any of the three languages is shown in the language of now; any other (the game's
+-- own word for a family we do not list) is shown as saved.
+K.FAMILY_NAMES = {
+    { enUS = "Bat", ptBR = "Morcego", frFR = "Chauve-souris" }, { enUS = "Bear", ptBR = "Urso", frFR = "Ours" },
+    { enUS = "Boar", ptBR = "Javali", frFR = "Sanglier" }, { enUS = "Carrion Bird", ptBR = "Ave de Carni\195\167a", frFR = "Charognard" },
+    { enUS = "Crab", ptBR = "Caranguejo", frFR = "Crabe" }, { enUS = "Crocolisk", ptBR = "Crocolisco", frFR = "Crocolisque" },
+    { enUS = "Cat", ptBR = "Gato", frFR = "F\195\169lin" }, { enUS = "Gorilla", ptBR = "Gorila", frFR = "Gorille" },
+    { enUS = "Hyena", ptBR = "Hiena", frFR = "Hy\195\168ne" }, { enUS = "Owl", ptBR = "Coruja", frFR = "Chouette" },
+    { enUS = "Raptor", ptBR = "Raptor", frFR = "Raptor" }, { enUS = "Scorpid", ptBR = "Escorpi\195\173deo", frFR = "Scorpide" },
+    { enUS = "Spider", ptBR = "Aranha", frFR = "Araign\195\169e" }, { enUS = "Wolf", ptBR = "Lobo", frFR = "Loup" },
+    { enUS = "Turtle", ptBR = "Tartaruga", frFR = "Tortue" },
+}
+Mile.FamilyLabel = function(fam)
+    if type(fam) ~= "string" or fam == "" then return fam end
+    local lower = fam:lower()
+    local here = GetLocale()
+    for _, names in ipairs(K.FAMILY_NAMES) do
+        for _, name in pairs(names) do
+            if name:lower() == lower then return names[here] or names.enUS end
+        end
+    end
+    return fam
+end
+ns.FamilyLabel = Mile.FamilyLabel   -- (the page text is built above, before Mile exists)
 -- Puts the picture of a family on a texture, no larger than size x size.
 Mile.SetFamilyIcon = function(tex, family, size)
     local path, key = Mile.FamilyIcon(family)
@@ -4764,7 +4789,7 @@ Mile.BuildPets = function(panel)
             icon:Show(); iconFrame:Show(); ShowFacts(true)
             Mile.SetFamilyIcon(icon, rec.fam, K.OWN_PET_ART and 64 or 50)
             name:SetText(out.name)
-            subLine:SetText((table.concat({ rec.fam or "", (rec.lv and rec.lv > 0) and string.format(L.TIP_LEVEL, rec.lv) or "" }, "  -  "):gsub("^  %-  ", ""):gsub("  %-  $", "")))
+            subLine:SetText((table.concat({ Mile.FamilyLabel(rec.fam) or "", (rec.lv and rec.lv > 0) and string.format(L.TIP_LEVEL, rec.lv) or "" }, "  -  "):gsub("^  %-  ", ""):gsub("  %-  $", "")))
             dietV:SetText(rec.diet or "-")
             sinceV:SetText(date(L.DAY_DATE, rec.t or time()))
             total:SetText(string.format(L.PETS_TOTAL, #list))
@@ -4784,7 +4809,7 @@ Mile.BuildPets = function(panel)
                 rows[i][1]:SetTextColor(atSide and K.C_HEAD[1] or K.C_BODY[1], atSide and K.C_HEAD[2] or K.C_BODY[2], atSide and K.C_HEAD[3] or K.C_BODY[3])
                 rows[i][1]:SetText(item.name)
                 local parts = {}
-                if item.rec.fam then parts[#parts + 1] = item.rec.fam end
+                if item.rec.fam then parts[#parts + 1] = Mile.FamilyLabel(item.rec.fam) end
                 if item.rec.lv and item.rec.lv > 0 then parts[#parts + 1] = string.format(L.TIP_LEVEL, item.rec.lv) end
                 parts[#parts + 1] = date(L.DAY_DATE, item.rec.t or time())
                 rows[i][2]:SetText(table.concat(parts, "  -  "))

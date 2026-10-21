@@ -1038,5 +1038,12 @@ if hidden then hidden._OnClick(hidden) end
 RES = (hidden and inReader and btn("Player names: shown")) and "ok" or ("hidden=" .. tostring(hidden) .. " reader=" .. tostring(inReader))`,
 });
 
+run('a pet family saved in another language is shown in the language of now', {
+  pre: `__locale = "ptBR"
+` + SAVED(`{}`),
+  body: `local a, b, c = ns.FamilyLabel("Wolf"), ns.FamilyLabel("lobo"), ns.FamilyLabel("Wild Beast")
+RES = (a == "Lobo" and b == "Lobo" and c == "Wild Beast" and ns.FamilyLabel(nil) == nil) and "ok" or (tostring(a) .. " " .. tostring(b) .. " " .. tostring(c))`,
+});
+
 console.log(failed ? `\n${failed} regression(s) FAILED` : '\nAll regressions passed');
 process.exit(failed ? 1 : 0);
