@@ -1711,7 +1711,15 @@ local function ShowToast(e, titleText, bodyText, lines, seconds)
     -- the title, its rule, the text, and room for the burnt edge below
     toastFrame:SetHeight(math.max(90, 19 + 14 + 12 + 3 + bodyHeight + 37))
     toastFrame.born = (GetTime and GetTime()) or 0
-    toastFrame.life = seconds or 6.5
+    -- How long it stays: the player's choice (0 = until clicked); a sample notice keeps the time it was asked for.
+    local chosen = SkaldDB and tonumber(SkaldDB.noticeSecs)
+    if e and e.sample then
+        toastFrame.life = seconds or 6.5
+    elseif chosen == 0 then
+        toastFrame.life = 1e9
+    else
+        toastFrame.life = chosen or seconds or 6.5
+    end
     toastFrame:SetAlpha(0)
     toastFrame:Show()
     if SkaldDB and SkaldDB.sound ~= false then
@@ -1720,9 +1728,9 @@ local function ShowToast(e, titleText, bodyText, lines, seconds)
 end
 
 -- Shows a sample notice that stays for half a minute: drag it where you want the notices to appear.
-ns.PreviewNotice = function()
+ns.PreviewNotice = function(seconds)
     local sample = { kind = "level", arg = 5, tier = 2, idx = 1, t = time(), zone = GetZoneText(), sample = true }
-    pcall(ShowToast, sample, nil, nil, 3, 30)
+    pcall(ShowToast, sample, nil, nil, 3, seconds or 30)
 end
 
 -- The card shown on returning to the game: where the last visit ended, the quests still open and
@@ -6384,10 +6392,29 @@ local function BuildNotices(panel)
     moveButton:SetScript("OnClick", function() if ns.PreviewNotice then ns.PreviewNotice() end end)
     NoteText(panel, K.RIGHT_X, -228):SetText(L.TOAST_MOVE_HINT)
 
+    -- How long a notice stays.
+    PageRule(panel, K.RIGHT_X, -300)
+    SectionLabel(panel, L.TOAST_TIME, K.RIGHT_X, -312)
+    local timeButtons = {}
+    local TIMES = { { 4, "4 s", 50 }, { 6.5, "6 s", 50 }, { 10, "10 s", 50 }, { 15, "15 s", 50 }, { 0, L.TOAST_PINNED, K.CW - 4 * 54 } }
+    local tx = 0
+    for _, choice in ipairs(TIMES) do
+        local tb = MakeFlatButton(panel, choice[3], 26, choice[2])
+        tb:SetPoint("TOPLEFT", K.RIGHT_X + tx, -340)
+        tx = tx + choice[3] + 4
+        tb:SetScript("OnClick", function()
+            Settings().noticeSecs = choice[1]
+            for value, other in pairs(timeButtons) do other:SetActive(value == choice[1]) end
+            if ns.PreviewNotice then ns.PreviewNotice(choice[1] == 0 and 12 or choice[1]) end
+        end)
+        timeButtons[choice[1]] = tb
+    end
+
     refresh = function()
         local s = Settings()
         for _, cb in ipairs(switches) do cb.Sync() end
         for key, pb in pairs(placeButtons) do pb:SetActive(not s.toastPos and (s.toastAnchor or "top") == key) end
+        for value, tb in pairs(timeButtons) do tb:SetActive(value == (tonumber(s.noticeSecs) or 6.5)) end
     end
     return refresh
 end

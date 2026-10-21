@@ -1045,5 +1045,14 @@ run('a pet family saved in another language is shown in the language of now', {
 RES = (a == "Lobo" and b == "Lobo" and c == "Wild Beast" and ns.FamilyLabel(nil) == nil) and "ok" or (tostring(a) .. " " .. tostring(b) .. " " .. tostring(c))`,
 });
 
+run('a notice stays as long as the player chose: a number of seconds, until clicked, and a sample keeps its own time', {
+  body: `local function life() for i = #frames, 1, -1 do local l = rawget(frames[i], "life") if l then return l end end end
+ns.ShowNotice("T", "b", 3, 9, nil); local standard = life()
+SkaldDB.noticeSecs = 10; ns.ShowNotice("T", "b", 3, 9, nil); local ten = life()
+SkaldDB.noticeSecs = 0; ns.ShowNotice("T", "b", 3, 9, nil); local pinned = life()
+SkaldDB.noticeSecs = 4; ns.PreviewNotice(12); local sample = life()
+RES = (standard == 9 and ten == 10 and pinned >= 1e9 and sample == 12) and "ok" or (tostring(standard) .. " " .. tostring(ten) .. " " .. tostring(pinned) .. " " .. tostring(sample))`,
+});
+
 console.log(failed ? `\n${failed} regression(s) FAILED` : '\nAll regressions passed');
 process.exit(failed ? 1 : 0);
