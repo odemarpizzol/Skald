@@ -420,7 +420,7 @@ local function BuildGoalsTab(panel)
     -- The band under the heading: the title the points earn, the goals and points, and a bar toward the next title.
     header = CreateFrame("Frame", nil, panel)
     header:SetSize(CW, 48)
-    header:SetPoint("TOPLEFT", 0, -32)
+    header:SetPoint("TOPLEFT", 0, -42)   -- below the rule of the heading
     header:EnableMouse(true)
     local emblem = header:CreateTexture(nil, "ARTWORK")
     emblem:SetSize(26, 26)
@@ -450,8 +450,8 @@ local function BuildGoalsTab(panel)
 
     for i, cat in ipairs(CATS) do
         local row = CreateFrame("Button", nil, panel)
-        row:SetSize(CW, 40)
-        row:SetPoint("TOPLEFT", 0, -84 - (i - 1) * 44)
+        row:SetSize(CW, 38)
+        row:SetPoint("TOPLEFT", 0, -98 - (i - 1) * 42)
         row.icon = row:CreateTexture(nil, "ARTWORK")
         row.icon:SetSize(30, 30)
         row.icon:SetPoint("LEFT", 4, 0)
@@ -548,7 +548,7 @@ local function BuildGoalsTab(panel)
                 shown = shown + 1
                 visibleCats[#visibleCats + 1] = i
                 row:ClearAllPoints()
-                row:SetPoint("TOPLEFT", 0, -84 - (shown - 1) * 44)
+                row:SetPoint("TOPLEFT", 0, -98 - (shown - 1) * 42)
                 row.count:SetText(string.format(UI.OF, d, n))
                 row.bar:Set(n > 0 and d / n or 0)
                 totalDone, totalAll = totalDone + d, totalAll + n
