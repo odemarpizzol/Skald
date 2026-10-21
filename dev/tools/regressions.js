@@ -505,6 +505,22 @@ SlashCmdList.SKALD("forgetcompanions")
 RES = (kept and SkaldCharDB.companions == nil) and "ok" or ("kept=" .. tostring(kept))`,
 });
 
+run('in a realmless world two players with the same first name and different surnames are two companions, and the page tells only the name', {
+  body: `function IsInGroup() return true end
+function UnitExists(u) return u == "party1" or u == "party2" end
+function UnitName(u) if u == "party1" then return "Adson", "Flexhota" elseif u == "party2" then return "Adson", "Marvik" end return "Tester" end
+function IsInInstance() return true, "party" end
+function GetInstanceInfo() return "The Deadmines", "party", 1, "", 5, 0, false, 36 end
+fire("BOSS_KILL", 1, "Edwin VanCleef"); runTimers()
+local c = SkaldCharDB.companions or {}
+local boss
+for _, x in ipairs(SkaldCharDB.entries) do if x.kind == "boss" then boss = x end end
+local text = boss and SkaldAPI.Render(boss) or ""
+local hidden = boss and ns.HideNames(text, boss) or ""
+RES = (c["Adson-Flexhota"] and c["Adson-Marvik"] and not c.Adson and text:find("Adson", 1, true) and not text:find("Flexhota", 1, true)
+  and not hidden:find("Adson", 1, true)) and "ok" or ("companions: " .. tostring(c["Adson-Flexhota"]) .. "/" .. tostring(c["Adson-Marvik"]) .. " text=" .. text .. " hidden=" .. hidden)`,
+});
+
 run('the companions kept are no more than the cap, the oldest dropped', {
   body: `local entry
 SkaldCharDB.companions = {}

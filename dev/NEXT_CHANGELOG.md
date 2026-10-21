@@ -4,3 +4,4 @@
 - **Goal points, art:** a gem beside the points of each goal and the cover, and an emblem for each of the six titles beside the title in the Goals tab.
 - **Bug reports:** `/skald report` opens a block of text to copy with the version, language, page counts, the events this client fired and the ones never seen, and the last errors caught (no character name, no page text).
 - **Developers:** `/skald probe comms` tests whether addons can talk to each other in this client (one tiny message on say, group and guild); the result appears in `/skald report`. Nothing is sent unless the command is typed.
+- **Companions in a realmless world:** players are told apart by name and surname (the part the client gives as the realm), so two players with the same first name are two companions; the pages still tell only the name, and the export hides both.

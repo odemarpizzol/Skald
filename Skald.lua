@@ -132,6 +132,22 @@ do
 local CONTEXT_KINDS = { dungeon = true, boss = true, death = true, zone = true, level = true,
     hearth = true, revive = true, flight = true, home = true, mount = true }   -- the hour of the day, for the line that sets the scene
 local WITH_KINDS = { dungeon = true, boss = true, death = true }
+-- Another player is told apart by name and by the second part the client gives (the realm in the classic game;
+-- in the realmless Forever it comes back as the surname, even for players of one's own world): the key kept in
+-- the diary is "Name-Surname", the page tells only the name (K.WhoShort).
+K.WhoKey = function(unit)
+    if not UnitName then return nil end
+    local name, realm = UnitName(unit)
+    name, realm = Safe(name), Safe(realm)
+    if type(name) ~= "string" or name == "" then return nil end
+    if type(realm) == "string" and realm ~= "" then return name .. "-" .. realm end
+    return name
+end
+K.WhoShort = function(key)
+    key = tostring(key or "")
+    return key:match("^([^%-]+)%-") or key
+end
+
 -- What surrounded the moment: the hour of the game, the names in the group, the pet.
 AddContext = function(kind, entry)
     if not CONTEXT_KINDS[kind] then return end
@@ -141,8 +157,8 @@ AddContext = function(kind, entry)
         local names = {}
         if IsInGroup and IsInGroup() then
             for i = 1, 4 do
-                local who = (not UnitExists or UnitExists("party" .. i)) and Safe(UnitName and UnitName("party" .. i)) or nil
-                if type(who) == "string" and who ~= "" then names[#names + 1] = who end
+                local who = (not UnitExists or UnitExists("party" .. i)) and K.WhoKey("party" .. i) or nil
+                if who then names[#names + 1] = who end
             end
         end
         if #names > 0 then entry.with = names end
@@ -751,7 +767,8 @@ Extras = function(e)
     local out = ""
     local idx = e.idx or 1
     if type(e.with) == "table" and #e.with > 0 then
-        local names = e.with
+        local names = {}
+        for i, who in ipairs(e.with) do names[i] = K.WhoShort(who) end
         local joined = names[1]
         if #names > 1 then joined = table.concat(names, ", ", 1, #names - 1) .. L.DAY_AND .. names[#names] end
         out = out .. " " .. string.format(L.WITH, joined)
@@ -5382,7 +5399,7 @@ Mile.CheckReunion = function()
     if not comp then return end
     local now = time()
     for i = 1, 4 do
-        local name = (not UnitExists or UnitExists("party" .. i)) and Safe(UnitName and UnitName("party" .. i)) or nil
+        local name = (not UnitExists or UnitExists("party" .. i)) and K.WhoKey("party" .. i) or nil
         local c = type(name) == "string" and comp[name]
         if c and c.shared and not Mile.reunionTold[name] then
             Mile.reunionTold[name] = true
@@ -5390,7 +5407,7 @@ Mile.CheckReunion = function()
             c.seen = now
             if away >= K.REUNION_GAP and now - (c.told or 0) >= K.REUNION_EVERY then
                 c.told = now
-                AddEntry("reunion", name, nil, { pz = c.pz, pn = c.pn })
+                AddEntry("reunion", K.WhoShort(name), nil, { pz = c.pz, pn = c.pn })
             end
         end
     end
