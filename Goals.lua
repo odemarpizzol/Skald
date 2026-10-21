@@ -10,7 +10,7 @@ local UI_TEXT = {
     enUS = {
         TAB = "Goals", OF = "%d of %d", DONE_ON = "Done on %s", BEFORE = "Done before the diary counted", SECRET = "???",
         SECRET_HINT = "A goal still to be found.", DATE = "%m/%d/%Y", TOTAL = "%d of %d goals reached",
-        POINTS = "%d of %d points", PTS = "%d pts",
+        POINTS = "%d of %d points", PTS = "%d pts", NEXT_TITLE = "Next title: %s, at %d points.",
         TITLES = { [0] = "Newcomer", [50] = "Wanderer", [150] = "Wayfarer", [300] = "Trailblazer", [500] = "Storied One", [750] = "Legend of the Road" },
         EMPTY = "Nothing here yet.",
         EVID = { chain = "\"%s\", a chain of %d quests.", hard = "%s (falls before it: %d).", reunion = "Met again: %s.", pet = "%s (%s).", petlevel = "%s reached my level.", with = "With: %s." },
@@ -47,7 +47,7 @@ local UI_TEXT = {
     ptBR = {
         TAB = "Metas", OF = "%d de %d", DONE_ON = "Cumprida em %s", BEFORE = "Cumprida antes do diário contar", SECRET = "???",
         SECRET_HINT = "Uma meta ainda por descobrir.", DATE = "%d/%m/%Y", TOTAL = "%d de %d metas cumpridas",
-        POINTS = "%d de %d pontos", PTS = "%d pts",
+        POINTS = "%d de %d pontos", PTS = "%d pts", NEXT_TITLE = "Próximo título: %s, com %d pontos.",
         TITLES = { [0] = "Recém-chegad{g:o|a}", [50] = "Caminhante", [150] = "Viajante", [300] = "Desbravador{g:|a}", [500] = "Personagem de Lendas", [750] = "Lenda da Estrada" },
         EMPTY = "Nada aqui ainda.",
         EVID = { chain = "\"%s\", uma cadeia de %d missões.", hard = "%s (quedas antes dele: %d).", reunion = "Reencontro com %s.", pet = "%s (%s).", petlevel = "%s alcançou o meu nível.", with = "Com: %s." },
@@ -84,7 +84,7 @@ local UI_TEXT = {
     frFR = {
         TAB = "Objectifs", OF = "%d sur %d", DONE_ON = "Accompli le %s", BEFORE = "Accompli avant que le journal compte", SECRET = "???",
         SECRET_HINT = "Un objectif encore à découvrir.", DATE = "%d/%m/%Y", TOTAL = "%d objectifs atteints sur %d",
-        POINTS = "%d points sur %d", PTS = "%d pts",
+        POINTS = "%d points sur %d", PTS = "%d pts", NEXT_TITLE = "Prochain titre\194\160: %s, à %d points.",
         TITLES = { [0] = "Nouv{g:el|elle} arrivant{g:|e}", [50] = "Voyageu{g:r|se}", [150] = "Routi{g:er|ère}", [300] = "Pionni{g:er|ère}", [500] = "Personnage de légende", [750] = "Légende de la route" },
         EMPTY = "Rien ici pour l'instant.",
         EVID = { chain = "«\194\160%s\194\160», une chaîne de %d quêtes.", hard = "%s (chutes avant lui\194\160: %d).", reunion = "Retrouvailles avec %s.", pet = "%s (%s).", petlevel = "%s a atteint mon niveau.", with = "Avec\194\160: %s." },
@@ -394,11 +394,7 @@ local function BuildGoalsTab(panel)
     local sealPath = "Interface\\AddOns\\Skald\\Textures\\seal"
 
     SkaldAPI.PageHeading(panel, UI.TAB, 0)
-    local total = SkaldAPI.NoteText(panel, 0, -34)
-    total:SetJustifyH("CENTER")
-    local titleLine = SkaldAPI.NoteText(panel, 0, -50)
-    titleLine:SetJustifyH("CENTER")
-    titleLine:SetTextColor(head[1], head[2], head[3])
+    local total, titleLine, pointsBar, header   -- the band under the heading, made once the bar is defined
     local rightTitle = SkaldAPI.PageHeading(panel, "", RIGHT_X)
 
     -- A bar: the frame of the picture over a gold fill.
@@ -421,6 +417,31 @@ local function BuildGoalsTab(panel)
         return bar
     end
 
+    -- The band under the heading: the title the points earn, the goals and points, and a bar toward the next title.
+    header = CreateFrame("Frame", nil, panel)
+    header:SetSize(CW, 48)
+    header:SetPoint("TOPLEFT", 0, -32)
+    header:EnableMouse(true)
+    titleLine = header:CreateFontString(nil, "OVERLAY", "SkaldSec")
+    titleLine:SetPoint("TOP", 0, 0)
+    titleLine:SetWidth(CW)
+    titleLine:SetJustifyH("CENTER")
+    titleLine:SetTextColor(head[1], head[2], head[3])
+    total = header:CreateFontString(nil, "OVERLAY", "SkaldSmall")
+    total:SetPoint("TOP", 0, -18)
+    total:SetWidth(CW)
+    total:SetJustifyH("CENTER")
+    total:SetTextColor(muted[1], muted[2], muted[3])
+    pointsBar = MakeBar(header, CW - 70, 14)
+    pointsBar:SetPoint("TOP", 0, -33)
+    header:SetScript("OnEnter", function(self)
+        if not self.nextTitle then return end
+        GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
+        GameTooltip:AddLine(string.format(UI.NEXT_TITLE, self.nextTitle, self.nextAt), 1, 0.82, 0, true)
+        GameTooltip:Show()
+    end)
+    header:SetScript("OnLeave", function() GameTooltip:Hide() end)
+
     local categoryRows, goalRows = {}, {}
     local chosen = 1
     local visibleCats
@@ -428,7 +449,7 @@ local function BuildGoalsTab(panel)
     for i, cat in ipairs(CATS) do
         local row = CreateFrame("Button", nil, panel)
         row:SetSize(CW, 40)
-        row:SetPoint("TOPLEFT", 0, -78 - (i - 1) * 44)
+        row:SetPoint("TOPLEFT", 0, -84 - (i - 1) * 44)
         row.icon = row:CreateTexture(nil, "ARTWORK")
         row.icon:SetSize(30, 30)
         row.icon:SetPoint("LEFT", 4, 0)
@@ -517,7 +538,7 @@ local function BuildGoalsTab(panel)
                 shown = shown + 1
                 visibleCats[#visibleCats + 1] = i
                 row:ClearAllPoints()
-                row:SetPoint("TOPLEFT", 0, -78 - (shown - 1) * 44)
+                row:SetPoint("TOPLEFT", 0, -84 - (shown - 1) * 44)
                 row.count:SetText(string.format(UI.OF, d, n))
                 row.bar:Set(n > 0 and d / n or 0)
                 totalDone, totalAll = totalDone + d, totalAll + n
@@ -526,6 +547,14 @@ local function BuildGoalsTab(panel)
         local earned, possible = ns.GoalScore()
         total:SetText(string.format(UI.TOTAL, totalDone, totalAll) .. "  -  " .. string.format(UI.POINTS, earned, possible))
         titleLine:SetText(ns.GoalTitle(earned))
+        local current, nextAt = 0, nil
+        for step in pairs(UI.TITLES) do
+            if step <= earned and step > current then current = step end
+            if step > earned and (not nextAt or step < nextAt) then nextAt = step end
+        end
+        pointsBar:Set(nextAt and (earned - current) / (nextAt - current) or 1)
+        header.nextAt = nextAt
+        header.nextTitle = nextAt and ns.Gendered(UI.TITLES[nextAt]) or nil
         if not categoryRows[chosen] or not categoryRows[chosen]:IsShown() then chosen = visibleCats[1] or 1 end
         for i, row in ipairs(categoryRows) do row.mark:SetShown(i == chosen) end
 
