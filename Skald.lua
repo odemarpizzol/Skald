@@ -953,7 +953,7 @@ end
 -- It is set aside with the pages and brought back with them, and emptied with them, so a cleared diary or a new
 -- character with an old name never inherits it.
 K.DIARY_STATE = { "pets", "petNow", "companions", "questObj", "questStart", "visitedMaps", "resume", "attempts",
-    "taxi", "marks", "goals", "goalsInit", "goalsVer", "rep", "memoryAt", "recentIdx" }
+    "taxi", "marks", "goals", "goalsInit", "goalsVer", "collInit", "rep", "memoryAt", "recentIdx" }
 
 local function TakeState(db)
     local state = {}
@@ -3501,8 +3501,49 @@ SkaldAPI.CW = K.CW
 SkaldAPI.AddEntry = AddEntry
 SkaldAPI.RefreshWindow = function() if window and window:IsShown() then window:Refresh() end end
 -- What the game itself counts (creatures, dungeons, bosses): more exact than the diary's own estimate.
+-- The collections as the game counts them (mounts and companion pets owned). `ready` only when a journal answered
+-- with a catalogue, so a journal not yet loaded is not taken for an empty collection. Asked at most every 20 seconds.
+K.Collections = function()
+    local now = GetTime and GetTime() or 0
+    local c = K.collCache
+    if c and now - c.at < 20 then return c.v end
+    local v = {}
+    pcall(function()
+        local J = C_MountJournal
+        if J and J.GetMountIDs and J.GetMountInfoByID then
+            local ids = J.GetMountIDs()
+            if type(ids) == "table" and #ids > 0 then
+                local n = 0
+                for _, id in ipairs(ids) do
+                    local r = { J.GetMountInfoByID(id) }
+                    if r[11] == true then n = n + 1 end
+                end
+                v.mounts, v.ready = n, true
+            end
+        end
+    end)
+    pcall(function()
+        if GetNumCompanions then v.mounts = math.max(v.mounts or 0, GetNumCompanions("MOUNT") or 0) end
+    end)
+    pcall(function()
+        local P = C_PetJournal
+        if P and P.GetNumPets then
+            local total, owned = P.GetNumPets()
+            if type(owned) == "number" and (total or 0) > 0 then v.critters, v.ready = owned, true end
+        end
+    end)
+    pcall(function()
+        if GetNumCompanions then v.critters = math.max(v.critters or 0, GetNumCompanions("CRITTER") or 0) end
+    end)
+    K.collCache = { at = now, v = v }
+    return v
+end
 SkaldAPI.GameFacts = function()
     local out = {}
+    out.quests = GameStat(K.STAT_QUESTS)
+    out.flights = GameStat(349)
+    local coll = K.Collections()
+    out.mounts, out.critters, out.collReady = coll.mounts, coll.critters, coll.ready
     local kills = KillStat()
     if not kills then
         local byId = GameStat(107)
@@ -6606,6 +6647,10 @@ ns.BuildReport = function()
     if GetNumCompanions then
         Count("companionMounts", function() return GetNumCompanions("MOUNT") end)
         Count("companionCritters", function() return GetNumCompanions("CRITTER") end)
+    end
+    do
+        local coll = K.Collections()
+        counts[#counts + 1] = "mountsCollected=" .. tostring(coll.mounts) .. " petsCollected=" .. tostring(coll.critters) .. " ready=" .. tostring(coll.ready)
     end
     if #counts > 0 then Add("collections: %s", table.concat(counts, " ")) end
     local cp = set.commsProbe

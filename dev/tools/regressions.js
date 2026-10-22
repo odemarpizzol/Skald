@@ -1106,13 +1106,36 @@ SkaldDB.noticeSecs = 4; ns.PreviewNotice(12); local sample = life()
 RES = (standard == 9 and ten == 10 and pinned >= 1e9 and sample == 12) and "ok" or (tostring(standard) .. " " .. tostring(ten) .. " " .. tostring(pinned) .. " " .. tostring(sample))`,
 });
 
+run('collection goals: an unready journal marks nothing, the first read marks quietly, a later mount is a page', {
+  pre: SAVED('{}', 'version = 99, goalsInit = true, goalsVer = 3'),
+  body: `local ids = {}
+C_MountJournal = { GetMountIDs = function() return ids end, GetMountInfoByID = function(id) return "m" .. id, 0, 0, false, true, 0, false, false, nil, false, id <= SKALD_OWNED, id end }
+SKALD_OWNED = 0
+local clock = 1000
+GetTime = function() clock = clock + 30; return clock end
+local function look() ns.CheckGoals() end
+look()
+local g = SkaldCharDB.goals
+local unready = not g.mounts1 and not SkaldCharDB.collInit
+for i = 1, 20 do ids[i] = i end
+SKALD_OWNED = 6
+look()
+local first = g.mounts1 and g.mounts1.retro and g.mounts5 and g.mounts5.retro and not g.mounts10 and SkaldCharDB.collInit
+SKALD_OWNED = 10
+look()
+local later = g.mounts10 and not g.mounts10.retro
+local mountPages = 0
+for _, x in ipairs(SkaldCharDB.entries) do if x.kind == "goal" and tostring(x.arg):find("^mounts") then mountPages = mountPages + 1 end end
+RES = (unready and first and later and mountPages == 1) and "ok" or ("unready=" .. tostring(unready) .. " first=" .. tostring(first) .. " later=" .. tostring(later) .. " pages=" .. count("goal") .. " " .. (function() local t = {} for _, x in ipairs(SkaldCharDB.entries) do if x.kind == "goal" then t[#t+1] = x.arg end end return table.concat(t, ",") end)())`,
+});
+
 run('goals that came with a later list are marked quietly in a diary that already looked, and the points follow the seals', {
   pre: SAVED('{}', 'version = 99, goalsInit = true, goals = { flights5 = { t = 5 } }, taxi = { true, true, true, true, true, true, true }, stats = { counts = { quest = 120, dungeon = 3, boss = 2, kill = 600 }, deathZones = {}, tiers = {}, played = 1, first = 1 }'),
   body: `local g = SkaldCharDB.goals
 local earned, possible = ns.GoalScore()
 -- flights5 was there before (5 points); the new ones (level 10 and 20, quests50, dungeons, bosses1, kills500) came quietly
 local quiet = g.level10 and g.level10.retro and g.level20 and g.level20.retro and g.quests50 and g.quests50.retro and g.kills500 and g.kills500.retro
-RES = (count("goal") == 0 and quiet and SkaldCharDB.goalsVer == 2 and earned > 5 and possible > 800 and ns.GoalPoints("level60") == 100
+RES = (count("goal") == 0 and quiet and SkaldCharDB.goalsVer == 3 and earned > 5 and possible > 800 and ns.GoalPoints("level60") == 100
   and ns.GoalPoints("flights5") == 5) and "ok" or ("pages=" .. count("goal") .. " quiet=" .. tostring(quiet) .. " ver=" .. tostring(SkaldCharDB.goalsVer) .. " score=" .. earned .. "/" .. possible)`,
 });
 

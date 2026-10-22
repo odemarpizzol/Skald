@@ -7,3 +7,5 @@
 - **Companions in a realmless world:** players are told apart by name and surname (the part the client gives as the realm), so two players with the same first name are two companions; the pages still tell only the name, and the export hides both.
 - **Variety:** the quest pages of rarity 3 to 5 (gathering, exploring, searching, delivering) have eight sentences or more in English, Portuguese and French.
 - **Group:** inviting someone who declines no longer counts as joining a group (no page, no goal); it counts when another player is really in the group.
+- Goals: a new Collection category (mounts 1/5/10, companion pets 1/10/25), read straight from the game's journals; what you already owned is marked quietly, without pages.
+- Goals: quests and flight paths now also use the game's own statistics (the larger of the game's count and the diary's); `/skald report` shows the mounts and pets collected.

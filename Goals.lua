@@ -15,7 +15,7 @@ local UI_TEXT = {
         EMPTY = "Nothing here yet.",
         EVID = { chain = "\"%s\", a chain of %d quests.", hard = "%s (falls before it: %d).", reunion = "Met again: %s.", pet = "%s (%s).", petlevel = "%s reached my level.", with = "With: %s." },
         OPEN_HINT = "Click to open the page in the book.",
-        CATS = { explorer = "Exploration", road = "The Road", story = "Stories", war = "War", craft = "Crafts", beasts = "Beasts", company = "Company", renown = "Fortune & Renown" },
+        CATS = { explorer = "Exploration", road = "The Road", story = "Stories", war = "War", craft = "Crafts", beasts = "Beasts", company = "Company", collection = "Collection", renown = "Fortune & Renown" },
         FACT = {
             zones = "Discover %d lands.", flights = "Learn %d flight paths.", level = "Reach level %d.",
             quests = "Complete %d quests.", chains = "Quest chains finished: %d.", rareQ = "Complete a rare quest or better.",
@@ -24,6 +24,7 @@ local UI_TEXT = {
             skillStep = "Reach %d skill in a trade.", pets = "Companions tamed: %d.", petLevel = "See a companion reach your level.",
             companions = "Companions of the road remembered: %d.", reunions = "Meet again someone from a dungeon.",
             guild = "Join a guild.", party = "Join a group for the first time.",
+            mounts = "Mounts collected: %d.", critters = "Companion pets collected: %d.",
             gold = "Hold %d gold.", repFriendly = "Become Friendly with a faction.", repHonored = "Become Honored with a faction.", repExalted = "Reach Exalted with a faction.",
         },
         NAMES = {
@@ -40,6 +41,8 @@ local UI_TEXT = {
             pets1 = "A Friend from the Wild", pets5 = "A Pack on the Road", pets10 = "The Whole Bestiary",
             petLevel = "Side by Side, Level for Level", companions1 = "The Road Has Company", companions5 = "A Circle of Friends",
             reunions = "Old Company, Met Again", guild = "Under One Banner", party = "Strength in Numbers",
+            mounts1 = "The First Stirrup", mounts5 = "A Stable of My Own", mounts10 = "Hooves, Wings and Scales",
+            critters1 = "A Small Companion", critters10 = "Pockets Full of Friends", critters25 = "A Little Ark of Critters",
             gold10 = "A Few Good Coins", gold100 = "A Heavy Purse", gold1000 = "A Dragon's Hoard",
             repFriendly = "A Friendly Face", repHonored = "Honored Guest", repExalted = "Among the Exalted",
         },
@@ -52,7 +55,7 @@ local UI_TEXT = {
         EMPTY = "Nada aqui ainda.",
         EVID = { chain = "\"%s\", uma cadeia de %d missões.", hard = "%s (quedas antes dele: %d).", reunion = "Reencontro com %s.", pet = "%s (%s).", petlevel = "%s alcançou o meu nível.", with = "Com: %s." },
         OPEN_HINT = "Clique para abrir a página no livro.",
-        CATS = { explorer = "Exploração", road = "A Estrada", story = "Histórias", war = "Guerra", craft = "Ofícios", beasts = "Feras", company = "Companhia", renown = "Fortuna e Renome" },
+        CATS = { explorer = "Exploração", road = "A Estrada", story = "Histórias", war = "Guerra", craft = "Ofícios", beasts = "Feras", company = "Companhia", collection = "Coleção", renown = "Fortuna e Renome" },
         FACT = {
             zones = "Descubra %d terras.", flights = "Aprenda %d rotas de voo.", level = "Chegue ao nível %d.",
             quests = "Cumpra %d missões.", chains = "Cadeias de missões concluídas: %d.", rareQ = "Cumpra uma missão rara ou melhor.",
@@ -61,6 +64,7 @@ local UI_TEXT = {
             skillStep = "Alcance %d de habilidade num ofício.", pets = "Companheiros domados: %d.", petLevel = "Veja um companheiro alcançar o seu nível.",
             companions = "Companheiros de estrada lembrados: %d.", reunions = "Reencontre alguém de uma masmorra.",
             guild = "Entre numa guilda.", party = "Junte-se a um grupo pela primeira vez.",
+            mounts = "Montarias reunidas: %d.", critters = "Mascotes reunidos: %d.",
             gold = "Tenha %d de ouro.", repFriendly = "Torne-se Amistoso com uma facção.", repHonored = "Torne-se Honrado com uma facção.", repExalted = "Chegue a Exaltado com uma facção.",
         },
         NAMES = {
@@ -77,6 +81,8 @@ local UI_TEXT = {
             pets1 = "Um Amigo da Natureza", pets5 = "Uma Matilha na Estrada", pets10 = "Todo o Bestiário",
             petLevel = "Lado a Lado, Nível a Nível", companions1 = "A Estrada Tem Companhia", companions5 = "Um Círculo de Amigos",
             reunions = "Velha Companhia, Reencontrada", guild = "Sob Uma Só Bandeira", party = "A Força do Grupo",
+            mounts1 = "O Primeiro Estribo", mounts5 = "Uma Cocheira Só Minha", mounts10 = "Cascos, Asas e Escamas",
+            critters1 = "Um Pequeno Companheiro", critters10 = "Bolsos Cheios de Amigos", critters25 = "Uma Arca de Bichinhos",
             gold10 = "Algumas Boas Moedas", gold100 = "Uma Bolsa Pesada", gold1000 = "O Tesouro de um Dragão",
             repFriendly = "Um Rosto Amigo", repHonored = "Hóspede de Honra", repExalted = "Entre os Exaltados",
         },
@@ -89,7 +95,7 @@ local UI_TEXT = {
         EMPTY = "Rien ici pour l'instant.",
         EVID = { chain = "«\194\160%s\194\160», une chaîne de %d quêtes.", hard = "%s (chutes avant lui\194\160: %d).", reunion = "Retrouvailles avec %s.", pet = "%s (%s).", petlevel = "%s a atteint mon niveau.", with = "Avec\194\160: %s." },
         OPEN_HINT = "Cliquez pour ouvrir la page dans le livre.",
-        CATS = { explorer = "Exploration", road = "La Route", story = "Histoires", war = "Guerre", craft = "Métiers", beasts = "Bêtes", company = "Compagnie", renown = "Fortune et renom" },
+        CATS = { explorer = "Exploration", road = "La Route", story = "Histoires", war = "Guerre", craft = "Métiers", beasts = "Bêtes", company = "Compagnie", collection = "Collection", renown = "Fortune et renom" },
         FACT = {
             zones = "Découvrez %d contrées.", flights = "Apprenez %d routes aériennes.", level = "Atteignez le niveau %d.",
             quests = "Accomplissez %d quêtes.", chains = "Chaînes de quêtes terminées\194\160: %d.", rareQ = "Accomplissez une quête rare ou mieux.",
@@ -98,6 +104,7 @@ local UI_TEXT = {
             skillStep = "Atteignez %d de compétence dans un métier.", pets = "Compagnons apprivoisés\194\160: %d.", petLevel = "Voyez un compagnon atteindre votre niveau.",
             companions = "Compagnons de route dont on se souvient\194\160: %d.", reunions = "Retrouvez quelqu'un d'un donjon.",
             guild = "Rejoignez une guilde.", party = "Rejoignez un groupe pour la première fois.",
+            mounts = "Montures réunies\194\160: %d.", critters = "Mascottes réunies\194\160: %d.",
             gold = "Possédez %d pièces d'or.", repFriendly = "Devenez Amical avec une faction.", repHonored = "Devenez Honoré avec une faction.", repExalted = "Atteignez Exalté avec une faction.",
         },
         NAMES = {
@@ -114,6 +121,8 @@ local UI_TEXT = {
             pets1 = "Un ami de la nature", pets5 = "Une meute sur la route", pets10 = "Tout le bestiaire",
             petLevel = "Côte à côte, niveau pour niveau", companions1 = "La route a de la compagnie", companions5 = "Un cercle d'amis",
             reunions = "Vieille compagnie, retrouvée", guild = "Sous une seule bannière", party = "La force du nombre",
+            mounts1 = "Le premier étrier", mounts5 = "Une écurie bien à moi", mounts10 = "Sabots, ailes et écailles",
+            critters1 = "Un petit compagnon", critters10 = "Des poches pleines d'amis", critters25 = "Une petite arche de bestioles",
             gold10 = "Quelques bonnes pièces", gold100 = "Une bourse bien lourde", gold1000 = "Le trésor d'un dragon",
             repFriendly = "Un visage ami", repHonored = "Hôte d'honneur", repExalted = "Parmi les exaltés",
         },
@@ -126,14 +135,15 @@ local TEX = "Interface\\AddOns\\Skald\\Textures\\"
 local CATS = {
     { key = "road", icon = "ev_level" }, { key = "explorer", icon = "ev_zone" }, { key = "story", icon = "ev_quest" },
     { key = "war", icon = "ev_boss" }, { key = "craft", icon = "ev_profession" },
-    { key = "beasts", icon = "ev_pet" }, { key = "company", icon = "ev_party" }, { key = "renown", icon = "st_gold" },
+    { key = "beasts", icon = "ev_pet" }, { key = "company", icon = "ev_party" }, { key = "collection", icon = "ev_mount" },
+    { key = "renown", icon = "st_gold" },
 }
 
 -- The goals: `fact` is read from the diary, `target` is what it must reach, `tier` is the rarity of the seal,
 -- `secret` keeps the name hidden until the feat is done.
 -- `since` is the version of the list in which a goal came: a diary that already looked at the list marks the ones that
 -- came later quietly (no page, no notice), whatever they find already done.
-local GOALS_VERSION = 2
+local GOALS_VERSION = 3
 local GOALS = {
     { id = "level10", cat = "road", tier = 1, fact = "level", target = 10, since = 2 },
     { id = "level20", cat = "road", tier = 2, fact = "level", target = 20, since = 2 },
@@ -175,6 +185,12 @@ local GOALS = {
     { id = "reunions", cat = "company", tier = 3, fact = "reunions", target = 1, secret = true },
     { id = "guild", cat = "company", tier = 1, fact = "guild", target = 1, since = 2 },
     { id = "party", cat = "company", tier = 1, fact = "party", target = 1, since = 2 },
+    { id = "mounts1", cat = "collection", tier = 2, fact = "mounts", target = 1, since = 3, coll = true },
+    { id = "mounts5", cat = "collection", tier = 3, fact = "mounts", target = 5, since = 3, coll = true },
+    { id = "mounts10", cat = "collection", tier = 4, fact = "mounts", target = 10, since = 3, coll = true },
+    { id = "critters1", cat = "collection", tier = 1, fact = "critters", target = 1, since = 3, coll = true },
+    { id = "critters10", cat = "collection", tier = 2, fact = "critters", target = 10, since = 3, coll = true },
+    { id = "critters25", cat = "collection", tier = 3, fact = "critters", target = 25, since = 3, coll = true },
     { id = "gold10", cat = "renown", tier = 1, fact = "gold", target = 10, since = 2 },
     { id = "gold100", cat = "renown", tier = 3, fact = "gold", target = 100, since = 2 },
     { id = "gold1000", cat = "renown", tier = 4, fact = "gold", target = 1000, since = 2 },
@@ -251,6 +267,9 @@ local function Facts()
     if type(exact.kills) == "number" then f.kills = math.max(f.kills, exact.kills) end
     if type(exact.bosses) == "number" then f.bosses = math.max(f.bosses, exact.bosses) end
     if type(exact.dungeons) == "number" then f.dungeons = math.max(f.dungeons, exact.dungeons) end
+    if type(exact.quests) == "number" then f.quests = math.max(f.quests, exact.quests) end
+    if type(exact.flights) == "number" then f.flights = math.max(f.flights, exact.flights) end
+    f.mounts, f.critters, f.collReady = exact.mounts or 0, exact.critters or 0, exact.collReady
     f.profs = Count(db.skills)
     local best = 0
     for _, step in pairs(db.skills or {}) do if type(step) == "number" and step > best then best = step end end
@@ -309,15 +328,18 @@ local function Check()
     local seenVersion = db.goalsVer or 1
     local facts = Facts()
     for _, g in ipairs(GOALS) do
-        if not db.goals[g.id] and (facts[g.fact] or 0) >= g.target then
-            -- a goal that came with a later version of the list is marked quietly the first time it is looked at
-            local quiet = silent or seenVersion < (g.since or 1)
+        -- a collection is read only once the game's journal has answered (an unloaded journal is not an empty one)
+        if not db.goals[g.id] and (facts[g.fact] or 0) >= g.target and (not g.coll or facts.collReady) then
+            -- a goal that came with a later version of the list is marked quietly the first time it is looked at;
+            -- so is a collection the first time the journal is read (what was owned before the diary is no feat of today)
+            local quiet = silent or seenVersion < (g.since or 1) or (g.coll and not db.collInit)
             db.goals[g.id] = { t = time(), retro = quiet or nil }
             if not quiet then
                 SkaldAPI.AddEntry("goal", g.id, nil, { tier = g.tier, m = false, x = false, y = false })
             end
         end
     end
+    if facts.collReady then db.collInit = true end
     db.goalsInit = true
     db.goalsVer = GOALS_VERSION
 end
