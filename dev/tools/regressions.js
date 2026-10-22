@@ -1260,6 +1260,19 @@ RES = (not all:find("1 quests", 1, true) and not all:find("1 falls", 1, true) an
   and all:find("1 quest", 1, true) and not all:find("{", 1, true)) and "ok" or "plural form wrong"`,
 });
 
+run('the Saga of falls the diary does not place does not invent a place, and the prologue only says where the first page was written', {
+  pre: SAGA_DIARY(1792000000, 'quest = 3, boss = 0, death = 4').replace('deathZones = { Duskwood = 3, Westfall = 1 }', 'deathZones = {}'),
+  body: `local seen, bad = false, nil
+for i = 1, 40 do
+  SkaldCharDB.stats.first = 1792000000 + i * 7919
+  for _, c in ipairs(ns.BuildSaga()) do
+    if c.key == "falls" then seen = true; if c.text:find("Duskwood") or c.text:lower():find("unknown") or c.text:find("?", 1, true) then bad = c.text end end
+    if c.key == "prologue" and (c.text:find("set out from") or c.text:find("starts in") or c.text:find("began in")) then bad = c.text end
+  end
+end
+RES = (seen and not bad) and "ok" or tostring(bad or "no falls chapter")`,
+});
+
 run('the Saga says "an Orc" and "an Undead", never "a Orc"', {
   pre: SAGA_DIARY() + `
 function UnitRace() return "Orc", "Orc" end`,

@@ -19,14 +19,14 @@ local TEXT = {
         },
         POOLS = {
             prologue = {
-                "My name is {name}. I am {a} {race} {class}, and my story begins on {date}, in {place}, with a first page and no notion of where the road would lead.",
+                "My name is {name}. I am {a} {race} {class}, and the first page of this diary was written on {date}, in {place}, with no notion of where the road would lead.",
                 "On {date}, in {place}, I first set quill to paper. {name} the {race} {class}: a name that meant little then, and means more with every page.",
-                "Every saga starts small. Mine started in {place}, on {date}, when {a} {race} {class} named {name} decided that the road deserved to be remembered.",
-                "I did not set out to become a tale. I set out from {place} on {date}, {a} {race} {class}, and the tale simply followed me.",
-                "They will say it began in {place}. It did, on {date}, with a {class} who had yet to learn what the road would ask.",
-                "Let it be written: on {date}, in {place}, {name} took the first step. {A} {race} {class}, with a satchel, a name, and a long road ahead.",
+                "Every saga starts small. Mine begins on a page written in {place}, on {date}, by {a} {race} {class} named {name}, who decided that the road deserved to be remembered.",
+                "I did not set out to become a tale. I only began to write, on {date}, in {place}, {a} {race} {class}, and the tale simply followed the quill.",
+                "They will say the story begins where the diary does. It does: {place}, {date}, with {a} {class} who had yet to learn what the road would ask.",
+                "Let it be written: on {date}, in {place}, {name} opened this book. {A} {race} {class}, with a satchel, a name, and a long road ahead.",
                 "The first page is dated {date}, and it was written in {place}. I was only {a} {race} {class} then, and I am still, but now I have a story to prove it.",
-                "Before the legend, the beginning: {place}, {date}, {a} {race} {class} called {name}. Small things, true things, the kind every saga is built on.",
+                "Before the legend, the first page: {place}, {date}, {a} {race} {class} called {name}. Small things, true things, the kind every saga is built on.",
             },
             road = {
                 "Level by level the road taught me its lessons. I stand at level {level} now, and it was in {place} that I last climbed.",
@@ -69,14 +69,24 @@ local TEXT = {
                 "{boss} stood between me and the next chapter, and charged a toll of {#tries:fall|falls}. I paid, and passed.",
             },
             falls = {
-                "I have fallen, and I will not pretend otherwise: {#n:fall|falls} in all, and it was in {place} that I fell most.",
-                "A hero is measured by the rising as much as by the glory. I have risen after {#n:fall|falls}, with {place} as the harshest teacher.",
-                "Death has been a stranger to no one on this road. I met it {#n:time|times}, and in {place} it called the loudest.",
-                "The spirit healer knows my face: {#n:visit|visits}. The land that asked the most of me was {place}.",
-                "Not every page is a triumph. Some are the quiet after a fall, {#n:page|pages} of them, with {place} the author of most.",
-                "I fell in {place} more than anywhere, and I got up every time, after {#n:fall|falls} in all.",
-                "Ask me about the ground I know best and I will say {place}, from lying on it, among {#n:fall|falls} in all.",
-                "Every fall left a lesson, and {place} gave the hardest. {#n:lesson|lessons} learned the hard way.",
+                "I have fallen, and I will not pretend otherwise: {#n:fall|falls} in all.",
+                "A hero is measured by the rising as much as by the glory. I have risen after {#n:fall|falls}.",
+                "Death has been a stranger to no one on this road. I met it {#n:time|times}.",
+                "The spirit healer knows my face: {#n:visit|visits}.",
+                "Not every page is a triumph. Some are the quiet after a fall: {#n:page|pages} of them.",
+                "I got up every time, after {#n:fall|falls} in all.",
+                "Every fall left a lesson: {#n:lesson|lessons} learned the hard way.",
+                "I have lain on the ground more often than I like to admit: {#n:fall|falls}, and every one earned.",
+            },
+            fallsPlace = {
+                "It was in {place} that I fell most.",
+                "{place} was the harshest teacher.",
+                "In {place}, death called the loudest.",
+                "The land that asked the most of me was {place}.",
+                "I know the ground of {place} better than most, from lying on it.",
+                "{place} took more from me than any other land.",
+                "If I fall again, I would rather it not be in {place}.",
+                "Ask me where it hurt most and I will say {place}.",
             },
             company = {
                 "I did not walk alone. I have chosen to remember {#n:face|faces} along the road.",
@@ -138,14 +148,14 @@ local TEXT = {
         },
         POOLS = {
             prologue = {
-                "Meu nome é {name}. Sou {g:um|uma} {race} {class}, e a minha história começa em {date}, em {place}, com uma primeira página e nenhuma ideia de aonde a estrada me levaria.",
+                "Meu nome é {name}. Sou {g:um|uma} {race} {class}, e a primeira página deste diário foi escrita em {date}, em {place}, sem ideia de aonde a estrada me levaria.",
                 "Em {date}, em {place}, pus a pena no papel pela primeira vez. {name}, {g:um|uma} {race} {class}: um nome que pouco dizia então e que diz mais a cada página.",
-                "Toda saga começa pequena. A minha começou em {place}, em {date}, quando {g:um|uma} {race} {class} chamad{g:o|a} {name} decidiu que a estrada merecia ser lembrada.",
-                "Não parti para virar história. Parti de {place} em {date}, {g:um|uma} {race} {class}, e a história simplesmente me seguiu.",
-                "Dirão que tudo começou em {place}. Começou, sim, em {date}, com {g:um|uma} {class} que ainda não sabia o que a estrada iria pedir.",
-                "Fique escrito: em {date}, em {place}, {name} deu o primeiro passo. {g:Um|Uma} {race} {class}, com uma bolsa, um nome e uma longa estrada pela frente.",
+                "Toda saga começa pequena. A minha começa numa página escrita em {place}, em {date}, por {g:um|uma} {race} {class} chamad{g:o|a} {name}, que decidiu que a estrada merecia ser lembrada.",
+                "Não parti para virar história. Só comecei a escrever, em {date}, em {place}, {g:um|uma} {race} {class}, e a história seguiu a pena.",
+                "Dirão que a história começa onde o diário começa. Começa: {place}, {date}, com {g:um|uma} {class} que ainda não sabia o que a estrada iria pedir.",
+                "Fique escrito: em {date}, em {place}, {name} abriu este livro. {g:Um|Uma} {race} {class}, com uma bolsa, um nome e uma longa estrada pela frente.",
                 "A primeira página tem a data de {date} e foi escrita em {place}. Eu era só {g:um|uma} {race} {class} então, e ainda sou, mas agora tenho uma história para provar.",
-                "Antes da lenda, o começo: {place}, {date}, {g:um|uma} {race} {class} chamad{g:o|a} {name}. Coisas pequenas, coisas verdadeiras, aquelas de que toda saga é feita.",
+                "Antes da lenda, a primeira página: {place}, {date}, {g:um|uma} {race} {class} chamad{g:o|a} {name}. Coisas pequenas, coisas verdadeiras, aquelas de que toda saga é feita.",
             },
             road = {
                 "Nível a nível a estrada me ensinou as suas lições. Estou no nível {level}, e foi em {place} que subi pela última vez.",
@@ -188,14 +198,24 @@ local TEXT = {
                 "{boss} se pôs entre mim e o capítulo seguinte, e cobrou um pedágio de {#tries:queda|quedas}. Paguei, e passei.",
             },
             falls = {
-                "Caí, e não vou fingir o contrário: {#n:queda|quedas} ao todo, e foi em {place} que mais caí.",
-                "Um herói se mede tanto pelo levantar quanto pela glória. Levantei-me depois de {#n:queda|quedas}, e {place} foi a mestra mais dura.",
-                "A morte não foi estranha a ninguém nesta estrada. Encontrei-a {#n:vez|vezes}, e em {place} ela chamou mais alto.",
-                "O curandeiro de espíritos conhece o meu rosto: {#n:visita|visitas}. A terra que mais me exigiu foi {place}.",
-                "Nem toda página é triunfo. Algumas são o silêncio depois de uma queda, {#n:página|páginas} delas, com {place} como autora da maioria.",
-                "Caí em {place} mais do que em qualquer lugar, e me levantei todas as vezes, depois de {#n:queda|quedas} ao todo.",
-                "Pergunte-me pelo chão que melhor conheço e direi {place}, de tanto deitar nele, entre {#n:queda|quedas} ao todo.",
-                "Cada queda deixou uma lição, e {place} deu a mais dura. {#n:lição aprendida|lições aprendidas} do jeito difícil.",
+                "Caí, e não vou fingir o contrário: {#n:queda|quedas} ao todo.",
+                "Um herói se mede tanto pelo levantar quanto pela glória. Levantei-me depois de {#n:queda|quedas}.",
+                "A morte não foi estranha a ninguém nesta estrada. Encontrei-a {#n:vez|vezes}.",
+                "O curandeiro de espíritos conhece o meu rosto: {#n:visita|visitas}.",
+                "Nem toda página é triunfo. Algumas são o silêncio depois de uma queda: {#n:página|páginas} delas.",
+                "Levantei-me todas as vezes, depois de {#n:queda|quedas} ao todo.",
+                "Cada queda deixou uma lição: {#n:lição aprendida|lições aprendidas} do jeito difícil.",
+                "Deitei no chão mais vezes do que gosto de admitir: {#n:queda|quedas}, e cada uma bem ganha.",
+            },
+            fallsPlace = {
+                "Foi em {place} que mais caí.",
+                "{place} foi a mestra mais dura.",
+                "Em {place}, a morte chamou mais alto.",
+                "A terra que mais me exigiu foi {place}.",
+                "Conheço o chão de {place} melhor que a maioria, de tanto deitar nele.",
+                "{place} me tomou mais do que qualquer outra terra.",
+                "Se eu cair de novo, preferiria que não fosse em {place}.",
+                "Pergunte onde mais doeu e direi {place}.",
             },
             company = {
                 "Não caminhei {g:sozinho|sozinha}. Escolhi lembrar {#n:rosto|rostos} ao longo da estrada.",
@@ -257,14 +277,14 @@ local TEXT = {
         },
         POOLS = {
             prologue = {
-                "Je m'appelle {name}. Je suis {g:un|une} {race} {class}, et mon histoire commence le {date}, à {place}, avec une première page et nulle idée de là où la route me mènerait.",
+                "Je m'appelle {name}. Je suis {g:un|une} {race} {class}, et la première page de ce journal a été écrite le {date}, à {place}, sans nulle idée de là où la route me mènerait.",
                 "Le {date}, à {place}, j'ai posé la plume sur le papier pour la première fois. {name}, {g:un|une} {race} {class}\194\160: un nom qui disait peu alors, et qui en dit plus à chaque page.",
-                "Toute saga commence petite. La mienne a commencé à {place}, le {date}, quand {g:un|une} {race} {class} nommé{g:|e} {name} a décidé que la route méritait d'être retenue.",
-                "Je ne suis pas parti{g:|e} pour devenir une histoire. Je suis parti{g:|e} de {place} le {date}, {g:un|une} {race} {class}, et l'histoire m'a simplement suivi{g:|e}.",
-                "On dira que tout a commencé à {place}. C'est vrai, le {date}, avec {g:un|une} {class} qui ignorait encore ce que la route allait lui demander.",
-                "Qu'il soit écrit\194\160: le {date}, à {place}, {name} a fait le premier pas. {g:Un|Une} {race} {class}, avec une besace, un nom et une longue route devant soi.",
+                "Toute saga commence petite. La mienne commence par une page écrite à {place}, le {date}, par {g:un|une} {race} {class} nommé{g:|e} {name}, qui a décidé que la route méritait d'être retenue.",
+                "Je ne suis pas parti{g:|e} pour devenir une histoire. J'ai seulement commencé à écrire, le {date}, à {place}, {g:un|une} {race} {class}, et l'histoire a suivi la plume.",
+                "On dira que l'histoire commence là où commence le journal. C'est vrai\194\160: {place}, le {date}, avec {g:un|une} {class} qui ignorait encore ce que la route allait lui demander.",
+                "Qu'il soit écrit\194\160: le {date}, à {place}, {name} a ouvert ce livre. {g:Un|Une} {race} {class}, avec une besace, un nom et une longue route devant soi.",
                 "La première page porte la date du {date} et fut écrite à {place}. Je n'étais alors qu'{g:un|une} {race} {class}, et je le suis encore, mais j'ai désormais une histoire pour le prouver.",
-                "Avant la légende, le commencement\194\160: {place}, le {date}, {g:un|une} {race} {class} nommé{g:|e} {name}. Des choses petites, des choses vraies, celles dont toute saga est faite.",
+                "Avant la légende, la première page\194\160: {place}, le {date}, {g:un|une} {race} {class} nommé{g:|e} {name}. Des choses petites, des choses vraies, celles dont toute saga est faite.",
             },
             road = {
                 "Niveau après niveau, la route m'a enseigné ses leçons. Je suis au niveau {level}, et c'est à {place} que j'ai grandi pour la dernière fois.",
@@ -307,14 +327,24 @@ local TEXT = {
                 "{boss} s'est dressé entre moi et le chapitre suivant, et a exigé un péage de {#tries:chute|chutes}. J'ai payé, et je suis passé{g:|e}.",
             },
             falls = {
-                "Je suis tombé{g:|e}, et je ne ferai pas semblant du contraire\194\160: {#n:chute|chutes} au total, et c'est à {place} que je suis le plus tombé{g:|e}.",
-                "On mesure un héros autant à son relèvement qu'à sa gloire. Je me suis relevé{g:|e} après {#n:chute|chutes}, et {place} fut la maîtresse la plus dure.",
-                "La mort n'a été étrangère à personne sur cette route. Je l'ai croisée {#n:fois|fois}, et c'est à {place} qu'elle a appelé le plus fort.",
-                "Le guérisseur des esprits connaît mon visage\194\160: {#n:visite|visites}. La contrée qui m'a le plus demandé fut {place}.",
-                "Toutes les pages ne sont pas des triomphes. Certaines sont le silence après une chute, {#n:page|pages} de cette sorte, avec {place} pour auteur de la plupart.",
-                "Je suis tombé{g:|e} à {place} plus qu'ailleurs, et je me suis relevé{g:|e} chaque fois, après {#n:chute|chutes} au total.",
-                "Demandez-moi quel sol je connais le mieux et je dirai {place}, à force d'y être couché{g:|e}, parmi {#n:chute|chutes} au total.",
-                "Chaque chute a laissé une leçon, et {place} a donné la plus dure. {#n:leçon apprise|leçons apprises} à la dure.",
+                "Je suis tombé{g:|e}, et je ne ferai pas semblant du contraire\194\160: {#n:chute|chutes} au total.",
+                "On mesure un héros autant à son relèvement qu'à sa gloire. Je me suis relevé{g:|e} après {#n:chute|chutes}.",
+                "La mort n'a été étrangère à personne sur cette route. Je l'ai croisée {#n:fois|fois}.",
+                "Le guérisseur des esprits connaît mon visage\194\160: {#n:visite|visites}.",
+                "Toutes les pages ne sont pas des triomphes. Certaines sont le silence après une chute\194\160: {#n:page|pages} de cette sorte.",
+                "Je me suis relevé{g:|e} chaque fois, après {#n:chute|chutes} au total.",
+                "Chaque chute a laissé une leçon\194\160: {#n:leçon apprise|leçons apprises} à la dure.",
+                "J'ai goûté le sol plus souvent que je ne l'avoue\194\160: {#n:chute|chutes}, et chacune bien méritée.",
+            },
+            fallsPlace = {
+                "C'est à {place} que je suis le plus tombé{g:|e}.",
+                "{place} fut la maîtresse la plus dure.",
+                "À {place}, la mort a appelé le plus fort.",
+                "La contrée qui m'a le plus demandé fut {place}.",
+                "Je connais le sol de {place} mieux que la plupart, à force d'y être couché{g:|e}.",
+                "{place} m'a pris plus que toute autre contrée.",
+                "Si je tombe encore, je préférerais que ce ne soit pas à {place}.",
+                "Demandez-moi où cela a fait le plus mal et je dirai {place}.",
             },
             company = {
                 "Je n'ai pas marché seul{g:|e}. J'ai choisi de retenir {#n:visage|visages} le long de la route.",
@@ -499,7 +529,9 @@ ns.BuildSaga = function()
         Add("war", parts)
     end
     if v.deaths > 0 then
-        Add("falls", { { "falls", { n = v.deaths, place = v.deathPlace or ns.LOCALES[GetLocale()] and ns.LOCALES[GetLocale()].UNKNOWN_ZONE or "?" } } })
+        local parts = { { "falls", { n = v.deaths } } }
+        if v.deathPlace then parts[#parts + 1] = { "fallsPlace", { place = v.deathPlace } } end
+        Add("falls", parts)
     end
     if v.companions > 0 then
         local parts = { { "company", { n = v.companions } } }
