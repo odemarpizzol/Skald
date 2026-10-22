@@ -194,6 +194,7 @@
   "select",
   "table",
   "time",
+  "tonumber",
   "tostring",
   "type"
  ],

@@ -8,6 +8,8 @@ local function widget()
     if k=="SetAlpha" then return function(self,v) t._alpha=v end end
     if k=="GetAlpha" then return function() return t._alpha or 1 end end
     if k=="CreateFontString" then return function() local w=widget(); table.insert(FONTS,w); return w end end
+    if k=="SetEnabled" then return function(self,v) t._enabled=v end end
+    if k=="IsEnabled" then return function() return t._enabled ~= false end end
     if k=="SetText" then return function(self,v) t._text=v end end
     if k=="GetText" then return function() return t._text end end
     if k=="GetVerticalScrollRange" then return function() return RANGE or 0 end end

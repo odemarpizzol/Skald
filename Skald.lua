@@ -3543,7 +3543,6 @@ SkaldAPI.Collections = K.Collections
 SkaldAPI.GameFacts = function()
     local out = {}
     out.quests = GameStat(K.STAT_QUESTS)
-    out.flights = GameStat(349)
     local coll = K.Collections()
     out.mounts, out.critters, out.collReady = coll.mounts, coll.critters, coll.ready
     local kills = KillStat()

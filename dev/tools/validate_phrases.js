@@ -82,11 +82,11 @@ do
     local T = ns.SagaTexts["${loc}"]
     local E = ns.SagaTexts.enUS
     local ALLOWED = {
-        prologue = "name race class date place", road = "level place days", stories = "n", war = "n", warHard = "boss tries",
+        prologue = "name race class date place a A", road = "level place days", stories = "n", war = "n", warHard = "boss tries",
         falls = "n place", company = "n", companyNames = "names", marks = "n points title", epilogue = "name level pages title",
         epilogueTop = "name pages title",
     }
-    local MUST = { prologue = "date place", road = "level place days", stories = "n", war = "n", warHard = "boss tries",
+    local MUST = { prologue = "date place", road = "level place", stories = "n", war = "n", warHard = "boss tries",
         falls = "n place", company = "n", companyNames = "names", marks = "n points title", epilogue = "level", epilogueTop = "pages" }
     local COMBAT = { war = true, warHard = true, falls = true }
     local words = { ${FORBID[loc === 'enUS' ? 'en' : 'pt'].map(w => JSON.stringify(w)).join(', ')} }
@@ -100,6 +100,10 @@ do
             for i, ph in ipairs(pool) do
                 local where = "SAGA " .. key .. "#" .. i
                 local seen = {}
+                for tag in ph:gmatch("{#(%a+):") do
+                    seen[tag] = true
+                    if not (" " .. ALLOWED[key] .. " "):find(" " .. tag .. " ", 1, true) then problems[#problems+1] = where .. " tag {#" .. tag .. "}" end
+                end
                 for tag in ph:gmatch("{(%a+)}") do
                     seen[tag] = true
                     if not (" " .. ALLOWED[key] .. " "):find(" " .. tag .. " ", 1, true) then problems[#problems+1] = where .. " tag {" .. tag .. "}" end
@@ -108,7 +112,7 @@ do
                     if not seen[must] then problems[#problems+1] = where .. " lacks {" .. must .. "}" end
                 end
                 for tag in ph:gmatch("{[^}]*}") do
-                    if not tag:match("^{%a+}$") and not tag:match("^{g:[^|}]*|[^}]*}$") then problems[#problems+1] = where .. " bad tag " .. tag end
+                    if not tag:match("^{%a+}$") and not tag:match("^{g:[^|}]*|[^}]*}$") and not tag:match("^{#%a+:[^|}]*|[^}]*}$") then problems[#problems+1] = where .. " bad tag " .. tag end
                 end
                 if #ph > 330 then problems[#problems+1] = where .. " too long (" .. #ph .. ")" end
                 local low = ph:lower()
@@ -118,7 +122,7 @@ do
                     end
                 end
                 if "${loc}" == "frFR" then
-                    local plain = ph:gsub("{g:[^}]*}", "")
+                    local plain = (ph:gsub("{g:[^}]*}", "")):gsub("{#[^}]*}", "")
                     for _, mark in ipairs({ ":", ";", "?", "!" }) do
                         local at = 1
                         while true do

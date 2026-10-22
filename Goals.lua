@@ -156,9 +156,9 @@ local GOALS = {
     { id = "zones15", cat = "explorer", tier = 3, fact = "zones", target = 15, since = 2 },
     { id = "flights5", cat = "explorer", tier = 1, fact = "flights", target = 5 },
     { id = "flights15", cat = "explorer", tier = 3, fact = "flights", target = 15 },
-    { id = "quests50", cat = "story", tier = 1, fact = "quests", target = 50, since = 2 },
-    { id = "quests150", cat = "story", tier = 2, fact = "quests", target = 150, since = 2 },
-    { id = "quests400", cat = "story", tier = 4, fact = "quests", target = 400, since = 2 },
+    { id = "quests50", cat = "story", tier = 1, fact = "quests", target = 50, since = 3 },
+    { id = "quests150", cat = "story", tier = 2, fact = "quests", target = 150, since = 3 },
+    { id = "quests400", cat = "story", tier = 4, fact = "quests", target = 400, since = 3 },
     { id = "rareQ", cat = "story", tier = 2, fact = "rareQ", target = 1, since = 2 },
     { id = "epicQ", cat = "story", tier = 4, fact = "epicQ", target = 1, since = 2 },
     { id = "chains1", cat = "story", tier = 3, fact = "chains", target = 1, secret = true },
@@ -280,7 +280,6 @@ local function Facts()
     if type(exact.bosses) == "number" then f.bosses = math.max(f.bosses, exact.bosses) end
     if type(exact.dungeons) == "number" then f.dungeons = math.max(f.dungeons, exact.dungeons) end
     if type(exact.quests) == "number" then f.quests = math.max(f.quests, exact.quests) end
-    if type(exact.flights) == "number" then f.flights = math.max(f.flights, exact.flights) end
     f.mounts, f.critters, f.collReady = exact.mounts or 0, exact.critters or 0, exact.collReady
     f.profs = Count(db.skills)
     local best = 0

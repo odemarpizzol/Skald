@@ -1229,6 +1229,85 @@ end
 RES = (ok and counts[1] <= counts[3] and counts[3] <= counts[4] and counts[4] > counts[1]) and "ok" or (why .. " pages=" .. table.concat(counts, "/"))`,
 });
 
+for (const [loc, pats] of [['enUS', ['count', 'tally']], ['ptBR', ['%f[%a]conta%f[%A]']], ['frFR', ['%f[%a]compte%f[%A]']]]) {
+  run(`the Saga of ${loc} does not count in every chapter: at most two chapters use the counting formula`, {
+    pre: `__locale = "${loc}"; ${SAGA_DIARY()}`,
+    body: `local worst, at = 0, 0
+for i = 1, 60 do
+  SkaldCharDB.stats.first = 1792000000 + i * 7919
+  local n = 0
+  for _, c in ipairs(ns.BuildSaga()) do
+    local low = c.text:lower()
+    for _, p in ipairs({ ${pats.map(p => JSON.stringify(p)).join(', ')} }) do
+      if low:find(p) then n = n + 1; break end
+    end
+  end
+  if n > worst then worst, at = n, i end
+end
+RES = (worst <= 2) and "ok" or ("a Saga counted in " .. worst .. " chapters (seed " .. at .. ")")`,
+  });
+}
+
+run('the Saga writes the singular for one and the plural for many', {
+  pre: SAGA_DIARY(1792000000, 'quest = 1, boss = 1, death = 1'),
+  body: `local text = {}
+for i = 1, 40 do
+  SkaldCharDB.stats.first = 1792000000 + i * 7919
+  for _, c in ipairs(ns.BuildSaga()) do text[#text + 1] = c.text end
+end
+local all = table.concat(text, " ")
+RES = (not all:find("1 quests", 1, true) and not all:find("1 falls", 1, true) and not all:find("1 bosses", 1, true) and not all:find("1 days", 1, true)
+  and all:find("1 quest", 1, true) and not all:find("{", 1, true)) and "ok" or "plural form wrong"`,
+});
+
+run('the Saga says "an Orc" and "an Undead", never "a Orc"', {
+  pre: SAGA_DIARY() + `
+function UnitRace() return "Orc", "Orc" end`,
+  body: `local bad
+for i = 1, 40 do
+  SkaldCharDB.stats.first = 1792000000 + i * 7919
+  local text = ns.BuildSaga()[1].text
+  if text:find("[Aa] Orc") then bad = text end
+end
+UnitRace = function() return "Undead", "Scourge" end
+for i = 1, 40 do
+  SkaldCharDB.stats.first = 1792000000 + i * 104729
+  local text = ns.BuildSaga()[1].text
+  if text:find("[Aa] Undead") then bad = text end
+end
+RES = (not bad) and "ok" or bad`,
+});
+
+run('goals whose source changed come quietly to a diary that already looked (the game counts more quests than the diary)', {
+  pre: SAVED('{}', 'version = 99, goalsInit = true, goalsVer = 2, goals = { level10 = { t = 1 }, level20 = { t = 1 } }, stats = { counts = { quest = 30 }, deathZones = {}, tiers = {}, played = 1, first = 1 }') + `
+function GetStatistic(id) if id == 98 then return "200" end return "--" end`,
+  body: `local g = SkaldCharDB.goals
+RES = (count("goal") == 0 and g.quests50 and g.quests50.retro and g.quests150 and g.quests150.retro and not g.quests400)
+  and "ok" or ("pages=" .. count("goal") .. " q50=" .. tostring(g.quests50 and g.quests50.retro))`,
+});
+
+run('the Saga tab turns its pages through the corners: the first spread cannot go back, the last cannot go on, and both can turn in between', {
+  pre: SAGA_DIARY(),
+  body: `local tab = btn("Saga")
+tab._OnClick(tab)
+local prev, nextB
+for _, f in ipairs(frames) do
+  if f._OnClick and rawget(f, "tex") and rawget(f, "_alpha") then
+    if f._alpha < 1 then prev = f else nextB = f end
+  end
+end
+if not (prev and nextB) then RES = "corners not found" else
+  local first = prev._alpha < 1 and nextB._alpha == 1
+  local guard = 0
+  while nextB._alpha == 1 and guard < 10 do nextB._OnClick(nextB); guard = guard + 1 end
+  local last = nextB._alpha < 1 and prev._alpha == 1
+  prev._OnClick(prev)
+  local back = nextB._alpha == 1
+  RES = (first and last and back and guard >= 1 and SkaldDB.errors == nil) and "ok"
+    or ("first=" .. tostring(first) .. " last=" .. tostring(last) .. " back=" .. tostring(back) .. " turns=" .. guard)
+end`,
+});
+
 run('the Saga tab opens, turns its pages and raises no error', {
   pre: SAGA_DIARY(),
   body: `local tab = btn("Saga")
