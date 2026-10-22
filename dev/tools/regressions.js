@@ -1261,7 +1261,11 @@ RES = (not all:find("1 quests", 1, true) and not all:find("1 falls", 1, true) an
 });
 
 run('the Saga of falls the diary does not place does not invent a place, and the prologue only says where the first page was written', {
-  pre: SAGA_DIARY(1792000000, 'quest = 3, boss = 0, death = 4').replace('deathZones = { Duskwood = 3, Westfall = 1 }', 'deathZones = {}'),
+  pre: SAVED(`{
+  { t = 1792000000, kind = "zone", arg = "Elwynn Forest", zone = "Elwynn Forest", idx = 1 },
+  { t = 1792090000, kind = "level", arg = 10, zone = "Westfall", idx = 1 },
+}`, 'stats = { counts = {}, deathZones = {}, tiers = {}, played = 1, first = 1792000000 }, goals = {}, goalsInit = true, goalsVer = 3') + `
+function GetStatistic(id) if id == 60 then return "7" end return "--" end`,
   body: `local seen, bad = false, nil
 for i = 1, 40 do
   SkaldCharDB.stats.first = 1792000000 + i * 7919
