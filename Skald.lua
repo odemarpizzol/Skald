@@ -5947,6 +5947,17 @@ local function BuildReader(scope)
         lines[#lines + 1] = K.ReaderLine("G", id, type(rec) == "table" and rec.t or 0, (type(rec) == "table" and rec.retro) and 1 or 0,
             ns.GoalPoints and ns.GoalPoints(id) or 0)
     end
+    -- the Saga, chapter by chapter (the names of the companions hidden like in the pages)
+    if ns.BuildSaga then
+        local okSaga, chapters = pcall(ns.BuildSaga)
+        if okSaga then
+            for _, c in ipairs(chapters) do
+                local text = c.text
+                if hide then text = HideNames(text, {}) end
+                lines[#lines + 1] = K.ReaderLine("V", c.key, c.title, text)
+            end
+        end
+    end
     local summary = #lines
     for _, e in ipairs(entries) do
         local body = PlainText(RenderEntry(e))

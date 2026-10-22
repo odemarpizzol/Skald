@@ -54,6 +54,8 @@ button.quiet:hover:not(:disabled) { background: rgba(120,80,30,.12); }
 h2 { font-family: "Cinzel", serif; font-weight: 500; text-align: center; color: var(--head); letter-spacing: .06em; font-size: 1.45rem; margin: 6px 0 2px; text-transform: uppercase; }
 h2.small { font-size: 1.1rem; }
 .sub { text-align: center; color: var(--muted); font-size: .95rem; margin: 0 0 8px; }
+p.saga { margin: 0 0 10px; line-height: 1.5; font-size: 1.08rem; color: var(--ink); text-align: left; }
+h2.chapter { margin-top: 18px; }
 .rule { display: block; margin: 4px auto 10px; width: 130px; height: 11px; background: url("img/b_rule.png") 0 0 / 160px 14px no-repeat; }
 .entry { display: grid; grid-template-columns: 26px 44px 1fr 18px; gap: 6px; align-items: start; padding: 5px 0; line-height: 1.25; font-size: 1.02rem; }
 .entry img { width: 24px; height: 24px; margin-top: 1px; }

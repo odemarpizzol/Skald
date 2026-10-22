@@ -927,7 +927,7 @@ for n, text in ipairs(parts) do
   if tonumber(fields[12]) ~= h or tonumber(fields[10]) ~= n or tonumber(fields[11]) ~= #parts then ok = false end
   for line in (body .. nl):gmatch("([^" .. nl .. "]*)" .. nl) do
     if line:sub(1, 2) == "P^" then total = total + 1 end
-    if line ~= "" and not line:match("^[SNTGP]%^") then ok = false end
+    if line ~= "" and not line:match("^[SNTGVP]%^") then ok = false end
   end
 end
 RES = (#parts >= 2 and ok and total >= 400) and "ok" or ("parts=" .. #parts .. " ok=" .. tostring(ok) .. " pages=" .. total)`,

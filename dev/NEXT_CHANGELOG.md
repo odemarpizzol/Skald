@@ -11,3 +11,4 @@
 - Goals: quests and flight paths now also use the game's own statistics (the larger of the game's count and the diary's); `/skald report` shows the mounts and pets collected.
 - The Saga: a new tab that tells the whole diary as a short book (prologue, the road, quests, bosses, falls, company, seals, epilogue), in the first person, in English, Portuguese and French. It is built from the diary and the game's own statistics, and the same diary always gives the same Saga.
 - The Saga's prologue now tells where the race is born (the starting valley and land, named by the game in the client's language) and the first page of the diary when it was written elsewhere.
+- The Reader (and its export text) now carries the Saga: it opens after the index, with its own line in the index. The names of companions are hidden in it like in the pages.

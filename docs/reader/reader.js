@@ -13,7 +13,7 @@
       privacy: 'Nothing leaves this page: the text is read by your browser and is not sent anywhere.',
       part: 'Part %1 of %2', partBad: 'Part %1: incomplete copy', waiting: 'waiting for part %1',
       ready: 'All parts are here. You can open the book.', mixed: 'These parts are from different diaries. Clear and paste again.',
-      empty: 'Paste the text from the game.', diaryOf: 'Diary of %1', level: 'level %1 %2', story: 'The story so far', days: 'Days', index: 'Index',
+      empty: 'Paste the text from the game.', diaryOf: 'Diary of %1', level: 'level %1 %2', story: 'The story so far', saga: 'The Saga', days: 'Days', index: 'Index',
       day: 'Day %1', pages: 'Pages %1–%2 of %3', cover: 'Cover', first: 'First page written', played: 'Time on the road', goals: 'Goals reached', points: 'Goal points',
       stat: { quest: 'Quests completed', level: 'Levels earned', death: 'Times I fell', dungeon: 'Dungeons visited', boss: 'Bosses defeated', kill: 'Creatures defeated' },
       date: function (d) { return d.toLocaleDateString('en-US'); }, hours: '%1h %2min', minutes: '%1min', tier: ['Trivial', 'Common', 'Uncommon', 'Rare', 'Epic', 'Legendary'],
@@ -28,7 +28,7 @@
       privacy: 'Nada sai desta página: o texto é lido pelo seu navegador e não é enviado a lugar nenhum.',
       part: 'Parte %1 de %2', partBad: 'Parte %1: cópia incompleta', waiting: 'falta a parte %1',
       ready: 'Todas as partes chegaram. Pode abrir o livro.', mixed: 'Essas partes são de diários diferentes. Limpe e cole de novo.',
-      empty: 'Cole o texto que veio do jogo.', diaryOf: 'Diário de %1', level: 'nível %1 %2', story: 'A história até aqui', days: 'Dias', index: 'Índice',
+      empty: 'Cole o texto que veio do jogo.', diaryOf: 'Diário de %1', level: 'nível %1 %2', story: 'A história até aqui', saga: 'A Saga', days: 'Dias', index: 'Índice',
       day: 'Dia %1', pages: 'Páginas %1–%2 de %3', cover: 'Capa', first: 'Primeira página escrita', played: 'Tempo na estrada', goals: 'Metas cumpridas', points: 'Pontos de metas',
       stat: { quest: 'Missões cumpridas', level: 'Níveis conquistados', death: 'Vezes que caí', dungeon: 'Masmorras visitadas', boss: 'Chefes derrotados', kill: 'Criaturas vencidas' },
       date: function (d) { return d.toLocaleDateString('pt-BR'); }, hours: '%1h %2min', minutes: '%1min', tier: ['Trivial', 'Comum', 'Incomum', 'Rara', 'Épica', 'Lendária'],
@@ -43,7 +43,7 @@
       privacy: 'Rien ne quitte cette page : le texte est lu par votre navigateur et n’est envoyé nulle part.',
       part: 'Partie %1 sur %2', partBad: 'Partie %1 : copie incomplète', waiting: 'partie %1 manquante',
       ready: 'Toutes les parties sont là. Vous pouvez ouvrir le livre.', mixed: 'Ces parties viennent de journaux différents. Effacez et recollez.',
-      empty: 'Collez le texte venu du jeu.', diaryOf: 'Journal de %1', level: 'niveau %1 %2', story: 'L’histoire jusqu’ici', days: 'Jours', index: 'Index',
+      empty: 'Collez le texte venu du jeu.', diaryOf: 'Journal de %1', level: 'niveau %1 %2', story: 'L’histoire jusqu’ici', saga: 'La Saga', days: 'Jours', index: 'Index',
       day: 'Jour %1', pages: 'Pages %1–%2 sur %3', cover: 'Couverture', first: 'Première page écrite', played: 'Temps sur la route', goals: 'Objectifs atteints', points: 'Points d\'objectifs',
       stat: { quest: 'Quêtes accomplies', level: 'Niveaux gagnés', death: 'Fois où je suis tombé', dungeon: 'Donjons visités', boss: 'Boss vaincus', kill: 'Créatures vaincues' },
       date: function (d) { return d.toLocaleDateString('fr-FR'); }, hours: '%1 h %2 min', minutes: '%1 min', tier: ['Trivial', 'Commun', 'Peu commun', 'Rare', 'Épique', 'Légendaire'],
@@ -96,7 +96,7 @@
   function build(parts) {
     var first = parts[0];
     var model = { name: first.name, cls: first.cls, race: first.race, level: first.level, tone: first.tone, locale: first.locale, total: first.total,
-      first: 0, played: 0, counts: {}, tiers: {}, goals: 0, points: 0, pages: [] };
+      first: 0, played: 0, counts: {}, tiers: {}, goals: 0, points: 0, saga: [], pages: [] };
     parts.forEach(function (p) {
       p.body.split('\n').forEach(function (line) {
         if (!line) return;
@@ -105,6 +105,7 @@
           case 'S': model.first = +f[1]; model.played = +f[2]; break;
           case 'N': model.counts[f[1]] = +f[2]; break;
           case 'T': model.tiers[f[1]] = +f[2]; break;
+          case 'V': model.saga.push({ key: f[1], title: f[2], text: f[3] || '' }); break;
           case 'G': model.goals++; model.points += (+f[4] || 0); break;
           case 'P': model.pages.push({ t: +f[1], kind: f[2], tier: +f[3], fav: f[4] === '1', place: f[5], ic: f[6], text: f[7], note: f[8], info: parseInfo(f[9]) }); break;
         }
@@ -271,6 +272,23 @@
     return { pages: pages, days: days };
   }
 
+  // The Saga: the chapters, a few to a page (by the length of the text: the page is a fixed size).
+  function sagaPages(model) {
+    var pages = [], page = null, used = 0, budget = 780;
+    model.saga.forEach(function (c) {
+      var w = c.text.length + 140;
+      if (!page || used + w > budget) {
+        page = pageShell(model, false, L().saga);
+        pages.push(page); used = 0;
+      }
+      page.appendChild(el('h2', 'small chapter', c.title));
+      page.appendChild(el('span', 'rule'));
+      c.text.split('\n\n').forEach(function (para) { page.appendChild(el('p', 'saga', para)); });
+      used += w;
+    });
+    return pages;
+  }
+
   function coverPages(model) {
     var left = pageShell(model, false, L().cover);
     var c = el('div', 'cover');
@@ -314,14 +332,26 @@
     var days = paginate(model);
     // index pages (as many as the days need), then the days
     var perIndex = 18, indexPages = [];
-    var chunks = [];
-    for (var i = 0; i < days.days.length; i += perIndex) chunks.push(days.days.slice(i, i + perIndex));
+    var chunks = [], hasSaga = model.saga && model.saga.length > 0;
+    // the first index page also carries the line of the Saga, so it holds one day less
+    for (var i = 0; i < days.days.length;) {
+      var size = (chunks.length === 0 && hasSaga) ? perIndex - 1 : perIndex;
+      chunks.push(days.days.slice(i, i + size)); i += size;
+    }
     if (!chunks.length) chunks.push([]);
     chunks.forEach(function (chunk, ci) {
       var page = pageShell(model, ci % 2 === 1, L().index);
       page.appendChild(el('h2', 'small', L().index));
       page.appendChild(el('span', 'rule'));
       var wrap = el('div', 'index');
+      if (ci === 0 && hasSaga) {
+        var sa = el('a');
+        sa.appendChild(el('span', '', L().saga));
+        sa.appendChild(el('span', 'dots'));
+        sa.appendChild(el('span', 'n', ''));
+        sa.dataset.saga = '1';
+        wrap.appendChild(sa);
+      }
       chunk.forEach(function (d) {
         var a = el('a');
         a.appendChild(el('span', '', fmt(L().day, d.n) + ' — ' + L().date(new Date(d.group.t * 1000))));
@@ -336,6 +366,11 @@
     var cover = coverPages(model);
     var all = [cover[0], cover[1]].concat(indexPages);
     if (all.length % 2 === 1) all.push(pageShell(model, true, ''));
+    var sagaAt = all.length;
+    if (hasSaga) {
+      sagaPages(model).forEach(function (p) { all.push(p); });
+      if (all.length % 2 === 1) all.push(pageShell(model, true, ''));
+    }
     var firstDay = all.length;
     days.pages.forEach(function (p) { all.push(p); });
     if (all.length % 2 === 1) all.push(pageShell(model, true, ''));
@@ -349,6 +384,11 @@
     days.days.forEach(function (d) { dayPage[d.n] = firstDay + d.page; });
     indexPages.forEach(function (p) {
       p.querySelectorAll('a').forEach(function (a) {
+        if (a.dataset.saga) {
+          a.querySelector('.n').textContent = String(sagaAt + 1 - 2);
+          a.addEventListener('click', function () { goToPage(sagaAt); });
+          return;
+        }
         var n = +a.dataset.day; a.querySelector('.n').textContent = String(dayPage[n] + 1 - 2);
         a.addEventListener('click', function () { goToPage(dayPage[n]); });
       });
