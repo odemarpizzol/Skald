@@ -1126,7 +1126,11 @@ look()
 local later = g.mounts10 and not g.mounts10.retro
 local mountPages = 0
 for _, x in ipairs(SkaldCharDB.entries) do if x.kind == "goal" and tostring(x.arg):find("^mounts") then mountPages = mountPages + 1 end end
-RES = (unready and first and later and mountPages == 1) and "ok" or ("unready=" .. tostring(unready) .. " first=" .. tostring(first) .. " later=" .. tostring(later) .. " pages=" .. count("goal") .. " " .. (function() local t = {} for _, x in ipairs(SkaldCharDB.entries) do if x.kind == "goal" then t[#t+1] = x.arg end end return table.concat(t, ",") end)())`,
+local _, without = ns.GoalScore()
+C_PetJournal = { GetNumPets = function() return 5, 0 end }
+clock = clock + 60
+local _, withPets = ns.GoalScore()
+RES = (unready and first and later and mountPages == 1 and withPets - without == 40) and "ok" or ("unready=" .. tostring(unready) .. " first=" .. tostring(first) .. " later=" .. tostring(later) .. " pages=" .. count("goal") .. " " .. (function() local t = {} for _, x in ipairs(SkaldCharDB.entries) do if x.kind == "goal" then t[#t+1] = x.arg end end return table.concat(t, ",") end)())`,
 });
 
 run('goals that came with a later list are marked quietly in a diary that already looked, and the points follow the seals', {

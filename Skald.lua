@@ -3518,7 +3518,7 @@ K.Collections = function()
                     local r = { J.GetMountInfoByID(id) }
                     if r[11] == true then n = n + 1 end
                 end
-                v.mounts, v.ready = n, true
+                v.mounts, v.ready, v.mountsReady = n, true, true
             end
         end
     end)
@@ -3529,7 +3529,7 @@ K.Collections = function()
         local P = C_PetJournal
         if P and P.GetNumPets then
             local total, owned = P.GetNumPets()
-            if type(owned) == "number" and (total or 0) > 0 then v.critters, v.ready = owned, true end
+            if type(owned) == "number" and (total or 0) > 0 then v.critters, v.ready, v.petsReady = owned, true, true end
         end
     end)
     pcall(function()
@@ -3538,6 +3538,7 @@ K.Collections = function()
     K.collCache = { at = now, v = v }
     return v
 end
+SkaldAPI.Collections = K.Collections
 SkaldAPI.GameFacts = function()
     local out = {}
     out.quests = GameStat(K.STAT_QUESTS)

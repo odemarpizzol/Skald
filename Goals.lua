@@ -185,12 +185,12 @@ local GOALS = {
     { id = "reunions", cat = "company", tier = 3, fact = "reunions", target = 1, secret = true },
     { id = "guild", cat = "company", tier = 1, fact = "guild", target = 1, since = 2 },
     { id = "party", cat = "company", tier = 1, fact = "party", target = 1, since = 2 },
-    { id = "mounts1", cat = "collection", tier = 2, fact = "mounts", target = 1, since = 3, coll = true },
-    { id = "mounts5", cat = "collection", tier = 3, fact = "mounts", target = 5, since = 3, coll = true },
-    { id = "mounts10", cat = "collection", tier = 4, fact = "mounts", target = 10, since = 3, coll = true },
-    { id = "critters1", cat = "collection", tier = 1, fact = "critters", target = 1, since = 3, coll = true },
-    { id = "critters10", cat = "collection", tier = 2, fact = "critters", target = 10, since = 3, coll = true },
-    { id = "critters25", cat = "collection", tier = 3, fact = "critters", target = 25, since = 3, coll = true },
+    { id = "mounts1", cat = "collection", tier = 2, fact = "mounts", target = 1, since = 3, coll = "mounts" },
+    { id = "mounts5", cat = "collection", tier = 3, fact = "mounts", target = 5, since = 3, coll = "mounts" },
+    { id = "mounts10", cat = "collection", tier = 4, fact = "mounts", target = 10, since = 3, coll = "mounts" },
+    { id = "critters1", cat = "collection", tier = 1, fact = "critters", target = 1, since = 3, coll = "critters" },
+    { id = "critters10", cat = "collection", tier = 2, fact = "critters", target = 10, since = 3, coll = "critters" },
+    { id = "critters25", cat = "collection", tier = 3, fact = "critters", target = 25, since = 3, coll = "critters" },
     { id = "gold10", cat = "renown", tier = 1, fact = "gold", target = 10, since = 2 },
     { id = "gold100", cat = "renown", tier = 3, fact = "gold", target = 100, since = 2 },
     { id = "gold1000", cat = "renown", tier = 4, fact = "gold", target = 1000, since = 2 },
@@ -212,7 +212,19 @@ ns.GoalPoints = function(id)
 end
 -- What the goals reached are worth, and what all of them are worth.
 -- (the beasts are shown only to a hunter, or to whoever has had a pet: the same rule for the tab and the points)
+-- A collection goal is listed only when this client's journal answered for it (or when it was already reached):
+-- a system the client lacks would leave a goal that can never be done.
+local function Listed(g, db)
+    if not g.coll then return true end
+    if db and db.goals and db.goals[g.id] then return true end
+    local c = SkaldAPI.Collections and SkaldAPI.Collections() or {}
+    return (g.coll == "mounts" and c.mountsReady or g.coll == "critters" and c.petsReady) and true or false
+end
 local function CategoryShown(key, db)
+    if key == "collection" then
+        for _, g in ipairs(GOALS) do if g.cat == key and Listed(g, db) then return true end end
+        return false
+    end
     if key ~= "beasts" then return true end
     local isHunter = false
     pcall(function() isHunter = select(2, UnitClass("player")) == "HUNTER" end)
@@ -225,7 +237,7 @@ ns.GoalScore = function()
     local done, all = 0, 0
     for _, g in ipairs(GOALS) do
         local p = POINTS[g.tier] or 0
-        if not CategoryShown(g.cat, db) then p = 0 end
+        if not CategoryShown(g.cat, db) or not Listed(g, db) then p = 0 end
         all = all + p
         if db and db.goals and db.goals[g.id] then done = done + p end
     end
@@ -329,7 +341,7 @@ local function Check()
     local facts = Facts()
     for _, g in ipairs(GOALS) do
         -- a collection is read only once the game's journal has answered (an unloaded journal is not an empty one)
-        if not db.goals[g.id] and (facts[g.fact] or 0) >= g.target and (not g.coll or facts.collReady) then
+        if not db.goals[g.id] and (facts[g.fact] or 0) >= g.target and Listed(g, db) then
             -- a goal that came with a later version of the list is marked quietly the first time it is looked at;
             -- so is a collection the first time the journal is read (what was owned before the diary is no feat of today)
             local quiet = silent or seenVersion < (g.since or 1) or (g.coll and not db.collInit)
@@ -567,7 +579,7 @@ local function BuildGoalsTab(panel)
             local show = CategoryShown(cat.key, db)
             local n, d = 0, 0
             for _, g in ipairs(GOALS) do
-                if g.cat == cat.key then n = n + 1; if done[g.id] then d = d + 1 end end
+                if g.cat == cat.key and Listed(g, db) then n = n + 1; if done[g.id] then d = d + 1 end end
             end
             row:SetShown(show)
             if show then
@@ -609,7 +621,7 @@ local function BuildGoalsTab(panel)
         local cat = CATS[chosen]
         rightTitle:SetText(UI.CATS[cat.key])
         local list = {}
-        for _, g in ipairs(GOALS) do if g.cat == cat.key then list[#list + 1] = g end end
+        for _, g in ipairs(GOALS) do if g.cat == cat.key and Listed(g, db) then list[#list + 1] = g end end
         for i, row in ipairs(goalRows) do
             local g = list[i]
             if not g then
