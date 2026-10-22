@@ -572,6 +572,57 @@ run('a favourite note is the memory itself, in the player\'s own words', {
 RES = (SEEN and SEEN.text == '"The best tea of my life"' and SEEN.entry and SEEN.entry.fav) and "ok" or ("text=" .. tostring(SEEN and SEEN.text))`,
 });
 
+const ANNIV = (daysAgo, extra = '') => `${SAVED(`{ { t = NOW - ${daysAgo} * 86400, kind = "zone", arg = "Darkshore", zone = "Darkshore", m = 1439, idx = 1 } }`, `stats = { counts = {}, deathZones = {}, tiers = {}, played = 1, first = NOW - ${daysAgo} * 86400 } ${extra}`)}
+function UnitAffectingCombat() return false end`;
+const ANNIV_CHECK = `SEEN = nil
+ns.ShowNotice = function(title, text, lines, secs, entry) SEEN = { title = title, text = text, entry = entry } end
+ns.CheckAnniversary()`;
+const ANNIV_RUN = `NOW = NOW + 60
+${ANNIV_CHECK}`;
+run('a week after the first page a quiet notice marks it, once', {
+  pre: ANNIV(8),
+  body: `${ANNIV_RUN}
+local first = SEEN and SEEN.text
+SEEN = nil; NOW = NOW + 3600; ns.CheckAnniversary()
+RES = (first and not first:find("%", 1, true) and SkaldCharDB.anniv == 7 and SEEN == nil and SkaldAPI and true) and "ok" or ("first=" .. tostring(first) .. " anniv=" .. tostring(SkaldCharDB.anniv) .. " again=" .. tostring(SEEN))`,
+});
+run('a diary found long after a mark is brought up to date in silence', {
+  pre: ANNIV(200),
+  body: `${ANNIV_RUN}
+RES = (SEEN == nil and SkaldCharDB.anniv == 100) and "ok" or ("seen=" .. tostring(SEEN and SEEN.text) .. " anniv=" .. tostring(SkaldCharDB.anniv))`,
+});
+run('no journey notice in a fresh diary, in combat, with memories off, or in a dungeon (and it waits, it is not lost)', {
+  pre: ANNIV(3),
+  body: `${ANNIV_RUN}
+local fresh = SEEN
+SkaldCharDB.stats.first = NOW - 8 * 86400
+function UnitAffectingCombat() return true end
+ns.CheckAnniversary()
+local combat = SEEN
+function UnitAffectingCombat() return false end
+IsInInstance = function() return true, "party" end
+ns.CheckAnniversary()
+local dungeon = SEEN
+IsInInstance = function() return false, "none" end
+SkaldDB.memories = false
+ns.CheckAnniversary()
+local off = SEEN
+RES = (fresh == nil and combat == nil and dungeon == nil and off == nil and SkaldCharDB.anniv == 7) and "ok" or ("fresh=" .. tostring(fresh) .. " combat=" .. tostring(combat) .. " dungeon=" .. tostring(dungeon) .. " off=" .. tostring(off))`,
+});
+run('the journey notices of every mark are told in the language of the client, with no stray tag', {
+  pre: `__locale = "frFR"; ${ANNIV(8)}`,
+  body: `NOW = NOW + 60
+local all = {}
+for _, step in ipairs({ 7, 30, 100, 365 }) do
+  SkaldCharDB.anniv = nil
+  SkaldCharDB.stats.first = NOW - step * 86400
+  ${ANNIV_CHECK}
+  all[#all + 1] = SEEN and SEEN.text or "NOTHING"
+end
+local text = table.concat(all, " | ")
+RES = (not text:find("NOTHING", 1, true) and not text:find("{", 1, true) and not text:find("%s", 1, true)) and "ok" or text`,
+});
+
 run('no memory when the option is off, in combat, in a dungeon, or for a page of today', {
   pre: MEMORY(),
   body: `SkaldDB.memories = false

@@ -954,7 +954,7 @@ end
 -- It is set aside with the pages and brought back with them, and emptied with them, so a cleared diary or a new
 -- character with an old name never inherits it.
 K.DIARY_STATE = { "pets", "petNow", "companions", "questObj", "questStart", "visitedMaps", "resume", "attempts",
-    "taxi", "marks", "goals", "goalsInit", "goalsVer", "collInit", "rep", "memoryAt", "recentIdx" }
+    "taxi", "marks", "goals", "goalsInit", "goalsVer", "collInit", "rep", "memoryAt", "recentIdx", "anniv" }
 
 local function TakeState(db)
     local state = {}
@@ -4203,6 +4203,7 @@ local function CheckZone()
         lastZone = zone
         VisitZone(zone)
         if ns.CheckMemory then pcall(ns.CheckMemory) end
+        if ns.CheckAnniversary then pcall(ns.CheckAnniversary) end
     end
 end
 
@@ -5158,7 +5159,7 @@ H.PLAYER_LOGIN = function(self, event, ...)
         pcall(Mile.MergeCrafts)
         pcall(Mile.Relocalize)
         C_Timer.After(10, function() pcall(Mile.Relocalize) end)   -- items load a little later
-        if C_Timer.NewTicker then C_Timer.NewTicker(60, function() pcall(CheckMarks); pcall(Mile.CheckPet) end) end
+        if C_Timer.NewTicker then C_Timer.NewTicker(60, function() pcall(CheckMarks); pcall(Mile.CheckPet); pcall(ns.CheckAnniversary) end) end
         C_Timer.After(2, function() pcall(Mile.ShowResume) end)
     end)
     if not Settings().quiet then
@@ -5430,6 +5431,35 @@ ns.CheckMemory = function()
         text = string.format(list[idx], tostring(ns.ZoneNameOfMap(zid) or best.zone or L.UNKNOWN_ZONE))
     end
     ns.ShowNotice(L.MEMORY_TITLE, text, 3, 9, best)
+end
+
+-- The days of the journey: a quiet notice a week, a month, a hundred days and a year after the first page. A mark is told
+-- once, within two weeks of its day; a diary found long after one (an old one, the first time this is looked at) is
+-- brought up to date without a word.
+K.ANNIV_STEPS, K.ANNIV_WINDOW = { 7, 30, 100, 365 }, 14
+ns.CheckAnniversary = function()
+    local db = Journal()
+    if not ready or not db or not db.stats or not db.stats.first or db.stats.first <= 0 or not window then return end
+    local now = time()
+    if loginTime and now - loginTime < K.MEMORY_AFTER_LOGIN then return end
+    if UnitAffectingCombat and UnitAffectingCombat("player") then return end
+    if IsInInstance and IsInInstance() then return end
+    local days = math.floor((now - db.stats.first) / 86400)
+    local step
+    for _, m in ipairs(K.ANNIV_STEPS) do
+        if days >= m and m > (db.anniv or 0) then step = m end
+    end
+    if not step then return end
+    db.anniv = step
+    if days >= step + K.ANNIV_WINDOW or Settings().memories == false then return end
+    local list = PHRASES["anniv" .. step]
+    if not list or #list == 0 then return end
+    Mile.memoryIdx = Mile.memoryIdx or {}
+    local key = "anniv" .. step
+    local idx = math.random(#list)
+    if #list > 1 and idx == Mile.memoryIdx[key] then idx = idx % #list + 1 end
+    Mile.memoryIdx[key] = idx
+    ns.ShowNotice(L.MEMORY_TITLE, list[idx], 3, 9, db.entries and db.entries[1])
 end
 
 -- Someone I shared a dungeon with has joined my group again after a while: the page tells where we were.

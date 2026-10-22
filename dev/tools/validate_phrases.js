@@ -55,7 +55,7 @@ local function CheckUI(base, translated, path)
     end
 end
 CheckUI(ns.LOCALES.enUS, ns.LOCALES["${loc}"], "${loc}")
-local NO_NAME = { party = true, day = true }
+local NO_NAME = { party = true, day = true, anniv7 = true, anniv30 = true, anniv100 = true, anniv365 = true }
 local KNOWN = { ["{npc}"] = true, ["{steps}"] = true, ["{standing}"] = true, ["{tries}"] = true, ["{days}"] = true, ["{place}"] = true, ["{count}"] = true }
 for kind, list in pairs(P) do
   for i, ph in ipairs(list) do
