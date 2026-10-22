@@ -599,7 +599,7 @@ local function BuildGoalsTab(panel)
                 local target = g.target
                 row.evidence, row.entry = nil, nil
                 row.worth, row.title = (not g.secret or rec) and (POINTS[g.tier] or 0) or nil, UI.NAMES[g.id]
-                row.points:SetText(tostring(POINTS[g.tier] or 0))
+                row.points:SetText((g.secret and not rec) and "?" or tostring(POINTS[g.tier] or 0))
                 if rec then
                     row.points:SetTextColor(head[1], head[2], head[3])
                     row.gem:SetAlpha(1)
