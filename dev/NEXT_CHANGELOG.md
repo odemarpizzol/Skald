@@ -13,3 +13,4 @@
 - The Saga's prologue now tells where the race is born (the starting valley and land, named by the game in the client's language) and the first page of the diary when it was written elsewhere.
 - The Reader (and its export text) now carries the Saga: it opens after the index, with its own line in the index. The names of companions are hidden in it like in the pages.
 - Memories of the journey: a quiet notice a week, a month, a hundred days and a year after the first page (eight phrases for each mark, in three languages). It is told once, off with the other memories, and a diary found long after a mark is brought up to date in silence.
+- Reading aloud: /skald read speaks the newest page, /skald read saga the whole Saga, /skald read stop stops; the Saga tab has a Listen button. It uses the game's own text-to-speech and its voice settings (when the client has it).

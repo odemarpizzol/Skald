@@ -3581,7 +3581,7 @@ K.OPTIONAL_EVENTS = {
     "PLAYER_ENTERING_WORLD", "GROUP_ROSTER_UPDATE", "ENCOUNTER_START", "ENCOUNTER_END", "BOSS_KILL", "PLAYER_XP_UPDATE", "UI_SCALE_CHANGED", "DISPLAY_SIZE_CHANGED",
     "NEW_MOUNT_ADDED", "ACHIEVEMENT_EARNED", "SKILL_LINES_CHANGED", "CHAT_MSG_LOOT",
     "HEARTHSTONE_BOUND", "UPDATE_FACTION", "TAXIMAP_OPENED", "PLAYER_MONEY",
-    "LEARNED_SPELL_IN_TAB", "QUEST_ACCEPTED", "CHAT_MSG_ADDON",
+    "LEARNED_SPELL_IN_TAB", "QUEST_ACCEPTED", "CHAT_MSG_ADDON", "VOICE_CHAT_TTS_PLAYBACK_FINISHED",
     "PLAYER_UNGHOST", "PLAYER_ALIVE", "CONFIRM_XP_LOSS", "RESURRECT_REQUEST",
 }
 for _, ev in ipairs(K.OPTIONAL_EVENTS) do
@@ -5510,6 +5510,7 @@ end
 -- Probe for talking to other addons (the shared chronicle is only worth planning if the client lets addons
 -- talk): /skald probe comms sends one tiny message on each channel that makes sense and keeps what came back.
 K.COMMS_PREFIX = "SKALD1"
+H.VOICE_CHAT_TTS_PLAYBACK_FINISHED = function() if ns.SpeechFinished then ns.SpeechFinished() end end
 H.CHAT_MSG_ADDON = function(self, event, prefix, text, channel, sender)
     local probe = SkaldDB and SkaldDB.commsProbe
     if not probe or prefix ~= K.COMMS_PREFIX then return end
@@ -6019,6 +6020,78 @@ local function BuildReader(scope)
         out[i] = header .. K.NL .. body
     end
     return out
+end
+
+-- Reading aloud, with the game's own text-to-speech (the calls the DialogueUI addon makes in this client). The text
+-- goes in short pieces, one after the other: the next starts when the game says one has finished (and, if that event
+-- never comes in this client, after a time worked out from the length).
+K.speech = { queue = {}, id = 0, eventSeen = false }
+ns.SpeechAvailable = function()
+    return C_VoiceChat ~= nil and type(C_VoiceChat.SpeakText) == "function" and C_TTSSettings ~= nil
+end
+ns.Speaking = function() return K.speech.current ~= nil end
+local function SpeechClean(text)
+    text = PlainText(tostring(text or ""))
+    text = text:gsub("[<>]", ""):gsub("%-%-", ". ")
+    return text
+end
+-- The text in pieces of a sentence or two, so that a long page can be stopped between them.
+K.SpeechPieces = function(text, into)
+    text = SpeechClean(text)
+    for paragraph in (text .. K.NL .. K.NL):gmatch("(.-)" .. K.NL .. K.NL) do
+        paragraph = strtrim(paragraph)
+        while #paragraph > 0 do
+            if #paragraph <= 380 then into[#into + 1] = paragraph; break end
+            local cut = paragraph:sub(1, 380):match("^.*()[%.%?!] ")
+            cut = cut or paragraph:sub(1, 380):match("^.*() ") or 380
+            into[#into + 1] = strtrim(paragraph:sub(1, cut))
+            paragraph = strtrim(paragraph:sub(cut + 1))
+        end
+    end
+    return into
+end
+local SpeakNext
+ns.StopSpeaking = function()
+    local sp = K.speech
+    sp.queue, sp.current = {}, nil
+    sp.id = sp.id + 1
+    if C_VoiceChat and C_VoiceChat.StopSpeakingText then pcall(C_VoiceChat.StopSpeakingText) end
+end
+SpeakNext = function()
+    local sp = K.speech
+    local piece = table.remove(sp.queue, 1)
+    if not piece then sp.current = nil; if ns.SpeechChanged then ns.SpeechChanged() end; return end
+    sp.id = sp.id + 1
+    local mine = sp.id
+    sp.current = piece
+    local voice, rate, volume = 0, 0, 100
+    pcall(function()
+        voice = C_TTSSettings.GetVoiceOptionID(0) or 0
+        rate = C_TTSSettings.GetSpeechRate() or 0
+        volume = C_TTSSettings.GetSpeechVolume() or 100
+    end)
+    local ok = pcall(C_VoiceChat.SpeakText, voice, piece, rate, volume, false)
+    if not ok then ns.StopSpeaking(); if ns.SpeechChanged then ns.SpeechChanged() end; return end
+    if not sp.eventSeen and C_Timer and C_Timer.After then
+        C_Timer.After(#piece * 0.14 + 4, function() if K.speech.id == mine and K.speech.current then SpeakNext() end end)
+    end
+end
+-- Reads these texts (each may hold paragraphs); false when this client cannot.
+ns.SpeakTexts = function(texts)
+    if not ns.SpeechAvailable() then return false end
+    ns.StopSpeaking()
+    local pieces = {}
+    for _, t in ipairs(texts) do K.SpeechPieces(t, pieces) end
+    if #pieces == 0 then return false end
+    K.speech.queue = pieces
+    SpeakNext()
+    if ns.SpeechChanged then ns.SpeechChanged() end
+    return true
+end
+ns.SpeechFinished = function()
+    local sp = K.speech
+    sp.eventSeen = true
+    if sp.current then SpeakNext() end
 end
 
 -- Returns a list of texts, each short enough for one message (empty when there is nothing).
@@ -6915,6 +6988,20 @@ SlashCmdList["SKALD"] = function(msg)
         Say(L.CMD_SIZE_DONE)
     elseif msg == "report" then
         ns.ShowReport()
+    elseif msg == "read" or msg == "read stop" then
+        -- the newest page aloud (or stop)
+        if msg == "read stop" then ns.StopSpeaking(); Say(L.READ_STOPPED); return end
+        local entries = Journal() and Journal().entries or {}
+        local last = entries[#entries]
+        if not ns.SpeechAvailable() then Say(L.READ_NONE); return end
+        if not last then Say(L.READ_EMPTY); return end
+        if ns.SpeakTexts({ RenderEntry(last) }) then Say(L.READ_START) else Say(L.READ_EMPTY) end
+    elseif msg == "read saga" then
+        local chapters = ns.BuildSaga and ns.BuildSaga() or {}
+        if not ns.SpeechAvailable() then Say(L.READ_NONE); return end
+        local texts = {}
+        for _, c in ipairs(chapters) do texts[#texts + 1] = tostring(c.title) .. ". " .. K.NL .. K.NL .. c.text end
+        if ns.SpeakTexts(texts) then Say(L.READ_START) else Say(L.READ_EMPTY) end
     elseif msg == "reader" then
         -- the whole diary in the form the web Reader takes, ready to copy
         Settings().exportFormat, Settings().exportScope = "reader", "all"

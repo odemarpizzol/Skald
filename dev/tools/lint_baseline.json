@@ -1,5 +1,7 @@
 {
  "Skald/Skald.lua": [
+    "C_TTSSettings",
+    "C_VoiceChat",
     "GetCategoryList",
     "C_PetJournal",
     "GetNumCompanions",

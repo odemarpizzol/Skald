@@ -12,7 +12,7 @@ local _, ns = ...
 -- every chapter would read like a ledger.
 local TEXT = {
     enUS = {
-        TAB = "Saga", EMPTY = "The saga begins with the first page.", AND = " and ", DATE = "%m/%d/%Y",
+        TAB = "Saga", LISTEN = "Listen", STOP = "Stop", EMPTY = "The saga begins with the first page.", AND = " and ", DATE = "%m/%d/%Y",
         TITLES = {
             prologue = "Prologue", road = "The Road", stories = "Errands and Oaths", war = "Thrones Toppled",
             falls = "The Falls", company = "Company", marks = "Seals and Renown", epilogue = "Epilogue",
@@ -161,7 +161,7 @@ local TEXT = {
         },
     },
     ptBR = {
-        TAB = "Saga", EMPTY = "A saga começa com a primeira página.", AND = " e ", DATE = "%d/%m/%Y",
+        TAB = "Saga", LISTEN = "Ouvir", STOP = "Parar", EMPTY = "A saga começa com a primeira página.", AND = " e ", DATE = "%d/%m/%Y",
         TITLES = {
             prologue = "Prólogo", road = "A Estrada", stories = "Recados e Juramentos", war = "Tronos Derrubados",
             falls = "As Quedas", company = "Companhia", marks = "Selos e Renome", epilogue = "Epílogo",
@@ -310,7 +310,7 @@ local TEXT = {
         },
     },
     frFR = {
-        TAB = "Saga", EMPTY = "La saga commence avec la première page.", AND = " et ", DATE = "%d/%m/%Y",
+        TAB = "Saga", LISTEN = "Écouter", STOP = "Arrêter", EMPTY = "La saga commence avec la première page.", AND = " et ", DATE = "%d/%m/%Y",
         TITLES = {
             prologue = "Prologue", road = "La route", stories = "Courses et serments", war = "Trônes renversés",
             falls = "Les chutes", company = "Compagnie", marks = "Sceaux et renom", epilogue = "Épilogue",
@@ -733,6 +733,21 @@ local function BuildSagaTab(panel)
         pages = ns.SagaPages(built, size)
         if spread > Spreads() then spread = Spreads() end
         Show()
+    end
+    -- a button to hear the whole Saga read aloud, when the client has text-to-speech
+    if ns.SpeechAvailable and ns.SpeechAvailable() and SkaldAPI.MakeButton then
+        local button = SkaldAPI.MakeButton(panel, 80, 24, UI.LISTEN)
+        button:SetScript("OnClick", function()
+            if ns.Speaking() then ns.StopSpeaking()
+            else
+                local texts = {}
+                for _, c in ipairs(ns.BuildSaga()) do texts[#texts + 1] = c.title .. ". \n\n" .. c.text end
+                ns.SpeakTexts(texts)
+            end
+            if ns.SpeechChanged then ns.SpeechChanged() end
+        end)
+        button:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", 0, -6)
+        ns.SpeechChanged = function() button.text:SetText(ns.Speaking() and UI.STOP or UI.LISTEN) end
     end
     local pager = {
         Turn = function(delta) spread = math.max(1, math.min(Spreads(), spread + delta)); Show() end,

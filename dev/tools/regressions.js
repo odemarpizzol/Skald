@@ -1360,6 +1360,40 @@ function UnitRace() return "Pandaren", "Pandaren" end`,
 RES = (text:find("Darkshore", 1, true) and not text:find("born", 1, true)) and "ok" or text`,
 });
 
+const TTS = `SPOKEN = {}
+C_VoiceChat = { SpeakText = function(voice, text, rate, volume, overlap) SPOKEN[#SPOKEN + 1] = { voice = voice, text = text, rate = rate, volume = volume } end,
+  StopSpeakingText = function() STOPPED = (STOPPED or 0) + 1 end }
+C_TTSSettings = { GetVoiceOptionID = function() return 3 end, GetSpeechRate = function() return 1 end, GetSpeechVolume = function() return 80 end }`;
+run('/skald read speaks the newest page with the voice settings of the game, and stops on request', {
+  pre: TTS + `\n` + SAGA_DIARY(),
+  body: `SlashCmdList.SKALD("read")
+local first = SPOKEN[1]
+local e = SkaldCharDB.entries[#SkaldCharDB.entries]
+SlashCmdList.SKALD("read stop")
+RES = (first and first.voice == 3 and first.rate == 1 and first.volume == 80 and #first.text > 10 and not first.text:find("{", 1, true) and STOPPED and not ns.Speaking()) and "ok"
+  or ("spoken=" .. tostring(first and first.text) .. " stopped=" .. tostring(STOPPED))`,
+});
+
+run('/skald read saga speaks the chapters one piece after the other, advancing when the game says a piece is done', {
+  pre: TTS + `\n` + SAGA_DIARY(),
+  body: `SlashCmdList.SKALD("read saga")
+local n0 = #SPOKEN
+local guard = 0
+while ns.Speaking() and guard < 80 do fire("VOICE_CHAT_TTS_PLAYBACK_FINISHED"); guard = guard + 1 end
+local joined = {}
+for _, s in ipairs(SPOKEN) do joined[#joined + 1] = s.text; if #s.text > 400 then joined = nil; break end end
+RES = (n0 == 1 and #SPOKEN >= 8 and joined and not ns.Speaking() and table.concat(joined, " "):find("Prologue", 1, true)) and "ok"
+  or ("first=" .. n0 .. " total=" .. #SPOKEN)`,
+});
+
+run('/skald read says so when the client has no text-to-speech, and when there is nothing to read', {
+  pre: SAGA_DIARY(),
+  body: `local said = {}
+local old = print
+SlashCmdList.SKALD("read")
+RES = (not ns.SpeechAvailable() and SPOKEN == nil) and "ok" or "spoke without an API"`,
+});
+
 run('the Saga says "an Orc" and "an Undead", never "a Orc"', {
   pre: SAGA_DIARY() + `
 function UnitRace() return "Orc", "Orc" end`,
