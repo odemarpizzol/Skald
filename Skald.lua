@@ -6655,6 +6655,34 @@ ns.BuildReport = function()
         counts[#counts + 1] = "mountsCollected=" .. tostring(coll.mounts) .. " petsCollected=" .. tostring(coll.critters) .. " ready=" .. tostring(coll.ready)
     end
     if #counts > 0 then Add("collections: %s", table.concat(counts, " ")) end
+    -- where a race begins (the area names the game gives for the starting places we expect) and the oldest
+    -- achievement of this character: what a prologue could be told from, if the client answers
+    do
+        local okR, _, raceFile = pcall(UnitRace, "player")
+        Add("birth: race %s", okR and tostring(raceFile) or "?")
+        local areas = {}
+        for _, id in ipairs({ 9, 12, 132, 1, 188, 141, 363, 14, 154, 85, 220, 215, 3430, 3524, 3433, 3525 }) do
+            local ok, name = pcall(function() return C_Map and C_Map.GetAreaInfo and C_Map.GetAreaInfo(id) end)
+            areas[#areas + 1] = id .. "=" .. ((ok and name) and tostring(name) or "-")
+        end
+        Add("birth areas: %s", table.concat(areas, " "))
+        local oldest, done
+        pcall(function()
+            if not (GetCategoryList and GetCategoryNumAchievements and GetAchievementInfo) then return end
+            done = 0
+            for _, cat in ipairs(GetCategoryList() or {}) do
+                for i = 1, GetCategoryNumAchievements(cat) or 0 do
+                    local id, _, _, completed, month, day, year = GetAchievementInfo(cat, i)
+                    if id and completed and type(year) == "number" and type(month) == "number" and type(day) == "number" then
+                        done = done + 1
+                        local key = year * 10000 + month * 100 + day
+                        if not oldest or key < oldest then oldest = key end
+                    end
+                end
+            end
+        end)
+        Add("oldest achievement: %s (done %s)", oldest and tostring(oldest) or "none", tostring(done))
+    end
     local cp = set.commsProbe
     if cp then
         Add("comms probe (run %s, %ds ago): register %s | api %s %s %s", date("%H:%M:%S", cp.when or 0), math.max(0, time() - (cp.when or 0)), tostring(cp.register), tostring(cp.api.RegisterAddonMessagePrefix),

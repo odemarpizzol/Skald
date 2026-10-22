@@ -1,5 +1,6 @@
 {
  "Skald/Skald.lua": [
+    "GetCategoryList",
     "C_PetJournal",
     "GetNumCompanions",
     "GetNumGroupMembers",
