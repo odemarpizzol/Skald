@@ -1291,15 +1291,14 @@ for i = 1, 30 do
   texts[#texts + 1] = ns.BuildSaga()[1].text
 end
 local all = table.concat(texts, " ")
--- the first page was written in Darkshore, not where a Night Elf is born: it is told too, with the oldest deed (10/10/2026)
+-- the first page was written in Darkshore, not where a Night Elf is born: it is told too
 local born = all:find("${home}", 1, true) and all:find("${land}", 1, true)
 local firstPage = all:find("Darkshore", 1, true)
-local oldest = all:find("10/10/2026", 1, true) or all:find("2026/10/10", 1, true) or all:find("10/10/2026", 1, true)
 -- written where the race begins: no first page sentence
 SkaldCharDB.entries[1].zone = "${home}"
 local same = ns.BuildSaga()[1].text
-RES = (born and firstPage and oldest and not same:find("Darkshore", 1, true) and not all:find("{", 1, true)) and "ok"
-  or ("born=" .. tostring(born) .. " first=" .. tostring(firstPage) .. " oldest=" .. tostring(oldest) .. " same=" .. same)`,
+RES = (born and firstPage and not same:find("Darkshore", 1, true) and not all:find("{", 1, true)) and "ok"
+  or ("born=" .. tostring(born) .. " first=" .. tostring(firstPage) .. " same=" .. same)`,
   });
 }
 

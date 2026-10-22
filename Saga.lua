@@ -48,16 +48,6 @@ local TEXT = {
                 "On {date}, in {place}, the first line of this book was written.",
                 "From {date}, in {place}, the road has been kept on paper.",
             },
-            earliest = {
-                "The oldest deed the game remembers of me is dated {born}.",
-                "By the game's own memory, my first deed goes back to {born}.",
-                "The earliest mark I left in the world is from {born}.",
-                "The world has known me since {born}, at the least.",
-                "Long before this diary, on {born}, the game already held a deed of mine.",
-                "My oldest recorded deed is from {born}.",
-                "The game holds a deed of mine from {born}, older than any page here.",
-                "{born}: the date of the oldest deed the world remembers of me.",
-            },
             road = {
                 "Level by level the road taught me its lessons. I stand at level {level} now, and it was in {place} that I last climbed.",
                 "Level {level} is where this page finds me, and {place} is where I last grew. {#days:day|days} of road lie behind me.",
@@ -207,16 +197,6 @@ local TEXT = {
                 "Em {date}, em {place}, foi escrita a primeira linha deste livro.",
                 "Desde {date}, em {place}, a estrada é guardada no papel.",
             },
-            earliest = {
-                "O feito mais antigo de que o jogo se lembra, em meu nome, tem a data de {born}.",
-                "Pela memória do próprio jogo, o meu primeiro feito remonta a {born}.",
-                "A marca mais antiga que deixei no mundo é de {born}.",
-                "O mundo me conhece desde {born}, pelo menos.",
-                "Muito antes deste diário, em {born}, o jogo já guardava um feito meu.",
-                "O meu feito registrado mais antigo é de {born}.",
-                "O jogo guarda um feito meu de {born}, mais antigo que qualquer página daqui.",
-                "{born}: a data do feito mais antigo de que o mundo se lembra de mim.",
-            },
             road = {
                 "Nível a nível a estrada me ensinou as suas lições. Estou no nível {level}, e foi em {place} que subi pela última vez.",
                 "O nível {level} é onde esta página me encontra, e {place} é onde cresci pela última vez. Deixei para trás {#days:dia|dias} de estrada.",
@@ -365,16 +345,6 @@ local TEXT = {
                 "Le registre de ces pages commence le {date}, à {place}.",
                 "Le {date}, à {place}, la première ligne de ce livre a été écrite.",
                 "Depuis le {date}, à {place}, la route est gardée sur le papier.",
-            },
-            earliest = {
-                "L'exploit le plus ancien dont le jeu se souvienne, à mon nom, est daté du {born}.",
-                "D'après la mémoire du jeu lui-même, mon premier exploit remonte au {born}.",
-                "La plus ancienne marque que j'aie laissée dans le monde date du {born}.",
-                "Le monde me connaît depuis le {born}, au moins.",
-                "Bien avant ce journal, le {born}, le jeu gardait déjà un exploit de moi.",
-                "Mon plus ancien exploit enregistré date du {born}.",
-                "Le jeu garde de moi un exploit du {born}, plus ancien que toute page d'ici.",
-                "{born}\194\160: la date du plus ancien exploit dont le monde se souvienne de moi.",
             },
             road = {
                 "Niveau après niveau, la route m'a enseigné ses leçons. Je suis au niveau {level}, et c'est à {place} que j'ai grandi pour la dernière fois.",
@@ -537,33 +507,6 @@ local function AreaName(id)
     return (ok and type(name) == "string" and name ~= "") and name or nil
 end
 
--- The oldest achievement of the character (the game dates it): about when the character began. Asked once for a
--- while: it goes through every category of the achievements.
-local oldestCache
-local function OldestDeed()
-    if oldestCache and (oldestCache.t or oldestCache.tries >= 3) then return oldestCache.t end
-    oldestCache = oldestCache or { tries = 0 }
-    oldestCache.tries = oldestCache.tries + 1
-    pcall(function()
-        if not (GetCategoryList and GetCategoryNumAchievements and GetAchievementInfo) then return end
-        local best
-        for _, cat in ipairs(GetCategoryList() or {}) do
-            for i = 1, GetCategoryNumAchievements(cat) or 0 do
-                local id, _, _, completed, month, day, year = GetAchievementInfo(cat, i)
-                if id and completed and type(year) == "number" and type(month) == "number" and type(day) == "number" then
-                    local full = year < 100 and year + 2000 or year
-                    local key = full * 10000 + month * 100 + day
-                    if not best or key < best then best = key end
-                end
-            end
-        end
-        if best then
-            oldestCache.t = time({ year = math.floor(best / 10000), month = math.floor(best / 100) % 100, day = best % 100, hour = 12 })
-        end
-    end)
-    return oldestCache.t
-end
-
 -- What the diary knows, as plain values.
 local function Gather(db)
     local v = { entries = db.entries or {} }
@@ -623,7 +566,6 @@ local function Gather(db)
         v.home, v.land = AreaName(areas[1]), AreaName(areas[2])
         if not (v.home and v.land) then v.home, v.land = nil, nil end
     end
-    v.born = OldestDeed()
     return v
 end
 
@@ -655,16 +597,11 @@ ns.BuildSaga = function()
     local article = v.race:sub(1, 1):lower():match("[aeiou]") and "an" or "a"
     local base = { name = v.name, race = v.race, class = v.class, date = when, place = v.place, level = v.level,
         days = v.days, pages = v.pages, title = v.title, a = article, A = article:sub(1, 1):upper() .. article:sub(2) }
-    local function Day(t) return date("%Y%m%d", t) end
     local parts = {}
     if v.home then
         parts[1] = { "birth", { name = v.name, race = v.race, class = v.class, home = v.home, land = v.land, a = base.a, A = base.A } }
     else
         parts[1] = { "prologue", base }
-    end
-    -- the oldest deed the game dated, when it is older than the first page of the diary
-    if v.born and v.seed > 0 and Day(v.born) < Day(v.seed) then
-        parts[#parts + 1] = { "earliest", { born = date(UI.DATE, v.born) } }
     end
     -- the first page of the diary, when it was not written where the character was born (the other opening already says it)
     local here = tostring(v.place):lower()
@@ -699,10 +636,10 @@ end
 -- to a page as fit, never a chapter split. The estimate is cautious (it counts the bytes of a line, so accents make
 -- it longer) and was checked against the real fonts.
 local PAGE_HEIGHT = 415          -- the room of a page (440) less a margin
-local TITLE_HEIGHT, SLOT_GAP = 51, 26
+local TITLE_HEIGHT, SLOT_GAP = 55, 44
 local function ChapterHeight(c, size, width)
     local perLine = math.max(10, math.floor(width / (size * 0.42)))
-    local lineHeight = size * 1.4 + 4
+    local lineHeight = size * 1.4 + 6
     local lines = 0
     for paragraph in (c.text .. "\n\n"):gmatch("(.-)\n\n") do
         lines = lines + math.max(1, math.ceil(#paragraph / perLine)) + 1
@@ -710,7 +647,7 @@ local function ChapterHeight(c, size, width)
     return TITLE_HEIGHT + (lines - 1) * lineHeight
 end
 ns.SagaPages = function(chapters, size, width)
-    size = (type(size) == "number" and size > 0) and size or 13
+    size = (type(size) == "number" and size > 0) and size or 16
     width = width or (SkaldAPI.CW or 342)
     local pages, page, used = {}, {}, 0
     for _, c in ipairs(chapters) do
@@ -744,18 +681,21 @@ local function BuildSagaTab(panel)
             slot.rule:SetPoint("TOP", slot.title, "BOTTOM", 0, -3)
             slot.rule:SetTexture("Interface\\AddOns\\Skald\\Textures\\rule")
             slot.rule:SetTexCoord(0, 160 / 256, 0, 14 / 16)
-            slot.body = panel:CreateFontString(nil, "OVERLAY", "SkaldBody")
+            slot.body = panel:CreateFontString(nil, "OVERLAY", "SkaldSaga")
             slot.body:SetWidth(CW)
             slot.body:SetJustifyH("LEFT")
             slot.body:SetJustifyV("TOP")
-            slot.body:SetSpacing(4)
+            slot.body:SetSpacing(6)
             slot.body:SetWordWrap(true)
             slot.body:SetTextColor(SkaldAPI.C_BODY[1], SkaldAPI.C_BODY[2], SkaldAPI.C_BODY[3])
-            slot.body:SetPoint("TOPLEFT", slot.title, "BOTTOMLEFT", 0, -20)
+            slot.body:SetPoint("TOPLEFT", slot.title, "BOTTOMLEFT", 0, -24)
             if n == 1 then slot.title:SetPoint("TOPLEFT", x, 0)
-            else slot.title:SetPoint("TOPLEFT", side.slots[n - 1].body, "BOTTOMLEFT", 0, -26) end
+            else slot.title:SetPoint("TOPLEFT", side.slots[n - 1].body, "BOTTOMLEFT", 0, -44) end
             side.slots[n] = slot
         end
+        side.number = panel:CreateFontString(nil, "OVERLAY", "SkaldSmall")
+        side.number:SetPoint("BOTTOM", panel, "BOTTOMLEFT", x + CW / 2, 2)
+        side.number:SetTextColor(SkaldAPI.C_MUTED[1], SkaldAPI.C_MUTED[2], SkaldAPI.C_MUTED[3])
         sides[i] = side
     end
     local empty = panel:CreateFontString(nil, "OVERLAY", "SkaldBody")
@@ -768,7 +708,9 @@ local function BuildSagaTab(panel)
     local function Show()
         empty:SetText(#pages == 0 and UI.EMPTY or "")
         for i, side in ipairs(sides) do
-            local page = pages[(spread - 1) * 2 + i] or {}
+            local number = (spread - 1) * 2 + i
+            local page = pages[number] or {}
+            side.number:SetText(pages[number] and tostring(number) or "")
             for n, slot in ipairs(side.slots) do
                 local c = page[n]
                 slot.title:SetShown(c ~= nil)
@@ -787,7 +729,7 @@ local function BuildSagaTab(panel)
             built = {}
         end
         local size
-        pcall(function() size = select(2, SkaldBody:GetFont()) end)
+        pcall(function() size = select(2, SkaldSaga:GetFont()) end)
         pages = ns.SagaPages(built, size)
         if spread > Spreads() then spread = Spreads() end
         Show()

@@ -1361,6 +1361,7 @@ do
     ApplyFonts = function()
         local size = K.TEXT_SIZES[(SkaldDB and SkaldDB.textSize) or 1] or 14
         Make("SkaldBody", "EBGaramond.ttf", size, size - 2)
+        Make("SkaldSaga", "EBGaramond.ttf", size + 3, size + 1)
         Make("SkaldItalic", "EBGaramond-Italic.ttf", size, size - 2)
         Make("SkaldSmall", "EBGaramond.ttf", 11, 10)
         Make("SkaldHead", "Cinzel.ttf", 22, 19)
