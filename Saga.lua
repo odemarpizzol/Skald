@@ -28,6 +28,36 @@ local TEXT = {
                 "The first page is dated {date}, and it was written in {place}. I was only {a} {race} {class} then, and I am still, but now I have a story to prove it.",
                 "Before the legend, the first page: {place}, {date}, {a} {race} {class} called {name}. Small things, true things, the kind every saga is built on.",
             },
+            birth = {
+                "My name is {name}, {a} {race} {class}. I was born in {home}, in {land}, and everything I have done since began there.",
+                "I came into the world in {home}, in {land}. A small place for a story that has grown larger with every page.",
+                "Every people has its beginning, and mine was {home}, in {land}. The road leads away from it, but it never quite forgets the way back.",
+                "{name}, {a} {race} {class}, born in {home}, in {land}. Little more was known of me then than the name of that place.",
+                "Let it be told where it began: {home}, in {land}, among my own, with a name, a satchel, and a long road to learn.",
+                "They say a saga should start where its hero was born, and mine starts in {home}, in {land}, where {a} {race} named {name} first looked at the sky.",
+                "Before the roads, before the quests, there was {home}, in {land}: the place where I, {name}, {a} {race} {class}, took my first steps.",
+                "I was born in {home}, in {land}. Whatever the road makes of me, that is where I come from.",
+            },
+            firstPage = {
+                "The first page of this diary was written on {date}, in {place}.",
+                "I began to write on {date}, in {place}, and I have not stopped since.",
+                "This diary opens on {date}, in {place}, with a first page.",
+                "The quill first touched the paper on {date}, in {place}.",
+                "It was on {date}, in {place}, that I decided the road deserved a book.",
+                "The record of these pages starts on {date}, in {place}.",
+                "On {date}, in {place}, the first line of this book was written.",
+                "From {date}, in {place}, the road has been kept on paper.",
+            },
+            earliest = {
+                "The oldest deed the game remembers of me is dated {born}.",
+                "By the game's own memory, my first deed goes back to {born}.",
+                "The earliest mark I left in the world is from {born}.",
+                "The world has known me since {born}, at the least.",
+                "Long before this diary, on {born}, the game already held a deed of mine.",
+                "My oldest recorded deed is from {born}.",
+                "The game holds a deed of mine from {born}, older than any page here.",
+                "{born}: the date of the oldest deed the world remembers of me.",
+            },
             road = {
                 "Level by level the road taught me its lessons. I stand at level {level} now, and it was in {place} that I last climbed.",
                 "Level {level} is where this page finds me, and {place} is where I last grew. {#days:day|days} of road lie behind me.",
@@ -157,6 +187,36 @@ local TEXT = {
                 "A primeira página tem a data de {date} e foi escrita em {place}. Eu era só {g:um|uma} {race} {class} então, e ainda sou, mas agora tenho uma história para provar.",
                 "Antes da lenda, a primeira página: {place}, {date}, {g:um|uma} {race} {class} chamad{g:o|a} {name}. Coisas pequenas, coisas verdadeiras, aquelas de que toda saga é feita.",
             },
+            birth = {
+                "Meu nome é {name}, {g:um|uma} {race} {class}. Nasci em {home}, em {land}, e tudo o que fiz desde então começou ali.",
+                "Vim ao mundo em {home}, em {land}. Um lugar pequeno para uma história que cresceu a cada página.",
+                "Todo povo tem um começo, e o meu foi {home}, em {land}. A estrada leva para longe dele, mas nunca esquece de todo o caminho de volta.",
+                "{name}, {g:um|uma} {race} {class}, nascid{g:o|a} em {home}, em {land}. Pouco mais se sabia de mim, então, do que o nome daquele lugar.",
+                "Fique dito onde tudo começou: {home}, em {land}, entre os meus, com um nome, uma bolsa e uma longa estrada por aprender.",
+                "Dizem que uma saga deve começar onde nasceu o seu herói, e a minha começa em {home}, em {land}, onde {g:um|uma} {race} chamad{g:o|a} {name} olhou o céu pela primeira vez.",
+                "Antes das estradas, antes das missões, havia {home}, em {land}: o lugar onde eu, {name}, {g:um|uma} {race} {class}, dei os primeiros passos.",
+                "Nasci em {home}, em {land}. Seja o que a estrada fizer de mim, é de lá que venho.",
+            },
+            firstPage = {
+                "A primeira página deste diário foi escrita em {date}, em {place}.",
+                "Comecei a escrever em {date}, em {place}, e não parei mais.",
+                "Este diário se abre em {date}, em {place}, com uma primeira página.",
+                "A pena tocou o papel pela primeira vez em {date}, em {place}.",
+                "Foi em {date}, em {place}, que decidi que a estrada merecia um livro.",
+                "O registro destas páginas começa em {date}, em {place}.",
+                "Em {date}, em {place}, foi escrita a primeira linha deste livro.",
+                "Desde {date}, em {place}, a estrada é guardada no papel.",
+            },
+            earliest = {
+                "O feito mais antigo de que o jogo se lembra, em meu nome, tem a data de {born}.",
+                "Pela memória do próprio jogo, o meu primeiro feito remonta a {born}.",
+                "A marca mais antiga que deixei no mundo é de {born}.",
+                "O mundo me conhece desde {born}, pelo menos.",
+                "Muito antes deste diário, em {born}, o jogo já guardava um feito meu.",
+                "O meu feito registrado mais antigo é de {born}.",
+                "O jogo guarda um feito meu de {born}, mais antigo que qualquer página daqui.",
+                "{born}: a data do feito mais antigo de que o mundo se lembra de mim.",
+            },
             road = {
                 "Nível a nível a estrada me ensinou as suas lições. Estou no nível {level}, e foi em {place} que subi pela última vez.",
                 "O nível {level} é onde esta página me encontra, e {place} é onde cresci pela última vez. Deixei para trás {#days:dia|dias} de estrada.",
@@ -285,6 +345,36 @@ local TEXT = {
                 "Qu'il soit écrit\194\160: le {date}, à {place}, {name} a ouvert ce livre. {g:Un|Une} {race} {class}, avec une besace, un nom et une longue route devant soi.",
                 "La première page porte la date du {date} et fut écrite à {place}. Je n'étais alors qu'{g:un|une} {race} {class}, et je le suis encore, mais j'ai désormais une histoire pour le prouver.",
                 "Avant la légende, la première page\194\160: {place}, le {date}, {g:un|une} {race} {class} nommé{g:|e} {name}. Des choses petites, des choses vraies, celles dont toute saga est faite.",
+            },
+            birth = {
+                "Je m'appelle {name}, {g:un|une} {race} {class}. Je suis né{g:|e} à {home}, à {land}, et tout ce que j'ai fait depuis a commencé là.",
+                "Je suis venu{g:|e} au monde à {home}, à {land}. Un petit lieu pour une histoire qui a grandi à chaque page.",
+                "Chaque peuple a un commencement, et le mien fut {home}, à {land}. La route s'en éloigne, mais n'oublie jamais tout à fait le chemin du retour.",
+                "{name}, {g:un|une} {race} {class}, né{g:|e} à {home}, à {land}. On ne savait alors de moi guère plus que le nom de ce lieu.",
+                "Qu'on dise où tout a commencé\194\160: {home}, à {land}, parmi les miens, avec un nom, une besace et une longue route à apprendre.",
+                "On dit qu'une saga doit commencer là où est né son héros, et la mienne commence à {home}, à {land}, où {g:un|une} {race} nommé{g:|e} {name} a levé les yeux vers le ciel pour la première fois.",
+                "Avant les routes, avant les quêtes, il y avait {home}, à {land}\194\160: le lieu où moi, {name}, {g:un|une} {race} {class}, j'ai fait mes premiers pas.",
+                "Je suis né{g:|e} à {home}, à {land}. Quoi que la route fasse de moi, c'est de là que je viens.",
+            },
+            firstPage = {
+                "La première page de ce journal a été écrite le {date}, à {place}.",
+                "J'ai commencé à écrire le {date}, à {place}, et je n'ai plus cessé.",
+                "Ce journal s'ouvre le {date}, à {place}, par une première page.",
+                "La plume a touché le papier pour la première fois le {date}, à {place}.",
+                "C'est le {date}, à {place}, que j'ai décidé que la route méritait un livre.",
+                "Le registre de ces pages commence le {date}, à {place}.",
+                "Le {date}, à {place}, la première ligne de ce livre a été écrite.",
+                "Depuis le {date}, à {place}, la route est gardée sur le papier.",
+            },
+            earliest = {
+                "L'exploit le plus ancien dont le jeu se souvienne, à mon nom, est daté du {born}.",
+                "D'après la mémoire du jeu lui-même, mon premier exploit remonte au {born}.",
+                "La plus ancienne marque que j'aie laissée dans le monde date du {born}.",
+                "Le monde me connaît depuis le {born}, au moins.",
+                "Bien avant ce journal, le {born}, le jeu gardait déjà un exploit de moi.",
+                "Mon plus ancien exploit enregistré date du {born}.",
+                "Le jeu garde de moi un exploit du {born}, plus ancien que toute page d'ici.",
+                "{born}\194\160: la date du plus ancien exploit dont le monde se souvienne de moi.",
             },
             road = {
                 "Niveau après niveau, la route m'a enseigné ses leçons. Je suis au niveau {level}, et c'est à {place} que j'ai grandi pour la dernière fois.",
@@ -436,6 +526,44 @@ local function Fill(phrase, vars)
     return ns.Gendered(text)
 end
 
+-- Where each race is born: the area of its starting valley and the one of its land (the game names them in the
+-- language of the client). Races not listed are told without a birthplace.
+local RACE_HOME = {
+    Human = { 9, 12 }, Dwarf = { 132, 1 }, Gnome = { 132, 1 }, NightElf = { 188, 141 },
+    Orc = { 363, 14 }, Troll = { 363, 14 }, Scourge = { 154, 85 }, Tauren = { 220, 215 },
+}
+local function AreaName(id)
+    local ok, name = pcall(function() return C_Map and C_Map.GetAreaInfo and C_Map.GetAreaInfo(id) end)
+    return (ok and type(name) == "string" and name ~= "") and name or nil
+end
+
+-- The oldest achievement of the character (the game dates it): about when the character began. Asked once for a
+-- while: it goes through every category of the achievements.
+local oldestCache
+local function OldestDeed()
+    if oldestCache and (oldestCache.t or oldestCache.tries >= 3) then return oldestCache.t end
+    oldestCache = oldestCache or { tries = 0 }
+    oldestCache.tries = oldestCache.tries + 1
+    pcall(function()
+        if not (GetCategoryList and GetCategoryNumAchievements and GetAchievementInfo) then return end
+        local best
+        for _, cat in ipairs(GetCategoryList() or {}) do
+            for i = 1, GetCategoryNumAchievements(cat) or 0 do
+                local id, _, _, completed, month, day, year = GetAchievementInfo(cat, i)
+                if id and completed and type(year) == "number" and type(month) == "number" and type(day) == "number" then
+                    local full = year < 100 and year + 2000 or year
+                    local key = full * 10000 + month * 100 + day
+                    if not best or key < best then best = key end
+                end
+            end
+        end
+        if best then
+            oldestCache.t = time({ year = math.floor(best / 10000), month = math.floor(best / 100) % 100, day = best % 100, hour = 12 })
+        end
+    end)
+    return oldestCache.t
+end
+
 -- What the diary knows, as plain values.
 local function Gather(db)
     local v = { entries = db.entries or {} }
@@ -489,6 +617,13 @@ local function Gather(db)
     if ns.GoalScore then v.points = ns.GoalScore() end
     v.title = ns.GoalTitle and ns.GoalTitle(v.points or 0) or ""
     v.pages = #v.entries
+    local okR, _, raceFile = pcall(UnitRace, "player")
+    local areas = okR and RACE_HOME[raceFile]
+    if areas then
+        v.home, v.land = AreaName(areas[1]), AreaName(areas[2])
+        if not (v.home and v.land) then v.home, v.land = nil, nil end
+    end
+    v.born = OldestDeed()
     return v
 end
 
@@ -520,7 +655,23 @@ ns.BuildSaga = function()
     local article = v.race:sub(1, 1):lower():match("[aeiou]") and "an" or "a"
     local base = { name = v.name, race = v.race, class = v.class, date = when, place = v.place, level = v.level,
         days = v.days, pages = v.pages, title = v.title, a = article, A = article:sub(1, 1):upper() .. article:sub(2) }
-    Add("prologue", { { "prologue", base } })
+    local function Day(t) return date("%Y%m%d", t) end
+    local parts = {}
+    if v.home then
+        parts[1] = { "birth", { name = v.name, race = v.race, class = v.class, home = v.home, land = v.land, a = base.a, A = base.A } }
+    else
+        parts[1] = { "prologue", base }
+    end
+    -- the oldest deed the game dated, when it is older than the first page of the diary
+    if v.born and v.seed > 0 and Day(v.born) < Day(v.seed) then
+        parts[#parts + 1] = { "earliest", { born = date(UI.DATE, v.born) } }
+    end
+    -- the first page of the diary, when it was not written where the character was born (the other opening already says it)
+    local here = tostring(v.place):lower()
+    if v.home and v.place ~= "" and here ~= v.home:lower() and here ~= v.land:lower() then
+        parts[#parts + 1] = { "firstPage", { date = when, place = v.place } }
+    end
+    Add("prologue", parts)
     Add("road", { { "road", { level = v.level, place = v.levelPlace, days = v.days } } })
     if v.quests > 0 then Add("stories", { { "stories", { n = v.quests } } }) end
     if v.bosses > 0 then

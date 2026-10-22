@@ -18,6 +18,9 @@ function UnitXPMax() return 100000 end; function UnitXP() return 0 end
 function UnitLevel() return ${level} end; function UnitName() return "Oddinha" end; function UnitExists() return false end
 function GetQuestID() return 0 end; function UnitGUID() return "P1" end; function UnitSex() return ${sex} end
 function UnitClass() return "Guerreira","WARRIOR" end; function UnitRace() return "Elfa Noturna","NightElf" end
+C_Map.GetAreaInfo = function(id) if id == 188 then return "Umbravale" end if id == 141 then return "Teldrassil" end end
+function GetCategoryList() return { 1 } end; function GetCategoryNumAchievements() return 1 end
+function GetAchievementInfo() return 7, "x", 10, true, 10, 10, 26 end
 function SetPortraitTexture() end; function GetZoneText() return "Floresta de Elwynn" end
 function GetStatisticsCategoryList() return {} end; function GetStatistic() return "--" end; function GetMoney() return 0 end
 Minimap=CreateFrame("Frame","Minimap",UIParent); function GetCursorPosition() return 100,100 end

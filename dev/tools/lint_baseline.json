@@ -178,6 +178,10 @@
   "type"
  ],
  "Skald/Saga.lua": [
+  "C_Map",
+  "GetAchievementInfo",
+  "GetCategoryList",
+  "GetCategoryNumAchievements",
   "GetLocale",
   "SkaldAPI",
   "SkaldBody",

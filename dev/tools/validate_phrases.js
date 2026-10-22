@@ -82,11 +82,11 @@ do
     local T = ns.SagaTexts["${loc}"]
     local E = ns.SagaTexts.enUS
     local ALLOWED = {
-        prologue = "name race class date place a A", road = "level place days", stories = "n", war = "n", warHard = "boss tries",
+        prologue = "name race class date place a A", birth = "name race class home land a A", firstPage = "date place", earliest = "born", road = "level place days", stories = "n", war = "n", warHard = "boss tries",
         falls = "n", fallsPlace = "place", company = "n", companyNames = "names", marks = "n points title", epilogue = "name level pages title",
         epilogueTop = "name pages title",
     }
-    local MUST = { prologue = "date place", road = "level place", stories = "n", war = "n", warHard = "boss tries",
+    local MUST = { prologue = "date place", birth = "home land", firstPage = "date place", earliest = "born", road = "level place", stories = "n", war = "n", warHard = "boss tries",
         falls = "n", fallsPlace = "place", company = "n", companyNames = "names", marks = "n points title", epilogue = "level", epilogueTop = "pages" }
     local COMBAT = { war = true, warHard = true, falls = true, fallsPlace = true }
     local words = { ${FORBID[loc === 'enUS' ? 'en' : 'pt'].map(w => JSON.stringify(w)).join(', ')} }

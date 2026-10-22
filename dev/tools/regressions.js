@@ -1277,6 +1277,39 @@ end
 RES = (seen and not bad) and "ok" or tostring(bad or "no falls chapter")`,
 });
 
+for (const [loc, home, land] of [['enUS', 'Shadowglen', 'Teldrassil'], ['ptBR', 'Umbravale', 'Teldrassil'], ['frFR', 'Sylvarde', 'Teldrassil']]) {
+  run(`the Saga of ${loc} tells where a race is born, and the first page only when it was written elsewhere`, {
+    pre: `__locale = "${loc}"; ${SAGA_DIARY()}
+function UnitRace() return "Night Elf", "NightElf" end
+C_Map.GetAreaInfo = function(id) if id == 188 then return "${home}" end if id == 141 then return "${land}" end end
+function GetCategoryList() return { 1 } end
+function GetCategoryNumAchievements() return 2 end
+function GetAchievementInfo(cat, i) if i == 1 then return 7, "x", 10, true, 10, 10, 26 end return 8, "y", 10, true, 10, 12, 26 end`,
+    body: `local texts = {}
+for i = 1, 30 do
+  SkaldCharDB.stats.first = 1792000000 + i * 7919
+  texts[#texts + 1] = ns.BuildSaga()[1].text
+end
+local all = table.concat(texts, " ")
+-- the first page was written in Darkshore, not where a Night Elf is born: it is told too, with the oldest deed (10/10/2026)
+local born = all:find("${home}", 1, true) and all:find("${land}", 1, true)
+local firstPage = all:find("Darkshore", 1, true)
+local oldest = all:find("10/10/2026", 1, true) or all:find("2026/10/10", 1, true) or all:find("10/10/2026", 1, true)
+-- written where the race begins: no first page sentence
+SkaldCharDB.entries[1].zone = "${home}"
+local same = ns.BuildSaga()[1].text
+RES = (born and firstPage and oldest and not same:find("Darkshore", 1, true) and not all:find("{", 1, true)) and "ok"
+  or ("born=" .. tostring(born) .. " first=" .. tostring(firstPage) .. " oldest=" .. tostring(oldest) .. " same=" .. same)`,
+  });
+}
+
+run('the Saga of a race it does not know is told without a birthplace', {
+  pre: SAGA_DIARY() + `
+function UnitRace() return "Pandaren", "Pandaren" end`,
+  body: `local text = ns.BuildSaga()[1].text
+RES = (text:find("Darkshore", 1, true) and not text:find("born", 1, true)) and "ok" or text`,
+});
+
 run('the Saga says "an Orc" and "an Undead", never "a Orc"', {
   pre: SAGA_DIARY() + `
 function UnitRace() return "Orc", "Orc" end`,
