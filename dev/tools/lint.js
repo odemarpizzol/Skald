@@ -12,7 +12,7 @@ const path = require('path');
 const luaparse = require('luaparse');
 
 const ADDONS = path.resolve(__dirname, '../../..');
-const FILES = ['Skald/Skald.lua', 'Skald/Atlas.lua', 'Skald/Goals.lua', 'Skald/Locales.lua', 'Skald/Curated.lua', 'Skald/XPTiers.lua'].concat(fs.existsSync(path.join(ADDONS, 'SkaldAtlas')) ? ['SkaldAtlas/SkaldAtlas.lua'] : []);
+const FILES = ['Skald/Skald.lua', 'Skald/Atlas.lua', 'Skald/Goals.lua', 'Skald/Saga.lua', 'Skald/Locales.lua', 'Skald/Curated.lua', 'Skald/XPTiers.lua'].concat(fs.existsSync(path.join(ADDONS, 'SkaldAtlas')) ? ['SkaldAtlas/SkaldAtlas.lua'] : []);
 const INTENDED_GLOBALS = new Set(['SkaldAPI', 'SkaldDB', 'SkaldCharDB', 'SkaldAtlasDB', 'SkaldAtlasStub',
   'SLASH_SKALD1', 'SLASH_SKALD2', 'SLASH_SKALDATLAS1', 'SLASH_SKALDATLAS2', 'SLASH_SKALD3']);
 const LOCAL_LIMIT = 200, LOCAL_WARN = 185;

@@ -147,6 +147,7 @@ K.WhoShort = function(key)
     key = tostring(key or "")
     return key:match("^([^%-]+)%-") or key
 end
+ns.WhoShort = K.WhoShort
 
 -- What surrounded the moment: the hour of the game, the names in the group, the pet.
 AddContext = function(kind, entry)
@@ -2987,7 +2988,7 @@ local function CreateWindow()
 
     local panels, panelOrder = {}, {}
     -- The tabs in the order of the book: the diary itself, what it holds, then the settings below, a little apart.
-    local TAB_RANK = { cover = 1, index = 2, days = 3, goals = 4, pets = 5, map = 6, style = 20, notices = 21, options = 22 }
+    local TAB_RANK = { cover = 1, index = 2, days = 3, goals = 4, saga = 4.5, pets = 5, map = 6, style = 20, notices = 21, options = 22 }
     local function LayoutTabs()
         local ids = {}
         for id in pairs(tabs) do ids[#ids + 1] = id end
@@ -3553,6 +3554,7 @@ SkaldAPI.GameFacts = function()
     out.kills = kills
     out.bosses = BossWins()
     out.dungeons = GameStat(K.STAT_DUNGEONS)
+    out.deaths = GameStat(K.STAT_DEATHS)
     return out
 end
 SkaldAPI.C_BODY, SkaldAPI.C_HEAD, SkaldAPI.C_MUTED = K.C_BODY, K.C_HEAD, K.C_MUTED

@@ -9,3 +9,4 @@
 - **Group:** inviting someone who declines no longer counts as joining a group (no page, no goal); it counts when another player is really in the group.
 - Goals: a new Collection category (mounts 1/5/10, companion pets 1/10/25), read straight from the game's journals; what you already owned is marked quietly, without pages.
 - Goals: quests and flight paths now also use the game's own statistics (the larger of the game's count and the diary's); `/skald report` shows the mounts and pets collected.
+- The Saga: a new tab that tells the whole diary as a short book (prologue, the road, quests, bosses, falls, company, seals, epilogue), in the first person, in English, Portuguese and French. It is built from the diary and the game's own statistics, and the same diary always gives the same Saga.

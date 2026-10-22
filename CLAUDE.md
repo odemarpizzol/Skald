@@ -25,7 +25,7 @@ Releases: bullets in `dev/NEXT_CHANGELOG.md` (English), version in `Skald.toc` a
 
 ## Architecture
 
-Load order (`Skald.toc`): `Locales.lua`, `Curated.lua`, `XPTiers.lua`, `Skald.lua`, `Atlas.lua`, `Goals.lua`; shared through the addon namespace `ns`. SavedVariables: `SkaldDB`, `SkaldAtlasDB` (account), `SkaldCharDB` (per character).
+Load order (`Skald.toc`): `Locales.lua`, `Curated.lua`, `XPTiers.lua`, `Skald.lua`, `Atlas.lua`, `Goals.lua`, `Saga.lua`; shared through the addon namespace `ns`. SavedVariables: `SkaldDB`, `SkaldAtlasDB` (account), `SkaldCharDB` (per character).
 
 - Everything the diary knows about a character besides pages (pets, companions, flights, goals, standings...) is listed in `K.DIARY_STATE`: it is cleared with the diary and archived/restored with it. A new per-character key in `SkaldCharDB` must be added there.
 - A new goal in `Goals.lua` must carry `since = <the next GOALS_VERSION>` and `GOALS_VERSION` must go up with it; without that every existing diary writes a page and a notice for each goal it finds already done on its next login. Points come from the seal (`tier`) and are never stored.
@@ -33,7 +33,7 @@ Load order (`Skald.toc`): `Locales.lua`, `Curated.lua`, `XPTiers.lua`, `Skald.lu
 - `Skald.lua` (~6400 lines) holds events (`EVENT_HANDLERS` table, dispatched by `HandleEvent`), milestones (`Mile`), the book window (`CreateWindow`, ~1200 lines), settings tabs (`f:AddTab`, order by `TAB_RANK`), export (`BuildExport`, `PlainText`, the Reader format) and the slash commands. Constants and helpers live in the tables `K`, `Mile` and `ns`, because the WoW Lua 5.1 chunk is limited to 200 locals (lint fails past that).
 - `Atlas.lua`: world-map pins, built in since 0.31 (standalone SkaldAtlas is only a stub). `Goals.lua`: the clickable Goals tab, using the `AddTab` pattern; new tabs should copy it. `Curated.lua`: hand-written quest stories. `XPTiers.lua`: level/XP tiers.
 - `docs/reader`: the web Reader (GitHub Pages, main branch `/docs`), plain HTML/JS with no dependencies. The game exports text with `/skald reader` (header, one line per page, fields separated by a caret `^`, parts with a checksum); the user pastes it in the page, nothing is sent anywhere. `dev/tools/reader_test.js` tests the parser against a real simulated export.
-- Planned next: `Saga.lua` with `ns.BuildSaga()` (the final book), loaded after `Goals.lua`, as a new tab and in the Reader export. The larger plan (Saga, shared chronicle, TTS, memories of time) is in the user's plan file `refactored-discovering-aurora.md`.
+- `Saga.lua`: `ns.BuildSaga()` tells the diary as chapters in the first person (a tab, pages by the size of the letter). Its phrases live in `Saga.lua` (`ns.SagaTexts`), are checked by `validate_phrases.js`, and each is picked by a hash of the diary's first date, so the same diary gives the same Saga. Planned next: the Saga in the Reader export (`docs/reader`). The larger plan (Saga, shared chronicle, TTS, memories of time) is in the user's plan file `refactored-discovering-aurora.md`.
 
 ## Art
 

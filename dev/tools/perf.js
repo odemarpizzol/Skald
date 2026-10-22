@@ -8,7 +8,7 @@ const L = lauxlib.luaL_newstate(); lualib.luaL_openlibs(L);
 const run = c => { if (lauxlib.luaL_dostring(L, to_luastring(c))) throw new Error(to_jsstring(lua.lua_tolstring(L, -1))); };
 const set = (k, v) => { lua.lua_pushstring(L, to_luastring(v)); lua.lua_setglobal(L, to_luastring(k)); };
 run(fs.readFileSync(path.join(__dirname, 'mock.lua'), 'utf8'));
-for (const [k, f] of [['LOC', 'Locales.lua'], ['CUR', 'Curated.lua'], ['XPT', 'XPTiers.lua'], ['CH', 'Skald.lua'], ['AT', 'Atlas.lua'], ['GL', 'Goals.lua']])
+for (const [k, f] of [['LOC', 'Locales.lua'], ['CUR', 'Curated.lua'], ['XPT', 'XPTiers.lua'], ['CH', 'Skald.lua'], ['AT', 'Atlas.lua'], ['GL', 'Goals.lua'], ['SG', 'Saga.lua']])
   set(k, fs.readFileSync(path.join(ADDONS, 'Skald', f), 'utf8'));
 run(`__locale="enUS"; frames={}; SkaldDB={}; SkaldCharDB=nil; FONTS={}
 TIMERS={}; C_Timer={After=function(t,fn) table.insert(TIMERS,fn) end}
@@ -24,7 +24,7 @@ function GetStatisticsCategoryList() return {} end; function GetStatistic() retu
 Minimap=CreateFrame("Frame","Minimap",UIParent); function GetCursorPosition() return 100,100 end
 local ns={}
 assert(load(LOC,"=L"))("Skald",ns); assert(load(CUR,"=U"))("Skald",ns); assert(load(XPT,"=X"))("Skald",ns)
-assert(load(CH,"=C"))("Skald",ns); assert(load(AT,"=A"))("Skald",ns); assert(load(GL,"=G"))("Skald",ns)
+assert(load(CH,"=C"))("Skald",ns); assert(load(AT,"=A"))("Skald",ns); assert(load(GL,"=G"))("Skald",ns); assert(load(SG,"=S"))("Skald",ns)
 local function fire(ev,...) for _,f in ipairs(frames) do if f._OnEvent then f._OnEvent(f,ev,...) end end end
 fire("ADDON_LOADED","Skald"); fire("PLAYER_LOGIN"); runTimers()
 local function clock(label, fn, n) local t=os.clock(); for i=1,(n or 1) do fn() end return string.format("%-34s %8.1f ms", label, (os.clock()-t)*1000/(n or 1)) end
@@ -59,6 +59,7 @@ for i = 1, 3000, 25 do SkaldCharDB.entries[i].with = { "Player" .. (i % 200 + 1)
 out[#out+1] = clock("goal facts (3000 pages)", function() ns.GoalFacts() end, 5)
 ns.CheckGoals()   -- the first look writes the goals that are new; the next ones find nothing
 out[#out+1] = clock("goals check, nothing new (3000)", function() ns.CheckGoals() end, 5)
+out[#out+1] = clock("saga (3000 pages)", function() ns.BuildSaga() end, 5)
 out[#out+1] = clock("export plain, names hidden (3000)", function() SkaldAPI.BuildExport("plain", "all") end, 1)
 out[#out+1] = clock("text for the Reader (3000 pages)", function() SkaldAPI.BuildExport("reader", "all") end, 1)
 -- the saved file, as the game would write it: about one line per field (a rough serializer, enough to see growth)

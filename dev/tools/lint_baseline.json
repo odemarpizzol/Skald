@@ -176,6 +176,27 @@
   "tostring",
   "type"
  ],
+ "Skald/Saga.lua": [
+  "GetLocale",
+  "SkaldAPI",
+  "SkaldBody",
+  "SkaldCharDB",
+  "SkaldDB",
+  "UnitClass",
+  "UnitLevel",
+  "UnitName",
+  "UnitRace",
+  "date",
+  "ipairs",
+  "math",
+  "pairs",
+  "pcall",
+  "select",
+  "table",
+  "time",
+  "tostring",
+  "type"
+ ],
  "Skald/Locales.lua": [],
  "Skald/Curated.lua": [
   "ipairs"

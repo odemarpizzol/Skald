@@ -16,7 +16,7 @@ const ok = msg => console.log('  ok    ' + msg);
 
 // 1. syntax
 console.log('Syntax');
-for (const f of ['Skald/Locales.lua', 'Skald/Curated.lua', 'Skald/XPTiers.lua', 'Skald/Skald.lua', 'Skald/Atlas.lua', 'Skald/Goals.lua'].concat(fs.existsSync(path.join(ADDONS, 'SkaldAtlas')) ? ['SkaldAtlas/SkaldAtlas.lua'] : [])) {
+for (const f of ['Skald/Locales.lua', 'Skald/Curated.lua', 'Skald/XPTiers.lua', 'Skald/Skald.lua', 'Skald/Atlas.lua', 'Skald/Goals.lua', 'Skald/Saga.lua'].concat(fs.existsSync(path.join(ADDONS, 'SkaldAtlas')) ? ['SkaldAtlas/SkaldAtlas.lua'] : [])) {
   const installed = path.join(ADDONS, f);
   const p = f === 'SkaldAtlas/SkaldAtlas.lua' && !fs.existsSync(installed)
     ? path.resolve(__dirname, '../skald-atlas-repo/SkaldAtlas.lua') : installed;
@@ -38,7 +38,7 @@ for (const f of fs.readdirSync(path.join(ADDONS, 'Skald')).filter(n => n.endsWit
 console.log('Textures');
 {
   const tex = new Set(fs.readdirSync(path.join(ADDONS, 'Skald/Textures')).map(f => f.replace(/\.tga$/, '')));
-  const src = fs.readFileSync(path.join(ADDONS, 'Skald/Skald.lua'), 'utf8') + fs.readFileSync(path.join(ADDONS, 'Skald/Atlas.lua'), 'utf8') + fs.readFileSync(path.join(ADDONS, 'Skald/Goals.lua'), 'utf8');
+  const src = fs.readFileSync(path.join(ADDONS, 'Skald/Skald.lua'), 'utf8') + fs.readFileSync(path.join(ADDONS, 'Skald/Atlas.lua'), 'utf8') + fs.readFileSync(path.join(ADDONS, 'Skald/Goals.lua'), 'utf8') + fs.readFileSync(path.join(ADDONS, 'Skald/Saga.lua'), 'utf8');
   const wanted = new Set();
   for (const m of src.matchAll(/"((?:it|ev|st|pf|ui|ghost|goal|rd)_[a-z_0-9]+)"/g)) wanted.add(m[1]);
   for (const m of src.matchAll(/"(pin_med)" \.\./g)) for (let i = 0; i <= 5; i++) wanted.add('pin_med' + i);
@@ -71,7 +71,7 @@ function session(locale) {
   const run = c => { if (lauxlib.luaL_dostring(L, to_luastring(c))) throw new Error(to_jsstring(lua.lua_tolstring(L, -1))); };
   const set = (k, v) => { lua.lua_pushstring(L, to_luastring(v)); lua.lua_setglobal(L, to_luastring(k)); };
   run(fs.readFileSync(path.join(__dirname, 'mock.lua'), 'utf8'));
-  for (const [k, f] of [['LOC', 'Locales.lua'], ['CUR', 'Curated.lua'], ['XPT', 'XPTiers.lua'], ['CH', 'Skald.lua'], ['AT', 'Atlas.lua'], ['GL', 'Goals.lua']])
+  for (const [k, f] of [['LOC', 'Locales.lua'], ['CUR', 'Curated.lua'], ['XPT', 'XPTiers.lua'], ['CH', 'Skald.lua'], ['AT', 'Atlas.lua'], ['GL', 'Goals.lua'], ['SG', 'Saga.lua']])
     set(k, fs.readFileSync(path.join(ADDONS, 'Skald', f), 'utf8'));
   run(`__locale="${locale}"; frames={}; SkaldDB={}; SkaldCharDB=nil; FONTS={}
 TIMERS={}; C_Timer={After=function(t,fn) table.insert(TIMERS,fn) end}
@@ -97,7 +97,7 @@ function GetMoney() return 0 end
 Minimap=CreateFrame("Frame","Minimap",UIParent); function GetCursorPosition() return 100,100 end
 local ns={}
 assert(load(LOC,"=L"))("Skald",ns); assert(load(CUR,"=U"))("Skald",ns); assert(load(XPT,"=X"))("Skald",ns)
-assert(load(CH,"=C"))("Skald",ns); assert(load(AT,"=A"))("Skald",ns); assert(load(GL,"=G"))("Skald",ns)
+assert(load(CH,"=C"))("Skald",ns); assert(load(AT,"=A"))("Skald",ns); assert(load(GL,"=G"))("Skald",ns); assert(load(SG,"=S"))("Skald",ns)
 local function fire(ev,...) for _,f in ipairs(frames) do if f._OnEvent then f._OnEvent(f,ev,...) end end end
 fire("ADDON_LOADED","Skald"); fire("PLAYER_LOGIN"); runTimers()
 local out={}
@@ -182,11 +182,12 @@ console.log('Speed');
   if (!(turn < 60)) fail('turning a page takes ' + turn + ' ms (limit 60): the layout is probably no longer cached');
   else if (!(first < 2500)) fail('opening the book takes ' + first + ' ms (limit 2500)');
   else if (!(ms('map markers (3000 pages, one map)') < 400)) fail('the map markers of 3000 pages take ' + ms('map markers (3000 pages, one map)') + ' ms (limit 400)');
+  else if (!(ms('saga (3000 pages)') < 100)) fail('the Saga takes ' + ms('saga (3000 pages)') + ' ms (limit 100): it is built when its tab opens');
   else if (!(ms('goals check, nothing new (3000)') < 100)) fail('the check of the goals takes ' + ms('goals check, nothing new (3000)') + ' ms (limit 100): it runs after every change of the pages');
   else if (!(ms('export plain, names hidden (3000)') < 3000)) fail('exporting 3000 pages with the names hidden takes ' + ms('export plain, names hidden (3000)') + ' ms (limit 3000)');
   else if (!(ms('text for the Reader (3000 pages)') < 5000)) fail('the text for the Reader takes ' + ms('text for the Reader (3000 pages)') + ' ms (limit 5000)');
   else if (!((m => m && Number(m[1]) < 4096)((r.stdout || '').match(/saved file \(3000\) (\d+) KB/)))) fail('the saved file of 3000 pages is over 4 MB: ' + ((r.stdout || '').match(/saved file \(3000\) (\d+) KB/) || [])[1] + ' KB')
-  else ok('3000 pages: open ' + first.toFixed(0) + ' ms, turn a page ' + turn.toFixed(1) + ' ms, map markers ' + ms('map markers (3000 pages, one map)').toFixed(0) + ' ms, goals ' + ms('goals check, nothing new (3000)').toFixed(0) + ' ms, export ' + ms('export plain, names hidden (3000)').toFixed(0) + ' ms, Reader text ' + ms('text for the Reader (3000 pages)').toFixed(0) + ' ms');
+  else ok('3000 pages: open ' + first.toFixed(0) + ' ms, turn a page ' + turn.toFixed(1) + ' ms, map markers ' + ms('map markers (3000 pages, one map)').toFixed(0) + ' ms, goals ' + ms('goals check, nothing new (3000)').toFixed(0) + ' ms, Saga ' + ms('saga (3000 pages)').toFixed(0) + ' ms, export ' + ms('export plain, names hidden (3000)').toFixed(0) + ' ms, Reader text ' + ms('text for the Reader (3000 pages)').toFixed(0) + ' ms');
 }
 
 console.log(failed ? `\n${failed} check(s) FAILED` : '\nAll checks passed');

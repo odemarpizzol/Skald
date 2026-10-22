@@ -8,7 +8,7 @@ const run = c => { if (lauxlib.luaL_dostring(L, to_luastring(c))) { console.log(
 const set = (k, v) => { lua.lua_pushstring(L, to_luastring(v)); lua.lua_setglobal(L, to_luastring(k)); };
 const get = k => { lua.lua_getglobal(L, to_luastring(k)); return to_jsstring(lua.lua_tolstring(L, -1)); };
 run(fs.readFileSync(__dirname + '/mock.lua', 'utf8'));
-for (const [k, f] of [['LOC', 'Skald/Locales.lua'], ['CUR', 'Skald/Curated.lua'], ['XPT', 'Skald/XPTiers.lua'], ['MAIN', 'Skald/Skald.lua']])
+for (const [k, f] of [['LOC', 'Skald/Locales.lua'], ['CUR', 'Skald/Curated.lua'], ['XPT', 'Skald/XPTiers.lua'], ['MAIN', 'Skald/Skald.lua'], ['SAGA', 'Skald/Saga.lua']])
   set(k, fs.readFileSync(A + f, 'utf8'));
 
 const FORBID = {
@@ -27,7 +27,7 @@ TIMERS={}; C_Timer={After=function(t,fn) table.insert(TIMERS,fn) end}
 function GetGuildInfo() return nil end; function IsInInstance() return false,"none" end
 function UnitXPMax() return 1000 end; function UnitLevel() return 10 end; function UnitName() return "x" end; function GetQuestID() return 0 end
 local ns={}
-assert(load(LOC,"=L"))("Skald",ns); assert(load(CUR,"=U"))("Skald",ns); assert(load(XPT,"=X"))("Skald",ns); assert(load(MAIN,"=C"))("Skald",ns)
+assert(load(LOC,"=L"))("Skald",ns); assert(load(CUR,"=U"))("Skald",ns); assert(load(XPT,"=X"))("Skald",ns); assert(load(MAIN,"=C"))("Skald",ns); assert(load(SAGA,"=S"))("Skald",ns)
 local function fire(ev,...) for _,f in ipairs(frames) do if f._OnEvent then f._OnEvent(f,ev,...) end end end
 fire("ADDON_LOADED","Skald"); fire("PLAYER_LOGIN")
 local P = ns.LOCALES["${loc}"].phrases
@@ -76,6 +76,66 @@ for _, qt in ipairs({ "fight", "gather", "explore", "seek", "delivery", "unknown
     sizes[#sizes+1] = list and #list or "NIL"
   end
   pools[#pools+1] = qt .. ": " .. table.concat(sizes, "/")
+end
+-- The Saga: pools of whole paragraphs (the tags each pool may use, the words it may not, French punctuation)
+do
+    local T = ns.SagaTexts["${loc}"]
+    local E = ns.SagaTexts.enUS
+    local ALLOWED = {
+        prologue = "name race class date place", road = "level place days", stories = "n", war = "n", warHard = "boss tries",
+        falls = "n place", company = "n", companyNames = "names", marks = "n points title", epilogue = "name level pages title",
+        epilogueTop = "name pages title",
+    }
+    local MUST = { prologue = "date place", road = "level place days", stories = "n", war = "n", warHard = "boss tries",
+        falls = "n place", company = "n", companyNames = "names", marks = "n points title", epilogue = "level", epilogueTop = "pages" }
+    local COMBAT = { war = true, warHard = true, falls = true }
+    local words = { ${FORBID[loc === 'enUS' ? 'en' : 'pt'].map(w => JSON.stringify(w)).join(', ')} }
+    local nbsp = string.char(194, 160)
+    for key in pairs(E.TITLES) do if not T.TITLES[key] then problems[#problems+1] = "SAGA TITLE " .. key end end
+    for key in pairs(E.POOLS) do
+        local pool = T.POOLS[key]
+        if not pool then problems[#problems+1] = "SAGA POOL missing " .. key
+        else
+            if #pool < ${POOL_AIM} then problems[#problems+1] = "SAGA POOL " .. key .. " has " .. #pool .. " (aim ${POOL_AIM})" end
+            for i, ph in ipairs(pool) do
+                local where = "SAGA " .. key .. "#" .. i
+                local seen = {}
+                for tag in ph:gmatch("{(%a+)}") do
+                    seen[tag] = true
+                    if not (" " .. ALLOWED[key] .. " "):find(" " .. tag .. " ", 1, true) then problems[#problems+1] = where .. " tag {" .. tag .. "}" end
+                end
+                for must in MUST[key]:gmatch("%a+") do
+                    if not seen[must] then problems[#problems+1] = where .. " lacks {" .. must .. "}" end
+                end
+                for tag in ph:gmatch("{[^}]*}") do
+                    if not tag:match("^{%a+}$") and not tag:match("^{g:[^|}]*|[^}]*}$") then problems[#problems+1] = where .. " bad tag " .. tag end
+                end
+                if #ph > 330 then problems[#problems+1] = where .. " too long (" .. #ph .. ")" end
+                local low = ph:lower()
+                if not COMBAT[key] then
+                    for _, w in ipairs(words) do
+                        if low:find(w, 1, true) then problems[#problems+1] = where .. " combat word " .. w end
+                    end
+                end
+                if "${loc}" == "frFR" then
+                    local plain = ph:gsub("{g:[^}]*}", "")
+                    for _, mark in ipairs({ ":", ";", "?", "!" }) do
+                        local at = 1
+                        while true do
+                            local a = plain:find(mark, at, true)
+                            if not a then break end
+                            local before = plain:sub(math.max(1, a - 2), a - 1)
+                            if before ~= nbsp then problems[#problems+1] = where .. " needs a non-breaking space before " .. mark end
+                            at = a + 1
+                        end
+                    end
+                end
+                -- the same text must not appear twice in a pool
+                for j = 1, i - 1 do if pool[j] == ph then problems[#problems+1] = where .. " repeats #" .. j end end
+            end
+        end
+    end
+    for key in pairs(T.POOLS) do if not E.POOLS[key] then problems[#problems+1] = "SAGA POOL extra " .. key end end
 end
 PROBLEMS = table.concat(problems, " ; ")
 POOLS = table.concat(pools, "   ")

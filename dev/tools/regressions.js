@@ -5,7 +5,7 @@ const fs = require('fs');
 const path = require('path');
 
 const ADDONS = path.resolve(__dirname, '../../..');
-const FILES = [['LOC', 'Locales.lua'], ['CUR', 'Curated.lua'], ['XPT', 'XPTiers.lua'], ['CH', 'Skald.lua'], ['AT', 'Atlas.lua'], ['GL', 'Goals.lua']];
+const FILES = [['LOC', 'Locales.lua'], ['CUR', 'Curated.lua'], ['XPT', 'XPTiers.lua'], ['CH', 'Skald.lua'], ['AT', 'Atlas.lua'], ['GL', 'Goals.lua'], ['SG', 'Saga.lua']];
 let failed = 0;
 
 // The game, as far as the addon can tell. `pre` runs before the addon loads (saved data, game answers);
@@ -39,7 +39,7 @@ function count(k) local n=0 for _,e in ipairs(SkaldCharDB.entries) do if e.kind=
 ${pre}
 ns={}
 assert(load(LOC,"=L"))("Skald",ns); assert(load(CUR,"=U"))("Skald",ns); assert(load(XPT,"=X"))("Skald",ns)
-assert(load(CH,"=C"))("Skald",ns); assert(load(AT,"=A"))("Skald",ns); assert(load(GL,"=G"))("Skald",ns)
+assert(load(CH,"=C"))("Skald",ns); assert(load(AT,"=A"))("Skald",ns); assert(load(GL,"=G"))("Skald",ns); assert(load(SG,"=S"))("Skald",ns)
 fire("ADDON_LOADED","Skald"); fire("PLAYER_LOGIN"); runTimers(); runTimers()
 RES = "no result"
 local okRun, err = pcall(function()
@@ -1141,6 +1141,101 @@ local earned, possible = ns.GoalScore()
 local quiet = g.level10 and g.level10.retro and g.level20 and g.level20.retro and g.quests50 and g.quests50.retro and g.kills500 and g.kills500.retro
 RES = (count("goal") == 0 and quiet and SkaldCharDB.goalsVer == 3 and earned > 5 and possible > 800 and ns.GoalPoints("level60") == 100
   and ns.GoalPoints("flights5") == 5) and "ok" or ("pages=" .. count("goal") .. " quiet=" .. tostring(quiet) .. " ver=" .. tostring(SkaldCharDB.goalsVer) .. " score=" .. earned .. "/" .. possible)`,
+});
+
+const SAGA_DIARY = (first = 1792000000, counts = 'quest = 80, boss = 3, death = 5', extra = '') => SAVED(`{
+  { t = ${first}, kind = "zone", arg = "Elwynn Forest", zone = "Elwynn Forest", idx = 1 },
+  { t = ${first + 90000}, kind = "level", arg = 10, zone = "Westfall", idx = 1 },
+  { t = ${first + 180000}, kind = "boss", arg = "Hogger", zone = "Elwynn Forest", tries = 2, tier = 3, idx = 1 },
+  { t = ${first + 260000}, kind = "death", arg = "Duskwood", zone = "Duskwood", idx = 1 },
+}`, `stats = { counts = { ${counts} }, deathZones = { Duskwood = 3, Westfall = 1 }, tiers = {}, played = 100, first = ${first} },
+  companions = { ["Aldor-Sakaldd"] = { first = 1, last = 50 }, ["Brisa-Sakaldd"] = { first = 1, last = 40 }, ["Cato-Sakaldd"] = { first = 1, last = 30 }, ["Dora-Sakaldd"] = { first = 1, last = 20 } },
+  goals = { level10 = { t = 1, retro = true }, flights5 = { t = 2, retro = true } }, goalsInit = true, goalsVer = 3 ${extra}`);
+
+run('the Saga: the same diary tells the same Saga, with every chapter, no stray tag and a page-sized text', {
+  pre: SAGA_DIARY(),
+  body: `local a, b = ns.BuildSaga(), ns.BuildSaga()
+local same = #a == #b
+for i = 1, #a do if not b[i] or a[i].text ~= b[i].text or a[i].title ~= b[i].title then same = false end end
+local keys, worst, stray = {}, 0, ""
+for _, c in ipairs(a) do
+  keys[#keys + 1] = c.key
+  if #c.text > worst then worst = #c.text end
+  if c.text:find("{", 1, true) or c.text:find("}", 1, true) then stray = c.key end
+end
+local names = a[6] and a[6].text or ""
+local wanted = "prologue,road,stories,war,falls,company,marks,epilogue"
+RES = (same and table.concat(keys, ",") == wanted and worst <= 640 and stray == "" and names:find("Aldor", 1, true) and names:find("Cato", 1, true)
+  and not names:find("Sakaldd", 1, true) and not names:find("Dora", 1, true) and a[4].text:find("Hogger", 1, true) and a[5].text:find("Duskwood", 1, true))
+  and "ok" or ("same=" .. tostring(same) .. " keys=" .. table.concat(keys, ",") .. " worst=" .. worst .. " stray=" .. stray)`,
+});
+
+run('the Saga leaves out a chapter that has nothing to say, and never tells a zero', {
+  pre: SAVED(`{
+  { t = 1792000000, kind = "zone", arg = "Elwynn Forest", zone = "Elwynn Forest", idx = 1 },
+  { t = 1792090000, kind = "level", arg = 10, zone = "Westfall", idx = 1 },
+}`, 'stats = { counts = {}, deathZones = {}, tiers = {}, played = 1, first = 1792000000 }, goals = {}, goalsInit = true, goalsVer = 3'),
+  body: `local keys, zero = {}, false
+for _, c in ipairs(ns.BuildSaga()) do
+  keys[#keys + 1] = c.key
+  if c.text:find("%f[%d]0%f[%D]") then zero = true end
+end
+local c = SkaldCharDB.stats.counts
+RES = (table.concat(keys, ",") == "prologue,road,marks,epilogue" and not zero) and "ok" or (table.concat(keys, ",") .. " zero=" .. tostring(zero) .. " boss=" .. tostring(c.boss) .. " death=" .. tostring(c.death) .. " goals=" .. tostring(next(SkaldCharDB.goals)))`,
+});
+
+run('the Saga picks different phrases for different diaries, and each pool is reachable', {
+  pre: SAGA_DIARY(),
+  body: `local seen, n = {}, 0
+for i = 1, 40 do
+  SkaldCharDB.stats.first = 1792000000 + i * 7919
+  local text = ns.BuildSaga()[1].text
+  if not seen[text:sub(1, 14) .. text:len()] then seen[text:sub(1, 14) .. text:len()] = true; n = n + 1 end
+end
+RES = (n >= 6) and "ok" or ("only " .. n .. " different prologues in 40 diaries")`,
+});
+
+for (const [loc, who] of [['ptBR', 'Aldor'], ['frFR', 'Aldor']]) {
+  run(`the Saga of a woman in ${loc}: every form agrees, no tag is left, the names are the first names`, {
+    pre: `__locale = "${loc}"; function UnitSex() return 3 end
+${SAGA_DIARY(1792000000, 'quest = 80, boss = 3, death = 5', ', level = 60')}`,
+    body: `local all = {}
+for i = 1, 25 do
+  SkaldCharDB.stats.first = 1792000000 + i * 104729
+  for _, c in ipairs(ns.BuildSaga()) do all[#all + 1] = c.text end
+end
+local text = table.concat(all, " ")
+local stray = text:find("{", 1, true) or text:find("}", 1, true)
+RES = (not stray and #all >= 200 and not text:find("Sakaldd", 1, true) and text:find("${who}", 1, true)) and "ok" or ("stray=" .. tostring(stray) .. " n=" .. #all)`,
+  });
+}
+
+run('the Saga goes onto pages by the size of the letter: no chapter lost, none split, never more than three to a page', {
+  pre: SAGA_DIARY(),
+  body: `local chapters = ns.BuildSaga()
+local ok, why = true, ""
+local counts = {}
+for _, size in ipairs({ 11, 13, 15, 20 }) do
+  local pages = ns.SagaPages(chapters, size)
+  local n, order = 0, {}
+  for _, page in ipairs(pages) do
+    if #page > 3 or #page == 0 then ok, why = false, "page of " .. #page .. " at " .. size end
+    for _, c in ipairs(page) do n = n + 1; order[#order + 1] = c.key end
+  end
+  if n ~= #chapters then ok, why = false, "chapters lost at " .. size end
+  for i, c in ipairs(chapters) do if order[i] ~= c.key then ok, why = false, "order at " .. size end end
+  counts[#counts + 1] = #pages
+end
+RES = (ok and counts[1] <= counts[3] and counts[3] <= counts[4] and counts[4] > counts[1]) and "ok" or (why .. " pages=" .. table.concat(counts, "/"))`,
+});
+
+run('the Saga tab opens, turns its pages and raises no error', {
+  pre: SAGA_DIARY(),
+  body: `local tab = btn("Saga")
+if not tab then RES = "no Saga tab" else
+  tab._OnClick(tab)
+  RES = (SkaldDB.errors == nil) and "ok" or ("errors: " .. tostring(SkaldDB.errors[1]))
+end`,
 });
 
 run('the title follows the points and the form of the character', {
