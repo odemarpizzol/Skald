@@ -1366,7 +1366,8 @@ C_VoiceChat = { SpeakText = function(voice, text, rate, volume, overlap) SPOKEN[
 C_TTSSettings = { GetVoiceOptionID = function() return 3 end, GetSpeechRate = function() return 1 end, GetSpeechVolume = function() return 80 end }`;
 run('/skald read speaks the newest page with the voice settings of the game, and stops on request', {
   pre: TTS + `\n` + SAGA_DIARY(),
-  body: `SlashCmdList.SKALD("read")
+  body: `ns.SpeechOn = true
+SlashCmdList.SKALD("read")
 local first = SPOKEN[1]
 local e = SkaldCharDB.entries[#SkaldCharDB.entries]
 SlashCmdList.SKALD("read stop")
@@ -1376,7 +1377,8 @@ RES = (first and first.voice == 3 and first.rate == 1 and first.volume == 80 and
 
 run('/skald read saga speaks the chapters one piece after the other, advancing when the game says a piece is done', {
   pre: TTS + `\n` + SAGA_DIARY(),
-  body: `SlashCmdList.SKALD("read saga")
+  body: `ns.SpeechOn = true
+SlashCmdList.SKALD("read saga")
 local n0 = #SPOKEN
 local guard = 0
 while ns.Speaking() and guard < 80 do fire("VOICE_CHAT_TTS_PLAYBACK_FINISHED"); guard = guard + 1 end
@@ -1388,10 +1390,10 @@ RES = (n0 == 1 and #SPOKEN >= 8 and joined and not ns.Speaking() and table.conca
 
 run('/skald read says so when the client has no text-to-speech, and when there is nothing to read', {
   pre: SAGA_DIARY(),
-  body: `local said = {}
-local old = print
-SlashCmdList.SKALD("read")
-RES = (not ns.SpeechAvailable() and SPOKEN == nil) and "ok" or "spoke without an API"`,
+  body: `SlashCmdList.SKALD("read")
+local off = not ns.SpeechAvailable() and SPOKEN == nil
+ns.SpeechOn = true
+RES = (off and not ns.SpeechAvailable() and SPOKEN == nil) and "ok" or "spoke without an API or with the switch off"`,
 });
 
 run('the Saga says "an Orc" and "an Undead", never "a Orc"', {

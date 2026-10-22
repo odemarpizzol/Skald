@@ -6026,8 +6026,9 @@ end
 -- goes in short pieces, one after the other: the next starts when the game says one has finished (and, if that event
 -- never comes in this client, after a time worked out from the length).
 K.speech = { queue = {}, id = 0, eventSeen = false }
+ns.SpeechOn = false   -- switched off: the voice of the game's text-to-speech was not good enough (set true to bring it back)
 ns.SpeechAvailable = function()
-    return C_VoiceChat ~= nil and type(C_VoiceChat.SpeakText) == "function" and C_TTSSettings ~= nil
+    return ns.SpeechOn and C_VoiceChat ~= nil and type(C_VoiceChat.SpeakText) == "function" and C_TTSSettings ~= nil
 end
 ns.Speaking = function() return K.speech.current ~= nil end
 local function SpeechClean(text)
@@ -6988,7 +6989,7 @@ SlashCmdList["SKALD"] = function(msg)
         Say(L.CMD_SIZE_DONE)
     elseif msg == "report" then
         ns.ShowReport()
-    elseif msg == "read" or msg == "read stop" then
+    elseif ns.SpeechOn and (msg == "read" or msg == "read stop") then
         -- the newest page aloud (or stop)
         if msg == "read stop" then ns.StopSpeaking(); Say(L.READ_STOPPED); return end
         local entries = Journal() and Journal().entries or {}
@@ -6996,7 +6997,7 @@ SlashCmdList["SKALD"] = function(msg)
         if not ns.SpeechAvailable() then Say(L.READ_NONE); return end
         if not last then Say(L.READ_EMPTY); return end
         if ns.SpeakTexts({ RenderEntry(last) }) then Say(L.READ_START) else Say(L.READ_EMPTY) end
-    elseif msg == "read saga" then
+    elseif ns.SpeechOn and msg == "read saga" then
         local chapters = ns.BuildSaga and ns.BuildSaga() or {}
         if not ns.SpeechAvailable() then Say(L.READ_NONE); return end
         local texts = {}

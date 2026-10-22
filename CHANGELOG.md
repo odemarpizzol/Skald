@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.38.0-beta
+
+- **The Saga:** a new tab that tells the whole diary as a short book in the first person (prologue, the road, quests, bosses, falls, company, seals and renown, epilogue), in English, Portuguese and French. It is built from the diary and from the game's own statistics, the same diary always gives the same Saga, and the prologue says where your race is born. The letter is larger and the pages are numbered.
+- **Skald Reader:** the Saga travels in the exported text and opens after the index, with its own line in it (the names of other players are hidden like on the pages).
+- **Goals:** the Goals tab has a new Collection group (mounts and companion pets, read from the game's journals; a goal appears only when this client has that system). Quests and the other counts now use the game's own statistics where it gives them, and what you already owned is marked quietly, without a wave of pages. The points are laid out in one tidy column, and an unrevealed secret goal shows a question mark instead of its value.
+- **Memories of the journey:** a quiet notice a week, a month, a hundred days and a year after the first page.
+- **Goal points:** the Goals tab grows from 12 to 46 goals in eight groups, each worth points by the rarity of its seal, with a title for the total in the form of your character; the cover has a line with the total.
+- **Group:** inviting someone who declines no longer counts as joining a group (no page, no goal).
+- **Companions in a realmless world:** players are told apart by name and surname, so two players with the same first name are two companions; the pages tell only the first name, and exports hide both.
+- **Variety:** the quest pages of rarity 3 to 5 have eight sentences or more in all three languages.
+- **Notices:** a choice of how long a notice stays (4, 6, 10, 15 seconds or until clicked).
+- **Bug reports:** `/skald report` opens a block of text to copy with the version, language, page counts, the events this client fired and the ones never seen, the collection systems it has and the last errors caught (no character name, no page text). `/skald probe comms` tests whether addons can talk to each other (nothing is sent unless typed).
+- **Pets:** the family of a pet saved in another language is shown in the language of the client.
+
 ## 0.37.1-beta
 
 - **Pets:** a new design for the pets page: an icon of the family for each companion (17 families, drawn for the book), the one at your side in the header with its family and level, the model of the pet beside the facts, and the list of companions with the family icon on each line, the current one in a darker name.
