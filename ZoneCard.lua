@@ -167,7 +167,7 @@ function ZC.Build(parent, width)
     local ROWS = {
         { key = "regions", icon = "ev_zone" },
         { key = "quests", icon = "ev_quest" },
-        { key = "kills", icon = "ev_party" },
+        { key = "kills", icon = "ev_claw" },
     }
     for i, spec in ipairs(ROWS) do
         local row = { key = spec.key }
