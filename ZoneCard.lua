@@ -39,21 +39,22 @@ function ZC.ZoneMap(mapID)
     return ok and found or nil
 end
 
--- The land to tell about: the last zone a page was written in, else the one underfoot.
+-- The land to tell about: the zone underfoot (cities and instances have none), else the last zone a page was written in.
 function ZC.CurrentMap()
+    local ok, here = pcall(function() return C_Map and C_Map.GetBestMapForUnit and C_Map.GetBestMapForUnit("player") end)
+    local zone = ok and here and ZC.ZoneMap(here)
+    if zone then return zone end
     local db = SkaldCharDB
     local entries = db and db.entries
     if entries then
-        for i = #entries, 1, -1 do
+        for i = #entries, math.max(1, #entries - 400), -1 do
             local e = entries[i]
             local id = e and ((type(e.m) == "number" and e.m) or e.zm)
-            local zone = id and ZC.ZoneMap(id)
+            zone = id and ZC.ZoneMap(id)
             if zone then return zone end
-            if i < #entries - 400 then break end
         end
     end
-    local ok, here = pcall(function() return C_Map and C_Map.GetBestMapForUnit and C_Map.GetBestMapForUnit("player") end)
-    return ok and here and ZC.ZoneMap(here) or nil
+    return nil
 end
 
 function ZC.Name(mapID)
