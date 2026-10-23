@@ -2,6 +2,9 @@
  "Skald/Skald.lua": [
     "C_TTSSettings",
     "C_VoiceChat",
+    "C_MapExplorationInfo",
+    "CombatLogGetCurrentEventInfo",
+    "GetQuestsCompleted",
     "GetCategoryList",
     "C_PetJournal",
     "GetNumCompanions",
