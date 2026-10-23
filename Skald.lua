@@ -2784,9 +2784,10 @@ local function CreateWindow()
         s.hl:SetText(Upper(UnitName("player")))
         s.hm:SetShown(page.type == "coverL")
         s.hm:SetText(Upper(L.HDR_M))
-        -- the cover's right page opens with its own title: no running head over it
-        for _, fs in ipairs({ s.hl, s.hr }) do fs:SetShown(page.type ~= "coverR") end
-        for _, rule in ipairs(s.headRules) do rule:SetShown(page.type ~= "coverR") end
+        -- the cover's right page and the contents open with their own title: no running head over them
+        local bare = page.type == "coverR" or page.type == "index"
+        for _, fs in ipairs({ s.hl, s.hr }) do fs:SetShown(not bare) end
+        for _, rule in ipairs(s.headRules) do rule:SetShown(not bare) end
         if page.type == "index" then
             s.hr:SetText(Upper(L.INDEX_TITLE))
         elseif page.type == "day" then
