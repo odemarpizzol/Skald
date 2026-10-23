@@ -2062,8 +2062,16 @@ local function CreateWindow()
         hr:SetText(L.HDR_R)
         s.hr = hr
         s.hl = hl
+        -- the cover's left page names the book in the middle too (name | diary | Skald)
+        s.hm = fr:CreateFontString(nil, "OVERLAY", "SkaldSmall")
+        s.hm:SetPoint("TOP", 0, -15)
+        s.hm:SetTextColor(K.C_HDR[1], K.C_HDR[2], K.C_HDR[3])
+        s.hm:SetText(L.HDR_M)
+        s.hm:Hide()
+        s.headRules = {}
         for n, alpha in ipairs({ 0.55, 0.22 }) do
             local rule = fr:CreateTexture(nil, "ARTWORK", nil, 3)
+            s.headRules[n] = rule
             rule:SetColorTexture(0.43, 0.118, 0.102, alpha)
             rule:SetHeight(1)
             rule:SetPoint("TOPLEFT", 30, -(35 + (n - 1) * 3))
@@ -2517,10 +2525,21 @@ local function CreateWindow()
         factValues[fact.key]:SetPoint("TOPRIGHT", -30, y - 4)
         factValues[fact.key]:SetTextColor(K.C_HEAD[1], K.C_HEAD[2], K.C_HEAD[3])
         local leader = stats:CreateTexture(nil, "ARTWORK")
-        leader:SetColorTexture(K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3], 0.4)
+        leader:SetColorTexture(K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3], 0.22)
         leader:SetHeight(1)
         leader:SetPoint("BOTTOMLEFT", factLabels[fact.key], "BOTTOMRIGHT", 6, 3)
         leader:SetPoint("BOTTOMRIGHT", factValues[fact.key], "BOTTOMLEFT", -6, 3)
+        -- a value with a remark ("305 (Humanoid)"): the remark sits at the margin in small muted italics
+        -- and the number stays where the other numbers end
+        if fact.key == "topkind" then
+            local tag = JText(stats, "SkaldItalic", 0, y - 4, "RIGHT")
+            tag:ClearAllPoints()
+            tag:SetPoint("TOPRIGHT", -30, y - 3)
+            tag:SetTextColor(0.45, 0.31, 0.18)
+            factValues.topkindTag = tag
+            factValues[fact.key]:ClearAllPoints()
+            factValues[fact.key]:SetPoint("TOPRIGHT", tag, "TOPLEFT", -4, 1)
+        end
     end
 
     local rarityTop = -98 - #FACTS * FACT_H - 14
@@ -2551,10 +2570,11 @@ local function CreateWindow()
         cell:SetScript("OnLeave", function() GameTooltip:Hide() end)
         rarityCounts[tier] = count
     end
-    local footerPlayed = JText(stats, "SkaldBody", RX, rarityTop - 80)
-    local footerFirst = JText(stats, "SkaldBody", RX, rarityTop - 98)
-    footerPlayed:SetTextColor(K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3])
-    footerFirst:SetTextColor(K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3])
+    -- the two notes at the foot are written by hand
+    local footerPlayed = JText(stats, "SkaldNote", RX, rarityTop - 78)
+    local footerFirst = JText(stats, "SkaldNote", RX, rarityTop - 98)
+    footerPlayed:SetTextColor(0.36, 0.24, 0.14)
+    footerFirst:SetTextColor(0.36, 0.24, 0.14)
 
     local function UpdateCover()
         local db = Journal()
@@ -2603,7 +2623,19 @@ local function CreateWindow()
         local level = UnitLevel and UnitLevel("player")
         if type(level) == "number" and level >= 1 then values.levels = level - 1 end
         factLabels.kills:SetText(exactKills and L.S_KILLS or L.S_KILLS_EST)
-        for key, fs in pairs(factValues) do fs:SetText(tostring(values[key])) end
+        for key, fs in pairs(factValues) do
+            if key ~= "topkindTag" then fs:SetText(tostring(values[key])) end
+        end
+        do
+            -- "305 (Humanoid)": number apart from the remark in brackets, if the game wrote one
+            local number, tag = tostring(values.topkind):match("^(.-)%s*(%b())%s*$")
+            if number and number ~= "" then
+                factValues.topkind:SetText(number)
+                factValues.topkindTag:SetText(tag)
+            else
+                factValues.topkindTag:SetText("")
+            end
+        end
         for tier, fs in pairs(rarityCounts) do fs:SetText(tostring((s.tiers and s.tiers[tier]) or 0)) end
         footerPlayed:SetText(L.S_PLAYED .. ": " .. FormatDuration(played))
         footerFirst:SetText(L.S_FIRST .. ": " .. (s.first and date(L.DATE_FMT, s.first) or L.S_NONE))
@@ -2755,12 +2787,19 @@ local function CreateWindow()
         s.line:Hide()
         s.quill:Hide()
         s.num:SetText("")
+        s.hl:Show(); s.hr:Show(); s.hm:Hide()
+        for _, rule in ipairs(s.headRules) do rule:Show() end
     end
 
     local function DrawPage(s, page, number)
         Clear(s)
         if not page then return end
         s.hl:SetText(Upper(UnitName("player")))
+        s.hm:SetShown(page.type == "coverL")
+        s.hm:SetText(Upper(L.HDR_M))
+        -- the cover's right page opens with its own title: no running head over it
+        for _, fs in ipairs({ s.hl, s.hr }) do fs:SetShown(page.type ~= "coverR") end
+        for _, rule in ipairs(s.headRules) do rule:SetShown(page.type ~= "coverR") end
         if page.type == "index" then
             s.hr:SetText(Upper(L.INDEX_TITLE))
         elseif page.type == "day" then
@@ -3063,8 +3102,13 @@ local function CreateWindow()
     todayButton.text:SetPoint("RIGHT", 0, 0)
     todayButton.text:SetTextColor(K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3])
     todayButton.text:SetText(L.TODAY)
-    todayButton:SetScript("OnEnter", function(self) self.text:SetTextColor(K.C_HEAD[1], K.C_HEAD[2], K.C_HEAD[3]) end)
-    todayButton:SetScript("OnLeave", function(self) self.text:SetTextColor(K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3]) end)
+    todayButton.glow = todayButton:CreateTexture(nil, "BACKGROUND")
+    todayButton.glow:SetPoint("TOPLEFT", -8, 4)
+    todayButton.glow:SetPoint("BOTTOMRIGHT", 8, -4)
+    todayButton.glow:SetColorTexture(1, 0.86, 0.5, 0.18)
+    todayButton.glow:Hide()
+    todayButton:SetScript("OnEnter", function(self) self.text:SetTextColor(K.C_HEAD[1], K.C_HEAD[2], K.C_HEAD[3]); self.glow:Show() end)
+    todayButton:SetScript("OnLeave", function(self) self.text:SetTextColor(K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3]); self.glow:Hide() end)
     todayButton:SetScript("OnClick", function() f:ShowSection("days") end)
     todayButton:Hide()
 
