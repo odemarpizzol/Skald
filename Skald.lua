@@ -2538,8 +2538,8 @@ local function CreateWindow()
     local rarityCounts = {}
     for tier = 0, 5 do
         local cell = CreateFrame("Frame", nil, stats)
-        cell:SetSize(57, 60)
-        cell:SetPoint("TOPLEFT", RX + tier * 57, rarityTop - 14)
+        cell:SetSize(52, 60)
+        cell:SetPoint("TOPLEFT", RX + 15 + tier * 52, rarityTop - 14)   -- close enough for all six counts to lie on the flat of the ribbon, not on its rolled ends
         cell:EnableMouse(true)
         local seal = cell:CreateTexture(nil, "ARTWORK")
         seal:SetSize(38, 38)
