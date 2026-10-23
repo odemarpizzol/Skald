@@ -1459,7 +1459,7 @@ function UnitRace() return "Human", "Human", 1 end
 function UnitClass() return "Mage", "MAGE", 8 end`;
 const ZONE_ART = `C_Map.GetMapArtLayers = function() return { { layerWidth = 1002, layerHeight = 668, tileWidth = 256, tileHeight = 256 } } end
 C_Map.GetMapArtLayerTextures = function() local t = {} for i = 1, 12 do t[i] = 1000 + i end return t end
-C_MapExplorationInfo = { GetExploredMapTextures = function() return { 1, 2, 3 } end }`;
+C_MapExplorationInfo = { GetExploredMapTextures = function() return { { textureWidth = 300, textureHeight = 200, offsetX = 100, offsetY = 50, fileDataIDs = { 11, 12 } }, { textureWidth = 256, textureHeight = 256, offsetX = 0, offsetY = 0, fileDataIDs = { 13 } }, { isShownByMouseOver = true, textureWidth = 256, textureHeight = 256, fileDataIDs = { 14 } } } end }`;
 const ZONE_DB = `local quests = {
   [1] = { zoneOrSort = 10 }, [2] = { zoneOrSort = 10 }, [3] = { zoneOrSort = 10, hidden = "retired" },
   [4] = { zoneOrSort = 10, requiredRaces = 2 }, [5] = { zoneOrSort = 10, specialFlags = 1 }, [6] = { zoneOrSort = -22 },
@@ -1481,7 +1481,7 @@ run('the zone card builds from the tiles of the game and raises no error', {
   body: ZONE_STUBS + '\n' + ZONE_ART + '\n' + ZONE_DB + `
 local card = ns.ZoneCard.Build(UIParent, 342)
 card:Set(1438)
-RES = (#card.tiles == 12 and ns.ZoneCard.Regions(1438) == 3) and "ok" or ("tiles " .. #card.tiles)`,
+RES = (#card.tiles == 12 and ns.ZoneCard.Regions(1438) == 3 and #card.found == 3) and "ok" or ("tiles " .. #card.tiles .. " found " .. #card.found)`,
 });
 
 run('the zone card still comes out without the map art and without QuestDB', {

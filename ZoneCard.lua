@@ -139,6 +139,7 @@ function ZC.Build(parent, width)
     local card = CreateFrame("Frame", nil, parent)
     card:SetSize(width, 440)
     card.tiles = {}
+    card.found = {}
     local mapBox = CreateFrame("Frame", nil, card)
     mapBox:SetPoint("TOPLEFT", 0, 0)
     mapBox:SetClipsChildren(true)
@@ -195,6 +196,18 @@ function ZC.Build(parent, width)
         return tex
     end
 
+    -- The regions already found lie over the grey base in pieces of their own (the game cuts each one in tiles of 256).
+    local function Found(n)
+        local tex = card.found[n]
+        if not tex then
+            tex = mapBox:CreateTexture(nil, "ARTWORK", nil, 1)
+            tex:SetDesaturated(true)
+            tex:SetVertexColor(0.93, 0.80, 0.60)
+            card.found[n] = tex
+        end
+        return tex
+    end
+
     function card:Set(mapID)
         local t = T()
         local y = 0
@@ -218,10 +231,37 @@ function ZC.Build(parent, width)
                 tex:Show()
                 drawn = n
             end
+            local used = 0
+            local okE, regions = pcall(function() return C_MapExplorationInfo.GetExploredMapTextures(mapID) end)
+            if okE and type(regions) == "table" then
+                for _, r in ipairs(regions) do
+                    if type(r) == "table" and type(r.fileDataIDs) == "table" and not r.isShownByMouseOver
+                        and r.textureWidth and r.textureHeight and r.textureWidth > 0 and r.textureHeight > 0 then
+                        local cols = math.ceil(r.textureWidth / 256)
+                        for i, file in ipairs(r.fileDataIDs) do
+                            local col, rowN = (i - 1) % cols, math.floor((i - 1) / cols)
+                            local w = math.min(256, r.textureWidth - col * 256)
+                            local h = math.min(256, r.textureHeight - rowN * 256)
+                            if w > 0 and h > 0 then
+                                used = used + 1
+                                local tex = Found(used)
+                                tex:ClearAllPoints()
+                                tex:SetPoint("TOPLEFT", mapBox, "TOPLEFT", ((r.offsetX or 0) + col * 256) * scale, -(((r.offsetY or 0) + rowN * 256) * scale))
+                                tex:SetSize(w * scale + 0.5, h * scale + 0.5)
+                                tex:SetTexCoord(0, w / 256, 0, h / 256)
+                                tex:SetTexture(file)
+                                tex:Show()
+                            end
+                        end
+                    end
+                end
+            end
+            for n = used + 1, #card.found do card.found[n]:Hide() end
             mapBox:Show()
             y = height + 22
         else
             mapBox:Hide()
+            for _, tex in ipairs(card.found) do tex:Hide() end
             y = 20
         end
         for n = drawn + 1, #card.tiles do card.tiles[n]:Hide() end
