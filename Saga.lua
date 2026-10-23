@@ -481,16 +481,21 @@ local function Pick(pool, name, seed)
     return pool[Hash(name .. ":" .. tostring(seed)) % #pool + 1]
 end
 
-local function Fill(phrase, vars)
+-- `marks`, when given, collects what the tab shows in another colour: places, bosses, titles, numbers and counted nouns.
+local MARKED = { place = true, boss = true, home = true, land = true, title = true, n = true, points = true, level = true, tries = true }
+local function Fill(phrase, vars, marks)
     -- {#n:one|many}: the number and its noun, in the singular for one ("1 quest") and the plural otherwise
     local counted = phrase:gsub("{#(%a+):([^|}]*)|([^}]*)}", function(key, one, many)
         local n = tonumber(vars[key])
         if not n then return "" end
-        return tostring(n) .. " " .. (n == 1 and one or many)
+        local out = tostring(n) .. " " .. (n == 1 and one or many)
+        if marks then marks[#marks + 1] = out end
+        return out
     end)
     local text = counted:gsub("{(%a+)}", function(key)
         local v = vars[key]
         if v == nil then return "" end
+        if marks and MARKED[key] and tostring(v) ~= "" then marks[#marks + 1] = tostring(v) end
         return tostring(v)
     end)
     return ns.Gendered(text)
@@ -588,14 +593,7 @@ ns.BuildSaga = function()
         local texts, marks = {}, {}
         for _, p in ipairs(parts) do
             local phrase = Pick(pools[p[1]], p[1], v.seed)
-            if phrase then
-                texts[#texts + 1] = Fill(phrase, p[2])
-                -- the names of places and bosses are shown in another colour in the tab
-                for _, k in ipairs({ "place", "boss", "home", "land" }) do
-                    local m = p[2][k]
-                    if type(m) == "string" and #m > 1 then marks[#marks + 1] = m end
-                end
-            end
+            if phrase then texts[#texts + 1] = Fill(phrase, p[2], marks) end
         end
         if #texts > 0 then chapters[#chapters + 1] = { key = key, title = UI.TITLES[key], text = table.concat(texts, "\n\n"), marks = marks } end
     end
@@ -684,12 +682,18 @@ local function Decorate(c)
         if not inside then marks[m] = true end
     end
     for m in pairs(marks) do
-        local out, from = {}, 1
+        local out, from, scan = {}, 1, 1
         while true do
-            local a, b = text:find(m, from, true)
+            local a, b = text:find(m, scan, true)
             if not a then break end
-            out[#out + 1] = text:sub(from, a - 1) .. "|cff8a5a14" .. m .. "|r"
-            from = b + 1
+            -- a number counts only as a whole number: the 2 of "2 quests", not the 2 of 12
+            local before, after = text:sub(a - 1, a - 1), text:sub(b + 1, b + 1)
+            if m:find("^%d") and before:find("%d") or m:find("%d$") and after:find("%d") or (#m == 1 and not m:find("%d")) then
+                scan = a + 1
+            else
+                out[#out + 1] = text:sub(from, a - 1) .. "|cff8a5a14" .. m .. "|r"
+                from, scan = b + 1, b + 1
+            end
         end
         out[#out + 1] = text:sub(from)
         text = table.concat(out)
