@@ -307,3 +307,77 @@ function ZC.Build(parent, width)
     card:Hide()
     return card
 end
+
+-- The summing up of a day, for the right page when the newest day ended on the left one.
+local DC = {}
+ns.DayCard = DC
+
+local DAY_TEXTS = {
+    enUS = { TITLE = "The day in numbers", LEVEL = "Level reached", QUESTS = "Quests done", ZONES = "Lands found", FALLS = "Falls", GOALS = "Goals reached", PAGES = "Pages written" },
+    ptBR = { TITLE = "O dia em números", LEVEL = "Nível alcançado", QUESTS = "Missões cumpridas", ZONES = "Terras descobertas", FALLS = "Quedas", GOALS = "Metas cumpridas", PAGES = "Páginas escritas" },
+    frFR = { TITLE = "Le jour en chiffres", LEVEL = "Niveau atteint", QUESTS = "Quêtes accomplies", ZONES = "Terres découvertes", FALLS = "Chutes", GOALS = "Objectifs atteints", PAGES = "Pages écrites" },
+}
+
+function DC.Count(day)
+    local out = { level = day.level or 1, quests = 0, zones = 0, falls = 0, goals = 0, pages = 0 }
+    for _, e in ipairs(day.entries or {}) do
+        out.pages = out.pages + 1
+        if e.kind == "quest" then out.quests = out.quests + 1
+        elseif e.kind == "zone" then out.zones = out.zones + 1
+        elseif e.kind == "death" then out.falls = out.falls + 1
+        elseif e.kind == "goal" then out.goals = out.goals + 1 end
+    end
+    return out
+end
+
+function DC.Build(parent, width)
+    local card = CreateFrame("Frame", nil, parent)
+    card:SetSize(width, 440)
+    local title = card:CreateFontString(nil, "OVERLAY", "SkaldHead2")
+    title:SetWidth(width)
+    title:SetJustifyH("CENTER")
+    title:SetPoint("TOP", card, "TOP", 0, 0)
+    title:SetTextColor(SkaldAPI.C_HEAD[1], SkaldAPI.C_HEAD[2], SkaldAPI.C_HEAD[3])
+    card.title = title
+    local rule = card:CreateTexture(nil, "ARTWORK")
+    rule:SetSize(130, 11)
+    rule:SetPoint("TOP", title, "BOTTOM", 0, -6)
+    rule:SetTexture("Interface\\AddOns\\Skald\\Textures\\skald2\\rule")
+    rule:SetTexCoord(0, 160 / 256, 0, 14 / 16)
+    card.rows = {}
+    local ROWS = { { "level", "ev_level" }, { "quests", "ev_quest" }, { "zones", "ev_zone" }, { "falls", "ev_death" },
+        { "goals", "ev_goal" }, { "pages", "ev_milestone" } }
+    for i, spec in ipairs(ROWS) do
+        local y = 44 + (i - 1) * 38
+        local row = { key = spec[1] }
+        row.icon = card:CreateTexture(nil, "ARTWORK")
+        row.icon:SetSize(30, 30)
+        row.icon:SetPoint("TOPLEFT", card, "TOPLEFT", 0, -y)
+        row.icon:SetTexture(TEX .. spec[2])
+        row.label = card:CreateFontString(nil, "OVERLAY", "SkaldBody")
+        row.label:SetPoint("TOPLEFT", card, "TOPLEFT", 40, -(y + 7))
+        row.label:SetTextColor(SkaldAPI.C_BODY[1], SkaldAPI.C_BODY[2], SkaldAPI.C_BODY[3])
+        row.value = card:CreateFontString(nil, "OVERLAY", "SkaldBody")
+        row.value:SetPoint("TOPRIGHT", card, "TOPLEFT", width - 4, -(y + 7))
+        row.value:SetJustifyH("RIGHT")
+        row.value:SetTextColor(SkaldAPI.C_HEAD[1], SkaldAPI.C_HEAD[2], SkaldAPI.C_HEAD[3])
+        row.leader = card:CreateTexture(nil, "ARTWORK")
+        row.leader:SetColorTexture(SkaldAPI.C_MUTED[1], SkaldAPI.C_MUTED[2], SkaldAPI.C_MUTED[3], 0.22)
+        row.leader:SetHeight(1)
+        row.leader:SetPoint("BOTTOMLEFT", row.label, "BOTTOMRIGHT", 6, 3)
+        row.leader:SetPoint("BOTTOMRIGHT", row.value, "BOTTOMLEFT", -6, 3)
+        card.rows[i] = row
+    end
+    function card:Set(day)
+        local loc = GetLocale and GetLocale() or "enUS"
+        local t = DAY_TEXTS[loc] or DAY_TEXTS.enUS
+        local n = DC.Count(day)
+        card.title:SetText(t.TITLE)
+        for _, row in ipairs(card.rows) do
+            row.label:SetText(t[row.key:upper()])
+            row.value:SetText(tostring(n[row.key]))
+        end
+    end
+    card:Hide()
+    return card
+end

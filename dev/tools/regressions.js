@@ -1508,6 +1508,22 @@ if not tab then RES = "no Contents tab" else
 end`,
 });
 
+run('the Days tab turns to the last spread: the day card sums up the day, with no error', {
+  pre: SAGA_DIARY(),
+  body: `local tab = btn("Days")
+if not tab then RES = "no Days tab" else
+  tab._OnClick(tab)
+  local shown = 0
+  for _, fr in ipairs(frames) do
+    local rows = rawget(fr, "rows")
+    if rows and rows[1] and rawget(rows[1], "key") == "level" and fr:IsShown() then shown = shown + 1 end
+  end
+  local c = ns.DayCard.Count({ level = 7, entries = { { kind = "quest" }, { kind = "quest" }, { kind = "zone" }, { kind = "death" }, { kind = "goal" } } })
+  RES = (SkaldDB.errors == nil and c.level == 7 and c.quests == 2 and c.zones == 1 and c.falls == 1 and c.goals == 1 and c.pages == 5)
+    and "ok" or ("errors: " .. tostring(SkaldDB.errors and SkaldDB.errors[1]) .. " shown " .. shown)
+end`,
+});
+
 run('creatures slain are counted for the zone underfoot, the first look only sets the baseline', {
   pre: SAVED('{}', 'version = 99, goalsInit = true, goalsVer = 3, goals = {}, stats = { counts = {}, deathZones = {}, tiers = {}, played = 1, first = 1 }'),
   body: ZONE_STUBS + `

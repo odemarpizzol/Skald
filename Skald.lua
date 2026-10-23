@@ -2760,7 +2760,10 @@ local function CreateWindow()
             end
             page.note = true
         end
-        if #pages % 2 == 1 then pages[#pages + 1] = { type = "blank" } end
+        if #pages % 2 == 1 then
+            local lastDay = days[#days]
+            pages[#pages + 1] = (lastDay and pages[#pages].type == "day") and { type = "daycard", day = lastDay } or { type = "blank" }
+        end
         return { days = days, pages = pages, indexPages = indexPages, firstDayPage = firstDayPage, entryPage = entryPage }
     end
 
@@ -2788,6 +2791,9 @@ local function CreateWindow()
         if s.noteArea and not editing then s.noteArea:Hide() end
         if s.closeIcon then s.closeIcon:Hide() end
         if s.closeLine then s.closeLine:Hide() end
+        if s.timeline then s.timeline:Hide() end
+        s.timelineTop = nil
+        if s.dayCard then s.dayCard:Hide() end
         s.cover:Hide()
         s.sub:Hide()
         s.rule:Hide()
@@ -2805,8 +2811,8 @@ local function CreateWindow()
         s.hl:SetText(Upper(UnitName("player")))
         s.hm:SetShown(page.type == "coverL")
         s.hm:SetText(Upper(L.HDR_M))
-        -- the cover's right page and the contents open with their own title: no running head over them
-        local bare = page.type == "coverR" or page.type == "index"
+        -- only the cover's left page names the book above; every other page opens with its own title
+        local bare = page.type ~= "coverL"
         for _, fs in ipairs({ s.hl, s.hr }) do fs:SetShown(not bare) end
         for _, rule in ipairs(s.headRules) do rule:SetShown(not bare) end
         if page.type == "index" then
@@ -2824,6 +2830,23 @@ local function CreateWindow()
         s.num:SetText(Hex(K.C_MUTED) .. tostring(number) .. "|r")
         s.quill:Show()
         local px = s.padL
+        if page.type == "daycard" then
+            -- the last day ended on a left page: the right one sums up the day
+            s.num:SetText(Hex(K.C_MUTED) .. tostring(number - layout.firstDayPage + 1) .. "|r")
+            if ns.DayCard then
+                if not s.dayCard then
+                    local okCard, card = pcall(ns.DayCard.Build, s.frame, K.CW)
+                    if okCard then s.dayCard = card else SkaldDB.errors = SkaldDB.errors or {}; table.insert(SkaldDB.errors, tostring(card)) end
+                end
+                if s.dayCard then
+                    s.dayCard:ClearAllPoints()
+                    s.dayCard:SetPoint("TOPLEFT", s.frame, "TOPLEFT", px, -(K.TOP_Y + 4))
+                    local okSet, err = pcall(s.dayCard.Set, s.dayCard, page.day)
+                    if okSet then s.dayCard:Show() else SkaldDB.errors = SkaldDB.errors or {}; table.insert(SkaldDB.errors, tostring(err)) end
+                end
+            end
+            return
+        end
 
         local function Heading(text, y, font)
             local head = SideText(s, 1)
@@ -2959,6 +2982,17 @@ local function CreateWindow()
                 r.icon:SetPoint("TOPLEFT", px, -top)
                 r.icon:SetTexture(block.icon)
                 r.icon:Show()
+                -- a faint line down the icons: the day runs from one time to the next
+                if not s.timeline then
+                    s.timeline = s.frame:CreateTexture(nil, "ARTWORK", nil, 1)
+                    s.timeline:SetWidth(2)
+                    s.timeline:SetColorTexture(K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3], 0.3)
+                end
+                if not s.timelineTop then s.timelineTop = top end
+                s.timeline:ClearAllPoints()
+                s.timeline:SetPoint("TOPLEFT", s.frame, "TOPLEFT", px + 11, -(s.timelineTop + 12))
+                s.timeline:SetPoint("BOTTOMLEFT", s.frame, "TOPLEFT", px + 11, -(top + 12))
+                s.timeline:SetShown(top > s.timelineTop)
                 r.time:ClearAllPoints()
                 r.time:SetPoint("TOPLEFT", px + 32, -(top + 4))
                 r.time:SetText(block.time)
