@@ -206,6 +206,25 @@
   "tostring",
   "type"
  ],
+ "Skald/ZoneCard.lua": [
+  "C_Map",
+  "C_MapExplorationInfo",
+  "C_QuestLog",
+  "CreateFrame",
+  "GetLocale",
+  "LibStub",
+  "SkaldAPI",
+  "SkaldCharDB",
+  "UnitClass",
+  "UnitRace",
+  "_G",
+  "ipairs",
+  "math",
+  "pcall",
+  "string",
+  "tostring",
+  "type"
+ ],
  "Skald/Locales.lua": [],
  "Skald/Curated.lua": [
   "ipairs"

@@ -16,7 +16,7 @@ const ok = msg => console.log('  ok    ' + msg);
 
 // 1. syntax
 console.log('Syntax');
-for (const f of ['Skald/Locales.lua', 'Skald/Curated.lua', 'Skald/XPTiers.lua', 'Skald/Skald.lua', 'Skald/Atlas.lua', 'Skald/Goals.lua', 'Skald/Saga.lua'].concat(fs.existsSync(path.join(ADDONS, 'SkaldAtlas')) ? ['SkaldAtlas/SkaldAtlas.lua'] : [])) {
+for (const f of ['Skald/Locales.lua', 'Skald/Curated.lua', 'Skald/XPTiers.lua', 'Skald/Skald.lua', 'Skald/Atlas.lua', 'Skald/Goals.lua', 'Skald/Saga.lua', 'Skald/ZoneCard.lua'].concat(fs.existsSync(path.join(ADDONS, 'SkaldAtlas')) ? ['SkaldAtlas/SkaldAtlas.lua'] : [])) {
   const installed = path.join(ADDONS, f);
   const p = f === 'SkaldAtlas/SkaldAtlas.lua' && !fs.existsSync(installed)
     ? path.resolve(__dirname, '../skald-atlas-repo/SkaldAtlas.lua') : installed;
@@ -38,7 +38,7 @@ for (const f of fs.readdirSync(path.join(ADDONS, 'Skald')).filter(n => n.endsWit
 console.log('Textures');
 {
   const tex = new Set(['Textures', 'Textures/skald2'].flatMap(d => fs.readdirSync(path.join(ADDONS, 'Skald', d)).filter(f => f.endsWith('.tga')).map(f => f.replace(/\.tga$/, ''))));
-  const src = fs.readFileSync(path.join(ADDONS, 'Skald/Skald.lua'), 'utf8') + fs.readFileSync(path.join(ADDONS, 'Skald/Atlas.lua'), 'utf8') + fs.readFileSync(path.join(ADDONS, 'Skald/Goals.lua'), 'utf8') + fs.readFileSync(path.join(ADDONS, 'Skald/Saga.lua'), 'utf8');
+  const src = fs.readFileSync(path.join(ADDONS, 'Skald/Skald.lua'), 'utf8') + fs.readFileSync(path.join(ADDONS, 'Skald/Atlas.lua'), 'utf8') + fs.readFileSync(path.join(ADDONS, 'Skald/Goals.lua'), 'utf8') + fs.readFileSync(path.join(ADDONS, 'Skald/Saga.lua'), 'utf8') + fs.readFileSync(path.join(ADDONS, 'Skald/ZoneCard.lua'), 'utf8');
   const wanted = new Set();
   for (const m of src.matchAll(/"((?:it|ev|st|pf|ui|ghost|goal|rd)_[a-z_0-9]+)"/g)) wanted.add(m[1]);
   for (const m of src.matchAll(/"(pin_med)" \.\./g)) for (let i = 0; i <= 5; i++) wanted.add('pin_med' + i);
@@ -71,7 +71,7 @@ function session(locale) {
   const run = c => { if (lauxlib.luaL_dostring(L, to_luastring(c))) throw new Error(to_jsstring(lua.lua_tolstring(L, -1))); };
   const set = (k, v) => { lua.lua_pushstring(L, to_luastring(v)); lua.lua_setglobal(L, to_luastring(k)); };
   run(fs.readFileSync(path.join(__dirname, 'mock.lua'), 'utf8'));
-  for (const [k, f] of [['LOC', 'Locales.lua'], ['CUR', 'Curated.lua'], ['XPT', 'XPTiers.lua'], ['CH', 'Skald.lua'], ['AT', 'Atlas.lua'], ['GL', 'Goals.lua'], ['SG', 'Saga.lua']])
+  for (const [k, f] of [['LOC', 'Locales.lua'], ['CUR', 'Curated.lua'], ['XPT', 'XPTiers.lua'], ['CH', 'Skald.lua'], ['AT', 'Atlas.lua'], ['GL', 'Goals.lua'], ['SG', 'Saga.lua'], ['ZC', 'ZoneCard.lua']])
     set(k, fs.readFileSync(path.join(ADDONS, 'Skald', f), 'utf8'));
   run(`__locale="${locale}"; frames={}; SkaldDB={}; SkaldCharDB=nil; FONTS={}
 TIMERS={}; C_Timer={After=function(t,fn) table.insert(TIMERS,fn) end}
@@ -97,7 +97,7 @@ function GetMoney() return 0 end
 Minimap=CreateFrame("Frame","Minimap",UIParent); function GetCursorPosition() return 100,100 end
 local ns={}
 assert(load(LOC,"=L"))("Skald",ns); assert(load(CUR,"=U"))("Skald",ns); assert(load(XPT,"=X"))("Skald",ns)
-assert(load(CH,"=C"))("Skald",ns); assert(load(AT,"=A"))("Skald",ns); assert(load(GL,"=G"))("Skald",ns); assert(load(SG,"=S"))("Skald",ns)
+assert(load(CH,"=C"))("Skald",ns); assert(load(AT,"=A"))("Skald",ns); assert(load(GL,"=G"))("Skald",ns); assert(load(SG,"=S"))("Skald",ns); assert(load(ZC,"=Z"))("Skald",ns)
 local function fire(ev,...) for _,f in ipairs(frames) do if f._OnEvent then f._OnEvent(f,ev,...) end end end
 fire("ADDON_LOADED","Skald"); fire("PLAYER_LOGIN"); runTimers()
 local out={}

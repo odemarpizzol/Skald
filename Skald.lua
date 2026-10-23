@@ -954,7 +954,7 @@ end
 -- It is set aside with the pages and brought back with them, and emptied with them, so a cleared diary or a new
 -- character with an old name never inherits it.
 K.DIARY_STATE = { "pets", "petNow", "companions", "questObj", "questStart", "visitedMaps", "resume", "attempts",
-    "taxi", "marks", "goals", "goalsInit", "goalsVer", "collInit", "rep", "memoryAt", "recentIdx", "anniv" }
+    "taxi", "marks", "goals", "goalsInit", "goalsVer", "collInit", "rep", "memoryAt", "recentIdx", "anniv", "zoneKills", "killBase" }
 
 local function TakeState(db)
     local state = {}
@@ -2774,6 +2774,7 @@ local function CreateWindow()
         s.quill:Hide()
         s.num:SetText("")
         s.hl:Show(); s.hr:Show(); s.hm:Hide()
+        if s.zoneCard then s.zoneCard:Hide() end
         for _, rule in ipairs(s.headRules) do rule:Show() end
     end
 
@@ -2816,6 +2817,22 @@ local function CreateWindow()
 
         if page.type == "index" then
             local y = K.TOP_Y + 4
+            if not page.first and #page.rows == 0 and ns.ZoneCard then
+                -- the contents ended on the left page: the right one tells about the land the diary last stood in
+                local mapID = ns.ZoneCard.CurrentMap()
+                if mapID then
+                    if not s.zoneCard then
+                        local okCard, card = pcall(ns.ZoneCard.Build, s.frame, K.CW)
+                        if okCard then s.zoneCard = card else SkaldDB.errors = SkaldDB.errors or {}; table.insert(SkaldDB.errors, tostring(card)) end
+                    end
+                    if s.zoneCard then
+                        s.zoneCard:ClearAllPoints()
+                        s.zoneCard:SetPoint("TOPLEFT", s.frame, "TOPLEFT", px, -(K.TOP_Y - 4))
+                        local okSet, err = pcall(s.zoneCard.Set, s.zoneCard, mapID)
+                        if okSet then s.zoneCard:Show() else SkaldDB.errors = SkaldDB.errors or {}; table.insert(SkaldDB.errors, tostring(err)) end
+                    end
+                end
+            end
             if page.first then
                 Heading(L.INDEX_TITLE, K.TOP_Y + 4)
                 Rule(s, K.TOP_Y + 32)
@@ -5189,7 +5206,7 @@ H.PLAYER_LOGIN = function(self, event, ...)
         pcall(Mile.MergeCrafts)
         pcall(Mile.Relocalize)
         C_Timer.After(10, function() pcall(Mile.Relocalize) end)   -- items load a little later
-        if C_Timer.NewTicker then C_Timer.NewTicker(60, function() pcall(CheckMarks); pcall(Mile.CheckPet); pcall(ns.CheckAnniversary) end) end
+        if C_Timer.NewTicker then C_Timer.NewTicker(60, function() pcall(CheckMarks); pcall(Mile.CheckPet); pcall(ns.CheckAnniversary); pcall(Mile.TrackKills) end) end
         C_Timer.After(2, function() pcall(Mile.ShowResume) end)
     end)
     if not Settings().quiet then
@@ -5300,8 +5317,35 @@ H.QUEST_ACCEPTED = function(self, event, a, b)
     end
 end
 
+-- Creatures slain in each zone: the game counts the total, so the difference since the last look goes to the zone
+-- underfoot (the first look only sets the baseline, and kills inside an instance count for no zone).
+Mile.TrackKills = function()
+    local db = Journal()
+    if not ready or not db or not (ns.ZoneCard and C_Map and C_Map.GetBestMapForUnit) then return end
+    local total = KillStat()
+    if not total then
+        local byId = GameStat(107)
+        if byId and byId > 0 then total = byId end
+    end
+    if not total then return end
+    local base = db.killBase
+    db.killBase = total
+    if not base or total <= base then return end
+    local ok, here = pcall(C_Map.GetBestMapForUnit, "player")
+    local zone = ok and here and ns.ZoneCard.ZoneMap(here)
+    if not zone then return end
+    db.zoneKills = db.zoneKills or {}
+    db.zoneKills[zone] = (db.zoneKills[zone] or 0) + (total - base)
+end
+
+ns.TrackKills = Mile.TrackKills
+
 H.PLAYER_XP_UPDATE = function(self, event, ...)
     if ready then OnXPChanged() end
+    if ready and not Mile.killsWait then
+        Mile.killsWait = true
+        C_Timer.After(3, function() Mile.killsWait = false; pcall(Mile.TrackKills) end)
+    end
 end
 
 H.QUEST_TURNED_IN = function(self, event, ...)

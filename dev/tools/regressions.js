@@ -5,7 +5,7 @@ const fs = require('fs');
 const path = require('path');
 
 const ADDONS = path.resolve(__dirname, '../../..');
-const FILES = [['LOC', 'Locales.lua'], ['CUR', 'Curated.lua'], ['XPT', 'XPTiers.lua'], ['CH', 'Skald.lua'], ['AT', 'Atlas.lua'], ['GL', 'Goals.lua'], ['SG', 'Saga.lua']];
+const FILES = [['LOC', 'Locales.lua'], ['CUR', 'Curated.lua'], ['XPT', 'XPTiers.lua'], ['CH', 'Skald.lua'], ['AT', 'Atlas.lua'], ['GL', 'Goals.lua'], ['SG', 'Saga.lua'], ['ZC', 'ZoneCard.lua']];
 let failed = 0;
 
 // The game, as far as the addon can tell. `pre` runs before the addon loads (saved data, game answers);
@@ -39,7 +39,7 @@ function count(k) local n=0 for _,e in ipairs(SkaldCharDB.entries) do if e.kind=
 ${pre}
 ns={}
 assert(load(LOC,"=L"))("Skald",ns); assert(load(CUR,"=U"))("Skald",ns); assert(load(XPT,"=X"))("Skald",ns)
-assert(load(CH,"=C"))("Skald",ns); assert(load(AT,"=A"))("Skald",ns); assert(load(GL,"=G"))("Skald",ns); assert(load(SG,"=S"))("Skald",ns)
+assert(load(CH,"=C"))("Skald",ns); assert(load(AT,"=A"))("Skald",ns); assert(load(GL,"=G"))("Skald",ns); assert(load(SG,"=S"))("Skald",ns); assert(load(ZC,"=Z"))("Skald",ns)
 fire("ADDON_LOADED","Skald"); fire("PLAYER_LOGIN"); runTimers(); runTimers()
 RES = "no result"
 local okRun, err = pcall(function()
@@ -1451,6 +1451,74 @@ if not tab then RES = "no Saga tab" else
   tab._OnClick(tab)
   RES = (SkaldDB.errors == nil) and "ok" or ("errors: " .. tostring(SkaldDB.errors[1]))
 end`,
+});
+
+const ZONE_STUBS = `C_Map.GetMapInfo = function(id) return { mapType = 3, name = "Teldrassil", parentMapID = 1414 } end
+C_Map.GetBestMapForUnit = function() return 1438 end
+function UnitRace() return "Human", "Human", 1 end
+function UnitClass() return "Mage", "MAGE", 8 end`;
+const ZONE_ART = `C_Map.GetMapArtLayers = function() return { { layerWidth = 1002, layerHeight = 668, tileWidth = 256, tileHeight = 256 } } end
+C_Map.GetMapArtLayerTextures = function() local t = {} for i = 1, 12 do t[i] = 1000 + i end return t end
+C_MapExplorationInfo = { GetExploredMapTextures = function() return { 1, 2, 3 } end }`;
+const ZONE_DB = `local quests = {
+  [1] = { zoneOrSort = 10 }, [2] = { zoneOrSort = 10 }, [3] = { zoneOrSort = 10, hidden = "retired" },
+  [4] = { zoneOrSort = 10, requiredRaces = 2 }, [5] = { zoneOrSort = 10, specialFlags = 1 }, [6] = { zoneOrSort = -22 },
+}
+local qdb = { GetQuestIds = function() return { 1, 2, 3, 4, 5, 6 } end, GetQuest = function(_, id) return quests[id] end,
+  GetUiMapId = function() return 1438 end }
+_G.LibStub = function() return qdb end
+C_QuestLog = { IsQuestFlaggedCompleted = function(id) return id == 2 end }`;
+
+run('the zone card counts the quests of the zone for the race and class, not the hidden nor the repeatable ones', {
+  pre: SAVED('{}', 'version = 99, goalsInit = true, goalsVer = 3, goals = {}, stats = { counts = {}, deathZones = {}, tiers = {}, played = 1, first = 1 }'),
+  body: ZONE_STUBS + '\n' + ZONE_ART + '\n' + ZONE_DB + `
+local done, total = ns.ZoneCard.Quests(1438)
+RES = (done == 1 and total == 2) and "ok" or ("done " .. tostring(done) .. " of " .. tostring(total))`,
+});
+
+run('the zone card builds from the tiles of the game and raises no error', {
+  pre: SAVED('{}', 'version = 99, goalsInit = true, goalsVer = 3, goals = {}, stats = { counts = {}, deathZones = {}, tiers = {}, played = 1, first = 1 }'),
+  body: ZONE_STUBS + '\n' + ZONE_ART + '\n' + ZONE_DB + `
+local card = ns.ZoneCard.Build(UIParent, 342)
+card:Set(1438)
+RES = (#card.tiles == 12 and ns.ZoneCard.Regions(1438) == 3) and "ok" or ("tiles " .. #card.tiles)`,
+});
+
+run('the zone card still comes out without the map art and without QuestDB', {
+  pre: SAVED('{}', 'version = 99, goalsInit = true, goalsVer = 3, goals = {}, stats = { counts = {}, deathZones = {}, tiers = {}, played = 1, first = 1 }'),
+  body: ZONE_STUBS + `
+C_Map.GetMapArtLayers = nil
+C_MapExplorationInfo = nil
+_G.LibStub = nil
+local card = ns.ZoneCard.Build(UIParent, 342)
+card:Set(1438)
+local done, total = ns.ZoneCard.Quests(1438)
+RES = (total == nil and done == 0 and ns.ZoneCard.Regions(1438) == nil) and "ok" or ("done " .. tostring(done) .. " total " .. tostring(total))`,
+});
+
+run('the Index shows the zone card on the right page when the contents fit on the left', {
+  pre: SAGA_DIARY(),
+  body: ZONE_STUBS + '\n' + ZONE_ART + '\n' + ZONE_DB + `
+local tab = btn("Contents")
+if not tab then RES = "no Contents tab" else
+  tab._OnClick(tab)
+  local made = 0
+  for _, fr in ipairs(frames) do if rawget(fr, "tiles") and fr:IsShown() then made = made + 1 end end
+  RES = (SkaldDB.errors == nil and made == 1) and "ok" or ("errors: " .. tostring(SkaldDB.errors and SkaldDB.errors[1]) .. " cards shown: " .. made)
+end`,
+});
+
+run('creatures slain are counted for the zone underfoot, the first look only sets the baseline', {
+  pre: SAVED('{}', 'version = 99, goalsInit = true, goalsVer = 3, goals = {}, stats = { counts = {}, deathZones = {}, tiers = {}, played = 1, first = 1 }'),
+  body: ZONE_STUBS + `
+local KILLS = 100
+function GetStatistic(id) if id == 107 then return tostring(KILLS) end return "--" end
+runTimers()
+ns.TrackKills()
+local first = SkaldCharDB.zoneKills
+KILLS = 112
+ns.TrackKills()
+RES = (first == nil and SkaldCharDB.zoneKills[1438] == 12) and "ok" or ("first " .. tostring(first) .. " then " .. tostring(SkaldCharDB.zoneKills and SkaldCharDB.zoneKills[1438]))`,
 });
 
 run('the title follows the points and the form of the character', {
