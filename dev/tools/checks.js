@@ -37,7 +37,7 @@ for (const f of fs.readdirSync(path.join(ADDONS, 'Skald')).filter(n => n.endsWit
 // every texture the .toc-listed files name must exist
 console.log('Textures');
 {
-  const tex = new Set(fs.readdirSync(path.join(ADDONS, 'Skald/Textures')).map(f => f.replace(/\.tga$/, '')));
+  const tex = new Set(['Textures', 'Textures/skald2'].flatMap(d => fs.readdirSync(path.join(ADDONS, 'Skald', d)).filter(f => f.endsWith('.tga')).map(f => f.replace(/\.tga$/, ''))));
   const src = fs.readFileSync(path.join(ADDONS, 'Skald/Skald.lua'), 'utf8') + fs.readFileSync(path.join(ADDONS, 'Skald/Atlas.lua'), 'utf8') + fs.readFileSync(path.join(ADDONS, 'Skald/Goals.lua'), 'utf8') + fs.readFileSync(path.join(ADDONS, 'Skald/Saga.lua'), 'utf8');
   const wanted = new Set();
   for (const m of src.matchAll(/"((?:it|ev|st|pf|ui|ghost|goal|rd)_[a-z_0-9]+)"/g)) wanted.add(m[1]);

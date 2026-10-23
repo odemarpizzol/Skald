@@ -1962,45 +1962,16 @@ local function CreateWindow()
         back:SetPoint("TOPLEFT", i == 1 and (K.PAGE_XS[1] - 6) or K.PAGE_XS[2], -(K.PAGE_Y - 6))
     end
 
-    -- Close: a small brass stud pressed into the leather, with a cross scratched on it
-    -- (the game's red button did not belong to the book). Esc closes the book too.
+    -- Close: a red wax seal with a golden cross, pressed on the corner of the cover. Esc closes the book too.
     local close = CreateFrame("Button", nil, book)
     close:SetFrameLevel(book:GetFrameLevel() + 6)
-    close:SetSize(26, 26)
-    close:SetPoint("TOPRIGHT", -22, -22)
-    local function Stud(size, r, g, b)
-        local tex = close:CreateTexture(nil, "ARTWORK")
-        tex:SetSize(size, size)
-        tex:SetPoint("CENTER", 0, 0)
-        tex:SetColorTexture(r, g, b, 1)
-        local ok, mask = pcall(close.CreateMaskTexture, close)
-        if ok and mask then
-            mask:SetTexture("Interface\\CHARACTERFRAME\\TempPortraitAlphaMask", "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
-            mask:SetAllPoints(tex)
-            pcall(tex.AddMaskTexture, tex, mask)
-        end
-        return tex
-    end
-    Stud(26, 0.10, 0.05, 0.02)            -- dark edge
-    local brass = Stud(22, 0.78, 0.59, 0.23)
-    Stud(16, 0.24, 0.13, 0.07)            -- the leather showing through
-    local bars = {}
-    for _, angle in ipairs({ math.pi / 4, -math.pi / 4 }) do
-        local bar = close:CreateTexture(nil, "OVERLAY")
-        bar:SetSize(12, 2)
-        bar:SetPoint("CENTER", 0, 0)
-        bar:SetColorTexture(0.88, 0.72, 0.29, 1)
-        pcall(bar.SetRotation, bar, angle)
-        bars[#bars + 1] = bar
-    end
-    close:SetScript("OnEnter", function()
-        brass:SetColorTexture(0.95, 0.80, 0.40, 1)
-        for _, bar in ipairs(bars) do bar:SetColorTexture(1, 0.92, 0.6, 1) end
-    end)
-    close:SetScript("OnLeave", function()
-        brass:SetColorTexture(0.78, 0.59, 0.23, 1)
-        for _, bar in ipairs(bars) do bar:SetColorTexture(0.88, 0.72, 0.29, 1) end
-    end)
+    close:SetSize(46, 46)
+    close:SetPoint("TOPRIGHT", -14, -14)
+    local closeTex = close:CreateTexture(nil, "ARTWORK")
+    closeTex:SetAllPoints()
+    closeTex:SetTexture(K.TEX .. "ui_close")
+    close:SetScript("OnEnter", function() closeTex:SetTexture(K.TEX .. "ui_close_hover") end)
+    close:SetScript("OnLeave", function() closeTex:SetTexture(K.TEX .. "ui_close") end)
     close:SetScript("OnClick", function() f:Hide() end)
 
     -- One page of the open book: parchment with burnt edges, header, page number. --------
@@ -2384,6 +2355,11 @@ local function CreateWindow()
             medal = { ring, inner }
         end
     end
+    -- a soft shadow under the feet, so the figure stands on the parchment instead of floating
+    local footShadow = modelHolder:CreateTexture(nil, "BACKGROUND", nil, 3)
+    footShadow:SetSize(210, 52)
+    footShadow:SetPoint("BOTTOM", 0, 14)
+    footShadow:SetTexture(K.TEX .. "ui_foot")
     local portrait = modelHolder:CreateTexture(nil, "ARTWORK")
     portrait:SetPoint("CENTER")
     portrait:SetSize(186, 186)
@@ -2420,6 +2396,11 @@ local function CreateWindow()
     alcoveTex:SetAllPoints()
     alcoveTex:SetTexture(K.TEX .. "alcove")
     alcoveTex:SetTexCoord(0, 316 / 512, 0, 372 / 512)
+    -- the lower edge of the arch darkens a little, like the floor of a niche
+    local archShade = alcove:CreateTexture(nil, "OVERLAY", nil, -1)
+    archShade:SetSize(292, 73)
+    archShade:SetPoint("BOTTOM", 0, 20)
+    archShade:SetTexture(K.TEX .. "ui_arch")
     -- The model is asked for once, then again a moment later and a little after that: the textures of what
     -- the character wears can still be on their way, and until they arrive the model has white patches.
     local function LoadModel()
@@ -2548,6 +2529,11 @@ local function CreateWindow()
     rarityRule:SetPoint("TOP", 3, rarityTop)
     rarityRule:SetTexture(K.TEX .. "rule")
     rarityRule:SetTexCoord(0, 160 / 256, 0, 14 / 16)
+    -- the ribbon the seals lean on, with the counts written on it
+    local ribbon = stats:CreateTexture(nil, "ARTWORK")
+    ribbon:SetSize(360, 45)
+    ribbon:SetPoint("TOPLEFT", RX - 9, rarityTop - 39)
+    ribbon:SetTexture(K.TEX .. "ui_ribbon")
     local rarityCounts = {}
     for tier = 0, 5 do
         local cell = CreateFrame("Frame", nil, stats)
@@ -2571,8 +2557,8 @@ local function CreateWindow()
         rarityCounts[tier] = count
     end
     -- the two notes at the foot are written by hand
-    local footerPlayed = JText(stats, "SkaldNote", RX, rarityTop - 78)
-    local footerFirst = JText(stats, "SkaldNote", RX, rarityTop - 98)
+    local footerPlayed = JText(stats, "SkaldNote", RX, rarityTop - 90)
+    local footerFirst = JText(stats, "SkaldNote", RX, rarityTop - 110)
     footerPlayed:SetTextColor(0.36, 0.24, 0.14)
     footerFirst:SetTextColor(0.36, 0.24, 0.14)
 
