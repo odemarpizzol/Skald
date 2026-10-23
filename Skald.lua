@@ -6829,6 +6829,50 @@ ns.BuildReport = function()
         end)
         Add("oldest achievement: %s (done %s)", oldest and tostring(oldest) or "none", tostring(done))
     end
+    -- the zone card of the Index: what the client can tell about the zone you stand in (map art, explored tiles,
+    -- the quests QuestDB places there, the combat log); only presence and numbers, nothing is written
+    do
+        local function Has(tbl, name) return type(tbl) == "table" and type(tbl[name]) == "function" and "yes" or "no" end
+        Add("zone card apis: C_Map.GetMapArtLayers=%s GetMapArtLayerTextures=%s GetMapArtID=%s C_MapExplorationInfo.GetExploredMapTextures=%s C_QuestLog.IsQuestFlaggedCompleted=%s GetQuestsCompleted=%s CombatLogGetCurrentEventInfo=%s",
+            Has(C_Map, "GetMapArtLayers"), Has(C_Map, "GetMapArtLayerTextures"), Has(C_Map, "GetMapArtID"),
+            Has(C_MapExplorationInfo, "GetExploredMapTextures"), Has(C_QuestLog, "IsQuestFlaggedCompleted"),
+            type(GetQuestsCompleted) == "function" and "yes" or Has(C_QuestLog, "GetQuestsCompleted"),
+            type(CombatLogGetCurrentEventInfo) == "function" and "yes" or "no")
+        local okM, mapID = pcall(function() return C_Map and C_Map.GetBestMapForUnit and C_Map.GetBestMapForUnit("player") end)
+        if okM and mapID then
+            local okI, info = pcall(function() return C_Map.GetMapInfo(mapID) end)
+            Add("zone card map: id=%s type=%s parent=%s", tostring(mapID), tostring(okI and info and info.mapType), tostring(okI and info and info.parentMapID))
+            local okL, layers = pcall(function() return C_Map.GetMapArtLayers(mapID) end)
+            local layer = okL and type(layers) == "table" and layers[1]
+            Add("zone card art: layers=%s size=%sx%s tile=%sx%s", tostring(okL and type(layers) == "table" and #layers or "?"),
+                tostring(layer and layer.layerWidth), tostring(layer and layer.layerHeight), tostring(layer and layer.tileWidth), tostring(layer and layer.tileHeight))
+            local okT, tiles = pcall(function() return C_Map.GetMapArtLayerTextures(mapID, 1) end)
+            Add("zone card tiles: %s first=%s", tostring(okT and type(tiles) == "table" and #tiles or "?"), tostring(okT and type(tiles) == "table" and tiles[1] or "-"))
+            local okE, explored = pcall(function() return C_MapExplorationInfo.GetExploredMapTextures(mapID) end)
+            Add("zone card explored: %s", tostring(okE and type(explored) == "table" and #explored or (okE and tostring(explored)) or "?"))
+            local qdb = _G.LibStub and LibStub("LibQuestDB-1.0", true)
+            if qdb and qdb.GetQuestIds and qdb.GetQuest and qdb.GetUiMapId then
+                local okQ, total, withZone, here = pcall(function()
+                    local all, wz, h = 0, 0, 0
+                    for _, id in ipairs(qdb:GetQuestIds() or {}) do
+                        all = all + 1
+                        local q = qdb:GetQuest(id)
+                        local z = q and q.zoneOrSort
+                        if type(z) == "number" and z > 0 then
+                            wz = wz + 1
+                            if qdb:GetUiMapId(z) == mapID then h = h + 1 end
+                        end
+                    end
+                    return all, wz, h
+                end)
+                Add("zone card questdb: quests=%s withArea=%s hereByMap=%s", tostring(okQ and total or "?"), tostring(okQ and withZone or "?"), tostring(okQ and here or "?"))
+            else
+                Add("zone card questdb: not installed")
+            end
+        else
+            Add("zone card map: none (stand in a zone and run again)")
+        end
+    end
     local cp = set.commsProbe
     if cp then
         Add("comms probe (run %s, %ds ago): register %s | api %s %s %s", date("%H:%M:%S", cp.when or 0), math.max(0, time() - (cp.when or 0)), tostring(cp.register), tostring(cp.api.RegisterAddonMessagePrefix),
