@@ -183,6 +183,7 @@
   "type"
  ],
  "Skald/Saga.lua": [
+  "UnitFactionGroup",
   "C_Map",
   "GetLocale",
   "SkaldAPI",

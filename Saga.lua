@@ -669,6 +669,9 @@ ns.SagaPages = function(chapters, size, width)
     return pages
 end
 
+-- Which chapters have a sketch behind them (the camp takes the banner of the character's faction).
+local SKETCH = { prologue = "camp", road = "walker", stories = "scroll", marks = "seals" }
+
 -- What the tab shows of a chapter: the names of places and bosses in the colour of old gold, and the first letter
 -- of the chapter in wine (the text of the chapter itself stays plain: the Reader and the voice read that).
 local function Decorate(c)
@@ -715,11 +718,11 @@ local function BuildSagaTab(panel)
             slot.title:SetWidth(CW)
             slot.title:SetJustifyH("CENTER")
             slot.title:SetTextColor(SkaldAPI.C_HEAD[1], SkaldAPI.C_HEAD[2], SkaldAPI.C_HEAD[3])
+            -- the flourish under the title (its picture has a clear margin: 422 of 512 across)
             slot.rule = panel:CreateTexture(nil, "ARTWORK")
-            slot.rule:SetSize(130, 11)
-            slot.rule:SetPoint("TOP", slot.title, "BOTTOM", 0, -3)
-            slot.rule:SetTexture("Interface\\AddOns\\Skald\\Textures\\rule")
-            slot.rule:SetTexCoord(0, 160 / 256, 0, 14 / 16)
+            slot.rule:SetSize(330 * 512 / 422, 330 * 64 / 422)
+            slot.rule:SetPoint("TOP", slot.title, "BOTTOM", 0, 6)
+            slot.rule:SetTexture("Interface\\AddOns\\Skald\\Textures\\ui_saga_divider")
             slot.body = panel:CreateFontString(nil, "OVERLAY", "SkaldSaga")
             slot.body:SetWidth(CW)
             slot.body:SetJustifyH("LEFT")
@@ -728,6 +731,12 @@ local function BuildSagaTab(panel)
             slot.body:SetWordWrap(true)
             slot.body:SetTextColor(SkaldAPI.C_BODY[1], SkaldAPI.C_BODY[2], SkaldAPI.C_BODY[3])
             slot.body:SetPoint("TOPLEFT", slot.title, "BOTTOMLEFT", 0, -24)
+            -- a faded ink sketch behind the right of the text, as if drawn on the page
+            slot.art = panel:CreateTexture(nil, "BACKGROUND")
+            slot.art:SetSize(112, 112)
+            slot.art:SetPoint("TOPRIGHT", slot.body, "TOPRIGHT", 4, 6)
+            slot.art:SetAlpha(0.55)
+            slot.art:Hide()
             if n == 1 then slot.title:SetPoint("TOPLEFT", x, 0)
             else slot.title:SetPoint("TOPLEFT", side.slots[n - 1].body, "BOTTOMLEFT", 0, -44) end
             side.slots[n] = slot
@@ -767,6 +776,13 @@ local function BuildSagaTab(panel)
                 slot.rule:SetShown(c ~= nil)
                 slot.body:SetShown(c ~= nil)
                 if c then slot.title:SetText(c.title); slot.body:SetText(Decorate(c)) end
+                local art = c and SKETCH[c.key]
+                if art == "camp" then
+                    local okF, faction = pcall(UnitFactionGroup, "player")
+                    art = (okF and faction == "Alliance") and "camp_alliance" or "camp_horde"
+                end
+                if art then slot.art:SetTexture("Interface\\AddOns\\Skald\\Textures\\ui_saga_" .. art) end
+                slot.art:SetShown(art ~= nil)
             end
         end
     end
