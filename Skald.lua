@@ -6872,6 +6872,22 @@ ns.BuildReport = function()
         else
             Add("zone card map: none (stand in a zone and run again)")
         end
+        -- the zones the client lists under each continent, with the ids the card would use
+        pcall(function()
+            local zones = {}
+            local zoneType = Enum and Enum.UIMapType and Enum.UIMapType.Zone or 3
+            for _, cont in ipairs({ 1414, 1415, 1945, 1946 }) do
+                local info = C_Map.GetMapInfo(cont)
+                local kids = info and C_Map.GetMapChildrenInfo and C_Map.GetMapChildrenInfo(cont, zoneType, true)
+                if type(kids) == "table" then
+                    local names = {}
+                    for _, k in ipairs(kids) do names[#names + 1] = k.mapID .. "=" .. tostring(k.name) end
+                    zones[#zones + 1] = cont .. " " .. tostring(info.name) .. " (" .. #kids .. "): " .. table.concat(names, ", ")
+                end
+            end
+            for _, line in ipairs(zones) do Add("zone list %s", line) end
+            if #zones == 0 then Add("zone list: none") end
+        end)
     end
     local cp = set.commsProbe
     if cp then
