@@ -510,7 +510,7 @@ local function BuildGoalsTab(panel)
     for i = 1, 7 do
         local row = CreateFrame("Button", nil, panel)
         row:SetSize(CW, 50)
-        row:SetPoint("TOPLEFT", RIGHT_X, -52 - (i - 1) * 54)
+        row:SetPoint("TOPLEFT", RIGHT_X, -52 - (i - 1) * 52)
         row.icon = row:CreateTexture(nil, "ARTWORK")
         row.icon:SetSize(36, 36)
         row.icon:SetPoint("TOPLEFT", 0, -4)
@@ -640,6 +640,8 @@ local function BuildGoalsTab(panel)
                     row.points:SetTextColor(muted[1], muted[2], muted[3])
                     row.gem:SetAlpha(0.45)
                 end
+                -- a goal still to do shows its seal faded and without colour; one reached shows it in full
+                pcall(row.icon.SetDesaturated, row.icon, not rec and not g.secret)
                 if rec then
                     row.icon:SetTexture(TEX .. "goal_done")
                     row.icon:SetAlpha(1)

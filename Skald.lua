@@ -2800,9 +2800,10 @@ local function CreateWindow()
         s.line:Hide()
         s.quill:Hide()
         s.num:SetText("")
-        s.hl:Show(); s.hr:Show(); s.hm:Hide()
+        -- no running head over a page: only the cover's left page raises it again (DrawPage)
+        s.hl:Hide(); s.hr:Hide(); s.hm:Hide()
         if s.zoneCard then s.zoneCard:Hide() end
-        for _, rule in ipairs(s.headRules) do rule:Show() end
+        for _, rule in ipairs(s.headRules) do rule:Hide() end
     end
 
     local function DrawPage(s, page, number)
