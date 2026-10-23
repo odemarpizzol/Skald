@@ -2051,12 +2051,18 @@ local function CreateWindow()
         end
 
         s.quill = fr:CreateTexture(nil, "ARTWORK", nil, 3)
-        s.quill:SetSize(20, 20)
-        s.quill:SetTexture(K.TEX .. "quill")
+        -- the page number between two sprigs of laurel (s.quill is the left one)
+        s.quill:SetSize(56, 28)
+        s.quill:SetTexture("Interface\\AddOns\\Skald\\Textures\\ui_laurel_l")
         s.num = fr:CreateFontString(nil, "OVERLAY", "SkaldBody")
-        s.num:SetPoint("BOTTOM", 10, 14)
-        s.quill:SetPoint("RIGHT", s.num, "LEFT", -3, 0)
+        s.num:SetPoint("BOTTOM", 0, 16)
+        s.quill:SetPoint("RIGHT", s.num, "LEFT", 2, -1)
         s.quill:Hide()
+        s.laurelR = fr:CreateTexture(nil, "ARTWORK", nil, 3)
+        s.laurelR:SetSize(56, 28)
+        s.laurelR:SetTexture("Interface\\AddOns\\Skald\\Textures\\ui_laurel_r")
+        s.laurelR:SetPoint("LEFT", s.num, "RIGHT", -2, -1)
+        s.laurelR:Hide()
 
         s.sub = fr:CreateFontString(nil, "OVERLAY", "SkaldBody")
         s.sub:SetWidth(K.CW)
@@ -2799,6 +2805,7 @@ local function CreateWindow()
         s.rule:Hide()
         s.line:Hide()
         s.quill:Hide()
+        s.laurelR:Hide()
         s.num:SetText("")
         -- no running head over a page: only the cover's left page raises it again (DrawPage)
         s.hl:Hide(); s.hr:Hide(); s.hm:Hide()
@@ -2830,6 +2837,7 @@ local function CreateWindow()
         if page.type == "blank" then return end
         s.num:SetText(Hex(K.C_MUTED) .. tostring(number) .. "|r")
         s.quill:Show()
+        s.laurelR:Show()
         local px = s.padL
         if page.type == "daycard" then
             -- the last day ended on a left page: the right one sums up the day

@@ -41,6 +41,7 @@ console.log('Textures');
   const src = fs.readFileSync(path.join(ADDONS, 'Skald/Skald.lua'), 'utf8') + fs.readFileSync(path.join(ADDONS, 'Skald/Atlas.lua'), 'utf8') + fs.readFileSync(path.join(ADDONS, 'Skald/Goals.lua'), 'utf8') + fs.readFileSync(path.join(ADDONS, 'Skald/Saga.lua'), 'utf8') + fs.readFileSync(path.join(ADDONS, 'Skald/ZoneCard.lua'), 'utf8');
   const wanted = new Set();
   for (const m of src.matchAll(/"((?:it|ev|st|pf|ui|ghost|goal|rd)_[a-z_0-9]+)"/g)) wanted.add(m[1]);
+  for (const m of src.matchAll(/"(goal_medal)" \.\./g)) { wanted.delete('goal_medal'); for (let i = 0; i <= 5; i++) wanted.add('goal_medal' + i); }
   for (const m of src.matchAll(/"(pin_med)" \.\./g)) for (let i = 0; i <= 5; i++) wanted.add('pin_med' + i);
   const ev = (src.match(/local EVENT_ICON = \{([\s\S]*?)\n\}/) || [])[1] || '';
   for (const m of ev.matchAll(/= "([a-z_]+)"/g)) wanted.add(m[1].startsWith('st_') ? m[1] : 'ev_' + m[1]);
