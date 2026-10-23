@@ -585,12 +585,19 @@ ns.BuildSaga = function()
     local pools = UI.POOLS
     local chapters = {}
     local function Add(key, parts)
-        local texts = {}
+        local texts, marks = {}, {}
         for _, p in ipairs(parts) do
             local phrase = Pick(pools[p[1]], p[1], v.seed)
-            if phrase then texts[#texts + 1] = Fill(phrase, p[2]) end
+            if phrase then
+                texts[#texts + 1] = Fill(phrase, p[2])
+                -- the names of places and bosses are shown in another colour in the tab
+                for _, k in ipairs({ "place", "boss", "home", "land" }) do
+                    local m = p[2][k]
+                    if type(m) == "string" and #m > 1 then marks[#marks + 1] = m end
+                end
+            end
         end
-        if #texts > 0 then chapters[#chapters + 1] = { key = key, title = UI.TITLES[key], text = table.concat(texts, "\n\n") } end
+        if #texts > 0 then chapters[#chapters + 1] = { key = key, title = UI.TITLES[key], text = table.concat(texts, "\n\n"), marks = marks } end
     end
     local when = date(UI.DATE, v.seed > 0 and v.seed or time())
     -- "a Human" but "an Orc" (only English tells the article by the sound of the next word)
@@ -664,6 +671,34 @@ ns.SagaPages = function(chapters, size, width)
     return pages
 end
 
+-- What the tab shows of a chapter: the names of places and bosses in the colour of old gold, and the first letter
+-- of the chapter in wine (the text of the chapter itself stays plain: the Reader and the voice read that).
+local function Decorate(c)
+    local text = c.text
+    local marks = {}
+    for _, m in ipairs(c.marks or {}) do
+        local inside = false
+        for _, other in ipairs(c.marks) do
+            if other ~= m and #other > #m and other:find(m, 1, true) then inside = true end
+        end
+        if not inside then marks[m] = true end
+    end
+    for m in pairs(marks) do
+        local out, from = {}, 1
+        while true do
+            local a, b = text:find(m, from, true)
+            if not a then break end
+            out[#out + 1] = text:sub(from, a - 1) .. "|cff8a5a14" .. m .. "|r"
+            from = b + 1
+        end
+        out[#out + 1] = text:sub(from)
+        text = table.concat(out)
+    end
+    local head = text:match("^[%z\1-\127\194-\244][\128-\191]*")
+    if head and not text:find("^|c") then text = "|cff6e1e1a" .. head .. "|r" .. text:sub(#head + 1) end
+    return text
+end
+
 -- The tab: two pages at a time (several short chapters to a page); the corners turn the pages.
 local function BuildSagaTab(panel)
     local CW, RX = SkaldAPI.CW, SkaldAPI.RIGHT_X
@@ -696,6 +731,15 @@ local function BuildSagaTab(panel)
         side.number = panel:CreateFontString(nil, "OVERLAY", "SkaldSmall")
         side.number:SetPoint("BOTTOM", panel, "BOTTOMLEFT", x + CW / 2, 2)
         side.number:SetTextColor(SkaldAPI.C_MUTED[1], SkaldAPI.C_MUTED[2], SkaldAPI.C_MUTED[3])
+        -- the number between two sprigs of laurel, as on the pages of the book
+        side.laurelL = panel:CreateTexture(nil, "ARTWORK")
+        side.laurelL:SetSize(56, 28)
+        side.laurelL:SetTexture("Interface\\AddOns\\Skald\\Textures\\ui_laurel_l")
+        side.laurelL:SetPoint("RIGHT", side.number, "LEFT", 2, -1)
+        side.laurelR = panel:CreateTexture(nil, "ARTWORK")
+        side.laurelR:SetSize(56, 28)
+        side.laurelR:SetTexture("Interface\\AddOns\\Skald\\Textures\\ui_laurel_r")
+        side.laurelR:SetPoint("LEFT", side.number, "RIGHT", -2, -1)
         sides[i] = side
     end
     local empty = panel:CreateFontString(nil, "OVERLAY", "SkaldBody")
@@ -711,12 +755,14 @@ local function BuildSagaTab(panel)
             local number = (spread - 1) * 2 + i
             local page = pages[number] or {}
             side.number:SetText(pages[number] and tostring(number) or "")
+            side.laurelL:SetShown(pages[number] ~= nil)
+            side.laurelR:SetShown(pages[number] ~= nil)
             for n, slot in ipairs(side.slots) do
                 local c = page[n]
                 slot.title:SetShown(c ~= nil)
                 slot.rule:SetShown(c ~= nil)
                 slot.body:SetShown(c ~= nil)
-                if c then slot.title:SetText(c.title); slot.body:SetText(c.text) end
+                if c then slot.title:SetText(c.title); slot.body:SetText(Decorate(c)) end
             end
         end
     end
