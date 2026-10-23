@@ -2028,7 +2028,7 @@ local function CreateWindow()
         hl:SetTextColor(K.C_HDR[1], K.C_HDR[2], K.C_HDR[3])
         hl:SetText(L.HDR_L)
         local hr = fr:CreateFontString(nil, "OVERLAY", "SkaldSmall")
-        hr:SetPoint("TOPRIGHT", -30, -15)
+        hr:SetPoint("TOPRIGHT", i == 2 and -52 or -30, -15)   -- the wax seal of the cover sits over the right corner
         hr:SetTextColor(K.C_HDR[1], K.C_HDR[2], K.C_HDR[3])
         hr:SetText(L.HDR_R)
         s.hr = hr
