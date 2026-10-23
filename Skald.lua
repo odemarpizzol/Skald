@@ -3054,13 +3054,13 @@ local function CreateWindow()
     local function MakeCurl(i)
         local b = CreateFrame("Button", nil, book)
         b:SetFrameLevel(book:GetFrameLevel() + 6)
-        b:SetSize(56, 56)
+        b:SetSize(76, 76)
+        -- the drawn corner has a little clear margin, so it sits a few points outside the page corner
         b:SetPoint(i == 1 and "BOTTOMLEFT" or "BOTTOMRIGHT", f, "TOPLEFT",
-            i == 1 and K.PAGE_XS[1] or (K.PAGE_XS[2] + K.PAGE_SW), -(K.PAGE_Y + K.PAGE_SH))
+            i == 1 and (K.PAGE_XS[1] - 8) or (K.PAGE_XS[2] + K.PAGE_SW + 8), -(K.PAGE_Y + K.PAGE_SH) - 8)
         b.tex = b:CreateTexture(nil, "ARTWORK")
         b.tex:SetAllPoints()
-        b.tex:SetTexture(K.TEX .. "curl")
-        if i == 1 then b.tex:SetTexCoord(56 / 64, 0, 0, 56 / 64) else b.tex:SetTexCoord(0, 56 / 64, 0, 56 / 64) end
+        b.tex:SetTexture(K.TEX .. (i == 1 and "ui_corner_l" or "ui_corner_r"))
         b:SetScript("OnEnter", function(self) self.tex:SetVertexColor(1.15, 1.15, 1.15) end)
         b:SetScript("OnLeave", function(self) self.tex:SetVertexColor(1, 1, 1) end)
         return b
