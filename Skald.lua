@@ -2532,14 +2532,14 @@ local function CreateWindow()
     rarityRule:SetTexCoord(0, 160 / 256, 0, 14 / 16)
     -- the ribbon the seals lean on, with the counts written on it
     local ribbon = stats:CreateTexture(nil, "ARTWORK")
-    ribbon:SetSize(360, 45)
-    ribbon:SetPoint("TOPLEFT", RX - 9, rarityTop - 39)
+    ribbon:SetSize(400, 50)   -- the drawn ribbon fills 85% of its picture: about 340 points show, the flat of it from 34 to 310
+    ribbon:SetPoint("TOPLEFT", RX - 29, rarityTop - 37)
     ribbon:SetTexture(K.TEX .. "ui_ribbon")
     local rarityCounts = {}
     for tier = 0, 5 do
         local cell = CreateFrame("Frame", nil, stats)
-        cell:SetSize(52, 60)
-        cell:SetPoint("TOPLEFT", RX + 15 + tier * 52, rarityTop - 14)   -- close enough for all six counts to lie on the flat of the ribbon, not on its rolled ends
+        cell:SetSize(50, 60)
+        cell:SetPoint("TOPLEFT", RX + 21 + tier * 50, rarityTop - 14)   -- close enough for all six counts to lie on the flat of the ribbon, not on its rolled ends
         cell:EnableMouse(true)
         local seal = cell:CreateTexture(nil, "ARTWORK")
         seal:SetSize(38, 38)
