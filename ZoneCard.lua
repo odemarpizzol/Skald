@@ -172,7 +172,7 @@ function ZC.Build(parent, width)
     for i, spec in ipairs(ROWS) do
         local row = { key = spec.key }
         row.icon = card:CreateTexture(nil, "ARTWORK")
-        row.icon:SetSize(20, 20)
+        row.icon:SetSize(30, 30)
         row.icon:SetTexture(TEX .. spec.icon)
         row.label = card:CreateFontString(nil, "OVERLAY", "SkaldBody")
         row.label:SetTextColor(SkaldAPI.C_BODY[1], SkaldAPI.C_BODY[2], SkaldAPI.C_BODY[3])
@@ -294,15 +294,15 @@ function ZC.Build(parent, width)
             row.icon:ClearAllPoints()
             row.icon:SetPoint("TOPLEFT", card, "TOPLEFT", 0, -y)
             row.label:ClearAllPoints()
-            row.label:SetPoint("TOPLEFT", card, "TOPLEFT", 30, -(y + 3))
+            row.label:SetPoint("TOPLEFT", card, "TOPLEFT", 40, -(y + 7))
             row.label:SetText(t[row.key:upper()])
             row.value:ClearAllPoints()
-            row.value:SetPoint("TOPRIGHT", card, "TOPLEFT", width - 4, -(y + 3))
+            row.value:SetPoint("TOPRIGHT", card, "TOPLEFT", width - 4, -(y + 7))
             row.value:SetText(values[row.key])
             row.leader:ClearAllPoints()
             row.leader:SetPoint("BOTTOMLEFT", row.label, "BOTTOMRIGHT", 6, 3)
             row.leader:SetPoint("BOTTOMRIGHT", row.value, "BOTTOMLEFT", -6, 3)
-            y = y + 26
+            y = y + 38
         end
     end
     card:Hide()

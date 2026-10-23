@@ -1399,6 +1399,7 @@ K.ENTRY_X = 80                          -- icon (24) | time (40) | text, gaps of
 K.NOTE_BTN_H = 52                       -- the room at the foot of a day for the quill button
 K.GAP = 11
 K.INDEX_ROW = 22
+K.INDEX_GAP = 12                         -- the space above a chapter that is not the first on its page
 
 K.ROMAN = { "I", "II", "III", "IV", "V", "VI", "VII" }
 local function RomanLower(n)
@@ -2641,7 +2642,6 @@ local function CreateWindow()
     -- Which pages exist: 1-2 cover, the contents, then the days (each from a new page).
     local function Paginate()
         local days = BuildDays()
-        local perPage = math.floor((K.PAGE_H - 50) / K.INDEX_ROW)
         local rows, lastChapter = {}, nil
         local placeCount = {}
         for _, day in ipairs(days) do
@@ -2667,14 +2667,25 @@ local function CreateWindow()
             end
             rows[#rows + 1] = { day = day }
         end
-        local indexPages = math.max(2, math.ceil(math.max(1, #rows) / perPage))
+        -- the rows go page by page by their height: a chapter after the first row of a page has a gap above it
+        local chunks, chunk, used = { {} }, 1, 0
+        local limit = K.PAGE_H - 50
+        for _, row in ipairs(rows) do
+            local h = K.INDEX_ROW + ((row.chapter and used > 0) and K.INDEX_GAP or 0)
+            if used + h > limit and used > 0 then
+                chunk = chunk + 1; chunks[chunk] = {}; used = 0
+                h = K.INDEX_ROW
+            end
+            local list = chunks[chunk]
+            list[#list + 1] = row
+            used = used + h
+        end
+        local indexPages = math.max(2, #chunks)
         if indexPages % 2 == 1 then indexPages = indexPages + 1 end   -- the days start on a left page
         local entryPage = {}
         local pages = { { type = "coverL" }, { type = "coverR" } }
         for i = 1, indexPages do
-            local chunk = {}
-            for r = (i - 1) * perPage + 1, math.min(#rows, i * perPage) do chunk[#chunk + 1] = rows[r] end
-            pages[#pages + 1] = { type = "index", rows = chunk, first = (i == 1), label = RomanLower(i) }
+            pages[#pages + 1] = { type = "index", rows = chunks[i] or {}, first = (i == 1), label = RomanLower(i) }
         end
 
         local firstDayPage = #pages + 1
@@ -2854,6 +2865,11 @@ local function CreateWindow()
                 b:SetPoint("TOPLEFT", px, -y)
                 b.text:ClearAllPoints()
                 if row.chapter then
+                    if n > 1 then
+                        y = y + K.INDEX_GAP
+                        b:ClearAllPoints()
+                        b:SetPoint("TOPLEFT", px, -y)
+                    end
                     b.target = nil
                     b.text:SetPoint("LEFT", 0, 0)
                     b.text:SetFontObject("SkaldSec")
