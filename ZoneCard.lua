@@ -268,7 +268,6 @@ function ZC.Build(parent, width)
         for n = drawn + 1, #card.tiles do card.tiles[n]:Hide() end
         for _, e in ipairs(card.edge) do e:SetShown(mapBox:IsShown()) end
         if mapBox:IsShown() then
-            local h = mapBox:GetHeight()
             card.edge[1]:ClearAllPoints(); card.edge[1]:SetPoint("TOPLEFT", mapBox, "TOPLEFT"); card.edge[1]:SetPoint("TOPRIGHT", mapBox, "TOPRIGHT"); card.edge[1]:SetHeight(2)
             card.edge[2]:ClearAllPoints(); card.edge[2]:SetPoint("BOTTOMLEFT", mapBox, "BOTTOMLEFT"); card.edge[2]:SetPoint("BOTTOMRIGHT", mapBox, "BOTTOMRIGHT"); card.edge[2]:SetHeight(2)
             card.edge[3]:ClearAllPoints(); card.edge[3]:SetPoint("TOPLEFT", mapBox, "TOPLEFT"); card.edge[3]:SetPoint("BOTTOMLEFT", mapBox, "BOTTOMLEFT"); card.edge[3]:SetWidth(2)
