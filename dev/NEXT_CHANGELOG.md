@@ -1,0 +1,1 @@
+- Pages of a day are now filled to about three quarters, so the doodles at the foot have room: each one a different size, a little crooked and on its own height, scattered by a hand. `/skald density compact|comfy|airy` sets how full the pages get (comfy by default; compact is the old way)

@@ -1422,7 +1422,9 @@ K.DOODLE_OF = {
 }
 K.DOODLE_ORDER = { "sword", "skull", "map", "star", "camp", "boots", "paw", "anvil", "mug", "scroll" }
 K.DOODLE_WEIGHT = { scroll = 0.3 }
-K.DOODLE_SIZE = 60
+-- How full a page of a day is let to get, so there is room left for the doodles (the share of its height).
+K.DENSITY = { compact = 1, comfy = 0.78, airy = 0.62 }
+function ns.DensityOf() return K.DENSITY[SkaldDB and SkaldDB.density or "comfy"] or K.DENSITY.comfy end
 function ns.DoodlesOf(entries, most)
     local score = {}
     for _, e in ipairs(entries or {}) do
@@ -2829,7 +2831,7 @@ local function CreateWindow()
                 block.mainH = mainH
                 block.noteH = noteH
                 block.h = math.max(24, mainH + (noteH > 0 and (noteH + 6) or 0))
-                local limit = K.PAGE_H - ((i == #blocks) and K.NOTE_BTN_H or 0)
+                local limit = math.floor(K.PAGE_H * ns.DensityOf()) - ((i == #blocks) and K.NOTE_BTN_H or 0)
                 if y + block.h > limit and #page.blocks > 0 then
                     page = { type = "day", day = day, blocks = {}, first = false }
                     pages[#pages + 1] = page
@@ -2862,7 +2864,7 @@ local function CreateWindow()
         local entries = Journal().entries
         local last = entries[#entries]
         local sig = table.concat({ #entries, last and last.t or 0, last and last.kind or "", (SkaldDB and SkaldDB.ink) or 0,
-            (SkaldDB and SkaldDB.textSize) or 1, (SkaldDB and SkaldDB.dayMode) or 0, ns.layoutRev or 0 }, ":")
+            (SkaldDB and SkaldDB.textSize) or 1, (SkaldDB and SkaldDB.dayMode) or 0, (SkaldDB and SkaldDB.density) or "", ns.layoutRev or 0 }, ":")
         if sig ~= cachedSig then
             cachedLayout = Paginate()
             cachedSig = sig
@@ -3137,25 +3139,29 @@ local function CreateWindow()
             b.dayRef = day
             b.px = px
             b:Show()
-            -- what the day held, drawn by the character in the free space above the quill (only if there is room)
-            local size = K.DOODLE_SIZE
-            local rowY = K.PAGE_H - K.NOTE_BTN_H - size
-            if page.doodles and #page.doodles > 0 and (page.usedY or 0) + 8 <= rowY then
-                local step = size + 12
-                local x0 = px + (K.CW - #page.doodles * step + 12) / 2
+            -- what the day held, drawn by the character where the page has room above the quill: each one a
+            -- different size, a little crooked, on its own height, as if scattered by a hand
+            local floor = K.PAGE_H - K.NOTE_BTN_H
+            local top = (page.usedY or 0) + 10
+            local count = page.doodles and #page.doodles or 0
+            if count > 0 and floor - top >= 48 then
+                local slot = K.CW / count
                 s.doodles = s.doodles or {}
                 for i, name in ipairs(page.doodles) do
                     local t = s.doodles[i]
                     if not t then
                         t = s.frame:CreateTexture(nil, "ARTWORK", nil, 2)
-                        t:SetSize(size, size)
                         s.doodles[i] = t
                     end
-                    local wobble = (day.number * 7 + i * 3) % 5 - 2   -- -2 to 2: a hand that is never quite steady
+                    local seed = day.number * 7 + i * 5
+                    local size = math.min(44 + (seed % 4) * 6, floor - top)   -- 44 to 62, never taller than the room
+                    local wobble = seed % 5 - 2   -- -2 to 2
+                    local drop = math.min(((i % 2 == 0) and 0.55 or 0.1) + (seed % 3) * 0.12, 1) * (floor - top - size)
+                    t:SetSize(size, size)
                     t:ClearAllPoints()
-                    t:SetPoint("TOPLEFT", s.frame, "TOPLEFT", x0 + (i - 1) * step, -(K.TOP_Y + rowY + wobble * 3))
+                    t:SetPoint("TOPLEFT", s.frame, "TOPLEFT", px + (i - 1) * slot + (slot - size) / 2 + wobble * 4, -(K.TOP_Y + top + drop))
                     t:SetTexture(K.TEX .. name)
-                    if t.SetRotation then pcall(t.SetRotation, t, wobble * 0.04) end
+                    if t.SetRotation then pcall(t.SetRotation, t, wobble * 0.07) end
                     t:Show()
                 end
             end
@@ -3558,6 +3564,7 @@ local function CreateWindow()
     f:ApplyCover()
 
     f.sides = sides   -- for the tests
+    function f:PageCount() layout = Layout(); return #layout.pages end   -- for the tests
 
     -- Opening the book lands on the newest day (or the cover while it is empty).
     f:SetScript("OnShow", function()
@@ -7361,6 +7368,15 @@ SlashCmdList["SKALD"] = function(msg)
         if db then db.companions = nil end
         Mile.reunionTold = {}
         Say(L.CMD_COMPANIONS_FORGOTTEN)
+    elseif msg:match("^density") then
+        local choice = strtrim(msg:sub(8))
+        if K.DENSITY[choice] then
+            Settings().density = choice
+            ns.layoutRev = (ns.layoutRev or 0) + 1
+            if window then window:Refresh() end
+        end
+        local now = Settings().density or "comfy"
+        Say(string.format(L.CMD_DENSITY, L.DENSITY_NAMES[now] or now))
     elseif msg == "tidy" then
         pcall(Mile.Relocalize)
         Say(string.format(L.CMD_TIDY, Mile.Tidy()))
