@@ -3534,7 +3534,7 @@ local function MakeFlatButton(parent, width, height, label, style)
             else
                 showIdle(not self.active)
                 showActive(self.active)
-                if self.active then self.text:SetTextColor(0.96, 0.91, 0.80) else self.text:SetTextColor(0.25, 0.16, 0.06) end
+                if self.active then self.text:SetTextColor(0.98, 0.93, 0.82) else self.text:SetTextColor(0.88, 0.82, 0.68) end
             end
             return
         end
