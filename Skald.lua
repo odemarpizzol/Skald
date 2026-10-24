@@ -1356,6 +1356,7 @@ end
 -- If the game cannot load one, the quest face of the game stands in at a smaller size.
 -- The size of the text in the book is a setting (Small, Normal, Large).
 K.TEXT_SIZES = { [0] = 11, [1] = 13, [2] = 15 }
+K.DENSITY_FONT = { compact = 0, comfy = 1, airy = 2 }   -- points added to the letter of the diary entries by the density of the pages
 local ApplyFonts
 do
     local FALLBACK = "Fonts\\FRIZQT__.TTF"
@@ -1370,6 +1371,8 @@ do
     ApplyFonts = function()
         local size = K.TEXT_SIZES[(SkaldDB and SkaldDB.textSize) or 1] or 14
         Make("SkaldBody", "EBGaramond.ttf", size, size - 2)
+        local entry = size + (K.DENSITY_FONT[SkaldDB and SkaldDB.density or "comfy"] or 1)
+        Make("SkaldEntry", "EBGaramond.ttf", entry, entry - 2)   -- the text of the entries on the pages of a day
         Make("SkaldSaga", "EBGaramond.ttf", size + 3, size + 1)
         Make("SkaldItalic", "EBGaramond-Italic.ttf", size, size - 2)
         Make("SkaldSmall", "EBGaramond.ttf", 11, 10)
@@ -2198,7 +2201,7 @@ local function CreateWindow()
             r.time:SetWidth(40)
             r.time:SetJustifyH("LEFT")
             r.time:SetTextColor(K.C_TIME[1], K.C_TIME[2], K.C_TIME[3])
-            r.text = s.frame:CreateFontString(nil, "OVERLAY", "SkaldBody")
+            r.text = s.frame:CreateFontString(nil, "OVERLAY", "SkaldEntry")
             r.text:SetJustifyH("LEFT")
             r.text:SetJustifyV("TOP")
             r.text:SetWordWrap(true)
@@ -2295,7 +2298,7 @@ local function CreateWindow()
     end
 
     -- Text heights come from a hidden string of the right width.
-    local meter = f:CreateFontString(nil, "OVERLAY", "SkaldBody")
+    local meter = f:CreateFontString(nil, "OVERLAY", "SkaldEntry")
     meter:SetWordWrap(true)
     meter:SetSpacing(2)
     meter:SetAlpha(0)
@@ -3069,6 +3072,7 @@ local function CreateWindow()
                 local fs = SideText(s, 2 + n)
                 fs:ClearAllPoints()
                 fs:SetPoint("TOPLEFT", px + 32, -top)
+                fs:SetFontObject("SkaldEntry")
                 fs:SetWidth(K.CW - 32)
                 fs:SetTextColor(1, 1, 1)
                 fs:SetText(block.text)
@@ -3397,7 +3401,7 @@ local function CreateWindow()
         end
 
         -- fonts
-        for _, name in ipairs({ "SkaldBody", "SkaldHead", "SkaldNote", "SkaldSec" }) do
+        for _, name in ipairs({ "SkaldBody", "SkaldEntry", "SkaldHead", "SkaldNote", "SkaldSec" }) do
             local font = _G[name]
             local path = font and font.GetFont and font:GetFont()
             if type(path) == "string" and not path:lower():find("skald", 1, true) then
@@ -7374,6 +7378,7 @@ SlashCmdList["SKALD"] = function(msg)
         local choice = strtrim(msg:sub(8))
         if K.DENSITY[choice] then
             Settings().density = choice
+            ApplyFonts()
             ns.layoutRev = (ns.layoutRev or 0) + 1
             if window then window:Refresh() end
         end
