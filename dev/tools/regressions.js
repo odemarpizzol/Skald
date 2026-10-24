@@ -1613,7 +1613,7 @@ RES = (order == "skull,sword,map" and none == 0 and drawn:find("dd_skull", 1, tr
 });
 
 run('a looser page density spreads a long day over more pages, and the command tells the choice', {
-  pre: SAVED('{' + Array.from({ length: 24 }, (_, i) => `{ t = ${1792000000 + i * 60}, kind = "quest", arg = "Q${i}", zone = "Darkshore", zm = 1439, m = 1439, x = 0.4, y = 0.4, idx = 1, tier = 1 }`).join(',') + '}'),
+  pre: SAVED('{' + Array.from({ length: 90 }, (_, i) => `{ t = ${1792000000 + i * 60}, kind = "quest", arg = "Q${i}", zone = "Darkshore", zm = 1439, m = 1439, x = 0.4, y = 0.4, idx = 1, tier = 1 }`).join(',') + '}'),
   body: `SkaldAPI.OpenEntry(SkaldCharDB.entries[1])
 SlashCmdList.SKALD("density compact")
 local compact = SkaldFrame:PageCount()

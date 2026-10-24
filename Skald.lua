@@ -1425,10 +1425,13 @@ K.DOODLE_OF = {
 }
 K.DOODLE_ORDER = { "sword", "skull", "map", "star", "camp", "boots", "paw", "anvil", "mug", "scroll" }
 K.DOODLE_WEIGHT = { scroll = 0.3 }
--- How full a page of a day is let to get, so there is room left for the doodles (the share of its height).
-K.DENSITY = { compact = 1, comfy = 0.78, airy = 0.62 }
+-- How full a page of a day is let to get (the share of its height).
+K.DENSITY = { compact = 1, comfy = 0.92, airy = 0.84 }
+-- The room the last page of a day keeps free for its doodles (points); the pages before it are filled to the share above.
+K.DENSITY_BAND = { compact = 0, comfy = 70, airy = 110 }
 K.DOODLE_SCALE = { compact = 0.85, comfy = 1, airy = 1.3 }   -- the doodles grow with the room a looser page leaves
 function ns.DensityOf() return K.DENSITY[SkaldDB and SkaldDB.density or "comfy"] or K.DENSITY.comfy end
+function ns.DensityBand() return K.DENSITY_BAND[SkaldDB and SkaldDB.density or "comfy"] or K.DENSITY_BAND.comfy end
 function ns.DoodlesOf(entries, most)
     local score = {}
     for _, e in ipairs(entries or {}) do
@@ -2835,7 +2838,9 @@ local function CreateWindow()
                 block.mainH = mainH
                 block.noteH = noteH
                 block.h = math.max(24, mainH + (noteH > 0 and (noteH + 6) or 0))
-                local limit = math.floor(K.PAGE_H * ns.DensityOf()) - ((i == #blocks) and K.NOTE_BTN_H or 0)
+                local limit = math.floor(K.PAGE_H * ns.DensityOf())
+                -- the last block of the day leaves room for the quill and the doodles, else it goes to a page of its own
+                if i == #blocks then limit = math.min(limit, K.PAGE_H - K.NOTE_BTN_H - ns.DensityBand()) end
                 if y + block.h > limit and #page.blocks > 0 then
                     page = { type = "day", day = day, blocks = {}, first = false }
                     pages[#pages + 1] = page
