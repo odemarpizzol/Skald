@@ -1390,6 +1390,27 @@ function ns.CloseSeal(faction)
     return "ui_waxseal_neutral"
 end
 
+-- The typical weather of a land, by the id of its map (the stamp on the first page of a day). Lands not listed
+-- have none and keep the plain sun. These are the ids of Classic and TBC; an id the client does not know
+-- simply gives no stamp. The weather the game is showing at the moment cannot be read, so this is the
+-- climate the land is known for, not the day's.
+K.WEATHER = {
+    sun = { 1411, 1413, 1418, 1419, 1427, 1428, 1434, 1436, 1449, 1454, 1944 },
+    rain = { 1437, 1438, 1439, 1440, 1444, 1445, 1946, 2024, 2025 },
+    snow = { 1416, 1426, 1452, 1455 },
+    sand = { 1441, 1443, 1446, 1451 },
+    fog = { 1420, 1421, 1422, 1423, 1430, 1431, 1435, 1448, 1942 },
+    storm = { 1425, 1447, 1948, 1949, 1953 },
+}
+K.WEATHER_OF = {}
+for kind, ids in pairs(K.WEATHER) do for _, id in ipairs(ids) do K.WEATHER_OF[id] = kind end end
+-- The weather kind ("sun", "rain", "snow", "sand", "fog" or "storm") of a map, or nil.
+function ns.WeatherOf(mapID)
+    if type(mapID) ~= "number" then return nil end
+    local zoneMap = ns.ZoneCard and ns.ZoneCard.ZoneMap and ns.ZoneCard.ZoneMap(mapID)
+    return K.WEATHER_OF[zoneMap or mapID]
+end
+
 -- Inks (design tokens).
 K.C_BODY  = { 0.243, 0.165, 0.086 }   -- #3E2A16
 K.C_HEAD  = { 0.431, 0.118, 0.102 }   -- #6E1E1A
@@ -1469,6 +1490,7 @@ local function BuildDays()
         else
             day.entries[#day.entries + 1] = e
             if e.kind ~= "note" then day.zone = KnownZone(ns.PlaceName(e)) or day.zone end
+            if e.kind ~= "note" then day.zmap = (type(e.m) == "number" and e.m) or e.zm or day.zmap end
             day.lastT = math.max(day.lastT or 0, e.t or 0)
             day.ses = day.ses or e.ses
             if e.kind == "level" or e.kind == "milestone" then
@@ -2974,7 +2996,11 @@ local function CreateWindow()
             sub:SetPoint("TOPLEFT", px, -(K.TOP_Y + 28))
             sub:SetTextColor(1, 1, 1)
             local where = KnownZone(day.zone)
-            sub:SetText(string.format("|T%ssun:18:18:0:0:64:64:0:48:0:48|t %s%s%s|r", K.TEX, Hex(K.C_MUTED),
+            -- the stamp of the land's typical weather, when it has one, in place of the plain sun
+            local weather = ns.WeatherOf(day.zmap)
+            local stamp = weather and string.format("|T%swx_%s:24:24|t", K.TEX, weather)
+                or string.format("|T%ssun:18:18:0:0:64:64:0:48:0:48|t", K.TEX)
+            sub:SetText(string.format("%s %s%s%s|r", stamp, Hex(K.C_MUTED),
                 date(L.DAY_DATE, day.t), where and ("  -  " .. where) or ""))
             sub:Show()
             Rule(s, K.TOP_Y + 56)
