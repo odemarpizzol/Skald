@@ -28,3 +28,4 @@ Português; versões escolhidas por ele ou por mim em "publica"; sem integraçã
 
 ## Ideias abertas
 Ornamento/letra capitular na Saga (arte), mais capítulos (faixas de nível, cadeias, raras, reencontros, pets), metas de transmog (API não verificada), crônica compartilhada, reativar a voz (flag), abrir `Locales.lua` a tradutores, README/descrição CurseForge/prints, PDF do Leitor girado, campo "Dieta" do pet em outro idioma. Dívida de lint: "unused locals summary" em `Skald.lua` (não falha).
+- Aviso sonoro para o banner (pedido do usuário em 2026-10-23, olhar depois): som curto ao aparecer o banner de aviso, com opção de desligar nas Opções; usar `PlaySound` com som do jogo, verificar no cliente real.
