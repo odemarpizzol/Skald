@@ -1179,7 +1179,7 @@ local function MakeParchmentButton(parent, width, height, label)
         self.active = active and true or false
         self.bar:SetShown(self.active)
         -- the chosen plate gives off a soft amber light
-        if not self.glow then
+        if type(rawget(self, "glow")) ~= "table" then
             self.glow = self:CreateTexture(nil, "ARTWORK")
             self.glow:SetPoint("TOPLEFT", 2, -2)
             self.glow:SetPoint("BOTTOMRIGHT", -2, 2)
