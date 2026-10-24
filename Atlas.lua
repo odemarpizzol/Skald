@@ -585,8 +585,11 @@ local function BuildMapTab(panel)
         function(on) SkaldAtlasDB.onlyFav = on and true or nil end)
 
     SkaldAPI.PageHeading(panel, UI.KINDS, RIGHT_X)
+    -- two columns (seven and six) instead of one long list
+    local COL_W, PER_COL = 172, 7
     for i, kind in ipairs(KIND_ORDER) do
-        Check(UI.KIND[kind], RIGHT_X, -52 - (i - 1) * 28,
+        local col, row = math.floor((i - 1) / PER_COL), (i - 1) % PER_COL
+        Check(UI.KIND[kind], RIGHT_X + col * COL_W, -56 - row * 40,
             function() return (SkaldAtlasDB.kinds or {})[kind] ~= false end,
             function(on)
                 SkaldAtlasDB.kinds = SkaldAtlasDB.kinds or {}
@@ -601,18 +604,32 @@ local function BuildMapTab(panel)
 
     -- The region: the land of the map open on screen (or the one you are in), what the diary holds
     -- there, and how much of it the filters show.
-    SkaldAPI.SectionLabel(panel, UI.REGION, 0, -326)
+    -- the card: a tinted parchment with a thin brass-brown edge
+    local card = CreateFrame("Frame", nil, panel)
+    card:SetPoint("TOPLEFT", -6, -338)
+    card:SetSize(354, 108)
+    local fillT = card:CreateTexture(nil, "BACKGROUND")
+    fillT:SetAllPoints()
+    fillT:SetColorTexture(0.80, 0.68, 0.45, 0.35)
+    for _, e in ipairs({ { "TOPLEFT", "TOPRIGHT", nil, 2 }, { "BOTTOMLEFT", "BOTTOMRIGHT", nil, 2 },
+                         { "TOPLEFT", "BOTTOMLEFT", 2, nil }, { "TOPRIGHT", "BOTTOMRIGHT", 2, nil } }) do
+        local edge = card:CreateTexture(nil, "BORDER")
+        edge:SetPoint(e[1]); edge:SetPoint(e[2])
+        if e[3] then edge:SetWidth(e[3]) else edge:SetHeight(e[4]) end
+        edge:SetColorTexture(0.55, 0.38, 0.16, 0.9)
+    end
+    SkaldAPI.SectionLabel(panel, UI.REGION, 4, -342)
     local function Line(y, font, color)
         local fs = panel:CreateFontString(nil, "OVERLAY", font)
-        fs:SetPoint("TOPLEFT", 0, y)
-        fs:SetWidth(342)
+        fs:SetPoint("TOPLEFT", 4, y)
+        fs:SetWidth(334)
         fs:SetJustifyH("LEFT")
         fs:SetTextColor(color[1], color[2], color[3])
         return fs
     end
-    local regionName = Line(-346, "SkaldBody", head)
-    local fact1, fact2, fact3 = Line(-368, "SkaldBody", body), Line(-386, "SkaldBody", body), Line(-404, "SkaldBody", body)
-    local status = Line(-424, "SkaldSmall", muted)
+    local regionName = Line(-362, "SkaldBody", head)
+    local fact1, fact2, fact3 = Line(-382, "SkaldBody", body), Line(-398, "SkaldBody", body), Line(-414, "SkaldBody", body)
+    local status = Line(-430, "SkaldSmall", muted)
     syncs[#syncs + 1] = function()
         local ok = pcall(function()
             local mapID

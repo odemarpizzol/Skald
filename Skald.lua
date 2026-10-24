@@ -3539,6 +3539,14 @@ local function MakeWaxCheck(parent, label, get, set, iconPath, swatch, width)
         icon:SetTexture(iconPath)
         textX = 50
     end
+    -- a soft warm glow under the row while the pointer is on it
+    local hover = b:CreateTexture(nil, "BACKGROUND")
+    hover:SetPoint("TOPLEFT", -4, 1)
+    hover:SetPoint("BOTTOMRIGHT", 0, -1)
+    hover:SetColorTexture(0.75, 0.55, 0.22, 0.16)
+    hover:Hide()
+    b:HookScript("OnEnter", function() hover:Show() end)
+    b:HookScript("OnLeave", function() hover:Hide() end)
     local fs = b:CreateFontString(nil, "OVERLAY", "SkaldBody")
     b.caption = label
     fs:SetPoint("LEFT", anchor, "LEFT", textX, 0)
