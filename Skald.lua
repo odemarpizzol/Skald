@@ -1396,6 +1396,8 @@ end
 -- climate the land is known for, not the day's.
 K.WEATHER = {
     sun = { 1411, 1413, 1418, 1419, 1427, 1428, 1434, 1436, 1449, 1454, 1944 },
+    partly = { 1412, 1429, 1432, 1453, 1456, 1457, 1941 },
+    cloudy = { 1417, 1424, 1433, 1442, 1458, 1951, 1952 },
     rain = { 1437, 1438, 1439, 1440, 1444, 1445, 1946, 2024, 2025 },
     snow = { 1416, 1426, 1452, 1455 },
     sand = { 1441, 1443, 1446, 1451 },
@@ -1405,7 +1407,7 @@ K.WEATHER = {
 K.WEATHER_SIZE = 64   -- the stamp, in points
 K.WEATHER_OF = {}
 for kind, ids in pairs(K.WEATHER) do for _, id in ipairs(ids) do K.WEATHER_OF[id] = kind end end
--- The weather kind ("sun", "rain", "snow", "sand", "fog" or "storm") of a map, or nil.
+-- The weather kind ("sun", "partly", "cloudy", "rain", "snow", "sand", "fog" or "storm") of a map, or nil.
 function ns.WeatherOf(mapID)
     if type(mapID) ~= "number" then return nil end
     local zoneMap = ns.ZoneCard and ns.ZoneCard.ZoneMap and ns.ZoneCard.ZoneMap(mapID)
@@ -2993,7 +2995,7 @@ local function CreateWindow()
         local y
         if page.first then
             local head = Heading(DayTitle(day, day.number), K.TOP_Y, "SkaldHead2")
-            -- the stamp of the land's typical weather, big at the right of the title (nothing for a land without one)
+            -- the doodle of the land's typical weather, big at the right of the title (nothing for a land without one)
             local weather = ns.WeatherOf(day.zmap)
             if weather then
                 if not s.weather then
@@ -3002,7 +3004,7 @@ local function CreateWindow()
                 end
                 s.weather:ClearAllPoints()
                 s.weather:SetPoint("TOPRIGHT", s.frame, "TOPRIGHT", -(K.PAGE_SW - s.padL - K.CW), -(K.TOP_Y - 10))
-                s.weather:SetTexture(K.TEX .. "wx_" .. weather)
+                s.weather:SetTexture(K.TEX .. "wxd_" .. weather)
                 s.weather:Show()
                 head:SetWidth(K.CW - K.WEATHER_SIZE - 6)   -- the title leaves the corner to the stamp
                 head:SetJustifyH("LEFT")

@@ -1604,12 +1604,12 @@ run('a day in a land with a known climate wears its weather stamp, and any other
 end
 SkaldAPI.OpenEntry(SkaldCharDB.entries[1])
 local rain = stamp()
-local ids = ns.WeatherOf(1411) == "sun" and ns.WeatherOf(1426) == "snow" and ns.WeatherOf(99999) == nil and ns.WeatherOf(nil) == nil
+local ids = ns.WeatherOf(1411) == "sun" and ns.WeatherOf(1426) == "snow" and ns.WeatherOf(1429) == "partly" and ns.WeatherOf(1424) == "cloudy" and ns.WeatherOf(99999) == nil and ns.WeatherOf(nil) == nil
 for _, e in ipairs(SkaldCharDB.entries) do e.m, e.zm = 99999, 99999 end
 ns.layoutRev = (ns.layoutRev or 0) + 1
 SkaldAPI.OpenEntry(SkaldCharDB.entries[2])
 local plain = stamp()
-RES = (rain and rain:find("wx_rain", 1, true) and ids and plain == nil) and "ok"
+RES = (rain and rain:find("wxd_rain", 1, true) and ids and plain == nil) and "ok"
   or ("stamp " .. tostring(rain) .. ", ids " .. tostring(ids) .. ", stamp on an unknown land " .. tostring(plain))`,
 });
 
