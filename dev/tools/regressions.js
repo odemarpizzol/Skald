@@ -1571,5 +1571,12 @@ RES = (f.gold == 500 and f.repFriendly == 2 and f.repHonored == 1 and f.repExalt
   and "ok" or ("gold=" .. tostring(f.gold) .. " rep=" .. tostring(f.repFriendly) .. "/" .. tostring(f.repHonored) .. "/" .. tostring(f.repExalted) .. " pages=" .. count("goal"))`,
 });
 
+run('the seal that closes the book follows the faction, and anything unknown is neutral', {
+  pre: SAVED('{}'),
+  body: `RES = (ns.CloseSeal("Horde") == "ui_waxseal_horde" and ns.CloseSeal("Alliance") == "ui_waxseal_alliance"
+  and ns.CloseSeal("Neutral") == "ui_waxseal_neutral" and ns.CloseSeal(nil) == "ui_waxseal_neutral" and ns.CloseSeal(false) == "ui_waxseal_neutral")
+  and "ok" or "wrong seal"`,
+});
+
 console.log(failed ? `\n${failed} regression(s) FAILED` : '\nAll regressions passed');
 process.exit(failed ? 1 : 0);

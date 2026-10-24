@@ -1,0 +1,1 @@
+- The seal that closes the book is now the wax seal of your faction: red for the Horde, blue for the Alliance, brown for neutral (art by the user)

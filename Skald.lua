@@ -1383,6 +1383,12 @@ do
 end
 
 K.TEX = "Interface\\AddOns\\Skald\\Textures\\skald2\\"
+-- The wax seal that closes the book, by the faction the game reports (anything else is neutral).
+function ns.CloseSeal(faction)
+    if faction == "Horde" then return "ui_waxseal_horde" end
+    if faction == "Alliance" then return "ui_waxseal_alliance" end
+    return "ui_waxseal_neutral"
+end
 
 -- Inks (design tokens).
 K.C_BODY  = { 0.243, 0.165, 0.086 }   -- #3E2A16
@@ -1974,16 +1980,18 @@ local function CreateWindow()
         back:SetPoint("TOPLEFT", i == 1 and (K.PAGE_XS[1] - 6) or K.PAGE_XS[2], -(K.PAGE_Y - 6))
     end
 
-    -- Close: a red wax seal with a golden cross, pressed on the corner of the cover. Esc closes the book too.
+    -- Close: the wax seal of your faction (red for the Horde, blue for the Alliance, brown for neutral),
+    -- pressed on the corner of the cover. Esc closes the book too.
     local close = CreateFrame("Button", nil, book)
     close:SetFrameLevel(book:GetFrameLevel() + 6)
-    close:SetSize(46, 46)
-    close:SetPoint("TOPRIGHT", -14, -14)
+    close:SetSize(39, 39)   -- the drawn seal fills more of its picture than the old one did, so it is drawn smaller to look as big
+    close:SetPoint("TOPRIGHT", -18, -18)
     local closeTex = close:CreateTexture(nil, "ARTWORK")
     closeTex:SetAllPoints()
-    closeTex:SetTexture(K.TEX .. "ui_close")
-    close:SetScript("OnEnter", function() closeTex:SetTexture(K.TEX .. "ui_close_hover") end)
-    close:SetScript("OnLeave", function() closeTex:SetTexture(K.TEX .. "ui_close") end)
+    closeTex:SetTexture(K.TEX .. ns.CloseSeal(Safe(select(2, pcall(UnitFactionGroup, "player")))))
+    closeTex:SetVertexColor(0.85, 0.85, 0.85)
+    close:SetScript("OnEnter", function() closeTex:SetVertexColor(1, 1, 1) end)
+    close:SetScript("OnLeave", function() closeTex:SetVertexColor(0.85, 0.85, 0.85) end)
     close:SetScript("OnClick", function() f:Hide() end)
 
     -- One page of the open book: parchment with burnt edges, header, page number. --------
