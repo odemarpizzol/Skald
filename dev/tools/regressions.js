@@ -1597,5 +1597,19 @@ RES = (rain and rain:find("wxd_rain", 1, true) and ids and plain == nil) and "ok
   or ("stamp " .. tostring(rain) .. ", ids " .. tostring(ids) .. ", stamp on an unknown land " .. tostring(plain))`,
 });
 
+run('a day ends with the doodles of what it held, the most present first, three at most', {
+  pre: THREE_DAYS,
+  body: `local picked = ns.DoodlesOf({ { kind = "boss" }, { kind = "death" }, { kind = "death" }, { kind = "quest" }, { kind = "quest" }, { kind = "zone" }, { kind = "level" } }, 3)
+local order = table.concat(picked, ",")
+local none = #ns.DoodlesOf({ { kind = "loot" } }, 3)
+SkaldAPI.OpenEntry(SkaldCharDB.entries[3])
+local drawn = ""
+for _, side in ipairs(SkaldFrame.sides) do
+  for _, t in ipairs(rawget(side, "doodles") or {}) do if rawget(t, "_shown") then drawn = drawn .. rawget(t, "_tex") end end
+end
+RES = (order == "skull,sword,map" and none == 0 and drawn:find("dd_skull", 1, true)) and "ok"
+  or ("order " .. order .. ", loot only " .. none .. ", drawn " .. tostring(drawn))`,
+});
+
 console.log(failed ? `\n${failed} regression(s) FAILED` : '\nAll regressions passed');
 process.exit(failed ? 1 : 0);

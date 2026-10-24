@@ -1414,6 +1414,31 @@ function ns.WeatherOf(mapID)
     return K.WEATHER_OF[zoneMap or mapID]
 end
 
+-- The doodles the character draws at the foot of a day, by what the day held (up to three, the most
+-- present first; the scroll of the quests counts for little, since nearly every day has some).
+K.DOODLE_OF = {
+    quest = "scroll", level = "star", milestone = "star", death = "skull", boss = "sword", dungeon = "sword",
+    zone = "map", flight = "boots", mount = "boots", tame = "paw", skill = "anvil", profession = "anvil",
+    hearth = "camp", home = "camp", guild = "mug", rep = "mug",
+}
+K.DOODLE_ORDER = { "sword", "skull", "map", "star", "camp", "boots", "paw", "anvil", "mug", "scroll" }
+K.DOODLE_WEIGHT = { scroll = 0.3 }
+K.DOODLE_SIZE = 60
+function ns.DoodlesOf(entries, most)
+    local score = {}
+    for _, e in ipairs(entries or {}) do
+        local d = K.DOODLE_OF[e.kind]
+        if d then score[d] = math.min((score[d] or 0) + (K.DOODLE_WEIGHT[d] or 1), 3 * (K.DOODLE_WEIGHT[d] or 1)) end
+    end
+    local picked = {}
+    for _, d in ipairs(K.DOODLE_ORDER) do if score[d] then picked[#picked + 1] = d end end
+    local rank = {}
+    for i, d in ipairs(picked) do rank[d] = i end
+    table.sort(picked, function(a, b) if score[a] ~= score[b] then return score[a] > score[b] end return rank[a] < rank[b] end)
+    while #picked > (most or 3) do table.remove(picked) end
+    return picked
+end
+
 -- Inks (design tokens).
 K.C_BODY  = { 0.243, 0.165, 0.086 }   -- #3E2A16
 K.C_HEAD  = { 0.431, 0.118, 0.102 }   -- #6E1E1A
@@ -2789,7 +2814,7 @@ local function CreateWindow()
                     quest = (e.kind == "quest") and e or nil,
                     entry = e,
                     note = (e.fav and e.favNote) or nil,
-                    icon = (e.kind == "loot" and ItemIcon(e)) or (e.kind == "note" and (K.TEX .. "quill")) or (isQuest and (K.SEAL_PATH .. e.tier)) or EventIconPath(e.kind, e),
+                    icon = (e.kind == "loot" and ItemIcon(e)) or (e.kind == "note" and (K.TEX .. "dd_scroll")) or (isQuest and (K.SEAL_PATH .. e.tier)) or EventIconPath(e.kind, e),
                 }
             end
             if day.summary then
@@ -2816,6 +2841,8 @@ local function CreateWindow()
                 y = y + block.h + K.GAP
             end
             page.note = true
+            page.usedY = y
+            page.doodles = ns.DoodlesOf(day.entries, 3)
         end
         if #pages % 2 == 1 then
             local lastDay = days[#days]
@@ -2849,6 +2876,7 @@ local function CreateWindow()
         if s.closeIcon then s.closeIcon:Hide() end
         if s.closeLine then s.closeLine:Hide() end
         if s.weather then s.weather:Hide() end
+        for _, t in ipairs(s.doodles or {}) do t:Hide() end
         if s.timeline then s.timeline:Hide() end
         s.timelineTop = nil
         if s.dayCard then s.dayCard:Hide() end
@@ -3119,6 +3147,28 @@ local function CreateWindow()
             b.dayRef = day
             b.px = px
             b:Show()
+            -- what the day held, drawn by the character in the free space above the quill (only if there is room)
+            local size = K.DOODLE_SIZE
+            local rowY = K.PAGE_H - K.NOTE_BTN_H - size
+            if page.doodles and #page.doodles > 0 and (page.usedY or 0) + 8 <= rowY then
+                local step = size + 12
+                local x0 = px + (K.CW - #page.doodles * step + 12) / 2
+                s.doodles = s.doodles or {}
+                for i, name in ipairs(page.doodles) do
+                    local t = s.doodles[i]
+                    if not t then
+                        t = s.frame:CreateTexture(nil, "ARTWORK", nil, 2)
+                        t:SetSize(size, size)
+                        s.doodles[i] = t
+                    end
+                    local wobble = (day.number * 7 + i * 3) % 5 - 2   -- -2 to 2: a hand that is never quite steady
+                    t:ClearAllPoints()
+                    t:SetPoint("TOPLEFT", s.frame, "TOPLEFT", x0 + (i - 1) * step, -(K.TOP_Y + rowY + wobble * 3))
+                    t:SetTexture(K.TEX .. "dd_" .. name)
+                    if t.SetRotation then pcall(t.SetRotation, t, wobble * 0.04) end
+                    t:Show()
+                end
+            end
         end
     end
 
