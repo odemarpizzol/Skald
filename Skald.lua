@@ -6759,6 +6759,8 @@ local function BuildStyle(panel)
         for key, b in pairs(toneButtons) do b:SetActive(key == tone) end
         toneHint:SetText(L.TONE_HINT[tone] or "")
         sample:SetText(L.TONE_SAMPLE[tone] or "")
+        local ink = K.INKS[(s.ink or 0) + 1] or K.INKS[1]   -- the example is written in the ink chosen below
+        sample:SetTextColor(ink[1], ink[2], ink[3])
         for _, cb in ipairs(colorBoxes) do cb.Sync() end
         for _, cb in ipairs(inkBoxes) do cb.Sync() end
         for i, b in pairs(textSizeButtons) do b:SetActive(i == (s.textSize or 1)) end
