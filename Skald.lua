@@ -2843,10 +2843,11 @@ local function CreateWindow()
             page.note = true
             page.usedY = y
             page.doodles = ns.DoodlesOf(day.entries, 3)
+            -- every day closes with its own page of numbers
+            pages[#pages + 1] = { type = "daycard", day = day }
         end
         if #pages % 2 == 1 then
-            local lastDay = days[#days]
-            pages[#pages + 1] = (lastDay and pages[#pages].type == "day") and { type = "daycard", day = lastDay } or { type = "blank" }
+            pages[#pages + 1] = { type = "blank" }
         end
         return { days = days, pages = pages, indexPages = indexPages, firstDayPage = firstDayPage, entryPage = entryPage }
     end
@@ -2920,7 +2921,7 @@ local function CreateWindow()
         s.laurelR:Show()
         local px = s.padL
         if page.type == "daycard" then
-            -- the last day ended on a left page: the right one sums up the day
+            -- the page that closes a day: its numbers
             s.num:SetText(Hex(K.C_MUTED) .. tostring(number - layout.firstDayPage + 1) .. "|r")
             if ns.DayCard then
                 if not s.dayCard then
