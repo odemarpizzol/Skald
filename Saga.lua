@@ -641,7 +641,7 @@ end
 -- to a page as fit, never a chapter split. The estimate is cautious (it counts the bytes of a line, so accents make
 -- it longer) and was checked against the real fonts.
 local PAGE_HEIGHT = 415          -- the room of a page (440) less a margin
-local TITLE_HEIGHT, SLOT_GAP = 55, 44
+local TITLE_HEIGHT, SLOT_GAP = 63, 44
 -- Which chapters have an ink sketch (the camp takes the banner of the character's faction). The sketch has a column
 -- of its own at the right of the text: the text never runs over it, and the chapter is at least as tall as it.
 local SKETCH = { prologue = "camp", road = "walker", stories = "scroll", marks = "seals" }
@@ -720,6 +720,7 @@ local function Compose(slot, c, width)
     if not first then first, others = c.text, "" end
     local cap, rest = CapOf(first)
     local function Height(fs, text)
+        fs:SetHeight(0)   -- a fixed height from an earlier pass would clip what is measured
         fs:SetText(text)
         local ok, h = pcall(fs.GetStringHeight, fs)
         return (ok and type(h) == "number") and h or 0
@@ -730,7 +731,7 @@ local function Compose(slot, c, width)
     slot.body:SetWidth(width)
     if not cap then
         slot.body:ClearAllPoints()
-        slot.body:SetPoint("TOPLEFT", slot.title, "BOTTOMLEFT", 0, -24)
+        slot.body:SetPoint("TOPLEFT", slot.title, "BOTTOMLEFT", 0, -32)
         slot.body:SetText(Decorate(c.text, c.marks))
         local h = Height(slot.body, Decorate(c.text, c.marks))
         slot.body:SetHeight(math.max(h, 1))
@@ -742,7 +743,7 @@ local function Compose(slot, c, width)
     local capW = math.max(30, (okW and type(capWidth) == "number" and capWidth or 30) + 6)
     slot.lead:SetWidth(width - capW)
     slot.lead:ClearAllPoints()
-    slot.lead:SetPoint("TOPLEFT", slot.title, "BOTTOMLEFT", capW, -24)
+    slot.lead:SetPoint("TOPLEFT", slot.title, "BOTTOMLEFT", capW, -32)
     local twoLines = Height(slot.lead, "X\nX")
     local words = {}
     for w in rest:gmatch("%S+") do words[#words + 1] = w end
@@ -803,10 +804,10 @@ local function BuildSagaTab(panel)
             slot.rule:SetTexture("Interface\\AddOns\\Skald\\Textures\\ui_saga_divider")
             slot.capShadow = panel:CreateFontString(nil, "OVERLAY", "SkaldDrop")
             slot.capShadow:SetTextColor(0.89, 0.69, 0.31)
-            slot.capShadow:SetPoint("TOPLEFT", slot.title, "BOTTOMLEFT", 1, -26)
+            slot.capShadow:SetPoint("TOPLEFT", slot.title, "BOTTOMLEFT", 1, -34)
             slot.cap = panel:CreateFontString(nil, "OVERLAY", "SkaldDrop")
             slot.cap:SetTextColor(0.43, 0.118, 0.102)
-            slot.cap:SetPoint("TOPLEFT", slot.title, "BOTTOMLEFT", 0, -24)
+            slot.cap:SetPoint("TOPLEFT", slot.title, "BOTTOMLEFT", 0, -32)
             slot.lead = panel:CreateFontString(nil, "OVERLAY", "SkaldSaga")
             slot.lead:SetJustifyH("LEFT")
             slot.lead:SetJustifyV("TOP")
@@ -820,11 +821,11 @@ local function BuildSagaTab(panel)
             slot.body:SetSpacing(6)
             slot.body:SetWordWrap(true)
             slot.body:SetTextColor(SkaldAPI.C_BODY[1], SkaldAPI.C_BODY[2], SkaldAPI.C_BODY[3])
-            slot.body:SetPoint("TOPLEFT", slot.title, "BOTTOMLEFT", 0, -24)
+            slot.body:SetPoint("TOPLEFT", slot.title, "BOTTOMLEFT", 0, -32)
             -- a faded ink sketch in a column of its own at the right of the text, as if drawn on the page
             slot.art = panel:CreateTexture(nil, "BACKGROUND")
             slot.art:SetSize(ART_W, ART_H)
-            slot.art:SetPoint("TOPRIGHT", slot.title, "BOTTOMRIGHT", 0, -18)
+            slot.art:SetPoint("TOPRIGHT", slot.title, "BOTTOMRIGHT", 0, -26)
             slot.art:SetAlpha(0.8)
             slot.art:Hide()
             if n == 1 then slot.title:SetPoint("TOPLEFT", x, 0)
