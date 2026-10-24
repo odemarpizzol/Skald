@@ -1178,6 +1178,15 @@ local function MakeParchmentButton(parent, width, height, label)
     function b:SetActive(active)
         self.active = active and true or false
         self.bar:SetShown(self.active)
+        -- the chosen plate gives off a soft amber light
+        if not self.glow then
+            self.glow = self:CreateTexture(nil, "ARTWORK")
+            self.glow:SetPoint("TOPLEFT", 2, -2)
+            self.glow:SetPoint("BOTTOMRIGHT", -2, 2)
+            self.glow:SetColorTexture(0.95, 0.65, 0.2, 0.18)
+            self.glow:SetBlendMode("ADD")
+        end
+        self.glow:SetShown(self.active)
         local fill = self.active and K.BTN.paper or K.BTN.leather
         self:SetBackdropColor(fill[1], fill[2], fill[3], 1)
         self:SetBackdropBorderColor(K.BTN.edge[1], K.BTN.edge[2], K.BTN.edge[3], 1)
@@ -3537,6 +3546,8 @@ local function MakeWaxCheck(parent, label, get, set, iconPath, swatch, width)
         icon:SetSize(18, 18)
         icon:SetPoint("LEFT", 26, 0)
         icon:SetTexture(iconPath)
+        pcall(icon.SetDesaturation, icon, 0.3)   -- the picture a little subdued, as inked
+        icon:SetAlpha(0.9)
         textX = 50
     end
     -- a soft warm glow under the row while the pointer is on it
