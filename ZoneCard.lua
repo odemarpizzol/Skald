@@ -344,11 +344,18 @@ function DC.Build(parent, width)
     rule:SetPoint("TOP", title, "BOTTOM", 0, -6)
     rule:SetTexture("Interface\\AddOns\\Skald\\Textures\\skald2\\rule")
     rule:SetTexCoord(0, 160 / 256, 0, 14 / 16)
+    -- which day the numbers are of, in the muted ink under the rule
+    local sub = card:CreateFontString(nil, "OVERLAY", "SkaldBody")
+    sub:SetWidth(width)
+    sub:SetJustifyH("CENTER")
+    sub:SetPoint("TOP", rule, "BOTTOM", 0, -8)
+    sub:SetTextColor(SkaldAPI.C_MUTED[1], SkaldAPI.C_MUTED[2], SkaldAPI.C_MUTED[3])
+    card.sub = sub
     card.rows = {}
     local ROWS = { { "level", "ev_level" }, { "quests", "ev_quest" }, { "zones", "ev_zone" }, { "falls", "ev_death" },
         { "goals", "ev_goal" }, { "pages", "ev_milestone" } }
     for i, spec in ipairs(ROWS) do
-        local y = 44 + (i - 1) * 38
+        local y = 76 + (i - 1) * 38
         local row = { key = spec[1] }
         row.icon = card:CreateTexture(nil, "ARTWORK")
         row.icon:SetSize(30, 30)
@@ -368,11 +375,12 @@ function DC.Build(parent, width)
         row.leader:SetPoint("BOTTOMRIGHT", row.value, "BOTTOMLEFT", -6, 3)
         card.rows[i] = row
     end
-    function card:Set(day)
+    function card:Set(day, reference)
         local loc = GetLocale and GetLocale() or "enUS"
         local t = DAY_TEXTS[loc] or DAY_TEXTS.enUS
         local n = DC.Count(day)
         card.title:SetText(t.TITLE)
+        card.sub:SetText(reference or "")
         for _, row in ipairs(card.rows) do
             row.label:SetText(t[row.key:upper()])
             row.value:SetText(tostring(n[row.key]))

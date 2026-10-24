@@ -1404,7 +1404,6 @@ K.WEATHER = {
     fog = { 1420, 1421, 1422, 1423, 1430, 1431, 1435, 1448, 1942 },
     storm = { 1425, 1447, 1948, 1949, 1953 },
 }
-K.WEATHER_SIZE = 64   -- the stamp, in points
 K.WEATHER_OF = {}
 for kind, ids in pairs(K.WEATHER) do for _, id in ipairs(ids) do K.WEATHER_OF[id] = kind end end
 -- The weather kind ("sun", "partly", "cloudy", "rain", "snow", "sand", "fog" or "storm") of a map, or nil.
@@ -2842,7 +2841,10 @@ local function CreateWindow()
             end
             page.note = true
             page.usedY = y
-            page.doodles = ns.DoodlesOf(day.entries, 3)
+            page.doodles = {}
+            local weather = ns.WeatherOf(day.zmap)
+            if weather then page.doodles[1] = "wxd_" .. weather end
+            for _, name in ipairs(ns.DoodlesOf(day.entries, 3)) do page.doodles[#page.doodles + 1] = "dd_" .. name end
             -- every day closes with its own page of numbers
             pages[#pages + 1] = { type = "daycard", day = day }
         end
@@ -2876,7 +2878,6 @@ local function CreateWindow()
         if s.noteArea and not editing then s.noteArea:Hide() end
         if s.closeIcon then s.closeIcon:Hide() end
         if s.closeLine then s.closeLine:Hide() end
-        if s.weather then s.weather:Hide() end
         for _, t in ipairs(s.doodles or {}) do t:Hide() end
         if s.timeline then s.timeline:Hide() end
         s.timelineTop = nil
@@ -2931,7 +2932,7 @@ local function CreateWindow()
                 if s.dayCard then
                     s.dayCard:ClearAllPoints()
                     s.dayCard:SetPoint("TOPLEFT", s.frame, "TOPLEFT", px, -(K.TOP_Y + 4))
-                    local okSet, err = pcall(s.dayCard.Set, s.dayCard, page.day)
+                    local okSet, err = pcall(s.dayCard.Set, s.dayCard, page.day, (DayTitle(page.day, page.day.number):gsub(":", " -", 1)))
                     if okSet then s.dayCard:Show() else SkaldDB.errors = SkaldDB.errors or {}; table.insert(SkaldDB.errors, tostring(err)) end
                 end
             end
@@ -3022,21 +3023,9 @@ local function CreateWindow()
         s.num:SetText(Hex(K.C_MUTED) .. tostring(number - layout.firstDayPage + 1) .. "|r")
         local y
         if page.first then
-            local head = Heading(DayTitle(day, day.number), K.TOP_Y, "SkaldHead2")
-            -- the doodle of the land's typical weather, big at the right of the title (nothing for a land without one)
+            Heading(DayTitle(day, day.number), K.TOP_Y, "SkaldHead2")
+            -- a land with a weather doodle of its own has it at the foot of the day, so the small sun stays out of the date line
             local weather = ns.WeatherOf(day.zmap)
-            if weather then
-                if not s.weather then
-                    s.weather = s.frame:CreateTexture(nil, "ARTWORK", nil, 3)
-                    s.weather:SetSize(K.WEATHER_SIZE, K.WEATHER_SIZE)
-                end
-                s.weather:ClearAllPoints()
-                s.weather:SetPoint("TOPRIGHT", s.frame, "TOPRIGHT", -(K.PAGE_SW - s.padL - K.CW), -(K.TOP_Y - 10))
-                s.weather:SetTexture(K.TEX .. "wxd_" .. weather)
-                s.weather:Show()
-                head:SetWidth(K.CW - K.WEATHER_SIZE - 6)   -- the title leaves the corner to the stamp
-                head:SetJustifyH("LEFT")
-            end
             local sub = s.sub
             sub:ClearAllPoints()
             sub:SetPoint("TOPLEFT", px, -(K.TOP_Y + 28))
@@ -3165,7 +3154,7 @@ local function CreateWindow()
                     local wobble = (day.number * 7 + i * 3) % 5 - 2   -- -2 to 2: a hand that is never quite steady
                     t:ClearAllPoints()
                     t:SetPoint("TOPLEFT", s.frame, "TOPLEFT", x0 + (i - 1) * step, -(K.TOP_Y + rowY + wobble * 3))
-                    t:SetTexture(K.TEX .. "dd_" .. name)
+                    t:SetTexture(K.TEX .. name)
                     if t.SetRotation then pcall(t.SetRotation, t, wobble * 0.04) end
                     t:Show()
                 end

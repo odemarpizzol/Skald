@@ -1578,23 +1578,24 @@ run('the seal that closes the book follows the faction, and anything unknown is 
   and "ok" or "wrong seal"`,
 });
 
-run('a day in a land with a known climate wears its weather stamp, and any other land keeps the sun', {
+run('a day in a land with a known climate has its weather doodle at the foot, and any other land does not', {
   pre: THREE_DAYS,
-  body: `local function stamp()
+  body: `local function drawn()
+  local out = ""
   for _, side in ipairs(SkaldFrame.sides) do
-    local w = rawget(side, "weather")
-    if w and rawget(w, "_shown") then return rawget(w, "_tex") end
+    for _, t in ipairs(rawget(side, "doodles") or {}) do if rawget(t, "_shown") then out = out .. rawget(t, "_tex") end end
   end
+  return out
 end
 SkaldAPI.OpenEntry(SkaldCharDB.entries[1])
-local rain = stamp()
+local rain = drawn()
 local ids = ns.WeatherOf(1411) == "sun" and ns.WeatherOf(1426) == "snow" and ns.WeatherOf(1429) == "partly" and ns.WeatherOf(1424) == "cloudy" and ns.WeatherOf(99999) == nil and ns.WeatherOf(nil) == nil
 for _, e in ipairs(SkaldCharDB.entries) do e.m, e.zm = 99999, 99999 end
 ns.layoutRev = (ns.layoutRev or 0) + 1
 SkaldAPI.OpenEntry(SkaldCharDB.entries[2])
-local plain = stamp()
-RES = (rain and rain:find("wxd_rain", 1, true) and ids and plain == nil) and "ok"
-  or ("stamp " .. tostring(rain) .. ", ids " .. tostring(ids) .. ", stamp on an unknown land " .. tostring(plain))`,
+local plain = drawn()
+RES = (rain:find("wxd_rain", 1, true) and ids and not plain:find("wxd_", 1, true)) and "ok"
+  or ("doodles " .. rain .. ", ids " .. tostring(ids) .. ", on an unknown land " .. plain)`,
 });
 
 run('a day ends with the doodles of what it held, the most present first, three at most', {

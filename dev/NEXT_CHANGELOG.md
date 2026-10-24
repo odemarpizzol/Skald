@@ -1,5 +1,6 @@
 - The seal that closes the book is now the wax seal of your faction: red for the Horde, blue for the Alliance, brown for neutral (art by the user)
 - New option in the Style tab: the seal that closes the book (by faction, Horde, Alliance or neutral)
-- A hand-drawn weather doodle (sun, partly cloudy, cloudy, rain, storm, snow, fog, sandstorm) sits big at the right of the title on the first page of a day, by the typical climate of the land you were in (art by the user)
+- A hand-drawn weather doodle (sun, partly cloudy, cloudy, rain, storm, snow, fog, sandstorm) opens the row of doodles at the foot of a day, by the typical climate of the land you were in (art by the user)
 - The character doodles at the foot of each day, in the free space above the quill: up to three small drawings of what the day held (scroll, star, skull, sword, map, boots, paw, anvil, campfire, mug; art by the user). The note you write now carries the small scroll
 - Every day now closes with its page of numbers ("The day in numbers"), not only the last one
+- The page "The day in numbers" says which day it is of
