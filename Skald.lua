@@ -1412,6 +1412,7 @@ K.INDEX_ROW = 22
 K.INDEX_GAP = 12                         -- the space above a chapter that is not the first on its page
 
 K.ROMAN = { "I", "II", "III", "IV", "V", "VI", "VII" }
+K.TAB_FOLIO = { map = 5, style = 7, notices = 9, options = 11 }   -- the first folio of each settings tab
 local function RomanLower(n)
     local out, map = "", { { 10, "x" }, { 9, "ix" }, { 5, "v" }, { 4, "iv" }, { 1, "i" } }
     for _, m in ipairs(map) do
@@ -3227,6 +3228,15 @@ local function CreateWindow()
             nextButton:SetAlpha(spread < count and 1 or 0.35)
         else
             for _, s in ipairs(sides) do Clear(s) end
+            -- the settings tabs are numbered on in Roman figures, between the sprigs of laurel
+            local first = K.TAB_FOLIO[view]
+            if first then
+                for i, s in ipairs(sides) do
+                    s.num:SetText(Hex(K.C_MUTED) .. RomanLower(first + i - 1) .. "|r")
+                    s.quill:Show()
+                    s.laurelR:Show()
+                end
+            end
             panels[view].frame:Show()
             if panels[view].refresh then pcall(panels[view].refresh) end
             if pager then
@@ -6716,8 +6726,8 @@ local function BuildStyle(panel)
     edit:SetTextColor(K.C_BODY[1], K.C_BODY[2], K.C_BODY[3])
     edit:SetTextInsets(8, 8, 0, 0)
     edit:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Buttons\\WHITE8X8", edgeSize = 1 })
-    edit:SetBackdropColor(1, 0.97, 0.88, 0.2)
-    edit:SetBackdropBorderColor(K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3], 1)
+    edit:SetBackdropColor(0.62, 0.48, 0.28, 0.32)   -- a darker scrap of parchment
+    edit:SetBackdropBorderColor(0.45, 0.30, 0.14, 1)
     local function SaveTitle()
         local text = (edit:GetText() or ""):gsub("^%s+", ""):gsub("%s+$", "")
         Settings().coverTitle = (text ~= "") and text or nil
