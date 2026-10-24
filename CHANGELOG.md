@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.39.0-beta
+
+- **The book, redrawn:** brass plates for every button (wine-red when chosen) in a frame round each row, a leather strap for "move the notices", and brass rivets, dark when off and lit amber when on, in place of the wax check boxes (art by the user). The pages of the settings tabs are numbered in Roman figures between sprigs of laurel, and the cover title box is a darker scrap of parchment.
+- **The wax seal** closes the book, and folded page corners turn the pages (left goes back, right goes on).
+- **Cover:** the running head only on the left page (name, diary, Skald), shadows under the feet and in the arch, a ribbon under the medals, the creature most slain with its kind in small italics, handwritten footnotes.
+- **Contents:** when the index ends on the left page, the right page shows a card of the zone you stand in: the map drawn from the game's own tiles with the regions already found, the quests of the zone done and total (from QuestDB when installed), and the creatures slain there (counted from the game's kill statistic from now on).
+- **Days:** the right page of the last day sums up the day (level, quests, lands, falls, goals, pages); a faint timeline joins the icons; the favourite star shows better and glows on hover.
+- **Goals:** a medal with a ribbon for each seal, brass progress bars, an ink stroke under the chosen category, pending goals faded.
+- **The Saga:** drop caps in Cinzel Decorative (SIL OFL licence, shipped in `Fonts`), place names, numbers and titles in old gold, an ornamental divider, and ink sketches (the camp of your faction, the road, the scroll, the seals) in a column beside the text.
+- **Map tab:** the facts of the region in a framed card, the pages shown in two columns, a soft glow under a row on hover. **Style tab:** the example sentence takes the colour of the chosen ink.
+- **`/skald report`** lists what the client can tell for the zone card (map art, explored tiles, QuestDB quests, the zones under each continent).
+
 ## 0.38.0-beta
 
 - **The Saga:** a new tab that tells the whole diary as a short book in the first person (prologue, the road, quests, bosses, falls, company, seals and renown, epilogue), in English, Portuguese and French. It is built from the diary and from the game's own statistics, the same diary always gives the same Saga, and the prologue says where your race is born. The letter is larger and the pages are numbered.
