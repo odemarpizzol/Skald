@@ -1368,6 +1368,7 @@ do
         Make("SkaldHead2", "Cinzel.ttf", 17, 16)
         Make("SkaldSec", "Cinzel.ttf", 13, 12)
         Make("SkaldNote", "Caveat.ttf", 20, 14)
+        Make("SkaldDrop", "CinzelDecorative-Bold.ttf", 46, 40)   -- the drop cap of the Saga
     end
     ApplyFonts()
 end

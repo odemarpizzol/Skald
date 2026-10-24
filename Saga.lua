@@ -677,12 +677,11 @@ end
 
 -- What the tab shows of a chapter: the names of places and bosses in the colour of old gold, and the first letter
 -- of the chapter in wine (the text of the chapter itself stays plain: the Reader and the voice read that).
-local function Decorate(c)
-    local text = c.text
+local function Decorate(text, markList)
     local marks = {}
-    for _, m in ipairs(c.marks or {}) do
+    for _, m in ipairs(markList or {}) do
         local inside = false
-        for _, other in ipairs(c.marks) do
+        for _, other in ipairs(markList) do
             if other ~= m and #other > #m and other:find(m, 1, true) then inside = true end
         end
         if not inside then marks[m] = true end
@@ -704,9 +703,85 @@ local function Decorate(c)
         out[#out + 1] = text:sub(from)
         text = table.concat(out)
     end
-    local head = text:match("^[%z\1-\127\194-\244][\128-\191]*")
-    if head and not text:find("^|c") then text = "|cff6e1e1a" .. head .. "|r" .. text:sub(#head + 1) end
     return text
+end
+
+-- The first letter of a paragraph becomes a drop cap (two lines tall, in an ornamental face) when it is a letter.
+local function CapOf(paragraph)
+    local head = paragraph:match("^[%z\1-\127\194-\244][\128-\191]*")
+    if head and (head:find("^%a") or #head > 1) then return head, paragraph:sub(#head + 1) end
+    return nil, paragraph
+end
+
+-- Puts a chapter in a slot: the drop cap with the first two lines of the first paragraph beside it (the lead), and
+-- the rest below (the body). The lead is cut at a word, never inside a name that is shown in colour.
+local function Compose(slot, c, width)
+    local first, others = c.text:match("^(.-)\n\n(.*)$")
+    if not first then first, others = c.text, "" end
+    local cap, rest = CapOf(first)
+    local function Height(fs, text)
+        fs:SetText(text)
+        local ok, h = pcall(fs.GetStringHeight, fs)
+        return (ok and type(h) == "number") and h or 0
+    end
+    slot.cap:SetShown(cap ~= nil)
+    slot.capShadow:SetShown(cap ~= nil)
+    slot.lead:SetShown(cap ~= nil)
+    slot.body:SetWidth(width)
+    if not cap then
+        slot.body:ClearAllPoints()
+        slot.body:SetPoint("TOPLEFT", slot.title, "BOTTOMLEFT", 0, -24)
+        slot.body:SetText(Decorate(c.text, c.marks))
+        local h = Height(slot.body, Decorate(c.text, c.marks))
+        slot.body:SetHeight(math.max(h, 1))
+        return math.max(h, 1)
+    end
+    slot.cap:SetText(cap)
+    slot.capShadow:SetText(cap)
+    local okW, capWidth = pcall(slot.cap.GetStringWidth, slot.cap)
+    local capW = math.max(30, (okW and type(capWidth) == "number" and capWidth or 30) + 6)
+    slot.lead:SetWidth(width - capW)
+    slot.lead:ClearAllPoints()
+    slot.lead:SetPoint("TOPLEFT", slot.title, "BOTTOMLEFT", capW, -24)
+    local twoLines = Height(slot.lead, "X\nX")
+    local words = {}
+    for w in rest:gmatch("%S+") do words[#words + 1] = w end
+    local function Joined(k) return table.concat(words, " ", 1, k) end
+    -- the most words that still fit in two lines (the text of the first paragraph is the letter and then the rest)
+    local lo, hi = 0, #words
+    while lo < hi do
+        local mid = math.ceil((lo + hi) / 2)
+        if Height(slot.lead, Joined(mid)) <= twoLines + 0.5 then lo = mid else hi = mid - 1 end
+    end
+    local k = lo
+    -- not inside a name in colour
+    for _ = 1, 8 do
+        local cut = #Joined(k)
+        local inside = false
+        for _, m in ipairs(c.marks or {}) do
+            local a, b = rest:find(m, 1, true)
+            while a do
+                if a <= cut and b > cut then inside = true end
+                a, b = rest:find(m, b + 1, true)
+            end
+        end
+        if not inside or k == 0 then break end
+        k = k - 1
+    end
+    local lead = Joined(k)
+    local remainder = table.concat(words, " ", k + 1)
+    slot.lead:SetText(Decorate(lead, c.marks))
+    local leadH = math.max(Height(slot.lead, Decorate(lead, c.marks)), twoLines)
+    slot.lead:SetHeight(leadH)
+    local bodyText = remainder
+    if others ~= "" then bodyText = bodyText .. (remainder ~= "" and "\n\n" or "") .. others end
+    slot.body:ClearAllPoints()
+    slot.body:SetPoint("TOPLEFT", slot.lead, "BOTTOMLEFT", -capW, (remainder == "" and others ~= "") and -12 or 0)
+    local decorated = Decorate(bodyText, c.marks)
+    local bodyH = bodyText == "" and 0 or Height(slot.body, decorated)
+    if bodyText == "" then slot.body:SetText("") end
+    slot.body:SetHeight(math.max(bodyH, 1))
+    return leadH + bodyH
 end
 
 -- The tab: two pages at a time (several short chapters to a page); the corners turn the pages.
@@ -726,6 +801,18 @@ local function BuildSagaTab(panel)
             slot.rule:SetSize(330 * 512 / 422, 330 * 64 / 422)
             slot.rule:SetPoint("TOP", slot.title, "BOTTOM", 0, 6)
             slot.rule:SetTexture("Interface\\AddOns\\Skald\\Textures\\ui_saga_divider")
+            slot.capShadow = panel:CreateFontString(nil, "OVERLAY", "SkaldDrop")
+            slot.capShadow:SetTextColor(0.89, 0.69, 0.31)
+            slot.capShadow:SetPoint("TOPLEFT", slot.title, "BOTTOMLEFT", 1, -26)
+            slot.cap = panel:CreateFontString(nil, "OVERLAY", "SkaldDrop")
+            slot.cap:SetTextColor(0.43, 0.118, 0.102)
+            slot.cap:SetPoint("TOPLEFT", slot.title, "BOTTOMLEFT", 0, -24)
+            slot.lead = panel:CreateFontString(nil, "OVERLAY", "SkaldSaga")
+            slot.lead:SetJustifyH("LEFT")
+            slot.lead:SetJustifyV("TOP")
+            slot.lead:SetSpacing(6)
+            slot.lead:SetWordWrap(true)
+            slot.lead:SetTextColor(SkaldAPI.C_BODY[1], SkaldAPI.C_BODY[2], SkaldAPI.C_BODY[3])
             slot.body = panel:CreateFontString(nil, "OVERLAY", "SkaldSaga")
             slot.body:SetWidth(CW)
             slot.body:SetJustifyH("LEFT")
@@ -778,7 +865,8 @@ local function BuildSagaTab(panel)
                 slot.title:SetShown(c ~= nil)
                 slot.rule:SetShown(c ~= nil)
                 slot.body:SetShown(c ~= nil)
-                if c then slot.title:SetText(c.title); slot.body:SetText(Decorate(c)) end
+                if not c then slot.cap:Hide(); slot.capShadow:Hide(); slot.lead:Hide() end
+                if c then slot.title:SetText(c.title) end
                 local art = c and SKETCH[c.key]
                 if art == "camp" then
                     local okF, faction = pcall(UnitFactionGroup, "player")
@@ -787,10 +875,16 @@ local function BuildSagaTab(panel)
                 if art then slot.art:SetTexture("Interface\\AddOns\\Skald\\Textures\\ui_saga_" .. art) end
                 slot.art:SetShown(art ~= nil)
                 -- the text takes the width left by the sketch, and the chapter is as tall as the taller of the two
-                slot.body:SetWidth(art and (CW - ART_W - 8) or CW)
-                if c then slot.body:SetText(Decorate(c)) end   -- again, now that the width is the right one to measure
-                local okH, h = pcall(slot.body.GetStringHeight, slot.body)
-                slot.body:SetHeight(math.max(type(h) == "number" and okH and h or 0, art and (ART_H - 24) or 0))
+                if c then
+                    local okC, total = pcall(Compose, slot, c, art and (CW - ART_W - 8) or CW)
+                    if not okC then
+                        SkaldDB.errors = SkaldDB.errors or {}
+                        table.insert(SkaldDB.errors, "saga compose: " .. tostring(total))
+                        slot.body:SetText(c.text)
+                    elseif art and type(total) == "number" and total < ART_H - 24 then
+                        slot.body:SetHeight(math.max(1, slot.body:GetHeight() + (ART_H - 24 - total)))
+                    end
+                end
             end
         end
     end
