@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.40.0-beta
+
+- **The wax seal of your faction** closes the book: red for the Horde, blue for the Alliance, brown for neutral. The Style tab has a new option, "Seal of the book", to choose it by hand (art by the user).
+- **Weather doodles:** a hand-drawn sun, partly cloudy, cloudy, rain, storm, snow, fog or sandstorm, by the climate a land is known for. It is the land's typical weather, not the weather the game shows at the moment (the game does not tell it).
+- **Doodles at the foot of each day:** in the free space above the quill the character draws up to three small pictures of what the day held (scroll, star, skull, sword, map, boots, paw, anvil, campfire, mug), a little crooked, as a hand would (art by the user). The note you write carries the small scroll.
+- **The day in numbers:** every day now closes with its page of numbers, not only the last one, and the page says which day it is of.
+
 ## 0.39.0-beta
 
 - **The book, redrawn:** brass plates for every button (wine-red when chosen) in a frame round each row, a leather strap for "move the notices", and brass rivets, dark when off and lit amber when on, in place of the wax check boxes (art by the user). The pages of the settings tabs are numbered in Roman figures between sprigs of laurel, and the cover title box is a darker scrap of parchment.
