@@ -1424,6 +1424,7 @@ K.DOODLE_ORDER = { "sword", "skull", "map", "star", "camp", "boots", "paw", "anv
 K.DOODLE_WEIGHT = { scroll = 0.3 }
 -- How full a page of a day is let to get, so there is room left for the doodles (the share of its height).
 K.DENSITY = { compact = 1, comfy = 0.78, airy = 0.62 }
+K.DOODLE_SCALE = { compact = 0.85, comfy = 1, airy = 1.3 }   -- the doodles grow with the room a looser page leaves
 function ns.DensityOf() return K.DENSITY[SkaldDB and SkaldDB.density or "comfy"] or K.DENSITY.comfy end
 function ns.DoodlesOf(entries, most)
     local score = {}
@@ -3154,7 +3155,8 @@ local function CreateWindow()
                         s.doodles[i] = t
                     end
                     local seed = day.number * 7 + i * 5
-                    local size = math.min(44 + (seed % 4) * 6, floor - top)   -- 44 to 62, never taller than the room
+                    local scale = K.DOODLE_SCALE[SkaldDB.density or "comfy"] or 1
+                    local size = math.min(math.floor((44 + (seed % 4) * 6) * scale), floor - top)   -- 44 to 62 at comfy, never taller than the room
                     local wobble = seed % 5 - 2   -- -2 to 2
                     local drop = math.min(((i % 2 == 0) and 0.55 or 0.1) + (seed % 3) * 0.12, 1) * (floor - top - size)
                     t:SetSize(size, size)
