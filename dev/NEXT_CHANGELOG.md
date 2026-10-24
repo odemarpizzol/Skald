@@ -1,4 +1,4 @@
 - The seal that closes the book is now the wax seal of your faction: red for the Horde, blue for the Alliance, brown for neutral (art by the user)
 - A ribbon bookmark hangs from the right page: click it to mark the spread, to go back to the mark, or to take the mark off (art by the user)
 - New option in the Style tab: the seal that closes the book (by faction, Horde, Alliance or neutral)
-- Weather stamps (sun, rain, snow, sandstorm, fog, storm) on the first page of a day, by the typical climate of the land you were in (art by the user)
+- A weather stamp (sun, rain, snow, sandstorm, fog, storm) sits big at the right of the title on the first page of a day, by the typical climate of the land you were in (art by the user)

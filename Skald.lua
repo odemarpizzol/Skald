@@ -1402,6 +1402,7 @@ K.WEATHER = {
     fog = { 1420, 1421, 1422, 1423, 1430, 1431, 1435, 1448, 1942 },
     storm = { 1425, 1447, 1948, 1949, 1953 },
 }
+K.WEATHER_SIZE = 64   -- the stamp, in points
 K.WEATHER_OF = {}
 for kind, ids in pairs(K.WEATHER) do for _, id in ipairs(ids) do K.WEATHER_OF[id] = kind end end
 -- The weather kind ("sun", "rain", "snow", "sand", "fog" or "storm") of a map, or nil.
@@ -2846,6 +2847,7 @@ local function CreateWindow()
         if s.noteArea and not editing then s.noteArea:Hide() end
         if s.closeIcon then s.closeIcon:Hide() end
         if s.closeLine then s.closeLine:Hide() end
+        if s.weather then s.weather:Hide() end
         if s.timeline then s.timeline:Hide() end
         s.timelineTop = nil
         if s.dayCard then s.dayCard:Hide() end
@@ -2990,17 +2992,29 @@ local function CreateWindow()
         s.num:SetText(Hex(K.C_MUTED) .. tostring(number - layout.firstDayPage + 1) .. "|r")
         local y
         if page.first then
-            Heading(DayTitle(day, day.number), K.TOP_Y, "SkaldHead2")
+            local head = Heading(DayTitle(day, day.number), K.TOP_Y, "SkaldHead2")
+            -- the stamp of the land's typical weather, big at the right of the title (nothing for a land without one)
+            local weather = ns.WeatherOf(day.zmap)
+            if weather then
+                if not s.weather then
+                    s.weather = s.frame:CreateTexture(nil, "ARTWORK", nil, 3)
+                    s.weather:SetSize(K.WEATHER_SIZE, K.WEATHER_SIZE)
+                end
+                s.weather:ClearAllPoints()
+                s.weather:SetPoint("TOPRIGHT", s.frame, "TOPRIGHT", -(K.PAGE_SW - s.padL - K.CW), -(K.TOP_Y - 10))
+                s.weather:SetTexture(K.TEX .. "wx_" .. weather)
+                s.weather:Show()
+                head:SetWidth(K.CW - K.WEATHER_SIZE - 6)   -- the title leaves the corner to the stamp
+                head:SetJustifyH("LEFT")
+            end
             local sub = s.sub
             sub:ClearAllPoints()
             sub:SetPoint("TOPLEFT", px, -(K.TOP_Y + 28))
             sub:SetTextColor(1, 1, 1)
             local where = KnownZone(day.zone)
-            -- the stamp of the land's typical weather, when it has one, in place of the plain sun
-            local weather = ns.WeatherOf(day.zmap)
-            local stamp = weather and string.format("|T%swx_%s:24:24|t", K.TEX, weather)
-                or string.format("|T%ssun:18:18:0:0:64:64:0:48:0:48|t", K.TEX)
-            sub:SetText(string.format("%s %s%s%s|r", stamp, Hex(K.C_MUTED),
+            -- the small sun stays on a day whose land has no weather stamp of its own
+            local stamp = weather and "" or (string.format("|T%ssun:18:18:0:0:64:64:0:48:0:48|t", K.TEX) .. " ")
+            sub:SetText(string.format("%s%s%s%s|r", stamp, Hex(K.C_MUTED),
                 date(L.DAY_DATE, day.t), where and ("  -  " .. where) or ""))
             sub:Show()
             Rule(s, K.TOP_Y + 56)
@@ -3514,6 +3528,7 @@ local function CreateWindow()
     ribbonTex:SetTexture(K.TEX .. "ui_ribbon_mark")
     ribbon:Hide()
     f.ribbon = ribbon
+    f.sides = sides
 
     local function SpreadEntry()
         for _, page in ipairs({ layout.pages[spread * 2 - 1] or false, layout.pages[spread * 2] or false }) do

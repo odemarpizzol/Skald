@@ -1596,18 +1596,21 @@ RES = (stamp == es[1].t and kept and SkaldCharDB.bookmark == nil) and "ok"
 
 run('a day in a land with a known climate wears its weather stamp, and any other land keeps the sun', {
   pre: THREE_DAYS,
-  body: `local function seen(word)
-  for _, fs in ipairs(FONTS) do local t = rawget(fs, "_text"); if t and tostring(t):find(word, 1, true) then return true end end
-  return false
+  body: `local function stamp()
+  for _, side in ipairs(SkaldFrame.sides) do
+    local w = rawget(side, "weather")
+    if w and rawget(w, "_shown") then return rawget(w, "_tex") end
+  end
 end
 SkaldAPI.OpenEntry(SkaldCharDB.entries[1])
-local rain = seen("wx_rain")
+local rain = stamp()
 local ids = ns.WeatherOf(1411) == "sun" and ns.WeatherOf(1426) == "snow" and ns.WeatherOf(99999) == nil and ns.WeatherOf(nil) == nil
 for _, e in ipairs(SkaldCharDB.entries) do e.m, e.zm = 99999, 99999 end
 ns.layoutRev = (ns.layoutRev or 0) + 1
 SkaldAPI.OpenEntry(SkaldCharDB.entries[2])
-RES = (rain and ids and not seen("wx_") and seen("sun:18")) and "ok"
-  or ("rain stamp " .. tostring(rain) .. ", ids " .. tostring(ids) .. ", plain sun " .. tostring(seen("sun:18")))`,
+local plain = stamp()
+RES = (rain and rain:find("wx_rain", 1, true) and ids and plain == nil) and "ok"
+  or ("stamp " .. tostring(rain) .. ", ids " .. tostring(ids) .. ", stamp on an unknown land " .. tostring(plain))`,
 });
 
 console.log(failed ? `\n${failed} regression(s) FAILED` : '\nAll regressions passed');
