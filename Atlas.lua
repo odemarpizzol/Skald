@@ -493,6 +493,7 @@ local function BuildMapTab(panel)
     -- Marker opacity: three steps.
     SkaldAPI.SectionLabel(panel, UI.OPACITY, 0, -88)
     local steps = { 0.5, 0.75, 1 }
+    if SkaldAPI.PlateGroup then SkaldAPI.PlateGroup(panel, 0, -110, 342, 26) end
     local alphaButtons = {}
     for i, value in ipairs(steps) do
         local b = SkaldAPI.MakeButton(panel, 114, 26, string.format("%d%%", value * 100))
@@ -554,6 +555,7 @@ local function BuildMapTab(panel)
     -- When: all the pages, only those of this session, only today's. Each button says how many pages
     -- it holds, so an empty choice is not a surprise.
     SkaldAPI.SectionLabel(panel, UI.WHEN, 0, -236)
+    if SkaldAPI.PlateGroup then SkaldAPI.PlateGroup(panel, 0, -258, 342, 26) end
     local rangeButtons = {}
     local ranges = { "all", "session", "today" }
     for i, key in ipairs(ranges) do

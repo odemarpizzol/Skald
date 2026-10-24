@@ -3477,6 +3477,28 @@ end
 K.RIGHT_X = K.PAGE_XS[2] + 36 - (K.PAGE_XS[1] + 30)
 
 -- Flat button: "seg" (outlined, burgundy when on), "gold" or "burn" (filled, for the big actions).
+-- A picture drawn in three parts (a left cap, a stretched middle, a right cap) so the rivets stay round at any width.
+-- `cap` is the width of a cap in the picture's own pixels (the picture is `full` wide and 64 high).
+local function ThreePart(b, file, cap, full)
+    local parts = {}
+    local height = b:GetHeight()
+    local capW = math.floor((type(height) == "number" and height or 26) * cap / 64 + 0.5)
+    local path = "Interface\\AddOns\\Skald\\Textures\\" .. file
+    local function Part(u0, u1)
+        local t = b:CreateTexture(nil, "BACKGROUND")
+        t:SetTexture(path)
+        t:SetTexCoord(u0, u1, 0, 1)
+        t:Hide()
+        parts[#parts + 1] = t
+        return t
+    end
+    local l, m, r = Part(0, cap / full), Part(cap / full, 1 - cap / full), Part(1 - cap / full, 1)
+    l:SetPoint("TOPLEFT"); l:SetPoint("BOTTOMLEFT"); l:SetWidth(capW)
+    r:SetPoint("TOPRIGHT"); r:SetPoint("BOTTOMRIGHT"); r:SetWidth(capW)
+    m:SetPoint("TOPLEFT", l, "TOPRIGHT"); m:SetPoint("BOTTOMRIGHT", r, "BOTTOMLEFT")
+    return function(on) for _, t in ipairs(parts) do t:SetShown(on) end end
+end
+
 local function MakeFlatButton(parent, width, height, label, style)
     local b = CreateFrame("Button", nil, parent, "BackdropTemplate")
     b:SetSize(width, height)
@@ -3491,8 +3513,31 @@ local function MakeFlatButton(parent, width, height, label, style)
     elseif style == "burn" then
         fill, border, ink = { 0.52, 0.16, 0.14 }, { 0.165, 0.10, 0.04 }, { 0.95, 0.89, 0.75 }
     end
+    -- the plain buttons are plates of brass (wine-red when chosen); "strap" is the leather band with gold lettering
+    local plated = (style == nil) or style == "strap"
+    local showIdle, showActive, showStrap
+    if plated then
+        if style == "strap" then
+            showStrap = ThreePart(b, "ui_strap", 24, 512)
+        else
+            showIdle, showActive = ThreePart(b, "ui_plate_idle", 24, 256), ThreePart(b, "ui_plate_active", 24, 256)
+        end
+        b:SetBackdropColor(0, 0, 0, 0)
+        b:SetBackdropBorderColor(0, 0, 0, 0)
+    end
     function b:SetActive(active)
         self.active = active and true or false
+        if plated then
+            if showStrap then
+                showStrap(true)
+                self.text:SetTextColor(0.89, 0.72, 0.36)
+            else
+                showIdle(not self.active)
+                showActive(self.active)
+                if self.active then self.text:SetTextColor(0.96, 0.91, 0.80) else self.text:SetTextColor(0.25, 0.16, 0.06) end
+            end
+            return
+        end
         if fill then
             self:SetBackdropColor(fill[1], fill[2], fill[3], 1)
             self:SetBackdropBorderColor(border[1], border[2], border[3], 1)
@@ -3512,6 +3557,40 @@ local function MakeFlatButton(parent, width, height, label, style)
     b:SetActive(false)
     return b
 end
+
+-- A brass frame round a row of plates (nine pieces, so its rivets stay as drawn): `x`, `y` and `w` are those of the row.
+local function PlateGroup(parent, x, y, w, h)
+    local frame = CreateFrame("Frame", nil, parent)
+    frame:SetPoint("TOPLEFT", x - 9, y + 8)
+    frame:SetSize(w + 18, h + 16)
+    local level = parent:GetFrameLevel()
+    if type(level) == "number" then frame:SetFrameLevel(level) end   -- under the plates
+    local path, M, S, E = "Interface\\AddOns\\Skald\\Textures\\ui_plate_group", 9, 28 / 512, 28 / 128   -- the margin on the page, and in the picture
+    local cols = { { 0, S, "LEFT" }, { S, 1 - S, "MID" }, { 1 - S, 1, "RIGHT" } }
+    local rows = { { 0, E, "TOP" }, { E, 1 - E, "MID" }, { 1 - E, 1, "BOTTOM" } }
+    for _, r in ipairs(rows) do
+        for _, c in ipairs(cols) do
+            local t = frame:CreateTexture(nil, "BACKGROUND", nil, -1)
+            t:SetTexture(path)
+            t:SetTexCoord(c[1], c[2], r[1], r[2])
+            if c[3] == "LEFT" then t:SetWidth(M) elseif c[3] == "RIGHT" then t:SetWidth(M) end
+            if r[3] == "TOP" then t:SetHeight(M) elseif r[3] == "BOTTOM" then t:SetHeight(M) end
+            local ax = c[3] == "LEFT" and "LEFT" or c[3] == "RIGHT" and "RIGHT" or ""
+            local ay = r[3] == "TOP" and "TOP" or r[3] == "BOTTOM" and "BOTTOM" or ""
+            if c[3] == "MID" and r[3] == "MID" then
+                t:SetPoint("TOPLEFT", M, -M); t:SetPoint("BOTTOMRIGHT", -M, M)
+            elseif c[3] == "MID" then
+                t:SetPoint(ay .. "LEFT", M, 0); t:SetPoint(ay .. "RIGHT", -M, 0)
+            elseif r[3] == "MID" then
+                t:SetPoint("TOP" .. ax, 0, -M); t:SetPoint("BOTTOM" .. ax, 0, M)
+            else
+                t:SetPoint(ay .. ax)
+            end
+        end
+    end
+    return frame
+end
+SkaldAPI.PlateGroup = PlateGroup
 
 -- A flat round disc (a colour texture under a round mask) on `frame`.
 local function MakeDisc(frame, layer, size, r, g, bl, sublevel)
@@ -3544,11 +3623,23 @@ local function MakeWaxCheck(parent, label, get, set, iconPath, swatch, width)
         end
         return t
     end
+    -- without a colour to show, the box is a brass pin: a lever when off, a lit bead when on
+    local pinOff, pinOn
+    if not swatch then
+        pinOff = b:CreateTexture(nil, "ARTWORK")
+        pinOff:SetSize(30, 30)
+        pinOff:SetPoint("LEFT", -4, 0)
+        pinOff:SetTexture("Interface\\AddOns\\Skald\\Textures\\ui_pin_off")
+        pinOn = b:CreateTexture(nil, "ARTWORK")
+        pinOn:SetSize(30, 30)
+        pinOn:SetPoint("LEFT", -4, 0)
+        pinOn:SetTexture("Interface\\AddOns\\Skald\\Textures\\ui_pin_on")
+    end
     local ring = Round("BACKGROUND", 18, K.C_BODY[1], K.C_BODY[2], K.C_BODY[3])
     local fill = Round("ARTWORK", 14, 0.91, 0.855, 0.71)
     local mid = Round("ARTWORK", 10, 0.75, 0.29, 0.26)
     local dot = Round("OVERLAY", 6, 0.88, 0.72, 0.29)
-    ring:Show()
+    ring:SetShown(swatch ~= nil)
     local anchor = b
     local textX = 28
     if iconPath then
@@ -3575,6 +3666,12 @@ local function MakeWaxCheck(parent, label, get, set, iconPath, swatch, width)
     fs:SetText(label)
     function b.Sync()
         local on = get() and true or false
+        if pinOn then
+            pinOn:SetShown(on)
+            pinOff:SetShown(not on)
+            fill:Hide(); mid:Hide(); dot:Hide()
+            return
+        end
         if swatch then
             fill:SetColorTexture(swatch[1], swatch[2], swatch[3], 1)
         elseif on then
@@ -6656,6 +6753,7 @@ local function BuildStyle(panel)
     -- Left page: the narrator's voice, with an example, and how the text looks.
     PageHeading(panel, L.TAB_STYLE, 0)
     SectionLabel(panel, L.OPT_TONE, 0, -52)
+    PlateGroup(panel, 0, -78, 342, 26)
     local toneButtons = {}
     for i, key in ipairs({ "epic", "humble", "humor" }) do
         local b = MakeFlatButton(panel, 114, 26, L.TONE_NAMES[key])
@@ -6675,6 +6773,7 @@ local function BuildStyle(panel)
 
     PageRule(panel, 0, -246)
     SectionLabel(panel, L.OPT_SIZE, 0, -266)
+    PlateGroup(panel, 0, -292, 342, 26)
     local textSizeButtons = {}
     for i = 0, 2 do
         local b = MakeFlatButton(panel, 114, 26, L.SIZE_NAMES[i + 1])
@@ -6741,6 +6840,7 @@ local function BuildStyle(panel)
     -- The size of the book (never more than the screen holds).
     PageRule(panel, K.RIGHT_X, -262)
     SectionLabel(panel, L.OPT_BOOKSIZE, K.RIGHT_X, -282)
+    PlateGroup(panel, K.RIGHT_X, -308, 336, 26)
     local sizeButtons = {}
     for i, size in ipairs(K.BOOK_SIZES) do
         local b = MakeFlatButton(panel, 64, 26, size == "auto" and L.SIZE_AUTO or string.format("%d%%", size * 100))
@@ -6804,6 +6904,7 @@ local function BuildNotices(panel)
     -- Right page: where they appear.
     PageHeading(panel, L.TOAST_PLACE_HEAD, K.RIGHT_X)
     SectionLabel(panel, L.TOAST_WHERE, K.RIGHT_X, -52)
+    PlateGroup(panel, K.RIGHT_X, -80, K.CW, 26)
     local placeButtons = {}
     for i, key in ipairs({ "top", "left", "bottom" }) do
         local pw = math.floor((K.CW - 8) / 3)
@@ -6818,7 +6919,7 @@ local function BuildNotices(panel)
         placeButtons[key] = pb
     end
     PageRule(panel, K.RIGHT_X, -150)
-    local moveButton = MakeFlatButton(panel, K.CW, 26, L.TOAST_MOVE)
+    local moveButton = MakeFlatButton(panel, K.CW, 30, L.TOAST_MOVE, "strap")
     moveButton:SetPoint("TOPLEFT", K.RIGHT_X, -184)
     moveButton:SetScript("OnClick", function() if ns.PreviewNotice then ns.PreviewNotice() end end)
     NoteText(panel, K.RIGHT_X, -228):SetText(L.TOAST_MOVE_HINT)
@@ -6826,6 +6927,7 @@ local function BuildNotices(panel)
     -- How long a notice stays.
     PageRule(panel, K.RIGHT_X, -300)
     SectionLabel(panel, L.TOAST_TIME, K.RIGHT_X, -312)
+    PlateGroup(panel, K.RIGHT_X, -340, K.CW, 26)
     local timeButtons = {}
     local TIMES = { { 4, "4 s", 50 }, { 6.5, "6 s", 50 }, { 10, "10 s", 50 }, { 15, "15 s", 50 }, { 0, L.TOAST_PINNED, K.CW - 4 * 54 } }
     local tx = 0
