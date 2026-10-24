@@ -642,14 +642,20 @@ end
 -- it longer) and was checked against the real fonts.
 local PAGE_HEIGHT = 415          -- the room of a page (440) less a margin
 local TITLE_HEIGHT, SLOT_GAP = 55, 44
+-- Which chapters have an ink sketch (the camp takes the banner of the character's faction). The sketch has a column
+-- of its own at the right of the text: the text never runs over it, and the chapter is at least as tall as it.
+local SKETCH = { prologue = "camp", road = "walker", stories = "scroll", marks = "seals" }
+local ART_W, ART_H = 104, 104
 local function ChapterHeight(c, size, width)
+    local minimum = 0
+    if SKETCH[c.key] then width = width - ART_W - 8; minimum = ART_H - 24 end
     local perLine = math.max(10, math.floor(width / (size * 0.42)))
     local lineHeight = size * 1.4 + 6
     local lines = 0
     for paragraph in (c.text .. "\n\n"):gmatch("(.-)\n\n") do
         lines = lines + math.max(1, math.ceil(#paragraph / perLine)) + 1
     end
-    return TITLE_HEIGHT + (lines - 1) * lineHeight
+    return TITLE_HEIGHT + math.max(minimum, (lines - 1) * lineHeight)
 end
 ns.SagaPages = function(chapters, size, width)
     size = (type(size) == "number" and size > 0) and size or 16
@@ -668,9 +674,6 @@ ns.SagaPages = function(chapters, size, width)
     if #page > 0 then pages[#pages + 1] = page end
     return pages
 end
-
--- Which chapters have a sketch behind them (the camp takes the banner of the character's faction).
-local SKETCH = { prologue = "camp", road = "walker", stories = "scroll", marks = "seals" }
 
 -- What the tab shows of a chapter: the names of places and bosses in the colour of old gold, and the first letter
 -- of the chapter in wine (the text of the chapter itself stays plain: the Reader and the voice read that).
@@ -731,11 +734,11 @@ local function BuildSagaTab(panel)
             slot.body:SetWordWrap(true)
             slot.body:SetTextColor(SkaldAPI.C_BODY[1], SkaldAPI.C_BODY[2], SkaldAPI.C_BODY[3])
             slot.body:SetPoint("TOPLEFT", slot.title, "BOTTOMLEFT", 0, -24)
-            -- a faded ink sketch behind the right of the text, as if drawn on the page
+            -- a faded ink sketch in a column of its own at the right of the text, as if drawn on the page
             slot.art = panel:CreateTexture(nil, "BACKGROUND")
-            slot.art:SetSize(112, 112)
-            slot.art:SetPoint("TOPRIGHT", slot.body, "TOPRIGHT", 4, 6)
-            slot.art:SetAlpha(0.55)
+            slot.art:SetSize(ART_W, ART_H)
+            slot.art:SetPoint("TOPRIGHT", slot.title, "BOTTOMRIGHT", 0, -18)
+            slot.art:SetAlpha(0.8)
             slot.art:Hide()
             if n == 1 then slot.title:SetPoint("TOPLEFT", x, 0)
             else slot.title:SetPoint("TOPLEFT", side.slots[n - 1].body, "BOTTOMLEFT", 0, -44) end
@@ -783,6 +786,11 @@ local function BuildSagaTab(panel)
                 end
                 if art then slot.art:SetTexture("Interface\\AddOns\\Skald\\Textures\\ui_saga_" .. art) end
                 slot.art:SetShown(art ~= nil)
+                -- the text takes the width left by the sketch, and the chapter is as tall as the taller of the two
+                slot.body:SetWidth(art and (CW - ART_W - 8) or CW)
+                if c then slot.body:SetText(Decorate(c)) end   -- again, now that the width is the right one to measure
+                local okH, h = pcall(slot.body.GetStringHeight, slot.body)
+                slot.body:SetHeight(math.max(type(h) == "number" and okH and h or 0, art and (ART_H - 24) or 0))
             end
         end
     end
