@@ -3623,17 +3623,17 @@ local function MakeWaxCheck(parent, label, get, set, iconPath, swatch, width)
         end
         return t
     end
-    -- without a colour to show, the box is a brass pin: a lever when off, a lit bead when on
+    -- without a colour to show, the box is a brass rivet: dark when off, the centre lit amber when on
     local pinOff, pinOn
     if not swatch then
         pinOff = b:CreateTexture(nil, "ARTWORK")
-        pinOff:SetSize(30, 30)
-        pinOff:SetPoint("LEFT", -4, 0)
-        pinOff:SetTexture("Interface\\AddOns\\Skald\\Textures\\ui_pin_off")
+        pinOff:SetSize(24, 24)
+        pinOff:SetPoint("LEFT", -1, 0)
+        pinOff:SetTexture("Interface\\AddOns\\Skald\\Textures\\ui_rivet_off")
         pinOn = b:CreateTexture(nil, "ARTWORK")
-        pinOn:SetSize(30, 30)
-        pinOn:SetPoint("LEFT", -4, 0)
-        pinOn:SetTexture("Interface\\AddOns\\Skald\\Textures\\ui_pin_on")
+        pinOn:SetSize(24, 24)
+        pinOn:SetPoint("LEFT", -1, 0)
+        pinOn:SetTexture("Interface\\AddOns\\Skald\\Textures\\ui_rivet_on")
     end
     local ring = Round("BACKGROUND", 18, K.C_BODY[1], K.C_BODY[2], K.C_BODY[3])
     local fill = Round("ARTWORK", 14, 0.91, 0.855, 0.71)
