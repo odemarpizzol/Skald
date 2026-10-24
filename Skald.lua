@@ -6899,15 +6899,30 @@ local function BuildStyle(panel)
         textSizeButtons[i] = b
     end
 
-    PageRule(panel, 0, -334)
-    SectionLabel(panel, L.OPT_INK, 0, -354)
+    -- how full the pages of a day are left (the same as /skald density), in a row under the size of the letter
+    PlateGroup(panel, 0, -324, 342, 26)
+    local densityButtons = {}
+    for i, key in ipairs({ "compact", "comfy", "airy" }) do
+        local b = MakeFlatButton(panel, 114, 26, (L.DENSITY_NAMES[key]:gsub("^%l", string.upper)))
+        b:SetPoint("TOPLEFT", (i - 1) * 114, -324)
+        b:SetScript("OnClick", function()
+            Settings().density = key
+            ApplyFonts()
+            ns.layoutRev = (ns.layoutRev or 0) + 1
+            Redraw()
+        end)
+        densityButtons[key] = b
+    end
+
+    PageRule(panel, 0, -362)
+    SectionLabel(panel, L.OPT_INK, 0, -380)
     local inkBoxes = {}
     for i = 0, 2 do
         local c = K.INKS[i + 1]
         local cb = MakeWaxCheck(panel, L.INK_NAMES[i + 1],
             function() return (Settings().ink or 0) == i end,
             function() Settings().ink = i; Redraw() end, nil, c, 114)
-        cb:SetPoint("TOPLEFT", i * 114, -380)
+        cb:SetPoint("TOPLEFT", i * 114, -406)
         inkBoxes[#inkBoxes + 1] = cb
     end
 
@@ -6998,6 +7013,7 @@ local function BuildStyle(panel)
         for _, cb in ipairs(colorBoxes) do cb.Sync() end
         for _, cb in ipairs(inkBoxes) do cb.Sync() end
         for i, b in pairs(textSizeButtons) do b:SetActive(i == (s.textSize or 1)) end
+        for key, b in pairs(densityButtons) do b:SetActive(key == (s.density or "comfy")) end
         for i, b in ipairs(sizeButtons) do
             local size = K.BOOK_SIZES[i]
             b:SetActive((size == "auto" and not s.bookScale) or size == s.bookScale)

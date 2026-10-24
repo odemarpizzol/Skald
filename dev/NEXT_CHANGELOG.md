@@ -1,3 +1,4 @@
 - Pages of a day are filled to about nine tenths, and the last page of the day keeps room for the doodles at the foot: each one a different size, a little crooked and on its own height, scattered by a hand. `/skald density compact|comfy|airy` sets how much is left free (comfy by default; compact is the old way)
 - The doodles at the foot of a day grow with the density of the pages: smaller on compact pages, bigger on airy ones
 - The letter of the entries on the pages of a day grows with the density: one point more on comfy pages, two on airy ones
+- The Style tab has the density of the pages (compact, comfortable, airy) in a row under the size of the text
