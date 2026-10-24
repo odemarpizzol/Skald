@@ -1578,22 +1578,6 @@ run('the seal that closes the book follows the faction, and anything unknown is 
   and "ok" or "wrong seal"`,
 });
 
-run('the ribbon marks a spread, leads back to it, and takes the mark off', {
-  pre: THREE_DAYS,
-  body: `local es = SkaldCharDB.entries
-SkaldAPI.OpenEntry(es[1])
-local click = SkaldFrame.ribbon._OnClick
-click(SkaldFrame.ribbon)
-local stamp = SkaldCharDB.bookmark
-SkaldAPI.OpenEntry(es[3])
-click(SkaldFrame.ribbon)
-local kept = SkaldCharDB.bookmark == stamp
-SkaldAPI.OpenEntry(es[1])
-click(SkaldFrame.ribbon)
-RES = (stamp == es[1].t and kept and SkaldCharDB.bookmark == nil) and "ok"
-  or ("mark " .. tostring(stamp) .. ", kept when away " .. tostring(kept) .. ", after clearing " .. tostring(SkaldCharDB.bookmark))`,
-});
-
 run('a day in a land with a known climate wears its weather stamp, and any other land keeps the sun', {
   pre: THREE_DAYS,
   body: `local function stamp()

@@ -954,7 +954,7 @@ end
 -- It is set aside with the pages and brought back with them, and emptied with them, so a cleared diary or a new
 -- character with an old name never inherits it.
 K.DIARY_STATE = { "pets", "petNow", "companions", "questObj", "questStart", "visitedMaps", "resume", "attempts",
-    "taxi", "marks", "bookmark", "goals", "goalsInit", "goalsVer", "collInit", "rep", "memoryAt", "recentIdx", "anniv", "zoneKills", "killBase" }
+    "taxi", "marks", "goals", "goalsInit", "goalsVer", "collInit", "rep", "memoryAt", "recentIdx", "anniv", "zoneKills", "killBase" }
 
 local function TakeState(db)
     local state = {}
@@ -2704,7 +2704,6 @@ local function CreateWindow()
     -- Layout -------------------------------------------------------------------------
     local view = "book"          -- "book" or the id of a tab panel
     local spread = 1
-    local UpdateRibbon = function() end   -- the ribbon bookmark, made after the window's pages
     local layout                 -- { days, pages, indexPages, firstDayPage }
 
     -- Which pages exist: 1-2 cover, the contents, then the days (each from a new page).
@@ -3305,7 +3304,6 @@ local function CreateWindow()
                 nextButton:SetAlpha(canNext and 1 or 0.35)
             end
         end
-        UpdateRibbon(showBook)
         local current = showBook and SectionOf(spread) or view
         for id, t in pairs(tabs) do t:SetActive(id == current) end
     end
@@ -3519,63 +3517,7 @@ local function CreateWindow()
 
     f:ApplyCover()
 
-    -- The ribbon bookmark hangs from the top of the right page. Click it to mark the spread you are on,
-    -- to come back to the mark from another spread, or (on the marked spread) to take it off.
-    local ribbon = CreateFrame("Button", nil, book)
-    ribbon:SetFrameLevel(book:GetFrameLevel() + 6)
-    ribbon:SetSize(40, 80)
-    ribbon:SetPoint("TOPLEFT", K.PAGE_XS[2] + 2, -K.PAGE_Y)
-    local ribbonTex = ribbon:CreateTexture(nil, "ARTWORK")
-    ribbonTex:SetAllPoints()
-    ribbonTex:SetTexture(K.TEX .. "ui_ribbon_mark")
-    ribbon:Hide()
-    f.ribbon = ribbon
-    f.sides = sides
-
-    local function SpreadEntry()
-        for _, page in ipairs({ layout.pages[spread * 2 - 1] or false, layout.pages[spread * 2] or false }) do
-            if page and page.blocks then
-                for _, block in ipairs(page.blocks) do if block.entry then return block.entry end end
-            end
-        end
-    end
-    -- The spread of the marked entry (the mark is the time the entry was written), if it is still in the book.
-    local function MarkedSpread()
-        local stamp = Journal().bookmark
-        if not stamp or not layout or not layout.entryPage then return nil end
-        for _, e in ipairs(Journal().entries) do
-            if e.t == stamp then
-                local page = layout.entryPage[e]
-                return page and math.floor((page + 1) / 2) or nil
-            end
-        end
-    end
-    UpdateRibbon = function(showBook)
-        ribbon:SetShown(showBook and true or false)
-        if showBook then ribbon:SetAlpha(MarkedSpread() and 1 or 0.45) end
-    end
-    ribbon:SetScript("OnClick", function()
-        local marked = MarkedSpread()
-        if marked and marked ~= spread then f:GoToPage(marked * 2 - 1); return end
-        if marked then
-            Journal().bookmark = nil
-        else
-            local e = SpreadEntry()
-            if not e then return end
-            Journal().bookmark = e.t
-        end
-        TurnSound()
-        f:Refresh()
-    end)
-    ribbon:SetScript("OnEnter", function(self)
-        local marked = MarkedSpread()
-        local text = (marked == spread and L.RIBBON_CLEAR) or (marked and L.RIBBON_GO)
-            or (SpreadEntry() and L.RIBBON_SET) or L.RIBBON_NONE
-        GameTooltip:SetOwner(self, "ANCHOR_LEFT")
-        GameTooltip:SetText(text, 1, 1, 1)
-        GameTooltip:Show()
-    end)
-    ribbon:SetScript("OnLeave", function() GameTooltip:Hide() end)
+    f.sides = sides   -- for the tests
 
     -- Opening the book lands on the newest day (or the cover while it is empty).
     f:SetScript("OnShow", function()
