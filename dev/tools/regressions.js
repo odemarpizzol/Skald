@@ -1623,5 +1623,22 @@ SlashCmdList.SKALD("density nonsense")
 RES = (compact < airy and SkaldDB.density == "airy") and "ok" or ("compact " .. compact .. " airy " .. airy .. " chosen " .. tostring(SkaldDB.density))`,
 });
 
+run('the density keeps room for the doodles in each choice, ignores a command that only starts like it, and an unknown value reads as comfy', {
+  body: `local bad
+for _, key in ipairs({ "compact", "comfy", "airy" }) do
+  SlashCmdList.SKALD("density " .. key)
+  local d = ns.DensityCfg()
+  local band = ns.DensityBand()
+  if key ~= "compact" and band - 11 - 10 < math.ceil(48 * d.doodle) then bad = key .. " band " .. band end
+end
+SlashCmdList.SKALD("density densityairy")
+SlashCmdList.SKALD("density compact")
+SlashCmdList.SKALD("densityairy")
+local kept = SkaldDB.density
+SkaldDB.density = "bogus"
+local cfg = ns.DensityCfg()
+RES = (not bad and kept == "compact" and cfg.fill == 0.92) and "ok" or ("band " .. tostring(bad) .. " kept " .. tostring(kept) .. " fill " .. tostring(cfg.fill))`,
+});
+
 console.log(failed ? `\n${failed} regression(s) FAILED` : '\nAll regressions passed');
 process.exit(failed ? 1 : 0);
