@@ -1454,6 +1454,18 @@ function ns.SetDensity(key)
     if window then window:Refresh() end
     return true
 end
+-- Where the i-th of `count` doodles of a day goes in the free room above the quill (`room` points high): its size, its
+-- left offset in the column, its drop from the top of the room and its tilt. A hand that is never quite steady, but the
+-- same every time for the same day, and always inside the room and inside the column.
+function ns.DoodleSpot(i, count, dayNumber, room, scale)
+    local slot = K.CW / count
+    local seed = dayNumber * 7 + i * 5
+    local size = math.min(math.floor((44 + (seed % 4) * 6) * scale), room, math.floor(slot) - 8)   -- 44 to 62 at comfy
+    local wobble = seed % 5 - 2   -- -2 to 2
+    local x = math.max(0, math.min((i - 1) * slot + (slot - size) / 2 + wobble * 4, K.CW - size))
+    local drop = math.min(((i % 2 == 0) and 0.55 or 0.1) + (seed % 3) * 0.12, 1) * (room - size)
+    return size, x, drop, wobble * 0.07
+end
 function ns.DoodlesOf(entries, most)
     local score = {}
     for _, e in ipairs(entries or {}) do
@@ -3178,8 +3190,8 @@ local function CreateWindow()
             local top = (page.usedY or 0) + K.DOODLE_PAD
             local count = page.doodles and #page.doodles or 0
             local dscale = ns.DensityCfg().doodle
-            if count > 0 and floor - top >= math.ceil(K.DOODLE_MIN * dscale) then
-                local slot = K.CW / count
+            local room = floor - top
+            if count > 0 and room >= math.ceil(K.DOODLE_MIN * dscale) then
                 s.doodles = s.doodles or {}
                 for i, name in ipairs(page.doodles) do
                     local t = s.doodles[i]
@@ -3187,16 +3199,12 @@ local function CreateWindow()
                         t = s.frame:CreateTexture(nil, "ARTWORK", nil, 2)
                         s.doodles[i] = t
                     end
-                    local seed = day.number * 7 + i * 5
-                    local size = math.min(math.floor((44 + (seed % 4) * 6) * dscale), floor - top, math.floor(slot) - 8)   -- 44 to 62 at comfy, never taller than the room nor wider than its slot
-                    local wobble = seed % 5 - 2   -- -2 to 2
-                    local drop = math.min(((i % 2 == 0) and 0.55 or 0.1) + (seed % 3) * 0.12, 1) * (floor - top - size)
+                    local size, x, drop, tilt = ns.DoodleSpot(i, count, day.number, room, dscale)
                     t:SetSize(size, size)
                     t:ClearAllPoints()
-                    local x = math.max(0, math.min((i - 1) * slot + (slot - size) / 2 + wobble * 4, K.CW - size))   -- stays inside the column
                     t:SetPoint("TOPLEFT", s.frame, "TOPLEFT", px + x, -(K.TOP_Y + top + drop))
                     t:SetTexture(K.TEX .. name)
-                    if t.SetRotation then pcall(t.SetRotation, t, wobble * 0.07) end
+                    if t.SetRotation then pcall(t.SetRotation, t, tilt) end
                     t:Show()
                 end
             end

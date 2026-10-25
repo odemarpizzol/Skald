@@ -1640,5 +1640,24 @@ local cfg = ns.DensityCfg()
 RES = (not bad and kept == "compact" and cfg.fill == 0.92) and "ok" or ("band " .. tostring(bad) .. " kept " .. tostring(kept) .. " fill " .. tostring(cfg.fill))`,
 });
 
+run('every doodle of a day lies inside the column and the room above the quill, whatever the density, the count and the day', {
+  body: `local bad
+for _, scale in ipairs({ 0.85, 1, 1.3 }) do
+  for count = 1, 4 do
+    for day = 1, 12 do
+      for _, room in ipairs({ 48, 63, 90 }) do
+        for i = 1, count do
+          local size, x, drop = ns.DoodleSpot(i, count, day, room, scale)
+          if size < 1 or x < 0 or x + size > SkaldAPI.CW + 0.001 or drop < 0 or drop + size > room + 0.001 then
+            bad = bad or ("scale " .. scale .. " count " .. count .. " day " .. day .. " room " .. room .. " i " .. i .. " size " .. size .. " x " .. x .. " drop " .. drop)
+          end
+        end
+      end
+    end
+  end
+end
+RES = bad or "ok"`,
+});
+
 console.log(failed ? `\n${failed} regression(s) FAILED` : '\nAll regressions passed');
 process.exit(failed ? 1 : 0);
