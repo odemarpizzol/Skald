@@ -298,6 +298,24 @@ local function Count(t)
     return n
 end
 
+-- The calendar days with a page. Worked out again only when the pages change (the count and the last one), as the
+-- tab and the check ask for the facts often.
+local daysCache
+local function DaysWritten(entries)
+    local n, last = #entries, entries[#entries]
+    local lastT = last and last.t or 0
+    if daysCache and daysCache.entries == entries and daysCache.n == n and daysCache.lastT == lastT then return daysCache.days end
+    local seen, days = {}, 0
+    for _, e in ipairs(entries) do
+        if type(e.t) == "number" then
+            local d = date("%Y%m%d", e.t)
+            if not seen[d] then seen[d] = true; days = days + 1 end
+        end
+    end
+    daysCache = { entries = entries, n = n, lastT = lastT, days = days }
+    return days
+end
+
 -- What the diary knows, as numbers. Read from the saved diary, so goals already met by old pages count too.
 local function Facts()
     local db = SkaldCharDB
@@ -348,12 +366,7 @@ local function Facts()
     end
     f.rareQ, f.epicQ = rare, epic
     local chains, hard, petLevel, reunions = 0, 0, 0, 0
-    local seenDays, days = {}, 0   -- the days with a page (the calendar days the diary has been written on)
     for _, e in ipairs(db.entries or {}) do
-        if type(e.t) == "number" then
-            local d = date("%Y%m%d", e.t)
-            if not seenDays[d] then seenDays[d] = true; days = days + 1 end
-        end
         local kind = e.kind
         if kind == "quest" then
             if (e.cend or 0) >= 2 then chains = chains + 1 end
@@ -368,7 +381,7 @@ local function Facts()
         end
     end
     f.chains, f.hardBoss, f.petLevel, f.reunions = chains, hard, petLevel, reunions
-    f.days = days
+    f.days = DaysWritten(db.entries or {})
     return f
 end
 ns.GoalFacts = Facts
