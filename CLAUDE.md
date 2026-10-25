@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-Skald is a World of Warcraft "Forever" (beta, `## Interface: 16001`) addon: an epic first-person auto-diary shown as an open leather book. Texts in en/ptBR/frFR. The user replies and works in Portuguese. This clone is the official workspace; the addon is copied into `Interface\AddOns\Skald` of the game folder (under Windows, `D:\Games\World of Warcraft\_classic_beta_`) only to test it in the game. See `dev/HANDOFF.md` for the state of the work and the user's preferences, and `dev/ROTEIRO_TESTE_0.37.md` for the in-game test script.
+Skald is a World of Warcraft Classic-family addon (the repo keeps `## Interface: 16001`; the test client is Anniversary, TOC 20506 only in the copy): an epic first-person auto-diary shown as an open leather book. Texts in en/ptBR/frFR. The user replies and works in Portuguese. This clone is the official workspace; the addon is copied into `Interface\AddOns\Skald` of the game folder (under Windows, `D:\Games\World of Warcraft\_anniversary_`; never copy `dev` into `_retail_`, that has its own `retail` branch) only to test it in the game. See `dev/HANDOFF.md` for the state of the work and the user's preferences, and `dev/ROTEIRO_TESTE_0.37.md` for the in-game test script.
 
 ## Commands
 
