@@ -1181,7 +1181,7 @@ local _, without = ns.GoalScore()
 C_PetJournal = { GetNumPets = function() return 5, 0 end }
 clock = clock + 60
 local _, withPets = ns.GoalScore()
-RES = (unready and first and later and mountPages == 1 and withPets - without == 40) and "ok" or ("unready=" .. tostring(unready) .. " first=" .. tostring(first) .. " later=" .. tostring(later) .. " pages=" .. count("goal") .. " " .. (function() local t = {} for _, x in ipairs(SkaldCharDB.entries) do if x.kind == "goal" then t[#t+1] = x.arg end end return table.concat(t, ",") end)())`,
+RES = (unready and first and later and mountPages == 1 and withPets - without == 90) and "ok" or ("unready=" .. tostring(unready) .. " first=" .. tostring(first) .. " later=" .. tostring(later) .. " pages=" .. count("goal") .. " " .. (function() local t = {} for _, x in ipairs(SkaldCharDB.entries) do if x.kind == "goal" then t[#t+1] = x.arg end end return table.concat(t, ",") end)())`,
 });
 
 run('goals that came with a later list are marked quietly in a diary that already looked, and the points follow the seals', {
@@ -1190,7 +1190,7 @@ run('goals that came with a later list are marked quietly in a diary that alread
 local earned, possible = ns.GoalScore()
 -- flights5 was there before (5 points); the new ones (level 10 and 20, quests50, dungeons, bosses1, kills500) came quietly
 local quiet = g.level10 and g.level10.retro and g.level20 and g.level20.retro and g.quests50 and g.quests50.retro and g.kills500 and g.kills500.retro
-RES = (count("goal") == 0 and quiet and SkaldCharDB.goalsVer == 3 and earned > 5 and possible > 800 and ns.GoalPoints("level60") == 100
+RES = (count("goal") == 0 and quiet and SkaldCharDB.goalsVer == 4 and earned > 5 and possible > 800 and ns.GoalPoints("level60") == 100
   and ns.GoalPoints("flights5") == 5) and "ok" or ("pages=" .. count("goal") .. " quiet=" .. tostring(quiet) .. " ver=" .. tostring(SkaldCharDB.goalsVer) .. " score=" .. earned .. "/" .. possible)`,
 });
 
@@ -1657,6 +1657,38 @@ for _, scale in ipairs({ 0.85, 1, 1.3 }) do
   end
 end
 RES = bad or "ok"`,
+});
+
+run('the long-haul goals of version 4 come quietly to an old diary that is already past them, and the days with a page are counted', {
+  pre: SAVED('{ { t = 1792000000, kind = "zone", arg = "Elwynn Forest", zone = "Elwynn Forest", idx = 1 }, { t = 1792003600, kind = "zone", arg = "Westfall", zone = "Westfall", idx = 1 }, { t = 1792090000, kind = "zone", arg = "Duskwood", zone = "Duskwood", idx = 1 } }',
+    'version = 99, goalsInit = true, goalsVer = 3, goals = {}, stats = { counts = { quest = 1600, kill = 12000 }, deathZones = {}, tiers = {}, played = 1, first = 1 }'),
+  body: `local g = SkaldCharDB.goals
+local f = ns.GoalFacts()
+local quiet = g.quests800 and g.quests800.retro and g.quests1500 and g.quests1500.retro and g.kills10000 and g.kills10000.retro
+local top = 0
+for _, x in ipairs(ns.GoalList) do if x.id == "days365" then top = x.target end end
+local newPages = 0
+for _, x in ipairs(SkaldCharDB.entries) do
+  if x.kind == "goal" and (tostring(x.arg):find("^quests") or tostring(x.arg):find("^kills") or tostring(x.arg):find("^days")) and x.arg ~= "quests50" and x.arg ~= "quests150" and x.arg ~= "quests400" and x.arg ~= "kills500" and x.arg ~= "kills2500" then newPages = newPages + 1 end
+end
+RES = (newPages == 0 and quiet and not g.quests3000 and not g.days7 and f.days >= 2 and top == 365
+  and ns.GoalTitle(2300) ~= ns.GoalTitle(750)) and "ok" or ("newPages=" .. newPages .. " quiet=" .. tostring(quiet) .. " days=" .. tostring(f.days))`,
+});
+
+run('a long category of goals goes over more pages: the pager turns them and stays inside the range', {
+  body: `local tab = btn("Goals")
+tab._OnClick(tab)
+for i = #frames, 1, -1 do local f = frames[i]; local c = rawget(f, "cat"); if c and c.key == "war" and f._OnClick then f._OnClick(f); break end end
+local pager
+for i = #frames, 1, -1 do if rawget(frames[i], "label") then pager = frames[i]; break end end
+local function label() return rawget(pager.label, "_text") end
+local first = label()
+local nextB = btn(">")
+nextB._OnClick(nextB); nextB._OnClick(nextB); nextB._OnClick(nextB)   -- past the last page: it stays on it
+local last = label()
+local prevB = btn("<")
+prevB._OnClick(prevB)
+RES = (first == "1/2" and last == "2/2" and label() == "1/2") and "ok" or ("first " .. tostring(first) .. " last " .. tostring(last) .. " back " .. tostring(label()))`,
 });
 
 console.log(failed ? `\n${failed} regression(s) FAILED` : '\nAll regressions passed');
