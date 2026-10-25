@@ -1439,7 +1439,6 @@ K.DOODLE_OF = {
 }
 K.DOODLE_ORDER = { "sword", "skull", "map", "star", "camp", "boots", "paw", "anvil", "mug", "scroll" }
 K.DOODLE_WEIGHT = { scroll = 0.3 }
-function ns.DensityOf() return ns.DensityCfg().fill end
 function ns.DensityBand()
     local d = ns.DensityCfg()
     if d.band == 0 then return 0 end
@@ -2855,15 +2854,16 @@ local function CreateWindow()
             local page = { type = "day", day = day, blocks = {}, first = true }
             local y = 70
             pages[#pages + 1] = page
+            -- the last block of the day leaves room for the quill and the doodles, else it goes to a page of its own
+            local fullLimit = math.floor(K.PAGE_H * ns.DensityCfg().fill)
+            local lastLimit = math.min(fullLimit, K.PAGE_H - K.NOTE_BTN_H - ns.DensityBand())
             for i, block in ipairs(blocks) do
                 local mainH = Measure(block.text, block.closing and (K.CW - 32) or (K.CW - K.ENTRY_X - 22))
                 local noteH = block.note and MeasureNote(block.note, K.CW - K.ENTRY_X - 22 - 16) or 0
                 block.mainH = mainH
                 block.noteH = noteH
                 block.h = math.max(24, mainH + (noteH > 0 and (noteH + 6) or 0))
-                local limit = math.floor(K.PAGE_H * ns.DensityOf())
-                -- the last block of the day leaves room for the quill and the doodles, else it goes to a page of its own
-                if i == #blocks then limit = math.min(limit, K.PAGE_H - K.NOTE_BTN_H - ns.DensityBand()) end
+                local limit = (i == #blocks) and lastLimit or fullLimit
                 if y + block.h > limit and #page.blocks > 0 then
                     page = { type = "day", day = day, blocks = {}, first = false }
                     pages[#pages + 1] = page
