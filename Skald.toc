@@ -1,4 +1,4 @@
-## Interface: 16001
+## Interface: 16001, 20506
 ## Title: Skald
 ## Title-ptBR: Skald
 ## Notes: Automatically writes the epic chronicle of your journey through Azeroth. Use /skald.
@@ -6,7 +6,7 @@
 ## Title-frFR: Skald
 ## Notes-frFR: Écrit automatiquement la chronique épique de votre voyage à travers Azeroth. Utilisez /skald.
 ## Author: Oddynho
-## Version: 0.40.0-beta
+## Version: 0.41.0-beta
 ## OptionalDeps: Spoken, QuestDB
 ## Category: Roleplay
 ## X-Curse-Project-ID: 1748824

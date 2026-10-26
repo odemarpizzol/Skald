@@ -11,12 +11,13 @@ local UI_TEXT = {
         TAB = "Goals", OF = "%d of %d", DONE_ON = "Done on %s", BEFORE = "Done before the diary counted", SECRET = "???",
         SECRET_HINT = "A goal still to be found.", DATE = "%m/%d/%Y", TOTAL = "%d of %d goals reached",
         POINTS = "%d of %d points", PTS = "%d pts", WORTH = "Worth %d points", NEXT_TITLE = "Next title: %s, at %d points.",
-        TITLES = { [0] = "Newcomer", [50] = "Wanderer", [150] = "Wayfarer", [300] = "Trailblazer", [500] = "Storied One", [750] = "Legend of the Road" },
+        TITLES = { [0] = "Newcomer", [50] = "Wanderer", [150] = "Wayfarer", [300] = "Trailblazer", [500] = "Storied One", [750] = "Legend of the Road", [1100] = "A Name in the Songs", [1600] = "Keeper of Long Tales", [2200] = "Immortal of Azeroth" },
         EMPTY = "Nothing here yet.",
         EVID = { chain = "\"%s\", a chain of %d quests.", hard = "%s (falls before it: %d).", reunion = "Met again: %s.", pet = "%s (%s).", petlevel = "%s reached my level.", with = "With: %s." },
         OPEN_HINT = "Click to open the page in the book.",
         CATS = { explorer = "Exploration", road = "The Road", story = "Stories", war = "War", craft = "Crafts", beasts = "Beasts", company = "Company", collection = "Collection", renown = "Fortune & Renown" },
         FACT = {
+            days = "Write pages on %d different days.",
             zones = "Discover %d lands.", flights = "Learn %d flight paths.", level = "Reach level %d.",
             quests = "Complete %d quests.", chains = "Quest chains finished: %d.", rareQ = "Complete a rare quest or better.",
             epicQ = "Complete an epic quest or better.", dungeons = "Dungeons visited: %d.", bosses = "Bosses defeated: %d.",
@@ -28,6 +29,11 @@ local UI_TEXT = {
             gold = "Hold %d gold.", repFriendly = "Become Friendly with a faction.", repHonored = "Become Honored with a faction.", repExalted = "Reach Exalted with a faction.",
         },
         NAMES = {
+            quests800 = "Eight Hundred Doors Knocked", quests1500 = "A Life Written in Errands", quests3000 = "The Tavern's Longest Tale",
+            kills10000 = "A Harvest of Ten Thousand", kills25000 = "The Reaper's Ledger", bosses50 = "Fifty Thrones Toppled", bosses100 = "A Hundred Crowns in the Dust",
+            dungeons15 = "At Home in the Dark", dungeons30 = "Every Cellar, Every Crypt", zones25 = "Half the World Underfoot", zones35 = "No Corner Left Blank",
+            flights30 = "The Gryphon Masters Know Me", gold5000 = "A King's Ransom", critters50 = "A Menagerie in My Pockets", mounts20 = "A Stable Fit for a Warlord",
+            days7 = "A Week of Pages", days30 = "A Month by Candlelight", days100 = "A Hundred Days Inked", days365 = "A Year in the Book",
             zones3 = "First Horizons", zones8 = "Boots on Many Roads", zones15 = "The Map Has My Name",
             flights5 = "A Seat Above the Clouds", flights15 = "Sky Roads of Azeroth",
             level10 = "Past the First Threshold", level20 = "A Name in the Taverns", level30 = "The Road in the Bones",
@@ -51,12 +57,13 @@ local UI_TEXT = {
         TAB = "Metas", OF = "%d de %d", DONE_ON = "Cumprida em %s", BEFORE = "Cumprida antes do diário contar", SECRET = "???",
         SECRET_HINT = "Uma meta ainda por descobrir.", DATE = "%d/%m/%Y", TOTAL = "%d de %d metas cumpridas",
         POINTS = "%d de %d pontos", PTS = "%d pts", WORTH = "Vale %d pontos", NEXT_TITLE = "Próximo título: %s, com %d pontos.",
-        TITLES = { [0] = "Recém-chegad{g:o|a}", [50] = "Caminhante", [150] = "Viajante", [300] = "Desbravador{g:|a}", [500] = "Personagem de Lendas", [750] = "Lenda da Estrada" },
+        TITLES = { [0] = "Recém-chegad{g:o|a}", [50] = "Caminhante", [150] = "Viajante", [300] = "Desbravador{g:|a}", [500] = "Personagem de Lendas", [750] = "Lenda da Estrada", [1100] = "Um Nome nas Canções", [1600] = "Guardi{g:ão|ã} das Longas Histórias", [2200] = "Imortal de Azeroth" },
         EMPTY = "Nada aqui ainda.",
         EVID = { chain = "\"%s\", uma cadeia de %d missões.", hard = "%s (quedas antes dele: %d).", reunion = "Reencontro com %s.", pet = "%s (%s).", petlevel = "%s alcançou o meu nível.", with = "Com: %s." },
         OPEN_HINT = "Clique para abrir a página no livro.",
         CATS = { explorer = "Exploração", road = "A Estrada", story = "Histórias", war = "Guerra", craft = "Ofícios", beasts = "Feras", company = "Companhia", collection = "Coleção", renown = "Fortuna e Renome" },
         FACT = {
+            days = "Escreva páginas em %d dias diferentes.",
             zones = "Descubra %d terras.", flights = "Aprenda %d rotas de voo.", level = "Chegue ao nível %d.",
             quests = "Cumpra %d missões.", chains = "Cadeias de missões concluídas: %d.", rareQ = "Cumpra uma missão rara ou melhor.",
             epicQ = "Cumpra uma missão épica ou melhor.", dungeons = "Masmorras visitadas: %d.", bosses = "Chefes derrotados: %d.",
@@ -68,6 +75,11 @@ local UI_TEXT = {
             gold = "Tenha %d de ouro.", repFriendly = "Torne-se Amistoso com uma facção.", repHonored = "Torne-se Honrado com uma facção.", repExalted = "Chegue a Exaltado com uma facção.",
         },
         NAMES = {
+            quests800 = "Oitocentas Portas Batidas", quests1500 = "Uma Vida Escrita em Recados", quests3000 = "O Conto Mais Longo da Taverna",
+            kills10000 = "Uma Colheita de Dez Mil", kills25000 = "O Livro de Contas do Ceifador", bosses50 = "Cinquenta Tronos Derrubados", bosses100 = "Cem Coroas no Pó",
+            dungeons15 = "À Vontade no Escuro", dungeons30 = "Cada Porão, Cada Cripta", zones25 = "Metade do Mundo Sob os Pés", zones35 = "Nenhum Canto em Branco",
+            flights30 = "Os Mestres de Voo Me Conhecem", gold5000 = "O Resgate de um Rei", critters50 = "Um Zoológico nos Bolsos", mounts20 = "Um Estábulo Digno de um Senhor da Guerra",
+            days7 = "Uma Semana de Páginas", days30 = "Um Mês à Luz de Vela", days100 = "Cem Dias em Tinta", days365 = "Um Ano no Livro",
             zones3 = "Primeiros Horizontes", zones8 = "Botas em Muitas Estradas", zones15 = "O Mapa Tem o Meu Nome",
             flights5 = "Um Assento Acima das Nuvens", flights15 = "Estradas do Céu de Azeroth",
             level10 = "Além do Primeiro Limiar", level20 = "Um Nome nas Tavernas", level30 = "A Estrada nos Ossos",
@@ -91,12 +103,13 @@ local UI_TEXT = {
         TAB = "Objectifs", OF = "%d sur %d", DONE_ON = "Accompli le %s", BEFORE = "Accompli avant que le journal compte", SECRET = "???",
         SECRET_HINT = "Un objectif encore à découvrir.", DATE = "%d/%m/%Y", TOTAL = "%d objectifs atteints sur %d",
         POINTS = "%d points sur %d", PTS = "%d pts", WORTH = "Vaut %d points", NEXT_TITLE = "Prochain titre\194\160: %s, à %d points.",
-        TITLES = { [0] = "Nouv{g:el|elle} arrivant{g:|e}", [50] = "Voyageu{g:r|se}", [150] = "Routi{g:er|ère}", [300] = "Pionni{g:er|ère}", [500] = "Personnage de légende", [750] = "Légende de la route" },
+        TITLES = { [0] = "Nouv{g:el|elle} arrivant{g:|e}", [50] = "Voyageu{g:r|se}", [150] = "Routi{g:er|ère}", [300] = "Pionni{g:er|ère}", [500] = "Personnage de légende", [750] = "Légende de la route", [1100] = "Un nom dans les chansons", [1600] = "Gardien{g:|ne} des longs récits", [2200] = "Immortel{g:|le} d'Azeroth" },
         EMPTY = "Rien ici pour l'instant.",
         EVID = { chain = "«\194\160%s\194\160», une chaîne de %d quêtes.", hard = "%s (chutes avant lui\194\160: %d).", reunion = "Retrouvailles avec %s.", pet = "%s (%s).", petlevel = "%s a atteint mon niveau.", with = "Avec\194\160: %s." },
         OPEN_HINT = "Cliquez pour ouvrir la page dans le livre.",
         CATS = { explorer = "Exploration", road = "La Route", story = "Histoires", war = "Guerre", craft = "Métiers", beasts = "Bêtes", company = "Compagnie", collection = "Collection", renown = "Fortune et renom" },
         FACT = {
+            days = "Écrivez des pages pendant %d jours différents.",
             zones = "Découvrez %d contrées.", flights = "Apprenez %d routes aériennes.", level = "Atteignez le niveau %d.",
             quests = "Accomplissez %d quêtes.", chains = "Chaînes de quêtes terminées\194\160: %d.", rareQ = "Accomplissez une quête rare ou mieux.",
             epicQ = "Accomplissez une quête épique ou mieux.", dungeons = "Donjons visités\194\160: %d.", bosses = "Boss vaincus\194\160: %d.",
@@ -108,6 +121,11 @@ local UI_TEXT = {
             gold = "Possédez %d pièces d'or.", repFriendly = "Devenez Amical avec une faction.", repHonored = "Devenez Honoré avec une faction.", repExalted = "Atteignez Exalté avec une faction.",
         },
         NAMES = {
+            quests800 = "Huit cents portes frappées", quests1500 = "Une vie écrite en courses", quests3000 = "Le plus long récit de la taverne",
+            kills10000 = "Une moisson de dix mille", kills25000 = "Le registre du faucheur", bosses50 = "Cinquante trônes renversés", bosses100 = "Cent couronnes dans la poussière",
+            dungeons15 = "Chez moi dans l'obscurité", dungeons30 = "Chaque cave, chaque crypte", zones25 = "La moitié du monde sous mes pas", zones35 = "Aucun coin laissé en blanc",
+            flights30 = "Les maîtres de vol me connaissent", gold5000 = "La rançon d'un roi", critters50 = "Une ménagerie dans mes poches", mounts20 = "Une écurie digne d'un chef de guerre",
+            days7 = "Une semaine de pages", days30 = "Un mois à la chandelle", days100 = "Cent jours à l'encre", days365 = "Une année dans le livre",
             zones3 = "Premiers horizons", zones8 = "Des bottes sur bien des routes", zones15 = "La carte porte mon nom",
             flights5 = "Une place au-dessus des nuages", flights15 = "Routes du ciel d'Azeroth",
             level10 = "Au-delà du premier seuil", level20 = "Un nom dans les tavernes", level30 = "La route dans les os",
@@ -143,7 +161,7 @@ local CATS = {
 -- `secret` keeps the name hidden until the feat is done.
 -- `since` is the version of the list in which a goal came: a diary that already looked at the list marks the ones that
 -- came later quietly (no page, no notice), whatever they find already done.
-local GOALS_VERSION = 3
+local GOALS_VERSION = 4
 local GOALS = {
     { id = "level10", cat = "road", tier = 1, fact = "level", target = 10, since = 2 },
     { id = "level20", cat = "road", tier = 2, fact = "level", target = 20, since = 2 },
@@ -197,6 +215,26 @@ local GOALS = {
     { id = "repFriendly", cat = "renown", tier = 2, fact = "repFriendly", target = 1, since = 2 },
     { id = "repHonored", cat = "renown", tier = 3, fact = "repHonored", target = 1, since = 2 },
     { id = "repExalted", cat = "renown", tier = 5, fact = "repExalted", target = 1, since = 2 },
+    -- the long haul (version 4): it takes weeks of play, or a year of pages
+    { id = "quests800", cat = "story", tier = 4, fact = "quests", target = 800, since = 4 },
+    { id = "quests1500", cat = "story", tier = 5, fact = "quests", target = 1500, since = 4 },
+    { id = "quests3000", cat = "story", tier = 5, fact = "quests", target = 3000, since = 4 },
+    { id = "kills10000", cat = "war", tier = 4, fact = "kills", target = 10000, since = 4 },
+    { id = "kills25000", cat = "war", tier = 5, fact = "kills", target = 25000, since = 4 },
+    { id = "bosses50", cat = "war", tier = 4, fact = "bosses", target = 50, since = 4 },
+    { id = "bosses100", cat = "war", tier = 5, fact = "bosses", target = 100, since = 4 },
+    { id = "dungeons15", cat = "war", tier = 4, fact = "dungeons", target = 15, since = 4 },
+    { id = "dungeons30", cat = "war", tier = 5, fact = "dungeons", target = 30, since = 4 },
+    { id = "zones25", cat = "explorer", tier = 3, fact = "zones", target = 25, since = 4 },
+    { id = "zones35", cat = "explorer", tier = 4, fact = "zones", target = 35, since = 4 },
+    { id = "flights30", cat = "explorer", tier = 3, fact = "flights", target = 30, since = 4 },
+    { id = "gold5000", cat = "renown", tier = 5, fact = "gold", target = 5000, since = 4 },
+    { id = "critters50", cat = "collection", tier = 4, fact = "critters", target = 50, since = 4, coll = "critters" },
+    { id = "mounts20", cat = "collection", tier = 5, fact = "mounts", target = 20, since = 4, coll = "mounts" },
+    { id = "days7", cat = "road", tier = 1, fact = "days", target = 7, since = 4 },
+    { id = "days30", cat = "road", tier = 2, fact = "days", target = 30, since = 4 },
+    { id = "days100", cat = "road", tier = 4, fact = "days", target = 100, since = 4 },
+    { id = "days365", cat = "road", tier = 5, fact = "days", target = 365, since = 4 },
 }
 -- Points follow the rarity of the seal (common .. legendary). They are worked out when shown, from the goals reached,
 -- so a change of value needs no change to what is saved.
@@ -258,6 +296,24 @@ local function Count(t)
     local n = 0
     for _ in pairs(t or {}) do n = n + 1 end
     return n
+end
+
+-- The calendar days with a page. Worked out again only when the pages change (the count and the last one), as the
+-- tab and the check ask for the facts often.
+local daysCache
+local function DaysWritten(entries)
+    local n, last = #entries, entries[#entries]
+    local lastT = last and last.t or 0
+    if daysCache and daysCache.entries == entries and daysCache.n == n and daysCache.lastT == lastT then return daysCache.days end
+    local seen, days = {}, 0
+    for _, e in ipairs(entries) do
+        if type(e.t) == "number" then
+            local d = date("%Y%m%d", e.t)
+            if not seen[d] then seen[d] = true; days = days + 1 end
+        end
+    end
+    daysCache = { entries = entries, n = n, lastT = lastT, days = days }
+    return days
 end
 
 -- What the diary knows, as numbers. Read from the saved diary, so goals already met by old pages count too.
@@ -325,6 +381,7 @@ local function Facts()
         end
     end
     f.chains, f.hardBoss, f.petLevel, f.reunions = chains, hard, petLevel, reunions
+    f.days = DaysWritten(db.entries or {})
     return f
 end
 ns.GoalFacts = Facts
@@ -481,6 +538,7 @@ local function BuildGoalsTab(panel)
 
     local categoryRows, goalRows = {}, {}
     local chosen = 1
+    local goalPage, goalPages = 1, 1   -- the right page shows seven goals at a time: a long category goes over more pages
     local visibleCats
 
     for i, cat in ipairs(CATS) do
@@ -506,7 +564,7 @@ local function BuildGoalsTab(panel)
         row.mark:SetPoint("LEFT", row, "LEFT", -CW * 39 / 433, 0)
         row.mark:SetTexture(TEX .. "ui_ink")
         row.mark:Hide()
-        row:SetScript("OnClick", function() chosen = i; if refreshTab then refreshTab() end end)
+        row:SetScript("OnClick", function() chosen = i; goalPage = 1; if refreshTab then refreshTab() end end)
         row.cat = cat
         categoryRows[i] = row
     end
@@ -568,6 +626,15 @@ local function BuildGoalsTab(panel)
         goalRows[i] = row
     end
 
+    -- "2 of 3" under the last goal; the page corners and the wheel of the book turn the pages (see `pager` below)
+    local pageNote = CreateFrame("Frame", nil, panel)
+    pageNote:SetSize(CW, 28)
+    pageNote:SetPoint("TOPLEFT", panel, "TOPLEFT", RIGHT_X, -430)
+    local pageLabel = pageNote:CreateFontString(nil, "OVERLAY", "SkaldBody")
+    pageLabel:SetPoint("CENTER", 0, 0)
+    pageLabel:SetTextColor(body[1], body[2], body[3])
+    pageNote.label = pageLabel   -- for the tests
+
     refreshTab = function()
         local db = SkaldCharDB
         if not db then return end
@@ -625,8 +692,14 @@ local function BuildGoalsTab(panel)
         rightTitle:SetText(UI.CATS[cat.key])
         local list = {}
         for _, g in ipairs(GOALS) do if g.cat == cat.key and Listed(g, db) then list[#list + 1] = g end end
+        local perPage = #goalRows
+        local pages = math.max(1, math.ceil(#list / perPage))
+        goalPage = math.max(1, math.min(goalPage, pages))
+        goalPages = pages
+        pageNote:SetShown(pages > 1)
+        pageLabel:SetText(string.format(UI.OF, goalPage, pages))
         for i, row in ipairs(goalRows) do
-            local g = list[i]
+            local g = list[(goalPage - 1) * perPage + i]
             if not g then
                 row:Hide()
             else
@@ -678,7 +751,13 @@ local function BuildGoalsTab(panel)
         end
     end
     pcall(Check)
-    return refreshTab
+    -- the corners and the wheel of the book turn the pages of the chosen category, as they do in the Saga
+    local pager = {
+        Turn = function(delta) goalPage = math.max(1, math.min(goalPages, goalPage + delta)) end,
+        CanPrev = function() return goalPage > 1 end,
+        CanNext = function() return goalPage < goalPages end,
+    }
+    return refreshTab, pager
 end
 
 SkaldAPI.AddTab("goals", UI.TAB, BuildGoalsTab)

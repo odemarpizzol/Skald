@@ -1356,6 +1356,17 @@ end
 -- If the game cannot load one, the quest face of the game stands in at a smaller size.
 -- The size of the text in the book is a setting (Small, Normal, Large).
 K.TEXT_SIZES = { [0] = 11, [1] = 13, [2] = 15 }
+-- By the density of the pages: how full a page of a day is let to get (share of its height), the room the last page of
+-- a day keeps free for its doodles (points, never less than the doodles need), the points added to the letter of the
+-- entries and how much the doodles grow with the room a looser page leaves.
+K.DENSITY = {
+    compact = { fill = 1,    band = 0,   font = 0, doodle = 0.85 },
+    comfy   = { fill = 0.92, band = 70,  font = 1, doodle = 1 },
+    airy    = { fill = 0.84, band = 110, font = 2, doodle = 1.3 },
+}
+K.DOODLE_MIN = 48          -- the free height a doodle needs at scale 1
+K.DOODLE_PAD = 10          -- space between the last block of a day and the doodles
+function ns.DensityCfg() return K.DENSITY[SkaldDB and SkaldDB.density or "comfy"] or K.DENSITY.comfy end
 local ApplyFonts
 do
     local FALLBACK = "Fonts\\FRIZQT__.TTF"
@@ -1370,6 +1381,12 @@ do
     ApplyFonts = function()
         local size = K.TEXT_SIZES[(SkaldDB and SkaldDB.textSize) or 1] or 14
         Make("SkaldBody", "EBGaramond.ttf", size, size - 2)
+        local entry = size + ns.DensityCfg().font
+        -- pages measured with another letter are stale (the settings load after the first call)
+        local sig = size .. ":" .. entry
+        if K.fontSig and K.fontSig ~= sig then ns.layoutRev = (ns.layoutRev or 0) + 1 end
+        K.fontSig = sig
+        Make("SkaldEntry", "EBGaramond.ttf", entry, entry - 2)   -- the text of the entries on the pages of a day
         Make("SkaldSaga", "EBGaramond.ttf", size + 3, size + 1)
         Make("SkaldItalic", "EBGaramond-Italic.ttf", size, size - 2)
         Make("SkaldSmall", "EBGaramond.ttf", 11, 10)
@@ -1422,7 +1439,33 @@ K.DOODLE_OF = {
 }
 K.DOODLE_ORDER = { "sword", "skull", "map", "star", "camp", "boots", "paw", "anvil", "mug", "scroll" }
 K.DOODLE_WEIGHT = { scroll = 0.3 }
-K.DOODLE_SIZE = 60
+function ns.DensityBand()
+    local d = ns.DensityCfg()
+    if d.band == 0 then return 0 end
+    return math.max(d.band, math.ceil(K.DOODLE_MIN * d.doodle) + K.GAP + K.DOODLE_PAD + 2)
+end
+-- The one way to change the density (the Style tab and /skald density): store it, redo the letter and the pages.
+function ns.SetDensity(key)
+    if not K.DENSITY[key] then return false end
+    Settings().density = key
+    ApplyFonts()
+    ns.layoutRev = (ns.layoutRev or 0) + 1
+    if ns.SyncDensity then ns.SyncDensity() end
+    if window then window:Refresh() end
+    return true
+end
+-- Where the i-th of `count` doodles of a day goes in the free room above the quill (`room` points high): its size, its
+-- left offset in the column, its drop from the top of the room and its tilt. A hand that is never quite steady, but the
+-- same every time for the same day, and always inside the room and inside the column.
+function ns.DoodleSpot(i, count, dayNumber, room, scale)
+    local slot = K.CW / count
+    local seed = dayNumber * 7 + i * 5
+    local size = math.min(math.floor((44 + (seed % 4) * 6) * scale), room, math.floor(slot) - 8)   -- 44 to 62 at comfy
+    local wobble = seed % 5 - 2   -- -2 to 2
+    local x = math.max(0, math.min((i - 1) * slot + (slot - size) / 2 + wobble * 4, K.CW - size))
+    local drop = math.min(((i % 2 == 0) and 0.55 or 0.1) + (seed % 3) * 0.12, 1) * (room - size)
+    return size, x, drop, wobble * 0.07
+end
 function ns.DoodlesOf(entries, most)
     local score = {}
     for _, e in ipairs(entries or {}) do
@@ -2195,7 +2238,7 @@ local function CreateWindow()
             r.time:SetWidth(40)
             r.time:SetJustifyH("LEFT")
             r.time:SetTextColor(K.C_TIME[1], K.C_TIME[2], K.C_TIME[3])
-            r.text = s.frame:CreateFontString(nil, "OVERLAY", "SkaldBody")
+            r.text = s.frame:CreateFontString(nil, "OVERLAY", "SkaldEntry")
             r.text:SetJustifyH("LEFT")
             r.text:SetJustifyV("TOP")
             r.text:SetWordWrap(true)
@@ -2292,7 +2335,7 @@ local function CreateWindow()
     end
 
     -- Text heights come from a hidden string of the right width.
-    local meter = f:CreateFontString(nil, "OVERLAY", "SkaldBody")
+    local meter = f:CreateFontString(nil, "OVERLAY", "SkaldEntry")
     meter:SetWordWrap(true)
     meter:SetSpacing(2)
     meter:SetAlpha(0)
@@ -2823,13 +2866,16 @@ local function CreateWindow()
             local page = { type = "day", day = day, blocks = {}, first = true }
             local y = 70
             pages[#pages + 1] = page
+            -- the last block of the day leaves room for the quill and the doodles, else it goes to a page of its own
+            local fullLimit = math.floor(K.PAGE_H * ns.DensityCfg().fill)
+            local lastLimit = math.min(fullLimit, K.PAGE_H - K.NOTE_BTN_H - ns.DensityBand())
             for i, block in ipairs(blocks) do
                 local mainH = Measure(block.text, block.closing and (K.CW - 32) or (K.CW - K.ENTRY_X - 22))
                 local noteH = block.note and MeasureNote(block.note, K.CW - K.ENTRY_X - 22 - 16) or 0
                 block.mainH = mainH
                 block.noteH = noteH
                 block.h = math.max(24, mainH + (noteH > 0 and (noteH + 6) or 0))
-                local limit = K.PAGE_H - ((i == #blocks) and K.NOTE_BTN_H or 0)
+                local limit = (i == #blocks) and lastLimit or fullLimit
                 if y + block.h > limit and #page.blocks > 0 then
                     page = { type = "day", day = day, blocks = {}, first = false }
                     pages[#pages + 1] = page
@@ -2862,7 +2908,7 @@ local function CreateWindow()
         local entries = Journal().entries
         local last = entries[#entries]
         local sig = table.concat({ #entries, last and last.t or 0, last and last.kind or "", (SkaldDB and SkaldDB.ink) or 0,
-            (SkaldDB and SkaldDB.textSize) or 1, (SkaldDB and SkaldDB.dayMode) or 0, ns.layoutRev or 0 }, ":")
+            (SkaldDB and SkaldDB.textSize) or 1, (SkaldDB and SkaldDB.dayMode) or 0, (SkaldDB and SkaldDB.density) or "", ns.layoutRev or 0 }, ":")
         if sig ~= cachedSig then
             cachedLayout = Paginate()
             cachedSig = sig
@@ -3066,6 +3112,7 @@ local function CreateWindow()
                 local fs = SideText(s, 2 + n)
                 fs:ClearAllPoints()
                 fs:SetPoint("TOPLEFT", px + 32, -top)
+                fs:SetFontObject("SkaldEntry")
                 fs:SetWidth(K.CW - 32)
                 fs:SetTextColor(1, 1, 1)
                 fs:SetText(block.text)
@@ -3137,25 +3184,27 @@ local function CreateWindow()
             b.dayRef = day
             b.px = px
             b:Show()
-            -- what the day held, drawn by the character in the free space above the quill (only if there is room)
-            local size = K.DOODLE_SIZE
-            local rowY = K.PAGE_H - K.NOTE_BTN_H - size
-            if page.doodles and #page.doodles > 0 and (page.usedY or 0) + 8 <= rowY then
-                local step = size + 12
-                local x0 = px + (K.CW - #page.doodles * step + 12) / 2
+            -- what the day held, drawn by the character where the page has room above the quill: each one a
+            -- different size, a little crooked, on its own height, as if scattered by a hand
+            local floor = K.PAGE_H - K.NOTE_BTN_H
+            local top = (page.usedY or 0) + K.DOODLE_PAD
+            local count = page.doodles and #page.doodles or 0
+            local dscale = ns.DensityCfg().doodle
+            local room = floor - top
+            if count > 0 and room >= math.ceil(K.DOODLE_MIN * dscale) then
                 s.doodles = s.doodles or {}
                 for i, name in ipairs(page.doodles) do
                     local t = s.doodles[i]
                     if not t then
                         t = s.frame:CreateTexture(nil, "ARTWORK", nil, 2)
-                        t:SetSize(size, size)
                         s.doodles[i] = t
                     end
-                    local wobble = (day.number * 7 + i * 3) % 5 - 2   -- -2 to 2: a hand that is never quite steady
+                    local size, x, drop, tilt = ns.DoodleSpot(i, count, day.number, room, dscale)
+                    t:SetSize(size, size)
                     t:ClearAllPoints()
-                    t:SetPoint("TOPLEFT", s.frame, "TOPLEFT", x0 + (i - 1) * step, -(K.TOP_Y + rowY + wobble * 3))
+                    t:SetPoint("TOPLEFT", s.frame, "TOPLEFT", px + x, -(K.TOP_Y + top + drop))
                     t:SetTexture(K.TEX .. name)
-                    if t.SetRotation then pcall(t.SetRotation, t, wobble * 0.04) end
+                    if t.SetRotation then pcall(t.SetRotation, t, tilt) end
                     t:Show()
                 end
             end
@@ -3389,7 +3438,7 @@ local function CreateWindow()
         end
 
         -- fonts
-        for _, name in ipairs({ "SkaldBody", "SkaldHead", "SkaldNote", "SkaldSec" }) do
+        for _, name in ipairs({ "SkaldBody", "SkaldEntry", "SkaldHead", "SkaldNote", "SkaldSec" }) do
             local font = _G[name]
             local path = font and font.GetFont and font:GetFont()
             if type(path) == "string" and not path:lower():find("skald", 1, true) then
@@ -3558,6 +3607,7 @@ local function CreateWindow()
     f:ApplyCover()
 
     f.sides = sides   -- for the tests
+    function f:PageCount() layout = Layout(); return #layout.pages end   -- for the tests
 
     -- Opening the book lands on the newest day (or the cover while it is empty).
     f:SetScript("OnShow", function()
@@ -6881,15 +6931,30 @@ local function BuildStyle(panel)
         textSizeButtons[i] = b
     end
 
-    PageRule(panel, 0, -334)
-    SectionLabel(panel, L.OPT_INK, 0, -354)
+    -- how full the pages of a day are left (the same as /skald density), in a row under the size of the letter
+    PlateGroup(panel, 0, -324, 342, 26)
+    local densityButtons = {}
+    for i, key in ipairs({ "compact", "comfy", "airy" }) do
+        local b = MakeFlatButton(panel, 114, 26, (L.DENSITY_NAMES[key]:gsub("^%l", string.upper)))
+        b:SetPoint("TOPLEFT", (i - 1) * 114, -324)
+        b:SetScript("OnClick", function() ns.SetDensity(key); Redraw() end)
+        densityButtons[key] = b
+    end
+    ns.SyncDensity = function()   -- also when the command changes it with the tab open
+        local now = Settings().density
+        if not K.DENSITY[now] then now = "comfy" end
+        for key, b in pairs(densityButtons) do b:SetActive(key == now) end
+    end
+
+    PageRule(panel, 0, -362)
+    SectionLabel(panel, L.OPT_INK, 0, -380)
     local inkBoxes = {}
     for i = 0, 2 do
         local c = K.INKS[i + 1]
         local cb = MakeWaxCheck(panel, L.INK_NAMES[i + 1],
             function() return (Settings().ink or 0) == i end,
             function() Settings().ink = i; Redraw() end, nil, c, 114)
-        cb:SetPoint("TOPLEFT", i * 114, -380)
+        cb:SetPoint("TOPLEFT", i * 114, -406)
         inkBoxes[#inkBoxes + 1] = cb
     end
 
@@ -6980,6 +7045,7 @@ local function BuildStyle(panel)
         for _, cb in ipairs(colorBoxes) do cb.Sync() end
         for _, cb in ipairs(inkBoxes) do cb.Sync() end
         for i, b in pairs(textSizeButtons) do b:SetActive(i == (s.textSize or 1)) end
+        ns.SyncDensity()
         for i, b in ipairs(sizeButtons) do
             local size = K.BOOK_SIZES[i]
             b:SetActive((size == "auto" and not s.bookScale) or size == s.bookScale)
@@ -7361,6 +7427,10 @@ SlashCmdList["SKALD"] = function(msg)
         if db then db.companions = nil end
         Mile.reunionTold = {}
         Say(L.CMD_COMPANIONS_FORGOTTEN)
+    elseif msg == "density" or msg:match("^density%s") then
+        ns.SetDensity(strtrim(msg:sub(8)))
+        local now = Settings().density or "comfy"
+        Say(string.format(L.CMD_DENSITY, L.DENSITY_NAMES[now] or now))
     elseif msg == "tidy" then
         pcall(Mile.Relocalize)
         Say(string.format(L.CMD_TIDY, Mile.Tidy()))
