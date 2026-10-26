@@ -1,0 +1,2 @@
+- A quest page can carry one more sentence about the moment, told only when it is true: the first quest of the day, the tenth, twentieth..., a quest far above or far below your level (with the gap in levels), a fat purse (with the gold), a fall just before, or a long absence. Each is drawn from its own phrases, never repeats within the last three quests, and never repeats a phrase within the last five of its kind
+- Six more lines in each pool for rare and epic quests and for the notable delivery, gather, explore and seek quests

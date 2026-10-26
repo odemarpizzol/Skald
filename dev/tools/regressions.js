@@ -1697,5 +1697,61 @@ RES = (first == "1 of 2" and last == "2 of 2" and label() == "1 of 2") and "ok" 
 end`,
 });
 
+const FACT_PRE = `function GetQuestID() return 102 end; C_QuestLog.GetQuestDifficultyLevel = function() return 20 end`;
+const FACT_HELP = `local function turn(money) NOW = NOW + 60; fire("QUEST_COMPLETE"); fire("QUEST_TURNED_IN", 102, 5000, money or 0); runTimers()
+  local e; for i = #SkaldCharDB.entries, 1, -1 do if SkaldCharDB.entries[i].kind == "quest" then e = SkaldCharDB.entries[i]; break end end
+  return e end
+local function level(n) C_QuestLog.GetQuestDifficultyLevel = function() return n end end`;
+
+run('a quest page tells one more thing only when it is true: the first of the day, a fat purse, a quest far above or below, a long absence, a fall, the tenth', {
+  pre: FACT_PRE,
+  body: `${FACT_HELP}
+local got = {}
+local function note(name, e, key, value) if e.xk ~= key or e.xv ~= value then got[#got + 1] = name .. "=" .. tostring(e.xk) .. "/" .. tostring(e.xv) end end
+note("first", turn(0), "first", nil)
+note("rich", turn(25000), "rich", 2)
+level(30); note("above", turn(0), "above", 10)
+level(5); note("below", turn(0), "below", 15)
+level(20); note("plain", turn(0), nil, nil)
+NOW = NOW + 3 * 86400; note("back", turn(0), "back", nil)
+table.insert(SkaldCharDB.entries, { t = NOW + 30, kind = "death", arg = "x", zone = "Elwynn Forest", idx = 1 }); NOW = NOW + 30
+note("fallen", turn(0), "fallen", nil)
+SkaldCharDB.days[SkaldCharDB.today].q = 9; NOW = NOW + 4000
+note("tenth", turn(0), "milestone", 10)
+local e = turn(25000); local shown = SkaldAPI.Render(e)
+RES = (#got == 0 and not shown:find("{", 1, true)) and "ok" or table.concat(got, " ")`,
+});
+
+run('the extra sentence of a quest page is told after the main one, and a page without it reads as it always did', {
+  pre: FACT_PRE,
+  body: `${FACT_HELP}
+local e = turn(0)
+local plain = SkaldAPI.Render({ kind = "quest", arg = "Q", tier = 1, idx = 1, t = NOW, npc = "Bob" })
+local base = SkaldAPI.Render({ kind = "quest", arg = "Q", tier = 1, idx = 1, t = NOW, npc = "Bob", xk = "first", xi = 1 })
+local pool = ns.LOCALES.enUS.phrases.fact_first
+RES = (base == plain .. " " .. pool[1] and plain ~= base) and "ok" or (plain .. " || " .. base)`,
+});
+
+run('thirty quests that all have something to tell: no key twice among three pages, no phrase twice among five of its key', {
+  pre: FACT_PRE,
+  body: `${FACT_HELP}
+level(40)
+local keys, per, bad = {}, {}, nil
+for i = 1, 60 do
+  local e = turn(30000)
+  keys[#keys + 1] = e.xk or "-"
+  if e.xk then
+    local list = per[e.xk] or {}; per[e.xk] = list
+    for j = math.max(1, #list - 4), #list do if list[j] == e.xi then bad = bad or (e.xk .. " repeats phrase " .. e.xi .. " at page " .. i) end end
+    list[#list + 1] = e.xi
+  end
+end
+for i = 1, #keys do
+  for j = i + 1, math.min(i + 2, #keys) do if keys[i] ~= "-" and keys[i] == keys[j] then bad = bad or ("key " .. keys[i] .. " at " .. i .. " and " .. j) end end
+end
+local told = 0; for _, k in ipairs(keys) do if k ~= "-" then told = told + 1 end end
+RES = (not bad and told >= 15) and "ok" or (bad or ("only " .. told .. " told: " .. table.concat(keys, ",")))`,
+});
+
 console.log(failed ? `\n${failed} regression(s) FAILED` : '\nAll regressions passed');
 process.exit(failed ? 1 : 0);

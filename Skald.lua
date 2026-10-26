@@ -276,6 +276,7 @@ local function AddEntry(kind, arg, zone, extra)
         entry.race = okRace and type(raceFile) == "string" and raceFile or nil
         entry.fl = PickFlavor(kind, entry)
     end
+    if kind == "quest" and K.PickFact then K.PickFact(db, entry) end
     local list = PoolFor(entry) or PHRASES[kind]
     -- Not one of the last few phrases told of this kind (as many as the pool allows, up to five).
     db.recentIdx = db.recentIdx or {}
@@ -764,9 +765,78 @@ local function PartOfDay(hour)
     if hour >= 17 and hour <= 19 then return "dusk" end
     return "night"
 end
+-- A quest page can carry one more sentence about the moment, told only when something about it is true:
+-- a fall just before, a long absence, the first quest of the day, the tenth, a fat purse, a quest far above or
+-- far below one's level. The page keeps the key (xk), the phrase number (xi) and the number the phrase names
+-- (xv); the text is built live, as for everything else. A key is not told again within the last three quests.
+K.FACT_ORDER = { "fallen", "back", "first", "milestone", "rich", "above", "below" }
+K.FACT_RECENT = 3
+K.PickFact = function(db, e)
+    local day = db.days and db.days[db.today or ""]
+    local before = day and day.q or 0   -- the quests of this day counted before this one
+    local entries = db.entries
+    local last, fell, recent, quests = nil, false, {}, 0
+    for i = #entries, math.max(1, #entries - 60), -1 do
+        local p = entries[i]
+        if p.kind ~= "day" then
+            last = last or p
+            if p.kind == "death" and e.t - p.t <= 1200 then fell = true end
+            if p.kind == "quest" and quests < K.FACT_RECENT then
+                quests = quests + 1
+                if p.xk then recent[p.xk] = true end
+            end
+        end
+    end
+    local have = {
+        fallen = fell,
+        back = last and e.t - last.t >= 129600,
+        first = before == 0,
+        milestone = (before + 1) % 10 == 0,
+        rich = type(e.mr) == "number" and e.mr >= 10000,
+        above = type(e.ql) == "number" and type(e.pl) == "number" and e.ql - e.pl >= 3,
+        below = type(e.ql) == "number" and type(e.pl) == "number" and e.pl - e.ql >= 8,
+    }
+    local value = {
+        milestone = before + 1,
+        rich = type(e.mr) == "number" and math.floor(e.mr / 10000) or nil,
+        above = type(e.ql) == "number" and type(e.pl) == "number" and e.ql - e.pl or nil,
+        below = type(e.ql) == "number" and type(e.pl) == "number" and e.pl - e.ql or nil,
+    }
+    for _, key in ipairs(K.FACT_ORDER) do
+        local list = PHRASES["fact_" .. key]
+        if have[key] and not recent[key] and list and #list > 0 then
+            db.recentIdx = db.recentIdx or {}
+            local mem = "fact:" .. key
+            local seen = db.recentIdx[mem] or {}
+            local keep = math.min(5, #list - 1)
+            local idx = math.random(#list)
+            for _ = 1, 30 do
+                local again = false
+                for i = math.max(1, #seen - keep + 1), #seen do if seen[i] == idx then again = true; break end end
+                if not again then break end
+                idx = math.random(#list)
+            end
+            seen[#seen + 1] = idx
+            while #seen > 5 do table.remove(seen, 1) end
+            db.recentIdx[mem] = seen
+            e.xk, e.xi, e.xv = key, idx, value[key]
+            return
+        end
+    end
+end
+K.FactText = function(e)
+    local list = e.xk and PHRASES["fact_" .. e.xk]
+    if not list or #list == 0 then return "" end
+    local text = list[((e.xi or 1) - 1) % #list + 1]
+    text = text:gsub("{diff}", function() return tostring(e.xv or "") end)
+    text = text:gsub("{gold}", function() return tostring(e.xv or "") end)
+    text = text:gsub("{nth}", function() return tostring(e.xv or "") end)
+    return " " .. ns.Gendered(text)
+end
 Extras = function(e)
     local out = ""
     local idx = e.idx or 1
+    if e.kind == "quest" and e.xk then out = K.FactText(e) end
     if type(e.with) == "table" and #e.with > 0 then
         local names = {}
         for i, who in ipairs(e.with) do names[i] = K.WhoShort(who) end
@@ -5723,7 +5793,8 @@ H.QUEST_TURNED_IN = function(self, event, ...)
             { tier = tier, q = questID, npc = pendingNPC, qtype = qtype or false, cend = cend, since = since,
               ot = (tier >= K.OBJECTIVE_MIN_TIER) and ((type(ns.pendingObjective) == "string" and ns.pendingObjective ~= "" and ns.pendingObjective)
                   or (Journal() and Journal().questObj and Journal().questObj[questID])) or nil,
-              ql = pendingQuestLevel, pl = UnitLevel and UnitLevel("player"), nid = Mile.npcId })
+              ql = pendingQuestLevel, pl = UnitLevel and UnitLevel("player"), nid = Mile.npcId,
+              mr = (type(moneyReward) == "number" and moneyReward > 0) and moneyReward or nil })
     else
         CountOnly("quest", tier)
     end
