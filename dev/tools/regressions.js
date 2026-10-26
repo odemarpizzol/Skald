@@ -1675,7 +1675,7 @@ RES = (newPages == 0 and quiet and not g.quests3000 and not g.days7 and f.days >
   and ns.GoalTitle(2300) ~= ns.GoalTitle(750)) and "ok" or ("newPages=" .. newPages .. " quiet=" .. tostring(quiet) .. " days=" .. tostring(f.days))`,
 });
 
-run('a long category of goals goes over more pages: the pager turns them and stays inside the range', {
+run('a long category of goals goes over more pages: the corners of the book turn them and stay inside the range', {
   body: `local tab = btn("Goals")
 tab._OnClick(tab)
 for i = #frames, 1, -1 do local f = frames[i]; local c = rawget(f, "cat"); if c and c.key == "war" and f._OnClick then f._OnClick(f); break end end
@@ -1683,12 +1683,18 @@ local pager
 for i = #frames, 1, -1 do if rawget(frames[i], "label") then pager = frames[i]; break end end
 local function label() return rawget(pager.label, "_text") end
 local first = label()
-local nextB = btn(">")
+local prev, nextB
+for _, f in ipairs(frames) do
+  if f._OnClick and rawget(f, "tex") and rawget(f, "_alpha") then
+    if f._alpha < 1 then prev = f else nextB = f end
+  end
+end
+if not (prev and nextB) then RES = "corners not found" else
 nextB._OnClick(nextB); nextB._OnClick(nextB); nextB._OnClick(nextB)   -- past the last page: it stays on it
 local last = label()
-local prevB = btn("<")
-prevB._OnClick(prevB)
-RES = (first == "1 of 2" and last == "2 of 2" and label() == "1 of 2") and "ok" or ("first " .. tostring(first) .. " last " .. tostring(last) .. " back " .. tostring(label()))`,
+prev._OnClick(prev)
+RES = (first == "1 of 2" and last == "2 of 2" and label() == "1 of 2") and "ok" or ("first " .. tostring(first) .. " last " .. tostring(last) .. " back " .. tostring(label()))
+end`,
 });
 
 console.log(failed ? `\n${failed} regression(s) FAILED` : '\nAll regressions passed');

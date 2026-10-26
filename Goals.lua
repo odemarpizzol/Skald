@@ -538,7 +538,7 @@ local function BuildGoalsTab(panel)
 
     local categoryRows, goalRows = {}, {}
     local chosen = 1
-    local goalPage = 1   -- the right page shows seven goals at a time: a long category goes over more pages
+    local goalPage, goalPages = 1, 1   -- the right page shows seven goals at a time: a long category goes over more pages
     local visibleCats
 
     for i, cat in ipairs(CATS) do
@@ -626,32 +626,14 @@ local function BuildGoalsTab(panel)
         goalRows[i] = row
     end
 
-    -- the pager, centred under the last goal: previous, "2 of 3", next (the wheel over the goals turns it too)
-    local pager = CreateFrame("Frame", nil, panel)
-    pager:SetSize(CW, 28)
-    pager:SetPoint("TOPLEFT", panel, "TOPLEFT", RIGHT_X, -430)
-    local function PagerButton(label, x, step)
-        local b = CreateFrame("Button", nil, pager)
-        b:SetSize(34, 28)
-        b:SetPoint("CENTER", pager, "CENTER", x, 0)
-        b.text = b:CreateFontString(nil, "OVERLAY", "SkaldHead")
-        b.text:SetPoint("CENTER", 0, 1)
-        b.text:SetText(label)
-        b.text:SetTextColor(head[1], head[2], head[3])
-        b:SetScript("OnClick", function() goalPage = goalPage + step; if refreshTab then refreshTab() end end)
-        b:SetScript("OnEnter", function(self) if self:GetAlpha() > 0.5 then self.text:SetTextColor(1, 0.9, 0.5) end end)
-        b:SetScript("OnLeave", function(self) self.text:SetTextColor(head[1], head[2], head[3]) end)
-        return b
-    end
-    local prevButton, nextButton = PagerButton("<", -62, -1), PagerButton(">", 62, 1)
-    local pageLabel = pager:CreateFontString(nil, "OVERLAY", "SkaldBody")
+    -- "2 of 3" under the last goal; the page corners and the wheel of the book turn the pages (see `pager` below)
+    local pageNote = CreateFrame("Frame", nil, panel)
+    pageNote:SetSize(CW, 28)
+    pageNote:SetPoint("TOPLEFT", panel, "TOPLEFT", RIGHT_X, -430)
+    local pageLabel = pageNote:CreateFontString(nil, "OVERLAY", "SkaldBody")
     pageLabel:SetPoint("CENTER", 0, 0)
     pageLabel:SetTextColor(body[1], body[2], body[3])
-    pager.label = pageLabel   -- for the tests
-    for _, row in ipairs(goalRows) do
-        row:EnableMouseWheel(true)
-        row:SetScript("OnMouseWheel", function(_, delta) goalPage = goalPage - delta; if refreshTab then refreshTab() end end)
-    end
+    pageNote.label = pageLabel   -- for the tests
 
     refreshTab = function()
         local db = SkaldCharDB
@@ -713,10 +695,9 @@ local function BuildGoalsTab(panel)
         local perPage = #goalRows
         local pages = math.max(1, math.ceil(#list / perPage))
         goalPage = math.max(1, math.min(goalPage, pages))
-        pager:SetShown(pages > 1)
+        goalPages = pages
+        pageNote:SetShown(pages > 1)
         pageLabel:SetText(string.format(UI.OF, goalPage, pages))
-        prevButton:SetAlpha(goalPage > 1 and 1 or 0.35)
-        nextButton:SetAlpha(goalPage < pages and 1 or 0.35)
         for i, row in ipairs(goalRows) do
             local g = list[(goalPage - 1) * perPage + i]
             if not g then
@@ -770,7 +751,13 @@ local function BuildGoalsTab(panel)
         end
     end
     pcall(Check)
-    return refreshTab
+    -- the corners and the wheel of the book turn the pages of the chosen category, as they do in the Saga
+    local pager = {
+        Turn = function(delta) goalPage = math.max(1, math.min(goalPages, goalPage + delta)) end,
+        CanPrev = function() return goalPage > 1 end,
+        CanNext = function() return goalPage < goalPages end,
+    }
+    return refreshTab, pager
 end
 
 SkaldAPI.AddTab("goals", UI.TAB, BuildGoalsTab)
