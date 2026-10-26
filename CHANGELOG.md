@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.41.0-beta
+
+- Pages of a day are filled to about nine tenths, and the last page of the day keeps room for the doodles at the foot: each one a different size, a little crooked and on its own height, scattered by a hand. `/skald density compact|comfy|airy` sets how much is left free (comfy by default; compact is the old way)
+- The doodles at the foot of a day grow with the density of the pages: smaller on compact pages, bigger on airy ones
+- The letter of the entries on the pages of a day grows with the density: one point more on comfy pages, two on airy ones
+- The Style tab has the density of the pages (compact, comfortable, airy) in a row under the size of the text
+- 19 new long-haul goals: 800, 1500 and 3000 quests; 10 000 and 25 000 creatures; 50 and 100 bosses; 15 and 30 dungeons; 25 and 35 lands; 30 flight paths; 5000 gold; 50 companion pets; 20 mounts; and pages written on 7, 30, 100 and 365 different days. Diaries that are already past them mark them quietly, with no page
+- Three new titles above Legend of the Road (1100, 1600 and 2200 points)
+- The goals of a long category (War, for one) go over more pages: the corners of the book or the mouse wheel, with "1 of 2" under the last goal
+- The three new titles have their own emblems (a lyre, an open book with a candle, and winged laurels)
+- The Skald.toc lists the Anniversary interface (20506) next to 16001, so the addon loads there without "load out of date addons"
+
 ## 0.40.0-beta
 
 - **The wax seal of your faction** closes the book: red for the Horde, blue for the Alliance, brown for neutral. The Style tab has a new option, "Seal of the book", to choose it by hand (art by the user).
