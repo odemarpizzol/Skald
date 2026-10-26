@@ -1,4 +1,4 @@
-## Interface: 16001
+## Interface: 16001, 20506
 ## Title: Skald
 ## Title-ptBR: Skald
 ## Notes: Automatically writes the epic chronicle of your journey through Azeroth. Use /skald.
