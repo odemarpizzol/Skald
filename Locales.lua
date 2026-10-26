@@ -4724,7 +4724,7 @@ ns.LOCALES = {
                 "Je n'oublierai pas le silence de «\194\160%s\194\160».",
                 "«\194\160%s\194\160» m'a mené là où la route s'oublie elle-même, et j'ai continué à marcher.",
                 "J'ai quitté le chemin pour «\194\160%s\194\160» et découvert que le monde est plus grand que ses cartes.",
-                "{npc} m'a demandé d'aller voir. Après «\194\160%s\194\160», je ne verrai plus jamais cet horizon de la même façon.",
+                "{npc} m'a demandé d'aller voir. Après «\194\160%s\194\160», je ne verrai plus jamais cet horizon de la même manière.",
                 "Le pays s'est ouvert lentement pour «\194\160%s\194\160», puis d'un seul coup.",
                 "Je me suis arrêté{g:|e} au bout de «\194\160%s\194\160» et j'ai laissé le vent me dire où j'étais.",
                 "«\194\160%s\194\160» fut une carte dessinée en marchant.",
