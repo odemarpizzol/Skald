@@ -689,7 +689,7 @@ local function BuildGoalsTab(panel)
         table.sort(steps)
         local rank = 1
         for i, step in ipairs(steps) do if earned >= step then rank = i end end
-        emblem:SetTexture(TEX .. "pt_title" .. math.min(rank - 1, 5))   -- the titles above the sixth wear its emblem until they have their own
+        emblem:SetTexture(TEX .. "pt_title" .. (rank - 1))
         local tw = titleLine.GetStringWidth and titleLine:GetStringWidth()
         if type(tw) ~= "number" then tw = 80 end
         emblem:ClearAllPoints()
