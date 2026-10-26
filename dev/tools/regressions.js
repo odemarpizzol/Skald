@@ -1688,7 +1688,7 @@ nextB._OnClick(nextB); nextB._OnClick(nextB); nextB._OnClick(nextB)   -- past th
 local last = label()
 local prevB = btn("<")
 prevB._OnClick(prevB)
-RES = (first == "1/2" and last == "2/2" and label() == "1/2") and "ok" or ("first " .. tostring(first) .. " last " .. tostring(last) .. " back " .. tostring(label()))`,
+RES = (first == "1 of 2" and last == "2 of 2" and label() == "1 of 2") and "ok" or ("first " .. tostring(first) .. " last " .. tostring(last) .. " back " .. tostring(label()))`,
 });
 
 console.log(failed ? `\n${failed} regression(s) FAILED` : '\nAll regressions passed');
