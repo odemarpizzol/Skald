@@ -64,3 +64,9 @@ issecretvalue=nil
 
 CURSOR=0
 function GetCursorPosition() return 0, CURSOR end
+-- the music of the game: what was asked of it is kept for the tests
+MUSIC = { played = {}, stopped = 0, cvars = { Sound_EnableAllSound = "1", Sound_EnableMusic = "1", Sound_MusicVolume = "0.40" } }
+function PlayMusic(id) MUSIC.played[#MUSIC.played + 1] = id end
+function StopMusic() MUSIC.stopped = MUSIC.stopped + 1 end
+function GetCVar(name) return MUSIC.cvars[name] end
+function SetCVar(name, value) MUSIC.cvars[name] = tostring(value) end

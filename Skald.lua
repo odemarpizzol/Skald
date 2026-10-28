@@ -234,6 +234,62 @@ K.RECORD_FLAG = {
 
 -- Entries store the event type, its argument and which phrase was drawn;
 -- the text is rendered when the window is shown.
+-- Permanent progress for the goals that used to be counted from the pages left in the diary: a page that leaves
+-- at the cap no longer takes its share with it. Days are kept as a set of dates, so a date seen again counts once.
+K.STATS_SCHEMA = 1
+K.Tally = function(stats, e)
+    local kind = e.kind
+    if kind == "quest" then
+        if (e.cend or 0) >= 2 then stats.chains = (stats.chains or 0) + 1 end
+    elseif kind == "boss" then
+        if (e.tries or 0) >= 1 then stats.hardBoss = (stats.hardBoss or 0) + 1 end
+    elseif kind == "tame" then
+        if e.sub == "level" then stats.petLevel = (stats.petLevel or 0) + 1 end
+    elseif kind == "reunion" then
+        stats.reunions = (stats.reunions or 0) + 1
+    elseif kind == "guild" then
+        stats.guild = 1
+    end
+    if type(e.t) == "number" then
+        local d = date("%Y%m%d", e.t)
+        stats.dayset = stats.dayset or {}
+        if not stats.dayset[d] then
+            stats.dayset[d] = true
+            stats.daysN = (stats.daysN or 0) + 1
+        end
+    end
+end
+
+-- A favourite or a line written by hand is the reader's own: the cap never takes it.
+K.IsPersonal = function(e) return e.fav or e.kind == "note" end
+
+-- Keeps the diary to the cap by letting the oldest pages go, leaving the personal ones. When only those are left
+-- the diary stays above the cap: nothing the reader kept is ever deleted. Done in place, as other code holds the table.
+K.Trim = function(db)
+    local entries = db.entries
+    local n = #entries
+    local drop = n - MAX_ENTRIES
+    if drop > 0 then
+        local w = 0
+        for i = 1, n do
+            local e = entries[i]
+            if drop > 0 and not K.IsPersonal(e) then
+                drop = drop - 1
+            else
+                w = w + 1
+                entries[w] = e
+            end
+        end
+        for i = n, w + 1, -1 do entries[i] = nil end
+        -- inserting a page and dropping an older one leaves the count and the last page as they were
+        if w < n then ns.layoutRev = (ns.layoutRev or 0) + 1 end
+    end
+    if #entries > MAX_ENTRIES and not K.overWarned then
+        K.overWarned = true
+        Say(string.format(L.OVER_CAP, MAX_ENTRIES))
+    end
+end
+
 local function AddEntry(kind, arg, zone, extra)
     local db = Journal()
     if not db then return end
@@ -299,12 +355,11 @@ local function AddEntry(kind, arg, zone, extra)
     entry.idx = idx
 
     table.insert(db.entries, entry)
-    while #db.entries > MAX_ENTRIES do
-        table.remove(db.entries, 1)
-    end
+    K.Trim(db)
 
     -- Lifetime counters survive the entry cap.
     local stats = db.stats
+    K.Tally(stats, entry)
     stats.counts[kind] = (stats.counts[kind] or 0) + 1
     if kind == "quest" and type(entry.tier) == "number" then
         stats.tiers = stats.tiers or {}
@@ -1015,6 +1070,21 @@ local function MigrateStats(db)
         end
         db.lastIdx = last
     end
+    -- Progress the goals read from the pages is kept apart from them, so it no longer shrinks when old pages leave.
+    -- Done once per schema, from the pages still there; the highest of the two is kept, so nothing counted drops.
+    if (s.sv or 0) < K.STATS_SCHEMA then
+        local seen = {}
+        for _, e in ipairs(db.entries) do K.Tally(seen, e) end
+        for _, key in ipairs({ "chains", "hardBoss", "petLevel", "reunions", "guild" }) do
+            s[key] = math.max(s[key] or 0, seen[key] or 0)
+        end
+        s.dayset = s.dayset or {}
+        for d in pairs(seen.dayset or {}) do s.dayset[d] = true end
+        local days = 0
+        for _ in pairs(s.dayset) do days = days + 1 end
+        s.daysN = math.max(s.daysN or 0, days)
+        s.sv = K.STATS_SCHEMA
+    end
     db.version = DB_VERSION
 end
 
@@ -1085,6 +1155,19 @@ end
 
 -- Brings back the most recently archived diary. The diary in use goes to the archive in
 -- its place, so nothing is lost either way. Returns true when something was restored.
+-- What describes the moment of play and not the book is not brought back with a diary: the flags, the day in
+-- progress and the professions are looked at afresh (silently), and the guild is read again right now, so restoring
+-- does not write a "joined" page or a day twice. Used after an archive or a backup is put in place.
+ns.ReadAfresh = function(db)
+    db.flags = {}
+    db.days, db.today = nil, nil            -- the days of the restored diary are not kept
+    db.skills, db.skillsInit = nil, nil     -- professions are looked at afresh, silently
+    db.lastIdx = nil
+    db.guild = (GetGuildInfo and GetGuildInfo("player")) or false
+    db.guildSeen = true
+    MigrateStats(db)
+end
+
 local function RestoreLatestArchive()
     local db = Journal()
     local archive = db and db.previous
@@ -1105,15 +1188,8 @@ local function RestoreLatestArchive()
     -- Without that state the map keys of the zones are made again from the old pages (else a zone told under its
     -- name in another language would be written twice).
     if not old.state then db.mapKeysDone = nil end
-    db.flags = {}
-    db.days, db.today = nil, nil            -- the days of the restored diary are not kept
-    db.skills, db.skillsInit = nil, nil     -- professions are looked at afresh, silently
-    db.lastIdx = nil
-    -- Guild is read again right now, so restoring does not write a "joined" page.
-    db.guild = (GetGuildInfo and GetGuildInfo("player")) or false
-    db.guildSeen = true
     db.version = DB_VERSION                  -- counters are already right: no recount
-    MigrateStats(db)
+    ns.ReadAfresh(db)
     ns.layoutRev = (ns.layoutRev or 0) + 1   -- the pages are other ones, whatever their count and last page
     return true
 end
@@ -1394,11 +1470,13 @@ local function InsertNote(t, zone, text, ses)
     local db = Journal()
     local at = #db.entries
     while at > 0 and (db.entries[at].t or 0) > t do at = at - 1 end
-    table.insert(db.entries, at + 1, { t = t, zone = zone or "", kind = "note", arg = text, idx = 1, ses = ses })
-    while #db.entries > MAX_ENTRIES do table.remove(db.entries, 1) end
-    -- At the cap the oldest page leaves as the note comes in: the count and the last page stay the same, so the
-    -- cached layout would not notice.
+    local note = { t = t, zone = zone or "", kind = "note", arg = text, idx = 1, ses = ses }
+    table.insert(db.entries, at + 1, note)
+    if db.stats then K.Tally(db.stats, note) end
+    -- A page is added in the middle: the count and the last page may stay the same, so the cached layout would
+    -- not notice (Trim also bumps it when it lets an older page go).
     ns.layoutRev = (ns.layoutRev or 0) + 1
+    K.Trim(db)
 end
 
 -- A note on a day: now, if it is today; otherwise just after that day's last page.
@@ -1421,6 +1499,8 @@ local function ConvertOldNotes()
     end
     db.notes = nil
 end
+
+ns.InsertNote, ns.ResetJournal, ns.MigrateStats = InsertNote, ResetJournal, MigrateStats
 
 -- Fonts of the design (Cinzel, EB Garamond, Caveat; SIL Open Font License, see Fonts/).
 -- If the game cannot load one, the quest face of the game stands in at a smaller size.
@@ -1470,6 +1550,24 @@ do
 end
 
 K.TEX = "Interface\\AddOns\\Skald\\Textures\\skald2\\"
+-- The looks of the tabs (Style tab). Every picture is 256x128 shown at half size, the same leather 110x31 inside, so a
+-- look changes the picture and the writing only: where the letters go (x, width) and their colour, shut and open.
+K.TAB_STYLE_ORDER = { "leather", "ribbon", "brass", "parchment", "wood" }
+K.TAB_STYLES = {
+    leather   = { idle = "tab_idle", active = "tab_active", x = 21, w = 78, ink = { 0.92, 0.86, 0.72 }, inkOn = { 1, 0.94, 0.78 } },
+    ribbon    = { idle = "tab_ribbon_%s_idle", active = "tab_ribbon_active", x = 14, w = 90, ink = { 1, 0.97, 0.90 }, inkOn = { 0.30, 0.18, 0.05 } },
+    brass     = { idle = "tab_brass_idle", active = "tab_brass_active", x = 12, w = 90, ink = { 0.98, 0.93, 0.78 }, inkOn = { 0.30, 0.18, 0.04 } },
+    parchment = { idle = "tab_parchment_idle", active = "tab_parchment_active", x = 14, w = 88, ink = { 0.28, 0.17, 0.08 }, inkOn = { 0.28, 0.17, 0.08 } },
+    wood      = { idle = "tab_wood_idle", active = "tab_wood_active", x = 22, w = 74, ink = { 0.95, 0.80, 0.42 }, inkOn = { 1, 0.90, 0.55 } },
+}
+-- the shut ribbons are all the wine red of the book; the open one is the golden ribbon
+K.RIBBON_COLORS = {}   -- one colour for every shut ribbon (a table, so a colour can be given to a tab later)
+function K.TabStyle() return K.TAB_STYLES[SkaldDB and SkaldDB.tabStyle or "leather"] or K.TAB_STYLES.leather end
+function K.TabPicture(id, active)
+    local st = K.TabStyle()
+    if active then return K.TEX .. st.active end
+    return K.TEX .. string.format(st.idle, K.RIBBON_COLORS[id] or "red")
+end
 -- The wax seal that closes the book, by the faction the game reports (anything else is neutral).
 function ns.CloseSeal(faction)
     if faction == "Horde" then return "ui_waxseal_horde" end
@@ -1560,8 +1658,6 @@ K.C_TIME  = { 0.541, 0.416, 0.227 }   -- #8A6A3A
 K.C_NOTE  = { 0.353, 0.227, 0.102 }   -- #5A3A1A
 K.C_HDR   = { 0.478, 0.290, 0.180 }   -- #7A4A2E
 K.INKS = { { 0.353, 0.227, 0.102 }, { 0.180, 0.165, 0.227 }, { 0.431, 0.118, 0.102 } }   -- sepia, iron gall, burgundy
-K.TAB_OFF = { 0.353, 0.227, 0.141 }   -- #5A3A24
-K.TAB_ON  = { 0.62, 0.30, 0.22 }      -- leather warmed to the red of the lit buttons
 
 K.BOOK_W, K.BOOK_H = 980, 580
 K.BOOK_FIT_W, K.BOOK_FIT_H, K.BOOK_MIN_SCALE = 0.96, 0.94, 0.5   -- how much of the screen the book may take, and the smallest it is drawn
@@ -2952,7 +3048,8 @@ local function CreateWindow()
                     y = 40
                 end
                 page.blocks[#page.blocks + 1] = block
-                if block.entry then entryPage[block.entry] = #pages end
+                if block.entry then entryPage[block.entry] = #pages
+                elseif block.closing and day.summary then entryPage[day.summary] = #pages end
                 y = y + block.h + K.GAP
             end
             page.note = true
@@ -3295,27 +3392,27 @@ local function CreateWindow()
         b:SetFrameLevel(f:GetFrameLevel() + 2)
         b:SetSize(112, 34)
         b.top = -(86 + (order - 1) * 40)
+        -- the art is 256x128 shown at half size: the leather itself is 110x31 and sits 10,7 inside, the glow of the open tab around it
         b.tex = b:CreateTexture(nil, "ARTWORK")
-        b.tex:SetAllPoints()
-        b.tex:SetTexture(K.TEX .. "tab")
-        b.tex:SetTexCoord(0, 112 / 128, 0, 34 / 64)
+        b.tex:SetSize(128, 64)
+        b.tex:SetPoint("TOPLEFT", b, "TOPLEFT", -10, 7)
+        b.tex:SetTexture(K.TabPicture(id, false))
         b.text = b:CreateFontString(nil, "OVERLAY", "SkaldBody")
-        b.text:SetPoint("LEFT", 17, 0)
+        b.text:SetPoint("LEFT", 21, 0)
+        b.text:SetWidth(78)   -- between the notch and the brass strap
+        b.text:SetJustifyH("CENTER")
         b.text:SetText(label)
-        b.gold = b:CreateTexture(nil, "OVERLAY")   -- the bookmark line of the tab that is open
-        b.gold:SetColorTexture(K.BTN.gold[1], K.BTN.gold[2], K.BTN.gold[3], 1)
-        b.gold:SetPoint("BOTTOMLEFT", 10, 5)
-        b.gold:SetPoint("BOTTOMRIGHT", -14, 5)
-        b.gold:SetHeight(2)
-        b.gold:Hide()
         function b:SetActive(active)
             self.active = active and true or false
             self:ClearAllPoints()
-            self:SetPoint("TOPLEFT", f, "TOPLEFT", self.active and 0 or 12, self.top)
-            local c = self.active and K.TAB_ON or K.TAB_OFF
-            self.tex:SetVertexColor(c[1], c[2], c[3])
-            self.gold:SetShown(self.active)
-            if self.active then self.text:SetTextColor(1, 0.94, 0.78) else self.text:SetTextColor(0.92, 0.86, 0.72) end
+            self:SetPoint("TOPLEFT", f, "TOPLEFT", self.active and -26 or -14, self.top)   -- the brass strap shows against the spine
+            local st = K.TabStyle()
+            self.tex:SetTexture(K.TabPicture(id, self.active))
+            self.text:ClearAllPoints()
+            self.text:SetPoint("LEFT", st.x, 0)
+            self.text:SetWidth(st.w)
+            local c = self.active and st.inkOn or st.ink
+            self.text:SetTextColor(c[1], c[2], c[3])
         end
         b:SetActive(false)
         b:SetScript("OnClick", function() f:ShowSection(id) end)
@@ -3325,25 +3422,28 @@ local function CreateWindow()
     MakeTab("cover", L.SEC_COVER, 1)
     MakeTab("index", L.SEC_INDEX, 2)
     MakeTab("days", L.SEC_DAYS, 3)
-
+    function f:ApplyTabStyle() for _, b in pairs(tabs) do b:SetActive(b.active) end end
     local panels, panelOrder = {}, {}
     -- The tabs in the order of the book: the diary itself, what it holds, then the settings below, a little apart.
-    local TAB_RANK = { cover = 1, index = 2, days = 3, goals = 4, saga = 4.5, pets = 5, map = 6, style = 20, notices = 21, options = 22 }
+    local TAB_RANK = { cover = 1, index = 2, days = 3, search = 3.5, bard = 3.7, goals = 4, saga = 4.5, pets = 5, map = 6, settings = 20 }
     local function LayoutTabs()
         local ids = {}
-        for id in pairs(tabs) do ids[#ids + 1] = id end
+        for id, b in pairs(tabs) do b:Show(); ids[#ids + 1] = id end
         table.sort(ids, function(a, b)
             local ra, rb = TAB_RANK[a] or 10, TAB_RANK[b] or 10
             if ra ~= rb then return ra < rb end
             return a < b
         end)
+        -- the column never runs into the foot of the cover: with many tabs the step between them closes a little
+        local step = 40
+        if #ids > 1 then step = math.min(40, math.floor((K.BOOK_H - 56 - 86 - 14 - 34) / (#ids - 1))) end
         local y = 86
         for _, id in ipairs(ids) do
             local b = tabs[id]
             if (TAB_RANK[id] or 10) >= 20 and not ids.gap then ids.gap = true; y = y + 14 end
             b.top = -y
             b:SetActive(b.active)
-            y = y + 40
+            y = y + step
         end
     end
     function f:AddTab(id, label, build)
@@ -3354,6 +3454,7 @@ local function CreateWindow()
         panel:SetPoint("TOPLEFT", f, "TOPLEFT", K.PAGE_XS[1] + 30, -(K.PAGE_Y + K.TOP_Y))
         panel:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -54, 70)
         panel:Hide()
+        panel.tabButton = button   -- a tab may mark its own button (the Bard's note while the music plays)
         local entry = { button = button, frame = panel }
         panels[id] = entry
         panelOrder[#panelOrder + 1] = id
@@ -3445,7 +3546,7 @@ local function CreateWindow()
         else
             for _, s in ipairs(sides) do Clear(s) end
             -- the settings tabs are numbered on in Roman figures, between the sprigs of laurel
-            local first = K.TAB_FOLIO[view]
+            local first = (pager and pager.Folio and pager.Folio()) or K.TAB_FOLIO[view]
             if first then
                 for i, s in ipairs(sides) do
                     s.num:SetText(Hex(K.C_MUTED) .. RomanLower(first + i - 1) .. "|r")
@@ -3561,9 +3662,11 @@ local function CreateWindow()
             end
         end
 
-        -- the tabs (Options, Style, Map): inside their page, never across the gutter
+        -- the tabs (Settings with its three pages, Map...): inside their page, never across the gutter
         for id, p in pairs(panels) do
+          for _, settingsPage in ipairs(id == "settings" and K.SETTINGS_PAGES or { false }) do   -- each page of the settings in turn
             view = id
+            if settingsPage then p.frame.GoTo(settingsPage.id) end
             f:Refresh()
             local pl, _, _, pb = Rect(p.frame)
             if pl then
@@ -3585,6 +3688,7 @@ local function CreateWindow()
                     end
                 end)
             end
+          end
         end
 
         view, spread = savedView, savedSpread
@@ -3965,6 +4069,8 @@ SkaldAPI.RIGHT_X = K.RIGHT_X
 SkaldAPI.CW = K.CW
 SkaldAPI.AddEntry = AddEntry
 SkaldAPI.RefreshWindow = function() if window and window:IsShown() then window:Refresh() end end
+SkaldAPI.IsBookOpen = function() return window ~= nil and window:IsShown() end
+SkaldAPI.OpenSection = function(id) if window then window:ShowSection(id); window:Show() end end   -- the book open at a tab
 -- What the game itself counts (creatures, dungeons, bosses): more exact than the diary's own estimate.
 -- The collections as the game counts them (mounts and companion pets owned). `ready` only when a journal answered
 -- with a catalogue, so a journal not yet loaded is not taken for an empty collection. Asked at most every 20 seconds.
@@ -5560,6 +5666,11 @@ ns.EditFavNote = function(e)
     if e then StaticPopup_Show("SKALD_FAVNOTE", nil, nil, e) end
 end
 SkaldAPI.OpenEntry = function(e) return window and window:OpenEntry(e) or false end
+-- The small picture a page has in the book (the item of a loot, the seal of a quest, the icon of its kind).
+SkaldAPI.EntryIcon = function(e)
+    return (e.kind == "loot" and ItemIcon(e)) or (e.kind == "note" and (K.TEX .. "dd_scroll"))
+        or (e.kind == "quest" and e.tier and (K.SEAL_PATH .. e.tier)) or EventIconPath(e.kind, e)
+end
 SkaldAPI.Session = function() return loginTime end
 SkaldAPI.RegionStats = ns.RegionStats
 SkaldAPI.ZoneIdOfMap = ns.ZoneIdOfMap
@@ -5956,6 +6067,16 @@ end
 -- Someone I shared a dungeon with has joined my group again after a while: the page tells where we were.
 K.REUNION_GAP, K.REUNION_EVERY = 86400, 3 * 86400
 Mile.reunionTold = {}
+
+-- After the whole diary is swapped (a backup restored or put back): what the session held about the old one goes,
+-- and the book is drawn again.
+ns.RefreshDiary = function()
+    K.nameSet = nil
+    K.overWarned = nil
+    Mile.reunionTold = {}
+    ns.layoutRev = (ns.layoutRev or 0) + 1
+    if window and window:IsShown() then window:Refresh() end
+end
 Mile.CheckReunion = function()
     local db = Journal()
     if not ready or not db or Settings().companions == false then return end
@@ -6961,7 +7082,6 @@ local function BuildOptions(panel)
     end
     return refresh
 end
-SkaldAPI.AddTab("options", L.TAB_OPTIONS, BuildOptions)
 
 local function BuildStyle(panel)
     local refresh
@@ -7049,11 +7169,11 @@ local function BuildStyle(panel)
         colorBoxes[#colorBoxes + 1] = cb
     end
 
-    PageRule(panel, K.RIGHT_X, -142)
-    SectionLabel(panel, L.OPT_COVERTITLE, K.RIGHT_X, -162)
+    PageRule(panel, K.RIGHT_X, -134)
+    SectionLabel(panel, L.OPT_COVERTITLE, K.RIGHT_X, -146)
     local edit = CreateFrame("EditBox", nil, panel, "BackdropTemplate")
     edit:SetSize(K.CW, 28)
-    edit:SetPoint("TOPLEFT", K.RIGHT_X, -188)
+    edit:SetPoint("TOPLEFT", K.RIGHT_X, -168)
     edit:SetAutoFocus(false)
     edit:SetMaxLetters(28)
     edit:SetFontObject("SkaldBody")
@@ -7070,16 +7190,16 @@ local function BuildStyle(panel)
     edit:SetScript("OnEnterPressed", function(self) SaveTitle(); self:ClearFocus() end)
     edit:SetScript("OnEscapePressed", function(self) self:SetText(Settings().coverTitle or ""); self:ClearFocus() end)
     edit:SetScript("OnEditFocusLost", SaveTitle)
-    NoteText(panel, K.RIGHT_X, -222):SetText(L.COVERTITLE_HINT)
+    NoteText(panel, K.RIGHT_X, -200):SetText(L.COVERTITLE_HINT)
 
     -- The size of the book (never more than the screen holds).
-    PageRule(panel, K.RIGHT_X, -262)
-    SectionLabel(panel, L.OPT_BOOKSIZE, K.RIGHT_X, -282)
-    PlateGroup(panel, K.RIGHT_X, -308, 336, 26)
+    PageRule(panel, K.RIGHT_X, -234)
+    SectionLabel(panel, L.OPT_BOOKSIZE, K.RIGHT_X, -246)
+    PlateGroup(panel, K.RIGHT_X, -268, 336, 26)
     local sizeButtons = {}
     for i, size in ipairs(K.BOOK_SIZES) do
         local b = MakeFlatButton(panel, 64, 26, size == "auto" and L.SIZE_AUTO or string.format("%d%%", size * 100))
-        b:SetPoint("TOPLEFT", K.RIGHT_X + (i - 1) * 68, -308)
+        b:SetPoint("TOPLEFT", K.RIGHT_X + (i - 1) * 68, -268)
         b:SetScript("OnClick", function()
             Settings().bookScale = (size ~= "auto") and size or nil
             if window then window:FitScale() end
@@ -7089,13 +7209,13 @@ local function BuildStyle(panel)
     end
 
     -- The wax seal that closes the book.
-    PageRule(panel, K.RIGHT_X, -352)
-    SectionLabel(panel, L.OPT_SEAL, K.RIGHT_X, -372)
-    PlateGroup(panel, K.RIGHT_X, -398, 336, 26)
+    PageRule(panel, K.RIGHT_X, -304)
+    SectionLabel(panel, L.OPT_SEAL, K.RIGHT_X, -316)
+    PlateGroup(panel, K.RIGHT_X, -338, 336, 26)
     local sealButtons = {}
     for i, key in ipairs({ "auto", "horde", "alliance", "neutral" }) do
         local b = MakeFlatButton(panel, 82, 26, L.SEAL_NAMES[key])
-        b:SetPoint("TOPLEFT", K.RIGHT_X + (i - 1) * 85, -398)
+        b:SetPoint("TOPLEFT", K.RIGHT_X + (i - 1) * 85, -338)
         b:SetScript("OnClick", function()
             Settings().sealStyle = (key ~= "auto") and key or nil
             if window then window:ApplySeal() end
@@ -7104,8 +7224,33 @@ local function BuildStyle(panel)
         sealButtons[key] = b
     end
 
+    -- The look of the tabs: a step back, the name (a click goes on), a step forward.
+    PageRule(panel, K.RIGHT_X, -374)
+    SectionLabel(panel, L.OPT_TABLOOK, K.RIGHT_X, -386)
+    PlateGroup(panel, K.RIGHT_X, -408, 336, 26)
+    local function StepLook(delta)
+        local order, now = K.TAB_STYLE_ORDER, 1
+        for i, key in ipairs(order) do if key == (Settings().tabStyle or "leather") then now = i end end
+        Settings().tabStyle = order[(now - 1 + delta) % #order + 1]
+        if window then window:ApplyTabStyle() end
+        refresh()
+    end
+    local lookBack = MakeFlatButton(panel, 44, 26, "<")
+    lookBack:SetPoint("TOPLEFT", K.RIGHT_X, -408)
+    lookBack:SetScript("OnClick", function() StepLook(-1) end)
+    local lookName = MakeFlatButton(panel, 244, 26, "")
+    lookName:SetPoint("TOPLEFT", K.RIGHT_X + 46, -408)
+    lookName:SetScript("OnClick", function() StepLook(1) end)
+    local lookNext = MakeFlatButton(panel, 44, 26, ">")
+    lookNext:SetPoint("TOPLEFT", K.RIGHT_X + 292, -408)
+    lookNext:SetScript("OnClick", function() StepLook(1) end)
+    panel.lookName, panel.lookBack, panel.lookNext = lookName, lookBack, lookNext   -- for the tests
+
     refresh = function()
         local s = Settings()
+        for i, key in ipairs(K.TAB_STYLE_ORDER) do
+            if key == (s.tabStyle or "leather") then lookName.text:SetText(L.TAB_LOOKS[i]) end
+        end
         local tone = s.tone or "epic"
         for key, b in pairs(sealButtons) do b:SetActive(key == (s.sealStyle or "auto")) end
         for key, b in pairs(toneButtons) do b:SetActive(key == tone) end
@@ -7125,7 +7270,6 @@ local function BuildStyle(panel)
     end
     return refresh
 end
-SkaldAPI.AddTab("style", L.TAB_STYLE, BuildStyle)
 
 local function BuildNotices(panel)
     local refresh
@@ -7204,7 +7348,44 @@ local function BuildNotices(panel)
     end
     return refresh
 end
-SkaldAPI.AddTab("notices", L.TAB_NOTICES, BuildNotices)
+
+-- The settings are one tab, "Settings", with three spreads (Style, Notices, Options) that the corners of the book turn, as in
+-- any tab with pages of its own; the folio numerals at the foot go on (vii, ix, xi).
+K.SETTINGS_PAGES = { { id = "style", build = BuildStyle }, { id = "notices", build = BuildNotices }, { id = "options", build = BuildOptions } }
+K.SETTINGS_FOLIO = 7
+local function BuildSettings(panel)
+    local subs, refreshes = {}, {}
+    local current = 1
+    for i, page in ipairs(K.SETTINGS_PAGES) do
+        local sub = CreateFrame("Frame", nil, panel)
+        sub:SetAllPoints(panel)
+        sub:Hide()
+        local ok, refresh = pcall(page.build, sub)
+        if ok and type(refresh) == "function" then refreshes[i] = refresh end
+        subs[i] = sub
+    end
+    local function ShowPage()
+        for i, sub in ipairs(subs) do
+            if i == current then sub:Show() else sub:Hide() end
+        end
+        if refreshes[current] then pcall(refreshes[current]) end
+    end
+    panel.subs = subs   -- for the tests
+    function panel.GoTo(id)
+        for i, page in ipairs(K.SETTINGS_PAGES) do if page.id == id then current = i end end
+        ShowPage()
+    end
+    local pager = {
+        Turn = function(delta) current = math.max(1, math.min(#subs, current + delta)); ShowPage() end,
+        CanPrev = function() return current > 1 end,
+        CanNext = function() return current < #subs end,
+        Folio = function() return K.SETTINGS_FOLIO + (current - 1) * 2 end,
+        Current = function() return current end,
+    }
+    panel.pager = pager
+    return ShowPage, pager
+end
+SkaldAPI.AddTab("settings", L.TAB_SETTINGS, BuildSettings)
 
 local spokenHook = CreateFrame("Frame")
 spokenHook:RegisterEvent("PLAYER_LOGIN")
@@ -7573,6 +7754,12 @@ SlashCmdList["SKALD"] = function(msg)
         end
     elseif msg == "export" then
         ShowExport()
+    elseif msg == "backup" then
+        if ns.Backup then ns.Backup.ShowExport() end
+    elseif msg == "restore" then
+        if ns.Backup then ns.Backup.ShowRestore() end
+    elseif msg == "restore undo" then
+        if ns.Backup then ns.Backup.ConfirmUndo() end
     elseif msg:match("^size") then
         -- /skald size auto|80|100|125|150
         local arg = strtrim(raw:sub(5)):lower():gsub("%%", "")

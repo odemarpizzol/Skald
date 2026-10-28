@@ -23,3 +23,6 @@ Atlas.lua
 Goals.lua
 Saga.lua
 ZoneCard.lua
+Backup.lua
+Search.lua
+Bard.lua

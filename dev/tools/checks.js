@@ -16,7 +16,7 @@ const ok = msg => console.log('  ok    ' + msg);
 
 // 1. syntax
 console.log('Syntax');
-for (const f of ['Skald/Locales.lua', 'Skald/Curated.lua', 'Skald/XPTiers.lua', 'Skald/Skald.lua', 'Skald/Atlas.lua', 'Skald/Goals.lua', 'Skald/Saga.lua', 'Skald/ZoneCard.lua'].concat(fs.existsSync(path.join(ADDONS, 'SkaldAtlas')) ? ['SkaldAtlas/SkaldAtlas.lua'] : [])) {
+for (const f of ['Skald/Locales.lua', 'Skald/Curated.lua', 'Skald/XPTiers.lua', 'Skald/Skald.lua', 'Skald/Atlas.lua', 'Skald/Goals.lua', 'Skald/Saga.lua', 'Skald/ZoneCard.lua', 'Skald/Backup.lua', 'Skald/Search.lua', 'Skald/Bard.lua'].concat(fs.existsSync(path.join(ADDONS, 'SkaldAtlas')) ? ['SkaldAtlas/SkaldAtlas.lua'] : [])) {
   const installed = path.join(ADDONS, f);
   const p = f === 'SkaldAtlas/SkaldAtlas.lua' && !fs.existsSync(installed)
     ? path.resolve(__dirname, '../skald-atlas-repo/SkaldAtlas.lua') : installed;
@@ -72,7 +72,7 @@ function session(locale) {
   const run = c => { if (lauxlib.luaL_dostring(L, to_luastring(c))) throw new Error(to_jsstring(lua.lua_tolstring(L, -1))); };
   const set = (k, v) => { lua.lua_pushstring(L, to_luastring(v)); lua.lua_setglobal(L, to_luastring(k)); };
   run(fs.readFileSync(path.join(__dirname, 'mock.lua'), 'utf8'));
-  for (const [k, f] of [['LOC', 'Locales.lua'], ['CUR', 'Curated.lua'], ['XPT', 'XPTiers.lua'], ['CH', 'Skald.lua'], ['AT', 'Atlas.lua'], ['GL', 'Goals.lua'], ['SG', 'Saga.lua'], ['ZC', 'ZoneCard.lua']])
+  for (const [k, f] of [['LOC', 'Locales.lua'], ['CUR', 'Curated.lua'], ['XPT', 'XPTiers.lua'], ['CH', 'Skald.lua'], ['AT', 'Atlas.lua'], ['GL', 'Goals.lua'], ['SG', 'Saga.lua'], ['ZC', 'ZoneCard.lua'], ['BK', 'Backup.lua'], ['SR', 'Search.lua'], ['BD', 'Bard.lua']])
     set(k, fs.readFileSync(path.join(ADDONS, 'Skald', f), 'utf8'));
   run(`__locale="${locale}"; frames={}; SkaldDB={}; SkaldCharDB=nil; FONTS={}
 TIMERS={}; C_Timer={After=function(t,fn) table.insert(TIMERS,fn) end}
@@ -98,16 +98,18 @@ function GetMoney() return 0 end
 Minimap=CreateFrame("Frame","Minimap",UIParent); function GetCursorPosition() return 100,100 end
 local ns={}
 assert(load(LOC,"=L"))("Skald",ns); assert(load(CUR,"=U"))("Skald",ns); assert(load(XPT,"=X"))("Skald",ns)
-assert(load(CH,"=C"))("Skald",ns); assert(load(AT,"=A"))("Skald",ns); assert(load(GL,"=G"))("Skald",ns); assert(load(SG,"=S"))("Skald",ns); assert(load(ZC,"=Z"))("Skald",ns)
+assert(load(CH,"=C"))("Skald",ns); assert(load(AT,"=A"))("Skald",ns); assert(load(GL,"=G"))("Skald",ns); assert(load(SG,"=S"))("Skald",ns); assert(load(ZC,"=Z"))("Skald",ns); assert(load(BK,"=B"))("Skald",ns); assert(load(SR,"=R"))("Skald",ns); assert(load(BD,"=D"))("Skald",ns)
 local function fire(ev,...) for _,f in ipairs(frames) do if f._OnEvent then f._OnEvent(f,ev,...) end end end
 fire("ADDON_LOADED","Skald"); fire("PLAYER_LOGIN"); runTimers()
 local out={}
 local function btn(label) for i=#frames,1,-1 do local f=frames[i]; local tx=rawget(f,"text"); if tx and rawget(tx,"_text")==label and f._OnClick then return f end end end
 local win=_G.SkaldFrame; win:Show(); if win._OnShow then win._OnShow(win) end
 out.book = win ~= nil
-out.tabStyle = btn(ns.LOCALES["${locale}"].TAB_STYLE) ~= nil
+local settingsBtn = btn(ns.LOCALES["${locale}"].TAB_SETTINGS)
+out.tabStyle = settingsBtn ~= nil and select(1, pcall(settingsBtn._OnClick, settingsBtn))
 local mapLabel = ({enUS="Map",ptBR="Mapa",frFR="Carte"})["${locale}"]
-out.tabJourney = btn(ns.LOCALES["${locale}"].TAB_OPTIONS) ~= nil
+out.tabJourney = false
+for _, f in ipairs(frames) do local subs = rawget(f, "subs"); if type(subs) == "table" and #subs == 3 then out.tabJourney = true end end
 local mapBtn = btn(mapLabel)
 out.tabMap = mapBtn ~= nil and select(1, pcall(mapBtn._OnClick, mapBtn))
 out.minimap = ns.minimapButton ~= nil
@@ -139,8 +141,8 @@ for (const loc of ['enUS', 'ptBR', 'frFR']) {
     const [book, style, mapTab, qa, pet, hearth, revive, texts, journey, minimap, petsTab] = session(loc);
     const problems = [];
     if (book !== 'true') problems.push('the book did not open');
-    if (style !== 'true') problems.push('no Style tab');
-    if (journey !== 'true') problems.push('no Options tab');
+    if (style !== 'true') problems.push('no Settings tab');
+    if (journey !== 'true') problems.push('the Settings tab does not hold its three pages');
     if (mapTab !== 'true') problems.push('no Map tab (the map pins built into Skald)');
     if (petsTab !== 'true') problems.push('no Pets tab for a hunter, or the diet does not show, or a renamed pet is not followed');
     if (minimap !== 'true') problems.push('no minimap button of its own');
