@@ -78,7 +78,15 @@ end
 
 function Bard.Play(i)
     local track = Bard.TRACKS[i]
-    if not track or not Bard.MusicOn() or type(PlayMusic) ~= "function" then return false end
+    if not track or type(PlayMusic) ~= "function" then return false end
+    if not Bard.MusicOn() then
+        -- the music of the game is off (Ctrl+M): say so in the chat too, not only on the page, once in a while
+        if not Bard.warned or GetTime() - Bard.warned > 8 then
+            Bard.warned = GetTime()
+            print("|cffffd100Skald|r: " .. L.BARD_MUSIC_OFF)
+        end
+        return false
+    end
     -- the number first, then the path of the same file: a client that does not know one of the two knows the other,
     -- and one that knows both just begins the same piece again at once
     local ok = pcall(PlayMusic, track.id)
@@ -340,18 +348,17 @@ local function BuildTab(panel)
     end
     -- With the book closed, a small plate says that a song plays: a note, its name and a button to stop it. A click opens
     -- the book at this tab, a drag moves it (the place is kept), a right click hides it until the next song.
-    -- The looks of the notice (the Bard tab chooses): "plate" is drawn by the code, the others are pictures (all in 512-wide
+    -- The looks of the notice (the Bard tab chooses): pictures (all in 512-wide
     -- canvases shown at half size): where the socket of the note, the button Stop and the name sit, in canvas points.
     -- Each picture is cut in three: the left cap (the socket of the note), a middle that is stretched and the right cap, so
     -- the notice is as wide as the name and the three buttons need (capL and capR are canvas points of the 512-wide art).
     local HUDS = {
-        plate = { w = 300, h = 36 },
         bar = { w = 340, h = 64, capL = 132, capR = 440, icon = { 84, 64, 62 }, stop = { 441, 63, 48 }, textX = 132, ink = { 1, 0.94, 0.78 } },
         scroll = { w = 340, h = 64, capL = 170, capR = 420, icon = { 122, 64, 60 }, stop = { 394, 64, 48 }, textX = 160, ink = { 0.25, 0.15, 0.08 } },
         wood = { w = 340, h = 64, capL = 130, capR = 450, icon = { 80, 64, 62 }, stop = { 443, 64, 48 }, textX = 130, ink = { 1, 0.94, 0.78 } },
         medal = { w = 360, h = 128, capL = 232, capR = 440, icon = { 118, 128, 105 }, stop = { 425, 127, 52 }, textX = 232, ink = { 1, 0.94, 0.78 }, lines = 2 },
     }
-    local mini = CreateFrame("Button", nil, UIParent, "BackdropTemplate")
+    local mini = CreateFrame("Button", nil, UIParent)
     mini:SetSize(236, 36)
     mini:SetFrameStrata("HIGH")   -- over the book too: a choice of look shows at once
     mini:SetClampedToScreen(true)
@@ -371,8 +378,6 @@ local function BuildTab(panel)
     local miniIcon = mini:CreateTexture(nil, "ARTWORK")
     local miniName = mini:CreateFontString(nil, "OVERLAY", "SkaldBody")
     miniName:SetJustifyH("LEFT")
-    local miniStop = SkaldAPI.MakeButton(mini, 56, 24, L.BARD_TIP_STOP)    -- the plate's own button
-    miniStop:SetScript("OnClick", function() Bard.Stop(); if refresh then refresh() end end)
     local miniStopArt = CreateFrame("Button", nil, mini)                     -- the button Stop of a picture
     miniStopArt.tex = miniStopArt:CreateTexture(nil, "ARTWORK")
     miniStopArt.tex:SetAllPoints()
@@ -414,10 +419,9 @@ local function BuildTab(panel)
         local W, H = h.w, h.h
         mini:SetSize(W, H)
         -- from the right: Stop, then the song after, then the song before; the name has what is left
-        local plate = key == "plate"
-        local stopX = plate and (W - 6 - 25) or (W - (512 - h.stop[1]) / 2)
-        local stopHalf = plate and 25 or (h.stop[3] / 4)
-        local skip = plate and 24 or 26
+        local stopX = W - (512 - h.stop[1]) / 2
+        local stopHalf = h.stop[3] / 4
+        local skip = 26
         local nextX = stopX - stopHalf - 4 - skip / 2
         local prevX = nextX - skip - 4
         local textRight = prevX - skip / 2 - 6
@@ -425,22 +429,7 @@ local function BuildTab(panel)
         miniNext:ClearAllPoints(); miniNext:SetPoint("CENTER", mini, "TOPLEFT", nextX, -H / 2)
         miniPrev:ClearAllPoints(); miniPrev:SetPoint("CENTER", mini, "TOPLEFT", prevX, -H / 2)
         local iconX
-        if plate then
-            mini:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Buttons\\WHITE8X8", edgeSize = 1 })
-            mini:SetBackdropColor(0.20, 0.12, 0.07, 0.92)
-            mini:SetBackdropBorderColor(0.75, 0.58, 0.25, 1)
-            artL:Hide(); artM:Hide(); artR:Hide()
-            iconX = 20
-            miniIcon:ClearAllPoints(); miniIcon:SetSize(24, 24); miniIcon:SetPoint("CENTER", mini, "TOPLEFT", iconX, -H / 2)
-            miniIcon:SetTexture(TEX .. "bard_note_on")
-            miniName:ClearAllPoints(); miniName:SetPoint("LEFT", mini, "TOPLEFT", 38, -H / 2)
-            miniName:SetWidth(textRight - 38); miniName:SetHeight(0)
-            miniName:SetWordWrap(false)
-            miniName:SetTextColor(1, 0.94, 0.78)
-            miniStop:ClearAllPoints(); miniStop:SetPoint("CENTER", mini, "TOPLEFT", stopX, -H / 2); miniStop:Show()
-            miniStopArt:Hide()
-        else
-            mini:SetBackdrop(nil)
+        do
             local picture = TEX .. "hud_" .. key
             local left, right = h.capL / 2, (512 - h.capR) / 2
             artL:ClearAllPoints(); artL:SetPoint("TOPLEFT", mini, "TOPLEFT", 0, 0); artL:SetSize(left, H)
@@ -460,7 +449,6 @@ local function BuildTab(panel)
             miniName:SetHeight(h.lines and 36 or 0)
             miniName:SetWordWrap(h.lines ~= nil)
             miniName:SetTextColor(h.ink[1], h.ink[2], h.ink[3])
-            miniStop:Hide()
             miniStopArt:ClearAllPoints(); miniStopArt:SetSize(h.stop[3] / 2, h.stop[3] / 2)
             miniStopArt:SetPoint("CENTER", mini, "TOPLEFT", stopX, -h.stop[2] / 2)
             miniStopArt.tex:SetTexture(TEX .. "hud_" .. key .. "_stop")
@@ -489,6 +477,7 @@ local function BuildTab(panel)
     panel.miniPrev, panel.miniNext = miniPrev, miniNext   -- for the tests
 
     local function Animate()
+        off:SetText(Bard.MusicOn() and "" or L.BARD_MUSIC_OFF)
         local on = Bard.playing ~= nil
         local closed = SkaldAPI.IsBookOpen and not SkaldAPI.IsBookOpen()
         local deadline = rawget(mini, "previewUntil")
@@ -518,7 +507,7 @@ local function BuildTab(panel)
     note:SetText(L.BARD_VOL_NOTE)
 
     -- the look of the notice shown with the book shut: a step back, the name (a click goes on), a step forward
-    local HUD_ORDER = { "bar", "scroll", "wood", "medal", "plate" }
+    local HUD_ORDER = { "bar", "scroll", "wood", "medal" }
     local hudBack = SkaldAPI.MakeButton(panel, 44, 26, "<")
     hudBack:SetPoint("TOPLEFT", RIGHT_X, -412)
     local hudName = SkaldAPI.MakeButton(panel, 244, 26, "")

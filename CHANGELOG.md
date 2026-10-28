@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.42.1-beta
+
+- The Bard notice no longer has the plain "plate" look: four looks are left (leather bar, scroll, carved wood, medallion)
+- When the music of the game is off (Ctrl+M), the Bard says so on its page and in the chat, instead of staying silent
+
 ## 0.42.0-beta
 
 - A quest page can carry one more sentence about the moment, told only when it is true: the first quest of the day, the tenth, twentieth..., a quest far above or far below your level (with the gap in levels), a fat purse (with the gold), a fall just before, or a long absence. Each is drawn from its own phrases, never repeats within the last three quests, and never repeats a phrase within the last five of its kind
