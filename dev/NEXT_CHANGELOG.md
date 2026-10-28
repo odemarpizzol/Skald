@@ -1,2 +1,0 @@
-- The Bard notice no longer has the plain "plate" look: four looks are left (leather bar, scroll, carved wood, medallion)
-- When the music of the game is off (Ctrl+M), the Bard says so on its page and in the chat, instead of staying silent
