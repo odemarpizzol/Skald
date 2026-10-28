@@ -2392,7 +2392,7 @@ RES = (allLen and early and advanced and notYet and wraps and chance and stays a
     .. " chance=" .. tostring(chance) .. " stays=" .. tostring(stays) .. " quits=" .. tostring(quits))`,
 });
 
-run('the Bard notice: five looks stepped through on the Bard tab, a look just chosen shows at once with the book open, the button Stop of a picture stops, and the names are in every language', {
+run('the Bard notice: four looks stepped through on the Bard tab, a look just chosen shows at once with the book open, the button Stop of a picture stops, and the names are in every language', {
   pre: 'GetTime = function() return 100 end\n' + SAVED('{}'),
   body: `local B = ns.Bard
 local tab = btn("Bard"); tab._OnClick(tab)
@@ -2410,13 +2410,12 @@ local stopArt = tostring(rawget(p.miniStopArt.tex, "_tex")):find("hud_scroll_sto
 p.hudNext._OnClick(p.hudNext); p.hudNext._OnClick(p.hudNext)
 local medal = SkaldDB.bardHud == "medal" and tostring(rawget(p.miniStopArt.tex, "_tex")):find("hud_medal_stop", 1, true) ~= nil
 p.hudNext._OnClick(p.hudNext)
-local plate = SkaldDB.bardHud == "plate" and p.miniStopArt._shown ~= true
-p.hudNext._OnClick(p.hudNext)
-local round = SkaldDB.bardHud == "bar"
+local round = SkaldDB.bardHud == "bar"   -- four looks go round
 p.hudBack._OnClick(p.hudBack)
-local back = SkaldDB.bardHud == "plate"
-p.hudBack._OnClick(p.hudBack)
+local back = SkaldDB.bardHud == "medal"
 local named = rawget(p.hudName.text, "_text") == string.format(ns.LOCALES.enUS.BARD_HUD_LABEL, ns.LOCALES.enUS.BARD_HUDS[4])
+SkaldDB.bardHud = "plate"   -- a look that is gone (kept by an earlier version) falls back to the first one
+local gone = B.HudStyle() == "bar"
 SkaldDB.bardHud = "wood"; p.ApplyHud()
 B.Play(1)
 SkaldAPI.IsBookOpen = function() return false end
@@ -2433,10 +2432,10 @@ local stopped = B.playing == nil and skipNext and skipPrev
 local miss = {}
 for _, loc in ipairs({ "enUS", "ptBR", "frFR" }) do
   local L = ns.LOCALES[loc]
-  if type(L.BARD_HUD_LABEL) ~= "string" or not L.BARD_HUD_LABEL:find("%s", 1, true) or type(L.BARD_HUDS) ~= "table" or #L.BARD_HUDS ~= 5 then miss[#miss + 1] = loc end
+  if type(L.BARD_HUD_LABEL) ~= "string" or not L.BARD_HUD_LABEL:find("%s", 1, true) or type(L.BARD_HUDS) ~= "table" or #L.BARD_HUDS ~= 4 then miss[#miss + 1] = loc end
 end
-RES = (default and scroll and stopArt and medal and plate and round and back and named and shown and stopped and #miss == 0) and "ok"
-  or ("default=" .. tostring(default) .. " scroll=" .. tostring(scroll) .. " stopArt=" .. tostring(stopArt) .. " medal=" .. tostring(medal) .. " plate=" .. tostring(plate)
+RES = (default and scroll and stopArt and medal and round and back and named and gone and shown and stopped and #miss == 0) and "ok"
+  or ("default=" .. tostring(default) .. " scroll=" .. tostring(scroll) .. " stopArt=" .. tostring(stopArt) .. " medal=" .. tostring(medal) .. " gone=" .. tostring(gone)
     .. " round=" .. tostring(round) .. " back=" .. tostring(back) .. " named=" .. tostring(named) .. " shown=" .. tostring(shown) .. " stopped=" .. tostring(stopped) .. " missing: " .. table.concat(miss, ","))`,
 });
 
