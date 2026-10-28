@@ -3,7 +3,7 @@ const { lua, lauxlib, lualib, to_luastring, to_jsstring } = require('fengari');
 const fs = require('fs');
 const path = require('path');
 const ADDONS = path.resolve(__dirname, '../../..');
-const FILES = [['LOC', 'Locales.lua'], ['CUR', 'Curated.lua'], ['XPT', 'XPTiers.lua'], ['CH', 'Skald.lua'], ['AT', 'Atlas.lua'], ['GL', 'Goals.lua'], ['SG', 'Saga.lua'], ['ZC', 'ZoneCard.lua']];
+const FILES = [['LOC', 'Locales.lua'], ['CUR', 'Curated.lua'], ['XPT', 'XPTiers.lua'], ['CH', 'Skald.lua'], ['AT', 'Atlas.lua'], ['GL', 'Goals.lua'], ['SG', 'Saga.lua'], ['ZC', 'ZoneCard.lua'], ['BK', 'Backup.lua'], ['SR', 'Search.lua'], ['BD', 'Bard.lua']];
 const loc = process.argv[2] || 'ptBR', sex = process.argv[3] === 'male' ? 2 : 3, level = process.argv[4] || '20';
 const L = lauxlib.luaL_newstate(); lualib.luaL_openlibs(L);
 const exec = c => { if (lauxlib.luaL_dostring(L, to_luastring(c))) throw new Error(to_jsstring(lua.lua_tolstring(L, -1))); };
@@ -33,7 +33,7 @@ SkaldCharDB = { entries = {
   goals = {}, goalsInit = true, goalsVer = 3 }
 ns={}
 assert(load(LOC,"=L"))("Skald",ns); assert(load(CUR,"=U"))("Skald",ns); assert(load(XPT,"=X"))("Skald",ns)
-assert(load(CH,"=C"))("Skald",ns); assert(load(AT,"=A"))("Skald",ns); assert(load(GL,"=G"))("Skald",ns); assert(load(SG,"=S"))("Skald",ns); assert(load(ZC,"=Z"))("Skald",ns)
+assert(load(CH,"=C"))("Skald",ns); assert(load(AT,"=A"))("Skald",ns); assert(load(GL,"=G"))("Skald",ns); assert(load(SG,"=S"))("Skald",ns); assert(load(ZC,"=Z"))("Skald",ns); assert(load(BK,"=B"))("Skald",ns); assert(load(SR,"=R"))("Skald",ns); assert(load(BD,"=D"))("Skald",ns)
 function fire(ev,...) for _,f in ipairs(frames) do if f._OnEvent then f._OnEvent(f,ev,...) end end end
 fire("ADDON_LOADED","Skald"); fire("PLAYER_LOGIN"); runTimers(); runTimers()
 local out = {}

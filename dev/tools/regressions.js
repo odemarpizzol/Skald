@@ -5,7 +5,7 @@ const fs = require('fs');
 const path = require('path');
 
 const ADDONS = path.resolve(__dirname, '../../..');
-const FILES = [['LOC', 'Locales.lua'], ['CUR', 'Curated.lua'], ['XPT', 'XPTiers.lua'], ['CH', 'Skald.lua'], ['AT', 'Atlas.lua'], ['GL', 'Goals.lua'], ['SG', 'Saga.lua'], ['ZC', 'ZoneCard.lua']];
+const FILES = [['LOC', 'Locales.lua'], ['CUR', 'Curated.lua'], ['XPT', 'XPTiers.lua'], ['CH', 'Skald.lua'], ['AT', 'Atlas.lua'], ['GL', 'Goals.lua'], ['SG', 'Saga.lua'], ['ZC', 'ZoneCard.lua'], ['BK', 'Backup.lua'], ['SR', 'Search.lua'], ['BD', 'Bard.lua']];
 let failed = 0;
 
 // The game, as far as the addon can tell. `pre` runs before the addon loads (saved data, game answers);
@@ -39,7 +39,7 @@ function count(k) local n=0 for _,e in ipairs(SkaldCharDB.entries) do if e.kind=
 ${pre}
 ns={}
 assert(load(LOC,"=L"))("Skald",ns); assert(load(CUR,"=U"))("Skald",ns); assert(load(XPT,"=X"))("Skald",ns)
-assert(load(CH,"=C"))("Skald",ns); assert(load(AT,"=A"))("Skald",ns); assert(load(GL,"=G"))("Skald",ns); assert(load(SG,"=S"))("Skald",ns); assert(load(ZC,"=Z"))("Skald",ns)
+assert(load(CH,"=C"))("Skald",ns); assert(load(AT,"=A"))("Skald",ns); assert(load(GL,"=G"))("Skald",ns); assert(load(SG,"=S"))("Skald",ns); assert(load(ZC,"=Z"))("Skald",ns); assert(load(BK,"=B"))("Skald",ns); assert(load(SR,"=R"))("Skald",ns); assert(load(BD,"=D"))("Skald",ns)
 fire("ADDON_LOADED","Skald"); fire("PLAYER_LOGIN"); runTimers(); runTimers()
 RES = "no result"
 local okRun, err = pcall(function()
@@ -1696,6 +1696,936 @@ prev._OnClick(prev)
 RES = (first == "1 of 2" and last == "2 of 2" and label() == "1 of 2") and "ok" or ("first " .. tostring(first) .. " last " .. tostring(last) .. " back " .. tostring(label()))
 end`,
 });
+
+const FACT_PRE = `function GetQuestID() return 102 end; C_QuestLog.GetQuestDifficultyLevel = function() return 20 end`;
+const FACT_HELP = `local function turn(money) NOW = NOW + 60; fire("QUEST_COMPLETE"); fire("QUEST_TURNED_IN", 102, 5000, money or 0); runTimers()
+  local e; for i = #SkaldCharDB.entries, 1, -1 do if SkaldCharDB.entries[i].kind == "quest" then e = SkaldCharDB.entries[i]; break end end
+  return e end
+local function level(n) C_QuestLog.GetQuestDifficultyLevel = function() return n end end`;
+
+run('a quest page tells one more thing only when it is true: the first of the day, a fat purse, a quest far above or below, a long absence, a fall, the tenth', {
+  pre: FACT_PRE,
+  body: `${FACT_HELP}
+local got = {}
+local function note(name, e, key, value) if e.xk ~= key or e.xv ~= value then got[#got + 1] = name .. "=" .. tostring(e.xk) .. "/" .. tostring(e.xv) end end
+note("first", turn(0), "first", nil)
+note("rich", turn(25000), "rich", 2)
+level(30); note("above", turn(0), "above", 10)
+level(5); note("below", turn(0), "below", 15)
+level(20); note("plain", turn(0), nil, nil)
+NOW = NOW + 3 * 86400; note("back", turn(0), "back", nil)
+table.insert(SkaldCharDB.entries, { t = NOW + 30, kind = "death", arg = "x", zone = "Elwynn Forest", idx = 1 }); NOW = NOW + 30
+note("fallen", turn(0), "fallen", nil)
+SkaldCharDB.days[SkaldCharDB.today].q = 9; NOW = NOW + 4000
+note("tenth", turn(0), "milestone", 10)
+local e = turn(25000); local shown = SkaldAPI.Render(e)
+RES = (#got == 0 and not shown:find("{", 1, true)) and "ok" or table.concat(got, " ")`,
+});
+
+run('the extra sentence of a quest page is told after the main one, and a page without it reads as it always did', {
+  pre: FACT_PRE,
+  body: `${FACT_HELP}
+local e = turn(0)
+local plain = SkaldAPI.Render({ kind = "quest", arg = "Q", tier = 1, idx = 1, t = NOW, npc = "Bob" })
+local base = SkaldAPI.Render({ kind = "quest", arg = "Q", tier = 1, idx = 1, t = NOW, npc = "Bob", xk = "first", xi = 1 })
+local pool = ns.LOCALES.enUS.phrases.fact_first
+RES = (base == plain .. " " .. pool[1] and plain ~= base) and "ok" or (plain .. " || " .. base)`,
+});
+
+run('thirty quests that all have something to tell: no key twice among three pages, no phrase twice among five of its key', {
+  pre: FACT_PRE,
+  body: `${FACT_HELP}
+level(40)
+local keys, per, bad = {}, {}, nil
+for i = 1, 60 do
+  local e = turn(30000)
+  keys[#keys + 1] = e.xk or "-"
+  if e.xk then
+    local list = per[e.xk] or {}; per[e.xk] = list
+    for j = math.max(1, #list - 4), #list do if list[j] == e.xi then bad = bad or (e.xk .. " repeats phrase " .. e.xi .. " at page " .. i) end end
+    list[#list + 1] = e.xi
+  end
+end
+for i = 1, #keys do
+  for j = i + 1, math.min(i + 2, #keys) do if keys[i] ~= "-" and keys[i] == keys[j] then bad = bad or ("key " .. keys[i] .. " at " .. i .. " and " .. j) end end
+end
+local told = 0; for _, k in ipairs(keys) do if k ~= "-" then told = told + 1 end end
+RES = (not bad and told >= 15) and "ok" or (bad or ("only " .. told .. " told: " .. table.concat(keys, ",")))`,
+});
+
+// The cap on pages (3000) lets the oldest go, but never a favourite or a note, and never the progress the goals read.
+const CAP_PRE = (mark) => `local es = {}
+for i = 1, 3000 do es[i] = { t = NOW - (3001 - i) * 60, zone = "Z", kind = "zone", arg = "e" .. i, idx = 1 } end
+${mark}
+${SAVED('es')}`;
+const has = `local function has(arg) for _, e in ipairs(SkaldCharDB.entries) do if e.arg == arg then return true end end return false end`;
+
+run('at the cap a favourite and a note stay while the plain pages go, oldest first', {
+  pre: CAP_PRE('es[1].fav = true; es[2].kind = "note"'),
+  body: `${has}
+SkaldAPI.AddEntry("zone", "new")
+RES = (#SkaldCharDB.entries == 3000 and has("e1") and has("e2") and not has("e3") and has("new")) and "ok"
+  or ("n=" .. #SkaldCharDB.entries .. " e1=" .. tostring(has("e1")) .. " e2=" .. tostring(has("e2")) .. " e3=" .. tostring(has("e3")))`,
+});
+
+run('when only favourites and notes are left the diary grows past the cap and loses nothing', {
+  pre: CAP_PRE('for i = 1, 3000 do if i % 2 == 0 then es[i].fav = true else es[i].kind = "note" end end'),
+  body: `${has}
+SkaldAPI.AddEntry("zone", "new")
+SkaldAPI.AddEntry("zone", "newer")
+local all = true
+for i = 1, 3000 do if not has("e" .. i) then all = false end end
+RES = (all and #SkaldCharDB.entries >= 3000) and "ok" or ("lost some, n=" .. #SkaldCharDB.entries)`,
+});
+
+run('a note written at the cap lets an older plain page go and the book redraws', {
+  pre: CAP_PRE('es[1].fav = true'),
+  body: `${has}
+local rev = ns.layoutRev or 0
+ns.InsertNote(NOW - 30, "Z", "hello")
+local note = false
+for _, e in ipairs(SkaldCharDB.entries) do if e.kind == "note" and e.arg == "hello" then note = true end end
+RES = (#SkaldCharDB.entries == 3000 and note and has("e1") and not has("e2") and (ns.layoutRev or 0) > rev) and "ok"
+  or ("n=" .. #SkaldCharDB.entries .. " note=" .. tostring(note) .. " e2=" .. tostring(has("e2")))`,
+});
+
+run('goal progress counted from pages does not shrink when those pages leave the cap', {
+  pre: CAP_PRE(`es[1].kind, es[1].cend = "quest", 3
+es[2].kind, es[2].tries = "boss", 1
+es[3].kind = "reunion"
+es[4].kind, es[4].sub = "tame", "level"
+es[5].kind = "guild"`),
+  body: `local f0 = ns.GoalFacts()
+for i = 1, 8 do SkaldAPI.AddEntry("zone", "n" .. i) end
+local f1 = ns.GoalFacts()
+local gone = true
+for _, e in ipairs(SkaldCharDB.entries) do if e.arg == "e1" or e.arg == "e5" then gone = false end end
+local ok = gone and f0.chains >= 1 and f0.hardBoss >= 1 and f0.reunions >= 1 and f0.petLevel >= 1 and f0.guild == 1
+  and f1.chains == f0.chains and f1.hardBoss == f0.hardBoss and f1.reunions == f0.reunions and f1.petLevel == f0.petLevel and f1.guild == 1
+RES = ok and "ok" or ("gone=" .. tostring(gone) .. " chains " .. f0.chains .. "->" .. f1.chains .. " reunions " .. f0.reunions .. "->" .. f1.reunions)`,
+});
+
+run('days written count distinct dates once, a note counts, and a date that left the cap still counts', {
+  pre: CAP_PRE(''),
+  body: `local d0 = ns.GoalFacts().days
+ns.InsertNote(NOW - 90, "Z", "same day")
+local d1 = ns.GoalFacts().days
+ns.InsertNote(NOW - 40 * 86400, "Z", "another day")
+local d2 = ns.GoalFacts().days
+ns.InsertNote(NOW - 40 * 86400 + 5, "Z", "that day again")
+local d3 = ns.GoalFacts().days
+for i = 1, 20 do SkaldAPI.AddEntry("zone", "n" .. i) end
+local d4 = ns.GoalFacts().days
+RES = (d1 == d0 and d2 == d0 + 1 and d3 == d2 and d4 >= d3) and "ok" or (d0 .. "," .. d1 .. "," .. d2 .. "," .. d3 .. "," .. d4)`,
+});
+
+run('running the progress migration again neither doubles nor lowers anything', {
+  pre: CAP_PRE(`es[1].kind, es[1].cend = "quest", 3; es[2].kind = "reunion"
+`),
+  body: `local s = SkaldCharDB.stats
+local a = { s.chains, s.reunions, s.daysN, s.sv }
+s.sv = nil
+ns.MigrateStats(SkaldCharDB)
+ns.MigrateStats(SkaldCharDB)
+local b = { s.chains, s.reunions, s.daysN, s.sv }
+local ok = a[1] == 1 and a[2] == 1 and a[4] == 1 and a[1] == b[1] and a[2] == b[2] and a[3] == b[3] and b[4] == 1
+-- a higher figure already kept is not lowered by a smaller count of the pages left
+s.sv = nil; s.chains = 50
+ns.MigrateStats(SkaldCharDB)
+RES = (ok and s.chains == 50) and "ok" or (table.concat(a, ",") .. " | " .. table.concat(b, ",") .. " chains=" .. s.chains)`,
+});
+
+run('clearing the diary zeroes the progress, and restoring an archived diary brings its progress back', {
+  pre: `local es = {}
+for i = 1, 5 do es[i] = { t = NOW - i * 86400, zone = "Z", kind = "quest", arg = "q" .. i, idx = 1, tier = 1, cend = 3 } end
+SkaldCharDB = { entries = es, visited = {}, flags = {}, guid = "OLD" }`,
+  body: `local before = ns.GoalFacts().chains
+local back = ns.RestoreLatestArchive()
+local restored = ns.GoalFacts().chains
+ns.ResetJournal(SkaldCharDB)
+local f = ns.GoalFacts()
+RES = (before == 0 and back and restored == 5 and f.chains == 0 and f.days == 0 and SkaldCharDB.stats.sv == 1) and "ok"
+  or ("before=" .. before .. " back=" .. tostring(back) .. " restored=" .. restored .. " after=" .. f.chains .. "/" .. f.days)`,
+});
+
+
+// The backup: the whole diary as text, in parts, and its restoring. Anything that goes wrong must leave the diary as it was.
+const BK_PRE = `local es = {}
+for i = 1, 40 do es[i] = { t = NOW - (41 - i) * 3600, zone = "Elwynn Forest", kind = "zone", arg = "e" .. i, idx = 1, x = 0.41234567891234, y = 1 / 3 } end
+local q, bar, nl, quote, bs, caret = string.char(34), string.char(124), string.char(10), string.char(34), string.char(92), string.char(94)
+es[3].kind = "note"
+es[3].arg = "Pipe " .. bar .. " accents " .. string.char(195, 167, 195, 163) .. " " .. string.char(230, 151, 165) .. " quote " .. quote .. " slash " .. bs .. " caret " .. caret .. " line1" .. nl .. "line2 SKALDBACKUP1" .. caret .. "x"
+es[4].fav, es[4].favNote = true, "my note"
+es[5].kind, es[5].qtype, es[5].cend, es[5].tier = "quest", false, 3, 2
+SkaldCharDB = { entries = es, visited = { Elwynn = true }, flags = {}, guid = "P1", version = 3,
+  pets = { Rex = { fam = "Wolf", lvl = 5 } }, companions = { Bob = { n = 2, pz = false } },
+  goals = { first = { t = 100, retro = true } }, taxi = { [1] = true, ["Stormwind"] = true }, skills = { Mining = 5 }, skillsInit = true,
+  futureThing = { a = 1, [7] = "seven", list = { 1, 2, 3 } },
+  previous = { { guid = "A", t = 1, entries = { { t = 1, kind = "zone" } } }, { guid = "B", t = 2, entries = { { t = 2, kind = "zone" } } }, { guid = "C", t = 3, entries = { { t = 3, kind = "zone" } } } } }`;
+const BK = `local B = ns.Backup
+local function snap() return B.Serialize(SkaldCharDB) end
+local function part(b, i) return b.parts[i] end
+local function importAll(parts) local imp = B.NewImport(); for _, p in ipairs(parts) do B.Add(imp, p) end; return imp end
+local function noteOf(state) for _, e in ipairs(state.entries) do if e.kind == "note" then return e.arg end end end
+local function bodyOf(p) return p:match("^[^\\n]*\\n(.*)$") end
+local function headerOf(p) return p:match("^([^\\n]*)\\n") end`;
+
+run('a backup comes back as the same diary, key by key and type by type, with the special characters kept', {
+  pre: BK_PRE,
+  body: `${BK}
+local b = B.Build()
+local want = B.Serialize(B.Capture(SkaldCharDB))
+local imp = importAll(b.parts)
+local cand, code, why = B.Finish(imp)
+if not cand then RES = "finish: " .. tostring(code) .. " " .. tostring(why); return end
+local got = B.Serialize(cand.state)
+local st = cand.state.stats
+local keysOk = cand.state.futureThing[7] == "seven" and cand.state.taxi[1] == true and cand.state.taxi.Stormwind == true
+  and type(next(st.dayset)) == "string" and cand.state.entries[5].qtype == false and cand.state.entries[1].x == SkaldCharDB.entries[1].x
+  and cand.state.entries[1].y == SkaldCharDB.entries[1].y and cand.state.companions.Bob.pz == false
+local note = noteOf(cand.state) == noteOf(B.Capture(SkaldCharDB))
+local ascii = true
+for _, p in ipairs(b.parts) do if p:find("[^\\n\\32-\\126]") or p:find(string.char(124), 1, true) then ascii = false end end
+local excluded = cand.state.previous == nil and cand.state.restoreUndo == nil
+local detail = {}
+for _, k in ipairs({ "futureThing", "taxi", "stats", "petNow", "pets", "companions", "entries", "goals" }) do detail[#detail + 1] = k .. "=" .. tostring(SkaldCharDB[k] ~= nil and B.Serialize(cand.state[k]) == B.Serialize(SkaldCharDB[k])) end
+detail[#detail + 1] = "dayset=" .. type(next(st.dayset)) .. " q=" .. tostring(cand.state.entries[5].qtype) .. " x=" .. tostring(cand.state.entries[1].x == SkaldCharDB.entries[1].x) .. " t1=" .. tostring(cand.state.taxi[1]) .. " ft7=" .. tostring(cand.state.futureThing[7])
+RES = (got == want and keysOk and note and ascii and excluded and cand.meta.count == #SkaldCharDB.entries) and "ok"
+  or ("same=" .. tostring(got == want) .. " keys=" .. tostring(keysOk) .. " note=" .. tostring(note) .. " ascii=" .. tostring(ascii) .. " excl=" .. tostring(excluded) .. " " .. table.concat(detail, " "))`,
+});
+
+run('parts can come in any order, with Windows line ends, several at once, and are collected until all are there', {
+  pre: BK_PRE,
+  body: `${BK}
+B.PART_LIMIT = 300
+local b = B.Build()
+if #b.parts < 4 then RES = "too few parts: " .. #b.parts; return end
+local imp = B.NewImport()
+for i = #b.parts, 2, -1 do
+  local r = B.Add(imp, b.parts[i]:gsub("\\n", "\\r\\n"))
+  if not r[1].ok then RES = "part " .. i .. ": " .. tostring(r[1].code); return end
+end
+local missing = B.Missing(imp)
+local c1, code1 = B.Finish(imp)
+local r = B.Add(imp, b.parts[1] .. "\\r\\n\\r\\n")
+local c2 = B.Finish(imp)
+-- all of them pasted in one go
+local imp2 = B.NewImport()
+local rs = B.Add(imp2, table.concat(b.parts, "\\n\\n"))
+local c3 = B.Finish(imp2)
+RES = (#missing == 1 and missing[1] == 1 and c1 == nil and code1 == "missing" and r[1].ok and c2 and #rs == #b.parts and c3
+  and B.Serialize(c3.state) == B.Serialize(B.Capture(SkaldCharDB))) and "ok" or ("missing=" .. #missing .. " code=" .. tostring(code1) .. " parts=" .. #rs)`,
+});
+
+run('a missing, repeated, foreign, changed, cut or unrelated part is refused and never used', {
+  pre: BK_PRE,
+  body: `${BK}
+B.PART_LIMIT = 300
+local b = B.Build()
+local before = snap()
+local imp = B.NewImport()
+local bad = {}
+local function expect(label, r, code) if r[1].ok or r[1].code ~= code then bad[#bad + 1] = label .. "=" .. tostring(r[1].code) end end
+B.Add(imp, b.parts[1])
+expect("dup", B.Add(imp, b.parts[1]), "dup")
+-- the same number with other content, its own checksum right: refused as a conflict
+local h, body = headerOf(b.parts[1]), bodyOf(b.parts[1])
+local f = {}; for x in (h .. "^"):gmatch("([^%^]*)%^") do f[#f + 1] = x end
+local other = body:sub(1, -2) .. (body:sub(-1) == "a" and "b" or "a")
+f[13], f[14] = tostring(#other), tostring(B.Checksum(other))
+expect("conflict", B.Add(imp, table.concat(f, "^") .. "\\n" .. other), "conflict")
+-- a changed letter, a cut part, an empty body
+local p2 = b.parts[2]
+local flipped = p2:sub(1, -2) .. (p2:sub(-1) == "a" and "b" or "a")
+expect("changed", B.Add(imp, flipped), "badpart")
+expect("cut", B.Add(imp, p2:sub(1, -20)), "badpart")
+expect("nobody", B.Add(imp, headerOf(p2)), "notbackup")
+-- another backup (one more page): the header says the whole is not the same
+SkaldCharDB.entries[#SkaldCharDB.entries + 1] = { t = NOW, zone = "Z", kind = "zone", arg = "late", idx = 1 }
+local b2 = B.Build()
+expect("foreign", B.Add(imp, b2.parts[2]), "other")
+SkaldCharDB.entries[#SkaldCharDB.entries] = nil
+-- unrelated text
+expect("text", B.Add(imp, "hello"), "notbackup")
+expect("empty", B.Add(imp, ""), "notbackup")
+expect("lua", B.Add(imp, "os.exit(1) SKALDBACKUP1"), "notbackup")
+expect("header only", B.Add(imp, "SKALDBACKUP1^a^b"), "notbackup")
+expect("short header", B.Add(imp, "SKALDBACKUP1^a^b" .. string.char(10) .. "body"), "badpart")
+expect("newer", B.Add(imp, (p2:gsub("^SKALDBACKUP1", "SKALDBACKUP2"))), "newer")
+local cand = B.Finish(imp)
+RES = (#bad == 0 and cand == nil and B.Received(imp) == 1 and snap() == before) and "ok" or (table.concat(bad, " ") .. " got=" .. B.Received(imp))`,
+});
+
+run('a payload that is damaged inside, however well wrapped, is refused before anything is touched', {
+  pre: BK_PRE,
+  body: `${BK}
+local good = B.Capture(SkaldCharDB)
+local before = snap()
+local function mine(state, override) return B.BuildFrom(state, override) end
+local function copy() local c = {}; for k, v in pairs(good) do c[k] = v end; return c end
+local bad = {}
+local function refuse(label, state, override)
+  local cand, code, why = B.Finish(importAll(mine(state, override).parts))
+  if cand then bad[#bad + 1] = label end
+end
+local s1 = copy(); s1.entries = "not pages"; refuse("entries type", s1)
+local s2 = copy(); s2.entries = { { t = 1, kind = "zone" }, { kind = "zone" } }; refuse("no t", s2)
+local s3 = copy(); s3.entries = { { t = 1 } }; refuse("no kind", s3)
+local s4 = copy(); s4.stats = "x"; refuse("stats type", s4)
+local s5 = copy(); s5.guid = nil; refuse("no guid", s5)
+local s6 = copy(); s6.previous = {}; refuse("excluded key", s6)
+local s7 = copy(); s7.version = "three"; refuse("version type", s7)
+local s8 = copy(); s8.entries = { [1] = { t = 1, kind = "zone" }, [3] = { t = 2, kind = "zone" } }; refuse("holes", s8)
+refuse("count lies", copy(), { count = 999 })
+refuse("period lies", copy(), { first = 1 })
+refuse("guid lies", copy(), { guid = "OTHER" })
+local deep = copy(); local node = deep; for i = 1, 20 do node.x = {}; node = node.x end
+local okDeep = pcall(B.Serialize, deep)
+local function bare(text) local v, err = B.Deserialize(text); return v == nil and err end
+local inputs = { "", "[", "[]]", "{" .. string.char(34) .. "a" .. string.char(34) .. "}", "n12", "nnan;", "n1e999;", "n-;", "n0x10;", "q",
+  "{n1;n1;n1;n2;}", "{[]t}", "[tt", string.char(34) .. "abc", string.char(34) .. "a" .. string.char(92) .. "zz" .. string.char(34), string.char(34) .. "a" .. string.char(92) .. string.char(34),
+  "[[[[[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]]]]]", "t t" }
+for _, text in ipairs(inputs) do if not bare(text) then bad[#bad + 1] = "parsed: " .. text end end
+RES = (#bad == 0 and not okDeep and snap() == before) and "ok" or (table.concat(bad, " | ") .. " deepSaved=" .. tostring(okDeep))`,
+});
+
+run('only the character a backup came from can restore it, and a refusal leaves the diary as it was', {
+  pre: BK_PRE,
+  body: `${BK}
+local state = B.Capture(SkaldCharDB)
+state.guid = "SOMEONE-ELSE"
+local cand = B.Finish(importAll(B.BuildFrom(state).parts))
+local before = snap()
+local ok, why = B.Apply(cand)
+RES = (cand and B.CanRestore(cand.meta) == false and ok == false and why == "wrong character" and snap() == before) and "ok"
+  or ("cand=" .. tostring(cand) .. " ok=" .. tostring(ok) .. " why=" .. tostring(why))`,
+});
+
+run('restoring replaces the diary, keeps the old one whole as the undo copy, and does not touch the archive of three', {
+  pre: BK_PRE,
+  body: `${BK}
+local b = B.Build()
+local backedUp = B.Serialize(B.Capture(SkaldCharDB))
+local cand = B.Finish(importAll(b.parts))
+local archiveBefore = B.Serialize(SkaldCharDB.previous)
+-- the diary moves on after the backup
+SkaldAPI.AddEntry("zone", "after the backup")
+SkaldCharDB.pets.Rex = nil
+SkaldCharDB.futureThing = nil
+local moved = B.Serialize(B.Capture(SkaldCharDB))
+local movedCount = #SkaldCharDB.entries
+local ok = B.Apply(cand)
+local now = SkaldCharDB
+local function same(key, a, c) return a[key] ~= nil and c[key] ~= nil and B.Serialize(a[key]) == B.Serialize(c[key]) end
+local kept = true
+for _, key in ipairs({ "entries", "stats", "visited", "pets", "companions", "goals", "taxi", "futureThing", "guid", "version" }) do
+  if not same(key, now, cand.state) then kept = false end
+end
+local afresh = next(now.flags) == nil and now.days == nil and now.today == nil and now.skills == nil and now.skillsInit == nil
+local undo = B.UndoInfo()
+local undoOk = undo and undo.count == movedCount and B.Serialize(undo.state) == moved
+RES = (ok and kept and afresh and undoOk and B.Serialize(now.previous) == archiveBefore and #now.previous == 3 and now.restoreUndo ~= nil
+  and now.futureThing and now.pets.Rex) and "ok"
+  or ("ok=" .. tostring(ok) .. " kept=" .. tostring(kept) .. " afresh=" .. tostring(afresh) .. " undo=" .. tostring(undoOk))`,
+});
+
+run('undo brings the earlier diary back and sets the one replaced in its place; a second restore replaces the undo copy', {
+  pre: BK_PRE,
+  body: `${BK}
+local parts = B.Build().parts
+local function fresh() return B.Finish(importAll(parts)) end
+SkaldAPI.AddEntry("zone", "after the backup")
+local moved = B.Serialize(B.Capture(SkaldCharDB))
+B.Apply(fresh())
+local restored = B.Serialize(B.Capture(SkaldCharDB))
+local ok1 = B.Undo()
+local afterUndo = B.Serialize(B.Capture(SkaldCharDB))
+local ok2 = B.Undo()
+local afterRedo = B.Serialize(B.Capture(SkaldCharDB))
+-- another restore: the undo copy is now the diary it replaced
+B.Apply(fresh())
+SkaldAPI.AddEntry("zone", "more")
+local third = B.Serialize(B.Capture(SkaldCharDB))
+local used = fresh()
+B.Apply(used)
+local undo = B.UndoInfo()
+local thirdKept = undo and B.Serialize(undo.state) == third
+local twice, whyTwice = B.Apply(used)       -- a candidate is put in place once
+-- another character's undo copy is never brought back
+SkaldCharDB.restoreUndo.state.guid = "SOMEONE-ELSE"
+local before = snap()
+local ok3, why3 = B.Undo()
+RES = (ok1 and ok2 and afterUndo == moved and afterRedo == restored and thirdKept
+  and twice == false and whyTwice == "already used" and not ok3 and why3 == "wrong character" and snap() == before) and "ok"
+  or ("undo=" .. tostring(afterUndo == moved) .. " redo=" .. tostring(afterRedo == restored) .. " third=" .. tostring(thirdKept) .. " twice=" .. tostring(twice))`,
+});
+
+run('if the restore fails half-way the diary and the undo copy are put back as they were', {
+  pre: BK_PRE,
+  body: `${BK}
+local parts = B.Build().parts
+SkaldAPI.AddEntry("zone", "after the backup")
+B.Apply(B.Finish(importAll(parts)))           -- one undo copy exists
+SkaldAPI.AddEntry("zone", "later")
+local before = snap()
+local original = ns.ReadAfresh
+ns.ReadAfresh = function() error("boom") end
+local ok, why = B.Apply(B.Finish(importAll(parts)))
+ns.ReadAfresh = original
+RES = (ok == false and tostring(why):find("boom") and snap() == before) and "ok" or ("ok=" .. tostring(ok) .. " why=" .. tostring(why) .. " same=" .. tostring(snap() == before))`,
+});
+
+run('the windows: parts pasted into the restore box are checked, the button waits for all of them, and the question restores', {
+  pre: BK_PRE,
+  body: `${BK}
+B.PART_LIMIT = 400
+local b = B.Build()
+local backedUp = B.Serialize(B.Capture(SkaldCharDB))
+local exp = B.ShowExport()
+local f = B.ShowRestore()
+local function paste(text) f.edit:SetText(text); f.edit._OnTextChanged(f.edit, true) end
+local log = {}
+for i = 1, #b.parts - 1 do paste(b.parts[i]); log[#log + 1] = tostring(f.status._text):sub(1, 60) end
+local waiting = f.restoreButton._enabled ~= true
+paste(b.parts[1])      -- a repeat: said, harmless
+paste(b.parts[#b.parts])
+SkaldAPI.AddEntry("zone", "after the backup")
+f.restoreButton._OnClick(f.restoreButton)
+local asked = __popup == "SKALD_BACKUP_RESTORE"
+StaticPopupDialogs["SKALD_BACKUP_RESTORE"].OnAccept()
+RES = (exp and waiting and asked and B.Serialize(SkaldCharDB.entries) == B.Serialize(B.Finish(importAll(b.parts)).state.entries)) and "ok"
+  or ("exp=" .. tostring(exp ~= nil) .. " waiting=" .. tostring(waiting) .. " asked=" .. tostring(asked) .. " status=" .. tostring(f.status._text) .. " | " .. log[1] .. " | " .. log[2])`,
+});
+
+// Search in the book ---------------------------------------------------------------------------------------------
+const SEARCH_PAGES = `local R = ns.Search
+local DAY = 86400
+local es = {
+  { t = NOW - 400 * DAY, kind = "quest", arg = "Old Debt", zone = "Elwynn Forest", m = false, idx = 1, tier = 1 },
+  { t = NOW - 20 * DAY, kind = "quest", arg = "Miss\\195\\163o dos Fantasmas", zone = "Elwynn Forest", m = false, idx = 1, tier = 1 },
+  { t = NOW - 10 * DAY, kind = "quest", arg = "Wanted: Jai'vhanel", q = 77, zone = "Darkshore", m = 1439, idx = 1, tier = 1, npc = "Thaelrin" },
+  { t = NOW - 5 * DAY, kind = "note", arg = "Lembrei da Ponte de Ferro", zone = "Elwynn Forest", m = false, fav = true },
+  { t = NOW - 3 * DAY, kind = "quest", arg = "Plain Task", zone = "Elwynn Forest", m = false, idx = 1, tier = 1, fav = true, favNote = "remember the Hatchet" },
+  { t = NOW - 1 * DAY, kind = "zone", arg = "Elwynn Forest", zone = "Elwynn Forest", m = false, idx = 1 },
+}
+local function ids(list) local o = {} for i, e in ipairs(list) do for j, x in ipairs(es) do if x == e then o[#o + 1] = j end end end return table.concat(o, ",") end
+`;
+
+run('search finds a page by its story, place, giver, note and favourite note, ignoring capitals and accents', {
+  pre: SAVED('{}'),
+  body: `${SEARCH_PAGES}
+local a = ids((R.Run(es, "JAI'VHANEL")))
+local b = ids((R.Run(es, "missao fantasmas")))
+local c = ids((R.Run(es, "PONTE ferro")))
+local d = ids((R.Run(es, "ponte zzz")))
+local e = ids((R.Run(es, "hatchet")))
+local f = ids((R.Run(es, "darkshore")))
+local g = ids((R.Run(es, "thaelrin")))
+RES = (a == "3" and b == "2" and c == "4" and d == "" and e == "5" and f == "3" and g == "3") and "ok"
+  or ("jai=" .. a .. " missao=" .. b .. " ponte=" .. c .. " none=" .. d .. " hatchet=" .. e .. " place=" .. f .. " giver=" .. g)`,
+});
+
+run('search lists the newest first and the filters (kind, favourites, how far back) narrow it', {
+  pre: SAVED('{}'),
+  body: `${SEARCH_PAGES}
+local all, total = R.Run(es, "")
+local notes = ids((R.Run(es, "", { group = "notes" })))
+local quests = ids((R.Run(es, "", { group = "quests" })))
+local favs = ids((R.Run(es, "", { favs = true })))
+local week = ids((R.Run(es, "", { days = 7, now = NOW })))
+local month = ids((R.Run(es, "", { days = 30, now = NOW })))
+local both = ids((R.Run(es, "plain", { group = "quests", favs = true })))
+RES = (ids(all) == "6,5,4,3,2,1" and total == 6 and notes == "4" and quests == "5,3,2,1" and favs == "5,4" and week == "6,5,4"
+  and month == "6,5,4,3,2" and both == "5") and "ok"
+  or ("all=" .. ids(all) .. " notes=" .. notes .. " quests=" .. quests .. " favs=" .. favs .. " week=" .. week .. " month=" .. month .. " both=" .. both)`,
+});
+
+run('search lists at most Search.MAX pages but counts all of them', {
+  pre: SAVED('{}'),
+  body: `${SEARCH_PAGES}
+local many = {}
+for i = 1, 350 do many[i] = { t = NOW - (351 - i), kind = "note", arg = "note number " .. i, zone = "x", m = false } end
+local list, total = R.Run(many, "note")
+RES = (#list == R.MAX and total == 350 and list[1] == many[350] and list[#list] == many[350 - R.MAX + 1]) and "ok"
+  or ("listed=" .. #list .. " total=" .. total)`,
+});
+
+run('search tells a changed page again after the pages are rewritten (layoutRev)', {
+  pre: SAVED('{}'),
+  body: `${SEARCH_PAGES}
+local n = es[4]
+local before = ids((R.Run(es, "ponte")))
+n.arg = "Agora uma torre"
+local stale = ids((R.Run(es, "torre")))      -- still the old text in the cache: the page is not told again yet
+ns.layoutRev = (ns.layoutRev or 0) + 1
+local fresh = ids((R.Run(es, "torre")))
+local gone = ids((R.Run(es, "ponte")))
+RES = (before == "4" and fresh == "4" and gone == "") and "ok" or ("before=" .. before .. " stale=" .. stale .. " fresh=" .. fresh .. " gone=" .. gone)`,
+});
+
+run('the search tab: typing lists the pages after a moment, a click opens the page, a hidden page is said', {
+  pre: SAVED(`{
+  { t = 1792000000, kind = "note", arg = "A nota da ponte", zone = "x", m = false, fav = true },
+  { t = 1792000100, kind = "note", arg = "Outra coisa", zone = "x", m = false },
+  { t = 1792000200, kind = "note", arg = "A ponte de novo", zone = "x", m = false },
+}`),
+  body: `local tab = btn("Search")
+tab._OnClick(tab)
+local p
+for i = #frames, 1, -1 do if rawget(frames[i], "searchBox") then p = frames[i]; break end end
+local box = p.searchBox
+local function shown() local n = 0 for _, r in ipairs(p.rows) do if r._shown then n = n + 1 end end return n end
+local idle = shown()
+box:SetText("PONTE"); box._OnTextChanged(box, true)
+local early = shown()          -- the word is looked for a moment after the last key
+runTimers()
+local found = shown()
+local first = rawget(p.rows[1].text, "_text")
+local firstPlain = (first:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""))
+local opened
+SkaldAPI.OpenEntry = function(e) opened = e; return true end
+p.rows[1]._OnClick(p.rows[1])
+local said
+local realPrint = print
+print = function(m) said = m end
+SkaldAPI.OpenEntry = function() return false end
+p.rows[2]._OnClick(p.rows[2])
+print = realPrint
+p.favButton._OnClick(p.favButton)
+local onlyFav = shown()
+RES = (idle == 0 and early == 0 and found == 2 and firstPlain == "A ponte de novo" and first:find("|cff9c1f12ponte|r", 1, true) and opened and opened.arg == "A ponte de novo"
+  and said and said:find("does not show", 1, true) and onlyFav == 1) and "ok"
+  or ("idle=" .. idle .. " early=" .. early .. " found=" .. found .. " first=" .. tostring(first) .. " opened=" .. tostring(opened and opened.arg) .. " said=" .. tostring(said) .. " onlyFav=" .. onlyFav)`,
+});
+
+run('the search tab has its words in every language', {
+  pre: SAVED('{}'),
+  body: `local miss = {}
+for loc, L in pairs(ns.LOCALES) do
+  for _, k in ipairs({ "SEARCH_TAB", "SEARCH_HINT", "SEARCH_FOUND", "SEARCH_SHOWN", "SEARCH_NONE", "SEARCH_KIND", "SEARCH_WHEN", "SEARCH_FAVS", "SEARCH_OPEN", "SEARCH_HIDDEN" }) do
+    if type(L[k]) ~= "string" then miss[#miss + 1] = loc .. "." .. k end
+  end
+  if #L.SEARCH_KINDS ~= #ns.Search.GROUPS then miss[#miss + 1] = loc .. ".SEARCH_KINDS" end
+  if #L.SEARCH_WHENS ~= #ns.Search.DAYS then miss[#miss + 1] = loc .. ".SEARCH_WHENS" end
+end
+RES = (#miss == 0) and "ok" or table.concat(miss, ",")`,
+});
+
+// The Bard's jukebox ---------------------------------------------------------------------------------------------
+run('the Bard: play sends the number of the song, stop stops the music, next and before go round, a closed music option plays nothing', {
+  pre: 'GetTime = function() return 100 end\n' + SAVED('{}'),
+  body: `local B = ns.Bard
+local ids = {}
+for i, t in ipairs(B.TRACKS) do ids[#ids + 1] = t.id end
+B.Play(2)
+local first = MUSIC.played[#MUSIC.played - 1] == B.TRACKS[2].id and MUSIC.played[#MUSIC.played] == B.TRACKS[2].path and B.playing == 2
+B.Step(1)
+local nextOk = B.playing == 3 and MUSIC.played[#MUSIC.played - 1] == B.TRACKS[3].id
+B.Play(#B.TRACKS); B.Step(1)
+local wrapNext = B.playing == 1
+B.Step(-1)
+local wrapPrev = B.playing == #B.TRACKS
+B.Stop()
+local stopped = B.playing == nil and MUSIC.stopped >= 1
+B.last = nil; B.Step(1)
+local fromNothing = B.playing == 1
+B.Stop()
+B.Play(4); B.Stop(); B.Play(B.last)
+local again = B.playing == 4 and MUSIC.played[#MUSIC.played - 1] == B.TRACKS[4].id
+B.Stop()
+local before = #MUSIC.played
+MUSIC.cvars.Sound_EnableMusic = "0"
+local refused = B.Play(1) == false and #MUSIC.played == before and B.playing == nil
+MUSIC.cvars.Sound_EnableMusic = "1"
+B.SetVolume(0.25)
+local vol = MUSIC.cvars.Sound_MusicVolume == "0.25" and math.abs(B.Volume() - 0.25) < 0.001
+B.SetVolume(7)
+local clamp = MUSIC.cvars.Sound_MusicVolume == "1.00"
+RES = (first and nextOk and wrapNext and wrapPrev and stopped and fromNothing and again and refused and vol and clamp and #ids == #B.TRACKS and #ids >= 30) and "ok"
+  or ("first=" .. tostring(first) .. " next=" .. tostring(nextOk) .. " wrapNext=" .. tostring(wrapNext) .. " wrapPrev=" .. tostring(wrapPrev)
+    .. " stopped=" .. tostring(stopped) .. " fromNothing=" .. tostring(fromNothing) .. " refused=" .. tostring(refused) .. " vol=" .. tostring(vol) .. " clamp=" .. tostring(clamp))`,
+});
+
+run('the Bard tab: a click on a song plays it and shows it, a second click stops it, the buttons work, the clock counts, and the words are in every language', {
+  pre: 'GetTime = function() return 100 end\n' + SAVED('{}'),
+  body: `local tab = btn("Bard")
+tab._OnClick(tab)
+local p
+for i = #frames, 1, -1 do if rawget(frames[i], "rows") and rawget(frames[i], "mainButton") then p = frames[i]; break end end
+local B = ns.Bard
+B.Stop()
+p.rows[3]._OnClick(p.rows[3])
+local playsRow = B.playing == 3 and rawget(p.song, "_text") == ns.LOCALES.enUS.BARD_TRACKS[3] and rawget(p.state, "_text") == ns.LOCALES.enUS.BARD_PLAYING
+  and tostring(rawget(p.rows[3].disc, "_tex")):find("bard_pause", 1, true) and tostring(rawget(p.rows[2].disc, "_tex")):find("bard_play", 1, true)
+p.nextButton._OnClick(p.nextButton)
+local nextOk = B.playing == 4
+p.prevButton._OnClick(p.prevButton)
+p.prevButton._OnClick(p.prevButton)
+local prevOk = B.playing == 2
+p.rows[2]._OnClick(p.rows[2])
+local stopsRow = B.playing == nil and rawget(p.state, "_text") == ns.LOCALES.enUS.BARD_STOPPED and rawget(p.clock, "_text") == ""
+p.mainButton._OnClick(p.mainButton)
+local mainPlays = B.playing == 2   -- after a stop the big button plays the piece that was playing, not the first
+p.mainButton._OnClick(p.mainButton)
+local mainStops = B.playing == nil
+p.rows[4]._OnClick(p.rows[4]); p.Animate()
+local pictureOn = rawget(p.rise, "_shown") == true and rawget(p.bars, "_shown") == true and rawget(p.tabNote, "_shown") == true
+  and tostring(rawget(p.rise, "_tex")):find("bard_notes_", 1, true) and tostring(rawget(p.bars, "_tex")):find("bard_eq_", 1, true)
+p.rows[4]._OnClick(p.rows[4]); p.Animate()
+local pictureOff = rawget(p.rise, "_shown") ~= true and rawget(p.bars, "_shown") ~= true and rawget(p.tabNote, "_shown") ~= true
+local ticks = 1000
+GetTime = function() ticks = ticks + 1; return ticks end   -- each song begins at its own moment
+local open = false
+SkaldAPI.IsBookOpen = function() return open end
+local opened
+SkaldAPI.OpenSection = function(id) opened = id end
+B.Play(5); p.Animate()
+local miniShown = rawget(p.mini, "_shown") == true
+open = true; p.Animate()
+local miniHidesOpen = rawget(p.mini, "_shown") ~= true
+open = false; p.Animate()
+p.mini._OnClick(p.mini, "LeftButton")
+local miniOpens = opened == "bard"
+p.mini._OnClick(p.mini, "RightButton"); p.Animate()
+local miniDismissed = rawget(p.mini, "_shown") ~= true
+B.Play(5); p.Animate()
+local miniBack = rawget(p.mini, "_shown") == true
+B.Stop(); p.Animate()
+local miniGone = rawget(p.mini, "_shown") ~= true
+local miniOk = miniShown and miniHidesOpen and miniOpens and miniDismissed and miniBack and miniGone
+local clockOk = B.Clock(65) == "01:05" and B.Clock(0) == "00:00" and B.Clock(-3) == "00:00"
+MUSIC.cvars.Sound_EnableMusic = "0"
+p.rows[1]._OnClick(p.rows[1])
+local offSaid = B.playing == nil and rawget(p.off, "_text") == ns.LOCALES.enUS.BARD_MUSIC_OFF
+MUSIC.cvars.Sound_EnableMusic = "1"
+local miss = {}
+for _, loc in ipairs({ "enUS", "ptBR", "frFR" }) do
+  local L = ns.LOCALES[loc]
+  for _, k in ipairs({ "BARD_TAB", "BARD_LEFT", "BARD_RIGHT", "BARD_PLAYING", "BARD_STOPPED", "BARD_PICK", "BARD_VOLUME", "BARD_VOL_NOTE", "BARD_MUSIC_OFF", "BARD_TIP_PLAY", "BARD_TIP_STOP", "BARD_TIP_PREV", "BARD_TIP_NEXT" }) do
+    if type(L[k]) ~= "string" or L[k] == "" then miss[#miss + 1] = loc .. "." .. k end
+  end
+  if type(L.BARD_TRACKS) ~= "table" or #L.BARD_TRACKS ~= #B.TRACKS then miss[#miss + 1] = loc .. ".BARD_TRACKS" end
+end
+RES = (playsRow and nextOk and prevOk and stopsRow and mainPlays and mainStops and pictureOn and pictureOff and miniOk and clockOk and offSaid and #miss == 0) and "ok"
+  or ("playsRow=" .. tostring(playsRow) .. " next=" .. tostring(nextOk) .. " prev=" .. tostring(prevOk) .. " stopsRow=" .. tostring(stopsRow)
+    .. " mainPlays=" .. tostring(mainPlays) .. " mainStops=" .. tostring(mainStops) .. " picOn=" .. tostring(pictureOn) .. " picOff=" .. tostring(pictureOff) .. " mini=" .. tostring(miniShown) .. tostring(miniHidesOpen) .. tostring(miniOpens) .. tostring(miniDismissed) .. tostring(miniBack) .. tostring(miniGone) .. " clock=" .. tostring(clockOk) .. " offSaid=" .. tostring(offSaid) .. " missing: " .. table.concat(miss, ","))`,
+});
+
+run('the Bard: the list has pages the corners turn, the song that plays brings its page, and the order left to chance never repeats the song and goes back through what played', {
+  pre: 'GetTime = function() return 100 end\n' + SAVED('{}'),
+  body: `local B = ns.Bard
+local tab = btn("Bard"); tab._OnClick(tab)
+local p
+for i = #frames, 1, -1 do if rawget(frames[i], "shuffleCheck") then p = frames[i]; break end end
+B.Stop(); B.last = nil; B.history = {}; B.page = 1
+local pages = B.Pages() == math.ceil(#B.TRACKS / 6) and B.Pages() >= 5
+local rows1 = p.rows[1]._shown == true and rawget(p.rows[1], "song") == 1 and rawget(p.rows[6], "song") == 6
+p.pager.Turn(1)
+p.pager.Turn(0)
+local turned = B.page == 2
+p.mainButton._OnClick(p.mainButton)   -- nothing played yet, not by chance: the first song, and the list shows its page
+local firstBack = B.playing == 1 and B.page == 1
+B.Play(#B.TRACKS)
+local follows = B.page == B.Pages()
+p.Refresh()
+local lastRows = 0
+for _, r in ipairs(p.rows) do if rawget(r, "song") then lastRows = lastRows + 1 end end
+local partial = lastRows == #B.TRACKS - (B.Pages() - 1) * 6
+local atEnd = not p.pager.CanNext() and p.pager.CanPrev()
+SkaldDB.bardShuffle = true
+B.Stop(); B.last = nil; B.history = {}
+B.Play(5)
+local never, distinct = true, {}
+for k = 1, 60 do
+  local before = B.playing
+  B.Step(1)
+  if B.playing == before then never = false end
+  distinct[B.playing] = true
+end
+local spread = 0
+for _ in pairs(distinct) do spread = spread + 1 end
+B.Play(7); B.Play(9); B.Step(1)
+local landed = B.playing
+B.Step(-1)
+local wentBack = B.playing == 9
+B.Step(-1)
+local wentBack2 = B.playing == 7
+SkaldDB.bardShuffle = false
+B.Play(1); B.Step(1)
+local ordered = B.playing == 2
+RES = (pages and rows1 and turned and firstBack and follows and partial and atEnd and never and spread >= 10 and wentBack and wentBack2 and ordered) and "ok"
+  or ("pages=" .. tostring(pages) .. " rows1=" .. tostring(rows1) .. " turned=" .. tostring(turned) .. " firstBack=" .. tostring(firstBack) .. " follows=" .. tostring(follows)
+    .. " partial=" .. tostring(partial) .. "(" .. lastRows .. "/" .. B.Pages() .. "/" .. #B.TRACKS .. ")" .. " atEnd=" .. tostring(atEnd) .. " never=" .. tostring(never) .. " spread=" .. spread .. " back=" .. tostring(wentBack) .. tostring(wentBack2) .. " ordered=" .. tostring(ordered))`,
+});
+
+run('the Bard goes on by itself: when a song has run its length the next begins (by chance with Shuffle), nothing changes before, a stopped Bard stays stopped, and every song has a length', {
+  pre: SAVED('{}'),
+  body: `local B = ns.Bard
+local now = 5000
+GetTime = function() return now end
+local allLen = true
+for _, t in ipairs(B.TRACKS) do if type(t.len) ~= "number" or t.len < 10 or t.len > 400 then allLen = false end end
+SkaldDB.bardShuffle = false
+B.Stop(); B.last = nil; B.history = {}
+B.Play(3)
+local len = B.TRACKS[3].len
+now = now + len - 5
+local early = B.Tick() == false and B.playing == 3
+now = now + 5
+local advanced = B.Tick() == true and B.playing == 4 and B.since == now
+now = now + 1
+local notYet = B.Tick() == false and B.playing == 4
+B.Play(#B.TRACKS); now = now + B.TRACKS[#B.TRACKS].len
+local wraps = B.Tick() == true and B.playing == 1
+SkaldDB.bardShuffle = true
+B.Play(2); now = now + B.TRACKS[2].len
+local chance = B.Tick() == true and B.playing ~= 2 and B.playing ~= nil
+SkaldDB.bardShuffle = false
+B.Stop(); now = now + 1000
+local stays = B.Tick() == false and B.playing == nil
+B.Play(1); now = now + B.TRACKS[1].len
+MUSIC.cvars.Sound_EnableMusic = "0"
+local quits = B.Tick() == true and B.playing == nil
+MUSIC.cvars.Sound_EnableMusic = "1"
+RES = (allLen and early and advanced and notYet and wraps and chance and stays and quits) and "ok"
+  or ("allLen=" .. tostring(allLen) .. " early=" .. tostring(early) .. " advanced=" .. tostring(advanced) .. " notYet=" .. tostring(notYet) .. " wraps=" .. tostring(wraps)
+    .. " chance=" .. tostring(chance) .. " stays=" .. tostring(stays) .. " quits=" .. tostring(quits))`,
+});
+
+run('the Bard notice: five looks stepped through on the Bard tab, a look just chosen shows at once with the book open, the button Stop of a picture stops, and the names are in every language', {
+  pre: 'GetTime = function() return 100 end\n' + SAVED('{}'),
+  body: `local B = ns.Bard
+local tab = btn("Bard"); tab._OnClick(tab)
+local p
+for i = #frames, 1, -1 do if rawget(frames[i], "hudName") then p = frames[i]; break end end
+SkaldDB.bardHud = nil
+SkaldAPI.IsBookOpen = function() return true end
+B.Stop(); B.last = nil
+p.Refresh()
+local default = B.HudStyle() == "bar"
+local function art() return tostring(rawget(p.mini.tex or p.mini, "_tex")) end
+p.hudNext._OnClick(p.hudNext)
+local scroll = SkaldDB.bardHud == "scroll" and p.mini._shown == true   -- shown with the book open, for a moment, though nothing plays
+local stopArt = tostring(rawget(p.miniStopArt.tex, "_tex")):find("hud_scroll_stop", 1, true) ~= nil
+p.hudNext._OnClick(p.hudNext); p.hudNext._OnClick(p.hudNext)
+local medal = SkaldDB.bardHud == "medal" and tostring(rawget(p.miniStopArt.tex, "_tex")):find("hud_medal_stop", 1, true) ~= nil
+p.hudNext._OnClick(p.hudNext)
+local plate = SkaldDB.bardHud == "plate" and p.miniStopArt._shown ~= true
+p.hudNext._OnClick(p.hudNext)
+local round = SkaldDB.bardHud == "bar"
+p.hudBack._OnClick(p.hudBack)
+local back = SkaldDB.bardHud == "plate"
+p.hudBack._OnClick(p.hudBack)
+local named = rawget(p.hudName.text, "_text") == string.format(ns.LOCALES.enUS.BARD_HUD_LABEL, ns.LOCALES.enUS.BARD_HUDS[4])
+SkaldDB.bardHud = "wood"; p.ApplyHud()
+B.Play(1)
+SkaldAPI.IsBookOpen = function() return false end
+p.Animate()
+local shown = p.mini._shown == true
+SkaldDB.bardShuffle = false
+B.Play(5)
+p.miniNext._OnClick(p.miniNext)
+local skipNext = B.playing == 6
+p.miniPrev._OnClick(p.miniPrev); p.miniPrev._OnClick(p.miniPrev)
+local skipPrev = B.playing == 4
+p.miniStopArt._OnClick(p.miniStopArt)
+local stopped = B.playing == nil and skipNext and skipPrev
+local miss = {}
+for _, loc in ipairs({ "enUS", "ptBR", "frFR" }) do
+  local L = ns.LOCALES[loc]
+  if type(L.BARD_HUD_LABEL) ~= "string" or not L.BARD_HUD_LABEL:find("%s", 1, true) or type(L.BARD_HUDS) ~= "table" or #L.BARD_HUDS ~= 5 then miss[#miss + 1] = loc end
+end
+RES = (default and scroll and stopArt and medal and plate and round and back and named and shown and stopped and #miss == 0) and "ok"
+  or ("default=" .. tostring(default) .. " scroll=" .. tostring(scroll) .. " stopArt=" .. tostring(stopArt) .. " medal=" .. tostring(medal) .. " plate=" .. tostring(plate)
+    .. " round=" .. tostring(round) .. " back=" .. tostring(back) .. " named=" .. tostring(named) .. " shown=" .. tostring(shown) .. " stopped=" .. tostring(stopped) .. " missing: " .. table.concat(miss, ","))`,
+});
+
+// every picture of the notice is in the folder
+{
+  const names = [];
+  for (const k of ['bar', 'scroll', 'wood', 'medal']) names.push('hud_' + k, 'hud_' + k + '_icon', 'hud_' + k + '_stop');
+  const lost = names.filter(n => !fs.existsSync(path.join(ADDONS, 'Skald', 'Textures', 'skald2', n + '.tga')));
+  if (!lost.length) console.log('  ok    every picture of the looks of the Bard notice is in the folder (' + names.length + ')');
+  else { failed++; console.log('  FAIL  pictures of the looks of the Bard notice missing: ' + lost.join(', ')); }
+}
+
+run('the column of tabs: ten for a hunter, always; Settings is one tab whose three pages (Style, Notices, Options) are turned by the corners of the book; the cover has its tab; the open tab has its own picture; the column stays above the foot of the cover', {
+  pre: SAVED('{}'),
+  body: `local function column()
+  local n, lowest, names = 0, 0, {}
+  for _, f in ipairs(frames) do
+    local top = rawget(f, "top")
+    if type(top) == "number" and rawget(f, "tex") and rawget(f, "text") and f._shown == true then
+      n = n + 1; lowest = math.max(lowest, -top + 34); names[#names + 1] = tostring(rawget(f.text, "_text"))
+    end
+  end
+  return n, lowest, table.concat(names, ",")
+end
+local function lit(label) local b = btn(label); return b and b.active == true end
+local n0, low0, names0 = column()
+local coverLit = lit("Cover")
+local artOn = tostring(rawget(btn("Cover").tex, "_tex")):find("tab_active", 1, true) and tostring(rawget(btn("Days").tex, "_tex")):find("tab_idle", 1, true)
+local settings = btn("Settings"); settings._OnClick(settings)
+local n1, low1, names1 = column()
+local settingsLit = lit("Settings")
+local panel
+for i = #frames, 1, -1 do if rawget(frames[i], "subs") then panel = frames[i]; break end end
+local page1 = panel.pager.Current() == 1 and panel.subs[1]._shown == true and panel.subs[2]._shown ~= true
+local folio1 = panel.pager.Folio()
+panel.pager.Turn(1)
+local page2 = panel.pager.Current() == 2 and panel.subs[2]._shown == true and panel.subs[1]._shown ~= true and panel.pager.Folio() == folio1 + 2
+panel.pager.Turn(1); panel.pager.Turn(1)
+local page3 = panel.pager.Current() == 3 and not panel.pager.CanNext() and panel.pager.CanPrev()
+panel.GoTo("style")
+local goTo = panel.pager.Current() == 1 and not panel.pager.CanPrev()
+local days = btn("Days"); days._OnClick(days)
+local n2, _, names2 = column()
+settings._OnClick(settings)
+local back = lit("Settings")
+RES = (n0 == 10 and names0:find("Cover", 1, true) and coverLit and artOn and n1 == 10 and n2 == 10 and settingsLit and back
+  and not names1:find("Style", 1, true) and not names1:find("Options", 1, true)
+  and page1 and page2 and page3 and goTo and low0 <= 580 - 56 and low1 <= 580 - 56) and "ok"
+  or ("closed=" .. n0 .. " (" .. names0 .. ") coverLit=" .. tostring(coverLit) .. " art=" .. tostring(artOn) .. " open=" .. n1 .. " (" .. names1 .. ") settingsLit=" .. tostring(settingsLit)
+    .. " pages=" .. tostring(page1) .. tostring(page2) .. tostring(page3) .. tostring(goTo) .. " after=" .. n2 .. " back=" .. tostring(back) .. " lowest=" .. low0 .. "/" .. low1)`,
+});
+
+run('every page the search can list opens in the real book, the summary of a closed day included', {
+  pre: `local yesterday = NOW - 86400
+${SAVED(`{
+  { t = yesterday, kind = "quest", arg = "Plain Task", zone = "Elwynn Forest", m = false, idx = 1, tier = 1, fav = true },
+  { t = yesterday + 60, kind = "note", arg = "A lembrança da ponte", zone = "Elwynn Forest", m = false },
+  { t = yesterday + 120, kind = "zone", arg = "Elwynn Forest", zone = "Elwynn Forest", m = false, idx = 1 },
+  { t = yesterday + 3600, kind = "day", arg = date("%Y-%m-%d", yesterday), zone = "Elwynn Forest", m = false, idx = 1,
+    day = { q = 2, l = 0, d = 0, z = 1, u = 0, b = 0, a = 0, k = 5, s = 1300 } },
+}`)}`,
+  body: `local R = ns.Search
+local list = R.Run(SkaldCharDB.entries, "")
+local kinds, bad = {}, {}
+for _, e in ipairs(list) do
+  kinds[e.kind] = true
+  if SkaldAPI.OpenEntry(e) ~= true then bad[#bad + 1] = tostring(e.kind) end
+end
+RES = (kinds.quest and kinds.note and kinds.zone and kinds.day and #bad == 0) and "ok"
+  or ("kinds: quest=" .. tostring(kinds.quest) .. " note=" .. tostring(kinds.note) .. " zone=" .. tostring(kinds.zone) .. " day=" .. tostring(kinds.day) .. " did not open: " .. table.concat(bad, ","))`,
+});
+
+run('search paints the words found, cuts a long text where the first one shows, and keeps a bar of the text from being read as a code', {
+  pre: SAVED('{}'),
+  body: `local R = ns.Search
+local C = "ff9c1f12"
+local function H(text, q, limit) return R.Highlight(text, R.Terms(q), C, limit) end
+local a = H("Miss\\195\\163o dos Fantasmas", "MISSAO fant")
+local b = H("o mar, o mar e o mar", "mar")
+local c = H("ponte pontes", "pont ponte")
+local long = string.rep("palavra ", 30) .. "tesouro " .. string.rep("fim ", 30)
+local d = H(long, "tesouro", 100)
+local e = H("a|nb ponte", "ponte")
+local f = H("nada a destacar aqui", "")
+local ok1 = a == "|c" .. C .. "Miss\\195\\163o|r dos |c" .. C .. "Fant|rasmas"
+local ok2 = b == "o |c" .. C .. "mar|r, o |c" .. C .. "mar|r e o |c" .. C .. "mar|r"
+local ok3 = c == "|c" .. C .. "ponte|r |c" .. C .. "ponte|rs"
+local ok4 = d:sub(1, 3) == "..." and d:find("|c" .. C .. "tesouro|r", 1, true) and d:sub(-3) == "..." and #d < 160
+local ok5 = e == "a||nb |c" .. C .. "ponte|r"
+local ok6 = f == "nada a destacar aqui"
+RES = (ok1 and ok2 and ok3 and ok4 and ok5 and ok6) and "ok" or ("accents=" .. tostring(ok1) .. " repeat=" .. tostring(ok2) .. " joined=" .. tostring(ok3) .. " cut=" .. tostring(ok4) .. " bar=" .. tostring(ok5) .. " plain=" .. tostring(ok6) .. " d=" .. d)`,
+});
+
+run('the search tab: the kind and the time are chosen from a list, one list open at a time, and a choice away from the usual shows as chosen', {
+  pre: SAVED(`{
+  { t = NOW - 86400, kind = "note", arg = "uma nota rara", zone = "x", m = false },
+  { t = NOW - 86400 * 40, kind = "quest", arg = "velha tarefa rara", zone = "x", m = false, idx = 1, tier = 1 },
+  { t = NOW - 3600, kind = "quest", arg = "tarefa rara de hoje", zone = "x", m = false, idx = 1, tier = 1 },
+}`),
+  body: `local tab = btn("Search")
+tab._OnClick(tab)
+local p
+for i = #frames, 1, -1 do if rawget(frames[i], "searchBox") then p = frames[i]; break end end
+local function shown() local n = 0 for _, r in ipairs(p.rows) do if r._shown == true then n = n + 1 end end return n end
+p.searchBox:SetText("rara"); p.searchBox._OnTextChanged(p.searchBox, true); runTimers()
+local base = shown()                                  -- the three pages
+local closed = p.kindList._shown ~= true and p.whenList._shown ~= true
+p.kindButton._OnClick(p.kindButton)
+local kindOpen = p.kindList._shown == true
+p.whenButton._OnClick(p.whenButton)
+local oneAtATime = p.whenList._shown == true and p.kindList._shown ~= true
+p.whenItems[3]._OnClick(p.whenItems[3])             -- the last 30 days
+local pickedClosed = p.whenList._shown ~= true
+local month = shown()
+local whenText = rawget(p.whenButton.text, "_text")
+local whenChosen = p.whenButton.active
+p.kindButton._OnClick(p.kindButton)
+p.kindItems[2]._OnClick(p.kindItems[2])             -- quests
+local quests = shown()
+local kindText = rawget(p.kindButton.text, "_text")
+p.kindItems[8]._OnClick(p.kindItems[8])             -- notes
+local notes = shown()
+p.kindItems[1]._OnClick(p.kindItems[1])             -- everything again
+p.whenItems[1]._OnClick(p.whenItems[1])             -- any time
+local all = shown()
+RES = (base == 3 and closed and kindOpen and oneAtATime and pickedClosed and month == 2 and quests == 1 and notes == 1 and all == 3
+  and whenText:find("30", 1, true) and kindText:find("Quests", 1, true) and whenChosen == true and p.kindButton.active == false) and "ok"
+  or ("base=" .. base .. " closed=" .. tostring(closed) .. " open=" .. tostring(kindOpen) .. " one=" .. tostring(oneAtATime) .. " picked=" .. tostring(pickedClosed)
+    .. " month=" .. month .. " quests=" .. quests .. " notes=" .. notes .. " all=" .. all .. " when=" .. tostring(whenText) .. " kind=" .. tostring(kindText) .. " chosen=" .. tostring(whenChosen))`,
+});
+
+run('the search tab shows the picture of each page, the star of a favourite and a faint word in the empty box', {
+  pre: SAVED(`{
+  { t = NOW - 7200, kind = "note", arg = "a nota rara", zone = "x", m = false, fav = true },
+  { t = NOW - 3600, kind = "quest", arg = "a tarefa rara", zone = "x", m = false, idx = 1, tier = 3 },
+}`),
+  body: `local tab = btn("Search")
+tab._OnClick(tab)
+local p
+for i = #frames, 1, -1 do if rawget(frames[i], "searchBox") then p = frames[i]; break end end
+p.searchBox:SetText(""); p.searchBox._OnTextChanged(p.searchBox, true)
+local before = p.placeholder._shown
+p.searchBox:SetText("rara"); p.searchBox._OnTextChanged(p.searchBox, true); runTimers()
+local typed = p.placeholder._shown
+local quest, note = p.rows[1], p.rows[2]
+RES = (before == true and typed == false and rawget(quest.icon, "_tex") and rawget(quest.icon, "_tex"):find("seal3", 1, true)
+  and rawget(note.icon, "_tex") and rawget(note.icon, "_tex"):find("dd_scroll", 1, true) and note.star._shown == true and quest.star._shown == false
+  and rawget(p.rightTitle, "_text") == "Results") and "ok"
+  or ("placeholder " .. tostring(before) .. "/" .. tostring(typed) .. " quest=" .. tostring(rawget(quest.icon, "_tex")) .. " note=" .. tostring(rawget(note.icon, "_tex"))
+    .. " stars " .. tostring(note.star._shown) .. "/" .. tostring(quest.star._shown) .. " title=" .. tostring(rawget(p.rightTitle, "_text")))`,
+});
+
+run('the look of the tabs: the Style tab steps through five looks, each tab takes the picture and the ink of the look, the ribbon has a colour for each shut tab, and the choice is kept', {
+  pre: SAVED('{}'),
+  body: `local p
+local st = btn("Settings"); st._OnClick(st)
+for i = #frames, 1, -1 do if rawget(frames[i], "lookName") then p = frames[i]; break end end
+local days, cover = btn("Days"), btn("Cover")
+local function pic(b) return tostring(rawget(b.tex, "_tex")) end
+local first = pic(days):find("tab_idle", 1, true) ~= nil and SkaldDB.tabStyle == nil
+p.lookNext._OnClick(p.lookNext)
+local ribbon = SkaldDB.tabStyle == "ribbon" and pic(days):find("tab_ribbon_red_idle", 1, true) ~= nil and rawget(p.lookName.text, "_text") == ns.LOCALES.enUS.TAB_LOOKS[2] and pic(cover):find("tab_ribbon_red_idle", 1, true) ~= nil and pic(btn("Settings")):find("tab_ribbon_active", 1, true) ~= nil   -- Settings is the open one
+p.lookNext._OnClick(p.lookNext); p.lookNext._OnClick(p.lookNext)
+local parchment = SkaldDB.tabStyle == "parchment" and pic(days):find("tab_parchment_idle", 1, true) ~= nil
+p.lookNext._OnClick(p.lookNext); p.lookNext._OnClick(p.lookNext)
+local round = SkaldDB.tabStyle == "leather" and pic(days):find("tab_idle", 1, true) ~= nil   -- five steps go round
+p.lookBack._OnClick(p.lookBack)
+local back = SkaldDB.tabStyle == "wood" and pic(days):find("tab_wood_idle", 1, true) ~= nil
+local miss = {}
+for _, loc in ipairs({ "enUS", "ptBR", "frFR" }) do
+  local L = ns.LOCALES[loc]
+  if type(L.OPT_TABLOOK) ~= "string" or type(L.TAB_LOOKS) ~= "table" or #L.TAB_LOOKS ~= 5 then miss[#miss + 1] = loc end
+end
+RES = (first and ribbon and parchment and round and back and #miss == 0) and "ok"
+  or ("first=" .. tostring(first) .. " ribbon=" .. tostring(ribbon) .. " parchment=" .. tostring(parchment) .. " round=" .. tostring(round) .. " back=" .. tostring(back) .. " missing: " .. table.concat(miss, ","))`,
+});
+
+// every picture a look can ask for is in the folder
+{
+  const src = fs.readFileSync(path.join(ADDONS, 'Skald', 'Skald.lua'), 'utf8');
+  const names = new Set();
+  for (const m of src.matchAll(/(?:idle|active) = "(tab_[a-z_%]+)"/g)) {
+    if (m[1].includes('%s')) for (const c of ['red', 'blue', 'green', 'gold']) names.add(m[1].replace('%s', c));
+    else names.add(m[1]);
+  }
+  const lost = [...names].filter(n => !fs.existsSync(path.join(ADDONS, 'Skald', 'Textures', 'skald2', n + '.tga')));
+  if (names.size >= 11 && !lost.length) console.log('  ok    every picture of the looks of the tabs is in the folder (' + names.size + ')');
+  else { failed++; console.log('  FAIL  pictures of the looks of the tabs: ' + names.size + ' named, missing: ' + lost.join(', ')); }
+}
 
 console.log(failed ? `\n${failed} regression(s) FAILED` : '\nAll regressions passed');
 process.exit(failed ? 1 : 0);

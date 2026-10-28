@@ -19,7 +19,8 @@ const FORBID = {
 const ALLOW = [/not every deed needs a sword/, /no blood was spilled/, /nem todo feito pede uma espada/, /nenhum sangue foi derramado/,
   /not every hero wields a sword/, /nem todo herói empunha uma espada/];
 const QUEST_POOLS = ['questDelivery', 'questDeliveryNotable', 'questGather', 'questGatherNotable',
-  'questExplore', 'questExploreNotable', 'questSeek', 'questSeekNotable', 'questChain'];
+  'questExplore', 'questExploreNotable', 'questSeek', 'questSeekNotable', 'questChain',
+  'fact_above', 'fact_below', 'fact_rich', 'fact_first', 'fact_milestone', 'fact_back', 'fact_fallen'];
 
 for (const loc of ['enUS', 'ptBR', 'frFR']) {
   run(`__locale="${loc}"; frames={}; SkaldDB=nil; SkaldCharDB=nil
@@ -56,12 +57,14 @@ local function CheckUI(base, translated, path)
 end
 CheckUI(ns.LOCALES.enUS, ns.LOCALES["${loc}"], "${loc}")
 local NO_NAME = { party = true, day = true, anniv7 = true, anniv30 = true, anniv100 = true, anniv365 = true }
-local KNOWN = { ["{npc}"] = true, ["{steps}"] = true, ["{standing}"] = true, ["{tries}"] = true, ["{days}"] = true, ["{place}"] = true, ["{count}"] = true }
+local KNOWN = { ["{diff}"] = true, ["{gold}"] = true, ["{nth}"] = true, ["{npc}"] = true, ["{steps}"] = true, ["{standing}"] = true, ["{tries}"] = true, ["{days}"] = true, ["{place}"] = true, ["{count}"] = true }
 for kind, list in pairs(P) do
   for i, ph in ipairs(list) do
     if not pcall(string.format, ph, "NAME") then problems[#problems+1] = "FORMAT " .. kind .. "#" .. i end
     local n = select(2, ph:gsub("%%s", ""))
-    if n ~= 1 and not NO_NAME[kind] then problems[#problems+1] = "NAMECOUNT(" .. n .. ") " .. kind .. "#" .. i end
+    if kind:find("^fact_") then
+      if n ~= 0 then problems[#problems+1] = "FACT NAME " .. kind .. "#" .. i end
+    elseif n ~= 1 and not NO_NAME[kind] then problems[#problems+1] = "NAMECOUNT(" .. n .. ") " .. kind .. "#" .. i end
     for tag in ph:gmatch("{[^}]*}") do
       if not KNOWN[tag] and not tag:match("^{g:[^|}]*|[^}]*}$") then problems[#problems+1] = "UNKNOWN TAG " .. tag .. " in " .. kind .. "#" .. i end
     end

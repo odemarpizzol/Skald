@@ -5,7 +5,7 @@ const fs = require('fs');
 const path = require('path');
 
 const ADDONS = path.resolve(__dirname, '../../..');
-const FILES = [['LOC', 'Locales.lua'], ['CUR', 'Curated.lua'], ['XPT', 'XPTiers.lua'], ['CH', 'Skald.lua'], ['AT', 'Atlas.lua'], ['GL', 'Goals.lua'], ['SG', 'Saga.lua'], ['ZC', 'ZoneCard.lua']];
+const FILES = [['LOC', 'Locales.lua'], ['CUR', 'Curated.lua'], ['XPT', 'XPTiers.lua'], ['CH', 'Skald.lua'], ['AT', 'Atlas.lua'], ['GL', 'Goals.lua'], ['SG', 'Saga.lua'], ['ZC', 'ZoneCard.lua'], ['BK', 'Backup.lua'], ['SR', 'Search.lua'], ['BD', 'Bard.lua']];
 const [saved, out, locale = 'ptBR'] = process.argv.slice(2);
 if (!saved || !out) { console.log('usage: node tools/reader_sample.js <Skald.lua> <output> [locale]'); process.exit(1); }
 
@@ -38,7 +38,7 @@ function UnitGUID() return savedGuid or "P1" end   -- the diary belongs to this 
 -- the saved file sets SkaldDB and SkaldCharDB as globals
 ns={}
 assert(load(LOC,"=L"))("Skald",ns); assert(load(CUR,"=U"))("Skald",ns); assert(load(XPT,"=X"))("Skald",ns)
-assert(load(CH,"=C"))("Skald",ns); assert(load(AT,"=A"))("Skald",ns); assert(load(GL,"=G"))("Skald",ns); assert(load(SG,"=S"))("Skald",ns); assert(load(ZC,"=Z"))("Skald",ns)
+assert(load(CH,"=C"))("Skald",ns); assert(load(AT,"=A"))("Skald",ns); assert(load(GL,"=G"))("Skald",ns); assert(load(SG,"=S"))("Skald",ns); assert(load(ZC,"=Z"))("Skald",ns); assert(load(BK,"=B"))("Skald",ns); assert(load(SR,"=R"))("Skald",ns); assert(load(BD,"=D"))("Skald",ns)
 fire("ADDON_LOADED","Skald"); fire("PLAYER_LOGIN"); runTimers(); runTimers()
 PARTS = SkaldAPI.BuildExport("reader", "all")
 OUT = table.concat(PARTS, "\\n===PART===\\n")`);
