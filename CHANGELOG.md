@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.42.0-beta
+
+- A quest page can carry one more sentence about the moment, told only when it is true: the first quest of the day, the tenth, twentieth..., a quest far above or far below your level (with the gap in levels), a fat purse (with the gold), a fall just before, or a long absence. Each is drawn from its own phrases, never repeats within the last three quests, and never repeats a phrase within the last five of its kind
+- Six more lines in each pool for rare and epic quests and for the notable delivery, gather, explore and seek quests
+- The everyday quest pages (delivery, gather, explore, seek, and the general and fight ones) have about twice as many lines: 30 each, 44 for fights
+- **Search tab** (between Days and Goals): type a word of a quest, a place, a giver, a companion or a note and the pages found are listed, newest first, with the words found painted and the picture of each page. Choose the kind of page (quests, battles, loot, company, journeys, deeds, notes), how far back (7 days, 30 days, a year) and favourites only; a click opens the page in the book. Capitals and accents do not matter
+- **Backup and restore:** `/skald backup` writes the whole diary as text in parts, and `/skald restore` takes the parts back, in any order, only on the character they came from. Everything is checked before anything is touched, the text is never run as code, and the diary replaced is kept whole so `/skald restore undo` brings it back
+- Favourites and notes are never dropped when the book passes its 3000 pages (it keeps growing and says so once, with a hint to export), and the counters behind the goals (chains, hard bosses, pet levels, reunions, guild, days written) no longer shrink when old pages go
+- The column of tabs closes its step a little when there are many, so it stays above the foot of the cover
+- The Skald.toc already lists 16001 and 20506: it loads in the 1.60.1 client and in the Anniversary one
+- The column of tabs is shorter: Style, Notices and Options are now three pages of one "Settings" tab, turned with the corners of the book.
+- New "Bard" tab: a jukebox of 33 pieces of the game's own music, with play/stop, previous/next, the time played and the volume of the game's music.
+- New art for the tabs of the book (leather banners, the open one outlined in gold).
+- Five looks for the tabs of the book (leather, ribbon, brass, parchment, carved wood), chosen in the Style tab.
+- While a song of the Bard plays and the book is shut, a notice on the screen shows it, with skip and Stop buttons and a note that beats (click it to open the Bard, drag it to move it, right click to hide it); it has five looks, chosen on the Bard tab.
+- The Bard goes on by itself when a song ends (by chance with "Shuffle"), has 33 songs on pages, and a Shuffle check.
+
 ## 0.41.0-beta
 
 - Pages of a day are filled to about nine tenths, and the last page of the day keeps room for the doodles at the foot: each one a different size, a little crooked and on its own height, scattered by a hand. `/skald density compact|comfy|airy` sets how much is left free (comfy by default; compact is the old way)
