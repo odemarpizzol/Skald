@@ -34,7 +34,7 @@ C_Map={GetMapInfo=function(id) if id==1439 then return {mapType=3,name="Darkshor
 C_QuestLog={GetTitleForQuestID=function(q) if q==77 then return "Wanted: Jai'vhanel" end end}
 C_Item={GetItemNameByID=function(id) if id==555 then return "Worn Hatchet" end end}
 function fire(ev,...) for _,f in ipairs(frames) do if f._OnEvent then f._OnEvent(f,ev,...) end end end
-function btn(label) for i=#frames,1,-1 do local f=frames[i]; local tx=rawget(f,"text"); if tx and rawget(tx,"_text")==label and f._OnClick then return f end end end
+function btn(label) for pass=1,2 do for i=#frames,1,-1 do local f=frames[i]; local tx=rawget(f,"text"); if tx and rawget(tx,"_text")==label and f._OnClick and (pass==2 or type(rawget(f,"top"))=="number") then return f end end end end   -- a tab of the book first: a filter of the Search tab can carry the same word (Journeys, Deeds)
 function count(k) local n=0 for _,e in ipairs(SkaldCharDB.entries) do if e.kind==k then n=n+1 end end return n end
 ${pre}
 ns={}
@@ -219,13 +219,13 @@ RES = (text:find("Wolf", 1, true) and not text:find("Lobo", 1, true)) and "ok" o
 
 run('an old separate Skald Atlas keeps the built-in map out of the way', {
   pre: `function IsAddOnLoaded(n) return n == "SkaldAtlas" end`,
-  body: `RES = (btn("Map") == nil) and "ok" or "the map tab is drawn twice"`,
+  body: `RES = (btn("Atlas") == nil) and "ok" or "the map tab is drawn twice"`,
 });
 
 run('the small replacement Atlas lets Skald take over', {
   pre: `function IsAddOnLoaded(n) return n == "SkaldAtlas" end
 SkaldAtlasStub = true`,
-  body: `RES = (btn("Map") ~= nil) and "ok" or "the map tab is missing"`,
+  body: `RES = (btn("Atlas") ~= nil) and "ok" or "the map tab is missing"`,
 });
 
 run('saved positions are shortened to four decimals', {
@@ -280,7 +280,7 @@ RES = (r[1] and r[2] and r[3] and r[4]) and "ok" or ("all " .. tostring(r[1]) ..
 
 run('the Map tab says how many pages each choice of "when" holds', {
   pre: THREE_DAYS,
-  body: `local mb = btn("Map")
+  body: `local mb = btn("Atlas")
 mb._OnClick(mb)
 local seen = {}
 for _, fs in ipairs(FONTS) do local t = rawget(fs, "_text"); if t then seen[tostring(t)] = true end end
@@ -853,7 +853,7 @@ RES = (n == 1) and "ok" or ("companions1 written " .. n .. " times")`,
 
 run('the goals tab opens and every goal has its name and text in each language', {
   pre: `__locale = "ptBR"`,
-  body: `local tab = btn("Metas")
+  body: `local tab = btn("Feitos")
 local missing = {}
 for _, g in ipairs(ns.GoalList) do
   if not ns.GoalUI.NAMES[g.id] then missing[#missing + 1] = "name " .. g.id end
@@ -868,7 +868,7 @@ run('the goals of the French client are all named', {
 for _, g in ipairs(ns.GoalList) do
   if not ns.GoalUI.NAMES[g.id] then missing[#missing + 1] = g.id end
 end
-RES = (#missing == 0 and btn("Objectifs") ~= nil) and "ok" or ("missing: " .. table.concat(missing, ","))`,
+RES = (#missing == 0 and btn("Exploits") ~= nil) and "ok" or ("missing: " .. table.concat(missing, ","))`,
 });
 
 run('building and refreshing the goals tab raises no error', {
@@ -879,7 +879,7 @@ pcall = function(f, ...)
   if not r[1] and tostring(r[2]):find("G:", 1, true) then ERRS = ERRS .. tostring(r[2]) .. "; " end
   return table.unpack(r)
 end`,
-  body: `local tab = btn("Goals")
+  body: `local tab = btn("Deeds")
 if tab and tab._OnClick then tab._OnClick(tab) end
 fire("BOSS_KILL", 1, "Edwin VanCleef"); runTimers(); runTimers()
 RES = (tab ~= nil and ERRS == "") and "ok" or ("tab=" .. tostring(tab) .. " errors: " .. ERRS)`,
@@ -894,7 +894,7 @@ run('a goal reached says what it was about, and its row opens the page', {
 }`, 'goals = { chains1 = { t = 1, retro = true } }, goalsInit = true')}
 local opened
 `,
-  body: `local tab = btn("Goals")
+  body: `local tab = btn("Deeds")
 tab._OnClick(tab)
 for i = #frames, 1, -1 do local f = frames[i]; local c = rawget(f, "cat"); if c and c.key == "story" and f._OnClick then f._OnClick(f); break end end
 SkaldAPI.OpenEntry = function(e) opened = e end
@@ -1396,6 +1396,14 @@ ns.SpeechOn = true
 RES = (off and not ns.SpeechAvailable() and SPOKEN == nil) and "ok" or "spoke without an API or with the switch off"`,
 });
 
+run('the cover shows the tall Tauren from further away, so head and hands stay inside the arch', {
+  pre: `function UnitRace() return "Tauren", "Tauren" end`,
+  body: `local tauren = ns.CoverZoom()
+UnitRace = function() return "Human", "Human" end
+local human = ns.CoverZoom()
+RES = (tauren > human and human == 0.8) and "ok" or ("tauren " .. tostring(tauren) .. " human " .. tostring(human))`,
+});
+
 run('the Saga says "an Orc" and "an Undead", never "a Orc"', {
   pre: SAGA_DIARY() + `
 function UnitRace() return "Orc", "Orc" end`,
@@ -1510,7 +1518,7 @@ end`,
 
 run('the Days tab turns to the last spread: the day card sums up the day, with no error', {
   pre: SAGA_DIARY(),
-  body: `local tab = btn("Days")
+  body: `local tab = btn("Journeys")
 if not tab then RES = "no Days tab" else
   tab._OnClick(tab)
   local shown = 0
@@ -1676,7 +1684,7 @@ RES = (newPages == 0 and quiet and not g.quests3000 and not g.days7 and f.days >
 });
 
 run('a long category of goals goes over more pages: the corners of the book turn them and stay inside the range', {
-  body: `local tab = btn("Goals")
+  body: `local tab = btn("Deeds")
 tab._OnClick(tab)
 for i = #frames, 1, -1 do local f = frames[i]; local c = rawget(f, "cat"); if c and c.key == "war" and f._OnClick then f._OnClick(f); break end end
 local pager
@@ -2392,6 +2400,21 @@ RES = (allLen and early and advanced and notYet and wraps and chance and stays a
     .. " chance=" .. tostring(chance) .. " stays=" .. tostring(stays) .. " quits=" .. tostring(quits))`,
 });
 
+run('the Bard notice: in every look the three buttons end inside the picture, the name has room, and the name does not run under them', {
+  pre: 'GetTime = function() return 100 end\n' + SAVED('{}'),
+  body: `local B = ns.Bard
+local tab = btn("Bard"); tab._OnClick(tab)
+local bad = {}
+for _, key in ipairs({ "bar", "scroll", "wood", "medal" }) do
+  local l = B.HudLayout(key)
+  if not (l.stopX + 13 < l.w - 8) then bad[#bad + 1] = key .. " stop outside" end
+  if not (l.prevX < l.nextX and l.nextX < l.stopX) then bad[#bad + 1] = key .. " buttons out of order" end
+  if not (l.textRight - l.textLeft >= 100) then bad[#bad + 1] = key .. " name room " .. (l.textRight - l.textLeft) end
+  if not (l.textRight <= l.prevX - 13) then bad[#bad + 1] = key .. " name under the buttons" end
+end
+RES = (#bad == 0) and "ok" or table.concat(bad, "; ")`,
+});
+
 run('the Bard notice: four looks stepped through on the Bard tab, a look just chosen shows at once with the book open, the button Stop of a picture stops, and the names are in every language', {
   pre: 'GetTime = function() return 100 end\n' + SAVED('{}'),
   body: `local B = ns.Bard
@@ -2463,7 +2486,7 @@ end
 local function lit(label) local b = btn(label); return b and b.active == true end
 local n0, low0, names0 = column()
 local coverLit = lit("Cover")
-local artOn = tostring(rawget(btn("Cover").tex, "_tex")):find("tab_active", 1, true) and tostring(rawget(btn("Days").tex, "_tex")):find("tab_idle", 1, true)
+local artOn = tostring(rawget(btn("Cover").tex, "_tex")):find("tab_active", 1, true) and tostring(rawget(btn("Journeys").tex, "_tex")):find("tab_idle", 1, true)
 local settings = btn("Settings"); settings._OnClick(settings)
 local n1, low1, names1 = column()
 local settingsLit = lit("Settings")
@@ -2477,7 +2500,7 @@ panel.pager.Turn(1); panel.pager.Turn(1)
 local page3 = panel.pager.Current() == 3 and not panel.pager.CanNext() and panel.pager.CanPrev()
 panel.GoTo("style")
 local goTo = panel.pager.Current() == 1 and not panel.pager.CanPrev()
-local days = btn("Days"); days._OnClick(days)
+local days = btn("Journeys"); days._OnClick(days)
 local n2, _, names2 = column()
 settings._OnClick(settings)
 local back = lit("Settings")
@@ -2593,7 +2616,7 @@ run('the look of the tabs: the Style tab steps through five looks, each tab take
   body: `local p
 local st = btn("Settings"); st._OnClick(st)
 for i = #frames, 1, -1 do if rawget(frames[i], "lookName") then p = frames[i]; break end end
-local days, cover = btn("Days"), btn("Cover")
+local days, cover = btn("Journeys"), btn("Cover")
 local function pic(b) return tostring(rawget(b.tex, "_tex")) end
 local first = pic(days):find("tab_idle", 1, true) ~= nil and SkaldDB.tabStyle == nil
 p.lookNext._OnClick(p.lookNext)
@@ -2611,6 +2634,28 @@ for _, loc in ipairs({ "enUS", "ptBR", "frFR" }) do
 end
 RES = (first and ribbon and parchment and round and back and #miss == 0) and "ok"
   or ("first=" .. tostring(first) .. " ribbon=" .. tostring(ribbon) .. " parchment=" .. tostring(parchment) .. " round=" .. tostring(round) .. " back=" .. tostring(back) .. " missing: " .. table.concat(miss, ","))`,
+});
+
+run('the paper of the pages: the Notices page offers four papers, the choice is kept (clean is the default and is not stored), and the names are in the three languages', {
+  pre: SAVED('{}'),
+  body: `local p
+local st = btn("Settings"); st._OnClick(st)
+for i = #frames, 1, -1 do if rawget(frames[i], "paperButtons") then p = frames[i]; break end end
+local pb = p.paperButtons
+local first = SkaldDB.paperStyle == nil
+pb.war._OnClick(pb.war)
+local war = SkaldDB.paperStyle == "war"
+pb.old._OnClick(pb.old)
+local old = SkaldDB.paperStyle == "old"
+pb.clean._OnClick(pb.clean)
+local clean = SkaldDB.paperStyle == nil
+local miss = {}
+for _, loc in ipairs({ "enUS", "ptBR", "frFR" }) do
+  local L = ns.LOCALES[loc]
+  if type(L.OPT_PAPER) ~= "string" or type(L.PAPER_NAMES) ~= "table" or not (L.PAPER_NAMES.clean and L.PAPER_NAMES.travel and L.PAPER_NAMES.war and L.PAPER_NAMES.old) then miss[#miss + 1] = loc end
+end
+RES = (first and war and old and clean and #miss == 0) and "ok"
+  or ("first=" .. tostring(first) .. " war=" .. tostring(war) .. " old=" .. tostring(old) .. " clean=" .. tostring(clean) .. " missing: " .. table.concat(miss, ","))`,
 });
 
 // every picture a look can ask for is in the folder

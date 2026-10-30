@@ -45,6 +45,7 @@ console.log('Textures');
   for (const m of src.matchAll(/"(pin_med)" \.\./g)) for (let i = 0; i <= 5; i++) wanted.add('pin_med' + i);
   const ev = (src.match(/local EVENT_ICON = \{([\s\S]*?)\n\}/) || [])[1] || '';
   for (const m of ev.matchAll(/= "([a-z_]+)"/g)) wanted.add(m[1].startsWith('st_') ? m[1] : 'ev_' + m[1]);
+  if (wanted.has('ui_corner_')) { wanted.delete('ui_corner_'); for (const side of ['l', 'r']) for (const look of ['', '_travel', '_war', '_old']) wanted.add('ui_corner_' + side + look); }
   if (wanted.has('ui_seal')) { wanted.delete('ui_seal'); for (let i = 0; i <= 5; i++) wanted.add('ui_seal' + i); }
   const missing = [...wanted].filter(n => !tex.has(n) && n !== 'pf_' && n !== 'ev_');
   if (missing.length) fail('missing textures: ' + missing.join(', ')); else ok(wanted.size + ' named textures exist');
@@ -107,7 +108,7 @@ local win=_G.SkaldFrame; win:Show(); if win._OnShow then win._OnShow(win) end
 out.book = win ~= nil
 local settingsBtn = btn(ns.LOCALES["${locale}"].TAB_SETTINGS)
 out.tabStyle = settingsBtn ~= nil and select(1, pcall(settingsBtn._OnClick, settingsBtn))
-local mapLabel = ({enUS="Map",ptBR="Mapa",frFR="Carte"})["${locale}"]
+local mapLabel = ({enUS="Atlas",ptBR="Atlas",frFR="Atlas"})["${locale}"]
 out.tabJourney = false
 for _, f in ipairs(frames) do local subs = rawget(f, "subs"); if type(subs) == "table" and #subs == 3 then out.tabJourney = true end end
 local mapBtn = btn(mapLabel)

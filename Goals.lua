@@ -8,7 +8,7 @@ local _, ns = ...
 -- Texts of the tab and of every goal (the page of a goal reached has its own phrases in Locales.lua).
 local UI_TEXT = {
     enUS = {
-        TAB = "Goals", OF = "%d of %d", DONE_ON = "Done on %s", BEFORE = "Done before the diary counted", SECRET = "???",
+        TAB = "Deeds", OF = "%d of %d", DONE_ON = "Done on %s", BEFORE = "Done before the diary counted", SECRET = "???",
         SECRET_HINT = "A goal still to be found.", DATE = "%m/%d/%Y", TOTAL = "%d of %d goals reached",
         POINTS = "%d of %d points", PTS = "%d pts", WORTH = "Worth %d points", NEXT_TITLE = "Next title: %s, at %d points.",
         TITLES = { [0] = "Newcomer", [50] = "Wanderer", [150] = "Wayfarer", [300] = "Trailblazer", [500] = "Storied One", [750] = "Legend of the Road", [1100] = "A Name in the Songs", [1600] = "Keeper of Long Tales", [2200] = "Immortal of Azeroth" },
@@ -54,7 +54,7 @@ local UI_TEXT = {
         },
     },
     ptBR = {
-        TAB = "Metas", OF = "%d de %d", DONE_ON = "Cumprida em %s", BEFORE = "Cumprida antes do diário contar", SECRET = "???",
+        TAB = "Feitos", OF = "%d de %d", DONE_ON = "Cumprida em %s", BEFORE = "Cumprida antes do diário contar", SECRET = "???",
         SECRET_HINT = "Uma meta ainda por descobrir.", DATE = "%d/%m/%Y", TOTAL = "%d de %d metas cumpridas",
         POINTS = "%d de %d pontos", PTS = "%d pts", WORTH = "Vale %d pontos", NEXT_TITLE = "Próximo título: %s, com %d pontos.",
         TITLES = { [0] = "Recém-chegad{g:o|a}", [50] = "Caminhante", [150] = "Viajante", [300] = "Desbravador{g:|a}", [500] = "Personagem de Lendas", [750] = "Lenda da Estrada", [1100] = "Um Nome nas Canções", [1600] = "Guardi{g:ão|ã} das Longas Histórias", [2200] = "Imortal de Azeroth" },
@@ -100,7 +100,7 @@ local UI_TEXT = {
         },
     },
     frFR = {
-        TAB = "Objectifs", OF = "%d sur %d", DONE_ON = "Accompli le %s", BEFORE = "Accompli avant que le journal compte", SECRET = "???",
+        TAB = "Exploits", OF = "%d sur %d", DONE_ON = "Accompli le %s", BEFORE = "Accompli avant que le journal compte", SECRET = "???",
         SECRET_HINT = "Un objectif encore à découvrir.", DATE = "%d/%m/%Y", TOTAL = "%d objectifs atteints sur %d",
         POINTS = "%d points sur %d", PTS = "%d pts", WORTH = "Vaut %d points", NEXT_TITLE = "Prochain titre\194\160: %s, à %d points.",
         TITLES = { [0] = "Nouv{g:el|elle} arrivant{g:|e}", [50] = "Voyageu{g:r|se}", [150] = "Routi{g:er|ère}", [300] = "Pionni{g:er|ère}", [500] = "Personnage de légende", [750] = "Légende de la route", [1100] = "Un nom dans les chansons", [1600] = "Gardien{g:|ne} des longs récits", [2200] = "Immortel{g:|le} d'Azeroth" },
@@ -468,13 +468,35 @@ local function BuildGoalsTab(panel)
         bar.frame:SetTexture(TEX .. "ui_bar_frame")
         bar.fill = bar:CreateTexture(nil, "OVERLAY")
         bar.fill:SetTexture(TEX .. "ui_bar_fill")
-        bar.fill:SetPoint("TOPLEFT", 8, -3)
-        bar.fill:SetHeight(height - 6)
-        bar.max = width - 16
+        bar.fill:SetVertexColor(0.84, 0.75, 0.57, 1)
+        bar.leftCap = bar:CreateTexture(nil, "OVERLAY")
+        bar.leftCap:SetTexture(TEX .. "bar_cap_left")
+        bar.leftCap:SetVertexColor(0.84, 0.75, 0.57, 1)
+        bar.rightCap = bar:CreateTexture(nil, "OVERLAY")
+        bar.rightCap:SetTexture(TEX .. "bar_cap_right")
+        bar.rightCap:SetVertexColor(0.84, 0.75, 0.57, 1)
+        bar.fill:SetPoint("TOPLEFT", 9, -4)
+        bar.fill:SetHeight(height - 8)   -- inside the dark track, clear of the rim of the frame
+        bar.max = width - 18
         function bar:Set(fraction)
             fraction = math.max(0, math.min(1, fraction or 0))
-            self.fill:SetWidth(math.max(0.01, self.max * fraction))
-            self.fill:SetShown(fraction > 0)
+            local w = self.max * fraction
+            local h = height - 8
+            local cap = math.min(h, w / 2)
+            local shown = fraction > 0
+            self.leftCap:ClearAllPoints()
+            self.leftCap:SetPoint("TOPLEFT", 9 - cap / 2, -4 + (h - cap) / 2)
+            self.leftCap:SetSize(cap, cap)
+            self.leftCap:SetShown(shown)
+            self.rightCap:ClearAllPoints()
+            self.rightCap:SetPoint("TOPLEFT", 9 + w - cap / 2, -4 + (h - cap) / 2)
+            self.rightCap:SetSize(cap, cap)
+            self.rightCap:SetShown(shown)
+            local middle = math.max(0, w - cap)   -- from the middle of one cap to the middle of the other
+            self.fill:SetPoint("TOPLEFT", 9 + cap / 2, -4)
+            self.fill:SetWidth(middle)
+            self.fill:SetTexCoord(0, math.min(1, middle / 256), 0, 1)
+            self.fill:SetShown(middle > 0)
         end
         return bar
     end

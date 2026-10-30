@@ -222,6 +222,14 @@ K.FLAVOR_FULL = 8   -- the lines a class or race pool needs to be drawn as often
 K.CRAFT_MERGE = 1200   -- seconds: making the same thing again within this time adds to the page of the last one
 K.QUEST_START_MAX, K.QUEST_START_DAYS = 300, 60   -- quests whose acceptance is kept, and for how long
 K.MODEL_REUSE, K.MODEL_RETRY = 20, { 1.5, 4 }   -- seconds: the cover model is not asked for again within K.MODEL_REUSE; retries after the first request
+-- How far the camera stands from the model on the cover: the tall races (the Tauren is taller than the arch) are shown from
+-- further away so head and hands stay inside the frame.
+K.COVER_ZOOM, K.COVER_ZOOM_BY_RACE = 0.8, { Tauren = 1.0 }
+K.COVER_UNDRESS = { 16, 17, 18 }   -- inventory slots of the weapons
+function ns.CoverZoom()
+    local _, raceFile = UnitRace("player")
+    return K.COVER_ZOOM_BY_RACE[raceFile or ""] or K.COVER_ZOOM
+end
 K.GHOST_ART = { epic = "ghost_candle", humble = "ghost_wisp", humor = "ghost_rip" }   -- the picture of the cover for a spirit, by voice
 K.FALLS_FORGOTTEN = 7200   -- seconds after the last fall in a dungeon, when it no longer counts for a boss
 
@@ -1540,6 +1548,7 @@ do
         Make("SkaldSaga", "EBGaramond.ttf", size + 3, size + 1)
         Make("SkaldItalic", "EBGaramond-Italic.ttf", size, size - 2)
         Make("SkaldSmall", "EBGaramond.ttf", 11, 10)
+        Make("SkaldTab", "EBGaramond.ttf", 15, 14)   -- the names on the tabs: a size up from the body, over a shadow, so they read on the wood
         Make("SkaldHead", "Cinzel.ttf", 22, 19)
         Make("SkaldHead2", "Cinzel.ttf", 17, 16)
         Make("SkaldSec", "Cinzel.ttf", 13, 12)
@@ -1550,15 +1559,19 @@ do
 end
 
 K.TEX = "Interface\\AddOns\\Skald\\Textures\\skald2\\"
+K.PAPER_STYLE_ORDER = { "clean", "travel", "war", "old" }
+K.PAPER_TEXTURES = {
+    clean = "parchment", travel = "parchment_travel", war = "parchment_war", old = "parchment_old",
+}
 -- The looks of the tabs (Style tab). Every picture is 256x128 shown at half size, the same leather 110x31 inside, so a
 -- look changes the picture and the writing only: where the letters go (x, width) and their colour, shut and open.
 K.TAB_STYLE_ORDER = { "leather", "ribbon", "brass", "parchment", "wood" }
 K.TAB_STYLES = {
-    leather   = { idle = "tab_idle", active = "tab_active", x = 21, w = 78, ink = { 0.92, 0.86, 0.72 }, inkOn = { 1, 0.94, 0.78 } },
-    ribbon    = { idle = "tab_ribbon_%s_idle", active = "tab_ribbon_active", x = 14, w = 90, ink = { 1, 0.97, 0.90 }, inkOn = { 0.30, 0.18, 0.05 } },
-    brass     = { idle = "tab_brass_idle", active = "tab_brass_active", x = 12, w = 90, ink = { 0.98, 0.93, 0.78 }, inkOn = { 0.30, 0.18, 0.04 } },
+    leather   = { idle = "tab_idle", active = "tab_active", x = 21, w = 78, ink = { 0.97, 0.92, 0.78 }, inkOn = { 1, 0.96, 0.82 }, shadow = true },
+    ribbon    = { idle = "tab_ribbon_%s_idle", active = "tab_ribbon_active", x = 14, w = 90, ink = { 1, 0.97, 0.90 }, inkOn = { 0.30, 0.18, 0.05 }, shadow = true },
+    brass     = { idle = "tab_brass_idle", active = "tab_brass_active", x = 12, w = 90, ink = { 0.98, 0.93, 0.78 }, inkOn = { 0.30, 0.18, 0.04 }, shadow = true },
     parchment = { idle = "tab_parchment_idle", active = "tab_parchment_active", x = 14, w = 88, ink = { 0.28, 0.17, 0.08 }, inkOn = { 0.28, 0.17, 0.08 } },
-    wood      = { idle = "tab_wood_idle", active = "tab_wood_active", x = 22, w = 74, ink = { 0.95, 0.80, 0.42 }, inkOn = { 1, 0.90, 0.55 } },
+    wood      = { idle = "tab_wood_idle", active = "tab_wood_active", x = 22, w = 74, ink = { 1, 0.93, 0.66 }, inkOn = { 1, 0.97, 0.78 }, shadow = true, strap = { x = 120, y = 18.5, w = 9, h = 8 } },
 }
 -- the shut ribbons are all the wine red of the book; the open one is the golden ribbon
 K.RIBBON_COLORS = {}   -- one colour for every shut ribbon (a table, so a colour can be given to a tab later)
@@ -1622,17 +1635,23 @@ function ns.SetDensity(key)
     if window then window:Refresh() end
     return true
 end
--- Where the i-th of `count` doodles of a day goes in the free room above the quill (`room` points high): its size, its
--- left offset in the column, its drop from the top of the room and its tilt. A hand that is never quite steady, but the
--- same every time for the same day, and always inside the room and inside the column.
+-- Where the i-th of `count` doodles of a day goes in the free room above the quill (`room` points high): the doodles stand in
+-- one strip, all of one size, centred in the column and resting on a line, each with room at its side for the count of what
+-- it stands for. Returns its size, its left offset in the column, its drop from the top of the room (the strip is at the
+-- foot of it) and its tilt (none).
+K.DOODLE_SIZE, K.DOODLE_GAP = 34, 26
 function ns.DoodleSpot(i, count, dayNumber, room, scale)
-    local slot = K.CW / count
-    local seed = dayNumber * 7 + i * 5
-    local size = math.min(math.floor((44 + (seed % 4) * 6) * scale), room, math.floor(slot) - 8)   -- 44 to 62 at comfy
-    local wobble = seed % 5 - 2   -- -2 to 2
-    local x = math.max(0, math.min((i - 1) * slot + (slot - size) / 2 + wobble * 4, K.CW - size))
-    local drop = math.min(((i % 2 == 0) and 0.55 or 0.1) + (seed % 3) * 0.12, 1) * (room - size)
-    return size, x, drop, wobble * 0.07
+    local gap = K.DOODLE_GAP
+    local size = math.min(math.floor(K.DOODLE_SIZE * scale), room - 12, math.floor((K.CW - (count - 1) * gap) / count))
+    local width = count * size + (count - 1) * gap
+    local x = math.max(0, math.min((K.CW - width) / 2 + (i - 1) * (size + gap), K.CW - size))
+    return size, x, room - size, 0
+end
+-- How many entries of a day a doodle stands for (the quills of a day of three quests: 3).
+function ns.DoodleCount(entries, name)
+    local n = 0
+    for _, e in ipairs(entries or {}) do if K.DOODLE_OF[e.kind] == name then n = n + 1 end end
+    return n
 end
 function ns.DoodlesOf(entries, most)
     local score = {}
@@ -2276,6 +2295,7 @@ local function CreateWindow()
         paper:SetTexture(K.TEX .. "parchment", "REPEAT", "REPEAT")
         local ox, oy = (i == 1) and 0 or 120, (i == 1) and 0 or 80
         paper:SetTexCoord(ox / 256, (ox + K.PAGE_SW) / 256, oy / 256, (oy + K.PAGE_SH) / 256)
+        s.paper, s.paperOx, s.paperOy = paper, ox, oy
 
         -- Burnt edges on three sides (the side next to the spine stays clean).
         local BURN = 48
@@ -2369,6 +2389,31 @@ local function CreateWindow()
         return s
     end
     local sides = { MakeSide(1), MakeSide(2) }
+    local prevButton, nextButton
+    local function ApplyCornerStyle()
+        local choice = (SkaldDB and SkaldDB.paperStyle) or "clean"
+        if choice ~= "travel" and choice ~= "war" and choice ~= "old" then choice = "clean" end
+        for _, button in ipairs({ prevButton, nextButton }) do
+            if button and button.tex then
+                local suffix = choice == "clean" and "" or ("_" .. choice)
+                button.tex:SetTexture(K.TEX .. "ui_corner_" .. button.cornerSide .. suffix)
+                local hover = button:IsMouseOver()
+                local gain = hover and 1.12 or 1
+                button.tex:SetVertexColor(gain, gain, gain)
+            end
+        end
+    end
+    function f:ApplyPaper()
+        local choice = (SkaldDB and SkaldDB.paperStyle) or "clean"
+        local texture = K.PAPER_TEXTURES[choice] or K.PAPER_TEXTURES.clean
+        for _, side in ipairs(sides) do
+            side.paper:SetTexture(K.TEX .. texture, "REPEAT", "REPEAT")
+            side.paper:SetTexCoord(side.paperOx / 256, (side.paperOx + K.PAGE_SW) / 256,
+                side.paperOy / 256, (side.paperOy + K.PAGE_SH) / 256)
+        end
+        ApplyCornerStyle()
+    end
+    f:ApplyPaper()
 
     local function Rule(s, y)
         s.rule:ClearAllPoints()
@@ -2669,7 +2714,9 @@ local function CreateWindow()
     ghostArt:SetPoint("CENTER", 0, 4)
     ghostArt:SetSize(170, 170)
     ghostArt:Hide()
-    local okModel, model = pcall(CreateFrame, "PlayerModel", nil, modelHolder)
+    -- A dressing-room model, which can be told to take the weapons off (see LoadModel); the plain model where the game has none.
+    local okModel, model = pcall(CreateFrame, "DressUpModel", nil, modelHolder)
+    if not (okModel and model) then okModel, model = pcall(CreateFrame, "PlayerModel", nil, modelHolder) end
     if okModel and model then
         model:SetAllPoints()
         local dragging, lastX
@@ -2709,7 +2756,12 @@ local function CreateWindow()
         -- The third argument asks for the character in its native form: not as a spirit, and not as
         -- the bear or the cat of a druid. (Where the game ignores it, the model is what it always was.)
         if not pcall(model.SetUnit, model, "player", false, true) then return false end
-        pcall(model.SetCamDistanceScale, model, 0.8)
+        pcall(model.SetCamDistanceScale, model, ns.CoverZoom())
+        -- A weapon as big as a staff or a spear sticks out of the arch, so the figure stands without weapons
+        -- (main hand, off hand, ranged); nothing is taken off the character, only off the picture.
+        if model.UndressSlot then
+            for _, slot in ipairs(K.COVER_UNDRESS) do pcall(model.UndressSlot, model, slot) end
+        end
         pcall(model.SetFacing, model, model.skaldAngle or 0)
         model.skaldLoadedAt = (GetTime and GetTime()) or 0
         return true
@@ -3057,7 +3109,11 @@ local function CreateWindow()
             page.doodles = {}
             local weather = ns.WeatherOf(day.zmap)
             if weather then page.doodles[1] = "wxd_" .. weather end
-            for _, name in ipairs(ns.DoodlesOf(day.entries, 3)) do page.doodles[#page.doodles + 1] = "dd_" .. name end
+            page.doodleN = {}
+            for _, name in ipairs(ns.DoodlesOf(day.entries, 3)) do
+                page.doodles[#page.doodles + 1] = "dd_" .. name
+                page.doodleN[#page.doodles] = ns.DoodleCount(day.entries, name)
+            end
             -- every day closes with its own page of numbers
             pages[#pages + 1] = { type = "daycard", day = day }
         end
@@ -3092,6 +3148,8 @@ local function CreateWindow()
         if s.closeIcon then s.closeIcon:Hide() end
         if s.closeLine then s.closeLine:Hide() end
         for _, t in ipairs(s.doodles or {}) do t:Hide() end
+        for _, t in ipairs(s.doodleN or {}) do t:Hide() end
+        if s.doodleLine then s.doodleLine:Hide() end
         if s.timeline then s.timeline:Hide() end
         s.timelineTop = nil
         if s.dayCard then s.dayCard:Hide() end
@@ -3245,7 +3303,7 @@ local function CreateWindow()
             sub:SetTextColor(1, 1, 1)
             local where = KnownZone(day.zone)
             -- the small sun stays on a day whose land has no weather stamp of its own
-            local stamp = weather and "" or (string.format("|T%ssun:18:18:0:0:64:64:0:48:0:48|t", K.TEX) .. " ")
+            local stamp = weather and "" or (string.format("|T%ssun:18:18:0:0:64:64:0:64:0:64|t", K.TEX) .. " ")
             sub:SetText(string.format("%s%s%s%s|r", stamp, Hex(K.C_MUTED),
                 date(L.DAY_DATE, day.t), where and ("  -  " .. where) or ""))
             sub:Show()
@@ -3266,7 +3324,7 @@ local function CreateWindow()
                     s.closeIcon = s.frame:CreateTexture(nil, "ARTWORK", nil, 3)
                     s.closeIcon:SetSize(24, 24)
                     s.closeIcon:SetTexture(K.TEX .. "moon")
-                    s.closeIcon:SetTexCoord(0, 48 / 64, 0, 48 / 64)
+                    s.closeIcon:SetTexCoord(0, 1, 0, 1)
                 end
                 s.closeLine:ClearAllPoints()
                 s.closeLine:SetPoint("TOPLEFT", px, -(top - 6))
@@ -3351,8 +3409,8 @@ local function CreateWindow()
             b.dayRef = day
             b.px = px
             b:Show()
-            -- what the day held, drawn by the character where the page has room above the quill: each one a
-            -- different size, a little crooked, on its own height, as if scattered by a hand
+            -- what the day held, in one strip where the page has room above the quill: the weather of the land, then what the
+            -- day was about, each with its count (when more than one), on a line, all of one size and in a row
             local floor = K.PAGE_H - K.NOTE_BTN_H
             local top = (page.usedY or 0) + K.DOODLE_PAD
             local count = page.doodles and #page.doodles or 0
@@ -3360,20 +3418,48 @@ local function CreateWindow()
             local room = floor - top
             if count > 0 and room >= math.ceil(K.DOODLE_MIN * dscale) then
                 s.doodles = s.doodles or {}
+                s.doodleN = s.doodleN or {}
                 for i, name in ipairs(page.doodles) do
                     local t = s.doodles[i]
                     if not t then
                         t = s.frame:CreateTexture(nil, "ARTWORK", nil, 2)
                         s.doodles[i] = t
                     end
-                    local size, x, drop, tilt = ns.DoodleSpot(i, count, day.number, room, dscale)
+                    local size, x, drop = ns.DoodleSpot(i, count, day.number, room, dscale)
                     t:SetSize(size, size)
                     t:ClearAllPoints()
                     t:SetPoint("TOPLEFT", s.frame, "TOPLEFT", px + x, -(K.TOP_Y + top + drop))
                     t:SetTexture(K.TEX .. name)
-                    if t.SetRotation then pcall(t.SetRotation, t, tilt) end
+                    if t.SetRotation then pcall(t.SetRotation, t, 0) end
                     t:Show()
+                    local n = page.doodleN and page.doodleN[i] or 0
+                    local label = s.doodleN[i]
+                    if not label then
+                        label = s.frame:CreateFontString(nil, "OVERLAY", "SkaldSmall")
+                        label:SetTextColor(K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3])
+                        s.doodleN[i] = label
+                    end
+                    if n > 1 then
+                        label:ClearAllPoints()
+                        label:SetPoint("BOTTOMLEFT", t, "BOTTOMRIGHT", 3, 1)
+                        label:SetText("x" .. n)
+                        label:Show()
+                    else
+                        label:Hide()
+                    end
                 end
+                -- the line the strip stands on
+                if not s.doodleLine then
+                    s.doodleLine = s.frame:CreateTexture(nil, "ARTWORK", nil, 1)
+                    s.doodleLine:SetHeight(1)
+                end
+                s.doodleLine:SetColorTexture(K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3], 0.3)
+                s.doodleLine:ClearAllPoints()
+                local size = ns.DoodleSpot(1, count, day.number, room, dscale)
+                local lineY = -(K.TOP_Y + top + room + 4)   -- the strip rests on it: its icons end at the foot of the room
+                s.doodleLine:SetPoint("TOPLEFT", s.frame, "TOPLEFT", px, lineY)
+                s.doodleLine:SetPoint("TOPRIGHT", s.frame, "TOPLEFT", px + K.CW, lineY)
+                s.doodleLine:Show()
             end
         end
     end
@@ -3397,7 +3483,7 @@ local function CreateWindow()
         b.tex:SetSize(128, 64)
         b.tex:SetPoint("TOPLEFT", b, "TOPLEFT", -10, 7)
         b.tex:SetTexture(K.TabPicture(id, false))
-        b.text = b:CreateFontString(nil, "OVERLAY", "SkaldBody")
+        b.text = b:CreateFontString(nil, "OVERLAY", "SkaldTab")
         b.text:SetPoint("LEFT", 21, 0)
         b.text:SetWidth(78)   -- between the notch and the brass strap
         b.text:SetJustifyH("CENTER")
@@ -3408,11 +3494,38 @@ local function CreateWindow()
             self:SetPoint("TOPLEFT", f, "TOPLEFT", self.active and -26 or -14, self.top)   -- the brass strap shows against the spine
             local st = K.TabStyle()
             self.tex:SetTexture(K.TabPicture(id, self.active))
+            -- the open wooden tab is drawn with a buckle at its end; a short strap runs from it to the edge of the book,
+            -- so the buckle holds on to something instead of hanging in the air
+            if st.strap then
+                if not rawget(self, "strap") then
+                    self.strap = self:CreateTexture(nil, "ARTWORK", nil, -1)
+                    self.strap:SetColorTexture(0.17, 0.10, 0.06, 1)
+                    self.strapEdge = self:CreateTexture(nil, "ARTWORK", nil, 0)
+                    self.strapEdge:SetColorTexture(0.36, 0.23, 0.12, 1)
+                end
+                self.strap:ClearAllPoints()
+                self.strap:SetPoint("TOPLEFT", self.tex, "TOPLEFT", st.strap.x, -st.strap.y)
+                self.strap:SetSize(st.strap.w, st.strap.h)
+                self.strapEdge:ClearAllPoints()
+                self.strapEdge:SetPoint("TOPLEFT", self.strap, "TOPLEFT", 0, 0)
+                self.strapEdge:SetSize(st.strap.w, 1)
+                if self.active then self.strap:Show(); self.strapEdge:Show() else self.strap:Hide(); self.strapEdge:Hide() end
+            elseif rawget(self, "strap") then   -- another look: the strap of the wooden one goes
+                self.strap:Hide(); self.strapEdge:Hide()
+            end
             self.text:ClearAllPoints()
             self.text:SetPoint("LEFT", st.x, 0)
-            self.text:SetWidth(st.w)
+            self.text:SetWidth(math.max(30, st.w - (id == "bard" and 18 or 0)))
             local c = self.active and st.inkOn or st.ink
             self.text:SetTextColor(c[1], c[2], c[3])
+            if self.text.SetShadowColor then   -- a dark edge to the letters on a dark tab; none on the light one
+                if st.shadow and (c[1] + c[2] + c[3]) / 3 > 0.6 then   -- only a light letter gets one
+                    self.text:SetShadowColor(0.10, 0.05, 0.02, 0.95)
+                    self.text:SetShadowOffset(1, -1)
+                else
+                    self.text:SetShadowColor(0, 0, 0, 0)
+                end
+            end
         end
         b:SetActive(false)
         b:SetScript("OnClick", function() f:ShowSection(id) end)
@@ -3425,7 +3538,7 @@ local function CreateWindow()
     function f:ApplyTabStyle() for _, b in pairs(tabs) do b:SetActive(b.active) end end
     local panels, panelOrder = {}, {}
     -- The tabs in the order of the book: the diary itself, what it holds, then the settings below, a little apart.
-    local TAB_RANK = { cover = 1, index = 2, days = 3, search = 3.5, bard = 3.7, goals = 4, saga = 4.5, pets = 5, map = 6, settings = 20 }
+    local TAB_RANK = { cover = 1, index = 2, search = 2.5, days = 3, bard = 3.7, goals = 4, saga = 4.5, pets = 5, map = 6, settings = 20 }
     local function LayoutTabs()
         local ids = {}
         for id, b in pairs(tabs) do b:Show(); ids[#ids + 1] = id end
@@ -3475,15 +3588,16 @@ local function CreateWindow()
             i == 1 and (K.PAGE_XS[1] - 8) or (K.PAGE_XS[2] + K.PAGE_SW + 8), -(K.PAGE_Y + K.PAGE_SH) - 8)
         b.tex = b:CreateTexture(nil, "ARTWORK")
         b.tex:SetAllPoints()
-        b.tex:SetTexture(K.TEX .. (i == 1 and "ui_corner_l" or "ui_corner_r"))
-        b:SetScript("OnEnter", function(self) self.tex:SetVertexColor(1.15, 1.15, 1.15) end)
-        b:SetScript("OnLeave", function(self) self.tex:SetVertexColor(1, 1, 1) end)
+        b.cornerSide = i == 1 and "l" or "r"
+        b:SetScript("OnEnter", function() ApplyCornerStyle() end)
+        b:SetScript("OnLeave", function() ApplyCornerStyle() end)
         return b
     end
-    local prevButton = MakeCurl(1)
+    prevButton = MakeCurl(1)
     prevButton.isPrev = true
-    local nextButton = MakeCurl(2)
+    nextButton = MakeCurl(2)
     nextButton.isNext = true
+    ApplyCornerStyle()
 
     -- The clasp over the spine.
     local clasp = book:CreateTexture(nil, "OVERLAY", nil, 2)
@@ -7193,7 +7307,7 @@ local function BuildStyle(panel)
     NoteText(panel, K.RIGHT_X, -200):SetText(L.COVERTITLE_HINT)
 
     -- The size of the book (never more than the screen holds).
-    PageRule(panel, K.RIGHT_X, -234)
+        PageRule(panel, K.RIGHT_X, -234)
     SectionLabel(panel, L.OPT_BOOKSIZE, K.RIGHT_X, -246)
     PlateGroup(panel, K.RIGHT_X, -268, 336, 26)
     local sizeButtons = {}
@@ -7340,11 +7454,30 @@ local function BuildNotices(panel)
         timeButtons[choice[1]] = tb
     end
 
+    -- The paper of the pages.
+    SectionLabel(panel, L.OPT_PAPER, K.RIGHT_X, -384)
+    PlateGroup(panel, K.RIGHT_X, -404, 336, 26)
+    local paperButtons = {}
+    for i, key in ipairs(K.PAPER_STYLE_ORDER) do
+        local b = MakeFlatButton(panel, 84, 26, L.PAPER_NAMES[key])
+        b:SetPoint("TOPLEFT", K.RIGHT_X + (i - 1) * 84, -404)
+        b:SetScript("OnClick", function()
+            Settings().paperStyle = (key ~= "clean") and key or nil
+            if window then window:ApplyPaper() end
+            refresh()
+        end)
+        paperButtons[key] = b
+    end
+    panel.paperButtons = paperButtons   -- for the tests
+
     refresh = function()
         local s = Settings()
         for _, cb in ipairs(switches) do cb.Sync() end
         for key, pb in pairs(placeButtons) do pb:SetActive(not s.toastPos and (s.toastAnchor or "top") == key) end
         for value, tb in pairs(timeButtons) do tb:SetActive(value == (tonumber(s.noticeSecs) or 6.5)) end
+        local paperStyle = s.paperStyle or "clean"
+        if not K.PAPER_TEXTURES[paperStyle] then paperStyle = "clean" end
+        for key, b in pairs(paperButtons) do b:SetActive(key == paperStyle) end
     end
     return refresh
 end

@@ -64,7 +64,7 @@ local GLYPH = {
 -- Strings and order for the Map tab (it lives inside the Skald window).
 local UI_TEXT = {
     enUS = {
-        TAB = "Map", SHOW = "Show pins on the world map", OPEN = "Open the world map",
+        TAB = "Atlas", SHOW = "Show pins on the world map", OPEN = "Open the world map",
         SUMMARY = "%s: %d %s, %d %s.", PAGE = "page", PAGES = "pages", PIN = "pin", PINS = "pins",
         HIDDEN = "%d hidden by the filters.", HIDDEN_ONE = "1 hidden by the filters.",
         NONE = "No pages recorded here yet.",
@@ -83,7 +83,7 @@ local UI_TEXT = {
         },
     },
     ptBR = {
-        TAB = "Mapa", SHOW = "Mostrar marcadores no mapa-múndi", OPEN = "Abrir o mapa-múndi",
+        TAB = "Atlas", SHOW = "Mostrar marcadores no mapa-múndi", OPEN = "Abrir o mapa-múndi",
         SUMMARY = "%s: %d %s, %d %s.", PAGE = "página", PAGES = "páginas", PIN = "marcador", PINS = "marcadores",
         HIDDEN = "%d escondidas pelos filtros.", HIDDEN_ONE = "1 escondida pelos filtros.",
         NONE = "Nenhuma página registrada aqui ainda.",
@@ -102,7 +102,7 @@ local UI_TEXT = {
         },
     },
     frFR = {
-        TAB = "Carte", SHOW = "Afficher les marqueurs sur la carte du monde", OPEN = "Ouvrir la carte du monde",
+        TAB = "Atlas", SHOW = "Afficher les marqueurs sur la carte du monde", OPEN = "Ouvrir la carte du monde",
         SUMMARY = "%s\194\160: %d %s, %d %s.", PAGE = "page", PAGES = "pages", PIN = "marqueur", PINS = "marqueurs",
         HIDDEN = "%d masquées par les filtres.", HIDDEN_ONE = "1 masquée par les filtres.",
         NONE = "Aucune page enregistrée ici pour l'instant.",
