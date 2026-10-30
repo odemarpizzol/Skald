@@ -1,0 +1,9 @@
+- **All the art repainted:** the icons of the pages, the medals, the seals, the pieces of the book, the minimap icon and the tabs have a new painted look, in one style (gold, leather and parchment)
+- **Four papers for the pages** (clean, travel, battle, old book), chosen in Settings (Notices page); the corners that turn the page follow the paper
+- Three tabs have new names: "Days" is **Journeys** (Jornadas, Étapes), "Map" is **Atlas** and "Goals" is **Deeds** (Feitos, Exploits); Search now sits right under Contents
+- The names on the tabs are a size larger and have a dark edge, so they read on the wood; the open wooden tab keeps its buckle tied to the book
+- The notice of the Bard with the book shut has four new frames (leather, scroll, carved wood, medallion) and a lyre; the lyre, the name and the three buttons stand on one line in each, the name shrinks to fit its place and the medallion is shown smaller
+- The bars of the goals have round ends, and the fill is cut from its picture instead of being squashed
+- The cover shows the Tauren from further away and every character without its weapons, so that nothing sticks out of the arch
+- The doodles at the foot of a day stand in one strip on a line, all of one size, with the count (x3) when a day held more than one of a kind
+- Fixed: the moon of the end of a day and the sun of the date were cut short by the new art

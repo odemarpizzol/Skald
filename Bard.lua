@@ -341,8 +341,8 @@ local function BuildTab(panel)
     local tabNote
     if panel.tabButton then
         tabNote = panel.tabButton:CreateTexture(nil, "OVERLAY")
-        tabNote:SetSize(16, 16)
-        tabNote:SetPoint("LEFT", panel.tabButton, "LEFT", 78, 0)
+        tabNote:SetSize(14, 14)
+        tabNote:SetPoint("RIGHT", panel.tabButton, "RIGHT", -9, 0)
         tabNote:SetTexture(TEX .. "bard_note_on")
         tabNote:Hide()
     end
@@ -353,10 +353,11 @@ local function BuildTab(panel)
     -- Each picture is cut in three: the left cap (the socket of the note), a middle that is stretched and the right cap, so
     -- the notice is as wide as the name and the three buttons need (capL and capR are canvas points of the 512-wide art).
     local HUDS = {
-        bar = { w = 340, h = 64, capL = 132, capR = 440, icon = { 84, 64, 62 }, stop = { 441, 63, 48 }, textX = 132, ink = { 1, 0.94, 0.78 } },
-        scroll = { w = 340, h = 64, capL = 170, capR = 420, icon = { 122, 64, 60 }, stop = { 394, 64, 48 }, textX = 160, ink = { 0.25, 0.15, 0.08 } },
-        wood = { w = 340, h = 64, capL = 130, capR = 450, icon = { 80, 64, 62 }, stop = { 443, 64, 48 }, textX = 130, ink = { 1, 0.94, 0.78 } },
-        medal = { w = 360, h = 128, capL = 232, capR = 440, icon = { 118, 128, 105 }, stop = { 425, 127, 52 }, textX = 232, ink = { 1, 0.94, 0.78 }, lines = 2 },
+        bar = { w = 340, h = 64, capL = 132, capR = 440, icon = { 82, 67, 76 }, stop = { 420, 67, 48 }, cy = 67, textX = 132, ink = { 1, 0.94, 0.78 } },
+        scroll = { w = 340, h = 64, capL = 170, capR = 420, icon = { 122.5, 63, 62 }, stop = { 394, 63, 48 }, cy = 63, textX = 160, ink = { 0.25, 0.15, 0.08 } },
+        wood = { w = 340, h = 64, capL = 130, capR = 450, icon = { 75.5, 66, 62 }, stop = { 415, 66, 48 }, cy = 66, textX = 130, ink = { 1, 0.94, 0.78 } },
+        -- The medal's text stays in its dark inset while the center of the frame stretches to fit it.
+        medal = { w = 420, h = 128, capL = 232, capR = 440, icon = { 115.5, 131, 105 }, stop = { 425, 131, 52 }, cy = 131, textX = 232, scale = 0.72, ink = { 1, 0.94, 0.78 } },
     }
     local mini = CreateFrame("Button", nil, UIParent)
     mini:SetSize(236, 36)
@@ -378,6 +379,20 @@ local function BuildTab(panel)
     local miniIcon = mini:CreateTexture(nil, "ARTWORK")
     local miniName = mini:CreateFontString(nil, "OVERLAY", "SkaldBody")
     miniName:SetJustifyH("LEFT")
+    miniName:SetJustifyV("MIDDLE")
+    local miniNameFont, miniNameBaseSize, miniNameFlags = miniName:GetFont()
+    local nameShown, nameLook
+    local function SetMiniName(text)
+        local look = Bard.HudStyle and Bard.HudStyle()
+        if nameShown == text and nameLook == look then return end   -- Animate asks every tick: the font is set again only for a new name or look
+        nameShown, nameLook = text, look
+        miniName:SetFont(miniNameFont, miniNameBaseSize, miniNameFlags)
+        miniName:SetText(text or "")
+        local width, textWidth = tonumber(miniName:GetWidth()), tonumber(miniName:GetStringWidth())
+        if width and textWidth and width > 0 and textWidth > width then
+            miniName:SetFont(miniNameFont, math.max(9, miniNameBaseSize * width / textWidth), miniNameFlags)
+        end
+    end
     local miniStopArt = CreateFrame("Button", nil, mini)                     -- the button Stop of a picture
     miniStopArt.tex = miniStopArt:CreateTexture(nil, "ARTWORK")
     miniStopArt.tex:SetAllPoints()
@@ -413,21 +428,37 @@ local function BuildTab(panel)
         local key = SkaldDB and SkaldDB.bardHud
         return HUDS[key] and key or "bar"
     end
-    local function ApplyHud()
-        local key = Bard.HudStyle()
-        local h = HUDS[key]
-        local W, H = h.w, h.h
-        mini:SetSize(W, H)
-        -- from the right: Stop, then the song after, then the song before; the name has what is left
+    -- Where the things of a look stand, in points from the left of the notice: from the right, Stop, then the song after, then the
+    -- song before; the name has what is left (and, in a picture with a slot for it, not more than the slot).
+    local function HudLayout(key)
+        local h = HUDS[key] or HUDS.bar
+        local W = h.w
         local stopX = W - (512 - h.stop[1]) / 2
         local stopHalf = h.stop[3] / 4
         local skip = 26
         local nextX = stopX - stopHalf - 4 - skip / 2
         local prevX = nextX - skip - 4
         local textRight = prevX - skip / 2 - 6
+        if h.slot then
+            local left, right = h.capL / 2, (512 - h.capR) / 2
+            local slotEnd = left + (h.slot - h.capL) / (h.capR - h.capL) * (W - left - right)   -- the middle is stretched
+            textRight = math.min(textRight, slotEnd - 6)
+        end
+        return { w = W, cy = h.cy and h.cy / 2 or h.h / 2,   -- the line the name and the buttons stand on, in points from the top
+             scale = h.scale or 1, stopX = stopX, nextX = nextX, prevX = prevX, skip = skip, textLeft = h.textX / 2, textRight = textRight }
+    end
+    Bard.HudLayout = HudLayout
+    local function ApplyHud()
+        local key = Bard.HudStyle()
+        local h = HUDS[key]
+        local lay = HudLayout(key)
+        local W, H = h.w, h.h
+        mini:SetSize(W, H)
+        mini:SetScale(lay.scale)
+        local stopX, nextX, prevX, skip, textRight = lay.stopX, lay.nextX, lay.prevX, lay.skip, lay.textRight
         for _, b in ipairs({ miniPrev, miniNext }) do b:SetSize(skip, skip) end
-        miniNext:ClearAllPoints(); miniNext:SetPoint("CENTER", mini, "TOPLEFT", nextX, -H / 2)
-        miniPrev:ClearAllPoints(); miniPrev:SetPoint("CENTER", mini, "TOPLEFT", prevX, -H / 2)
+        miniNext:ClearAllPoints(); miniNext:SetPoint("CENTER", mini, "TOPLEFT", nextX, -lay.cy)
+        miniPrev:ClearAllPoints(); miniPrev:SetPoint("CENTER", mini, "TOPLEFT", prevX, -lay.cy)
         local iconX
         do
             local picture = TEX .. "hud_" .. key
@@ -444,10 +475,10 @@ local function BuildTab(panel)
             miniIcon:SetPoint("CENTER", mini, "TOPLEFT", iconX, -h.icon[2] / 2)
             miniIcon:SetTexture(TEX .. "hud_" .. key .. "_icon")
             miniName:ClearAllPoints()
-            miniName:SetPoint("LEFT", mini, "TOPLEFT", h.textX / 2, -H / 2)
+            miniName:SetPoint("LEFT", mini, "TOPLEFT", h.textX / 2, -lay.cy)
             miniName:SetWidth(textRight - h.textX / 2)
-            miniName:SetHeight(h.lines and 36 or 0)
-            miniName:SetWordWrap(h.lines ~= nil)
+            miniName:SetHeight(24)
+            miniName:SetWordWrap(false)   -- one line: a name that is too long is cut at the end of the room, never put on a second line
             miniName:SetTextColor(h.ink[1], h.ink[2], h.ink[3])
             miniStopArt:ClearAllPoints(); miniStopArt:SetSize(h.stop[3] / 2, h.stop[3] / 2)
             miniStopArt:SetPoint("CENTER", mini, "TOPLEFT", stopX, -h.stop[2] / 2)
@@ -483,7 +514,7 @@ local function BuildTab(panel)
         local deadline = rawget(mini, "previewUntil")
         local preview = deadline and GetTime() < deadline   -- a look just chosen shows for a few seconds
         if (on and closed and rawget(mini, "hiddenFor") ~= Bard.since) or preview then
-            miniName:SetText(L.BARD_TRACKS[Bard.playing or Bard.last or 1] or "")
+            SetMiniName(L.BARD_TRACKS[Bard.playing or Bard.last or 1] or "")
             miniIcon:SetAlpha(0.55 + 0.45 * (0.5 + 0.5 * math.sin(GetTime() * 5)))   -- the note beats, about once in a second and a quarter
             mini:Show()
         else
