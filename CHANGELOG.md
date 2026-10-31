@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.43.1-beta
+
+- **Pets tab:** with no companion yet the left page keeps its title and a small paw, and the right page says in one line that companions will appear; the one at your side is outlined in gold in the list; the pictures fit their frames (ears and cheeks are no longer cut); "Diet" is left out when the game does not say it; the model stands further back in the arch
+- **Quests in the language of now:** a quest page and its tooltip show the title in the language the game speaks today, also for pages written before the change (what the client cannot name stays as it was written)
+- **Cover:** "Gold earned" and "Most slain" are left out, and the lines below move up, when the game gives no such statistic (the Burning Crusade client has none), instead of a row that always says "none"
+
 ## 0.43.0-beta
 
 - **All the art repainted:** the icons of the pages, the medals, the seals, the pieces of the book, the minimap icon and the tabs have a new painted look, in one style (gold, leather and parchment)

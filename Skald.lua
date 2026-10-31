@@ -961,6 +961,29 @@ ns.PlaceName = function(e)
 end
 end
 
+-- A quest is written down with the title the client gave that day. When the game's language changes, ask
+-- the client (or the quest database) for the title in the language of now; failing that, keep what was written.
+local questTitles = {}
+local function QuestTitleNow(e)
+    local id = e.q
+    if not id then return e.arg end
+    local hit = questTitles[id]
+    if hit == nil then
+        hit = false
+        pcall(function()
+            local t = C_QuestLog and C_QuestLog.GetTitleForQuestID and C_QuestLog.GetTitleForQuestID(id)
+            if type(t) ~= "string" or t == "" then
+                local qdb = _G.LibStub and LibStub("LibQuestDB-1.0", true)
+                local q = qdb and qdb:GetQuest(id)
+                t = type(q) == "table" and (q.title or q.name) or nil
+            end
+            if type(t) == "string" and t ~= "" then hit = t end
+        end)
+        if hit then questTitles[id] = hit end   -- only a real answer is kept; the client may know more later
+    end
+    return hit or e.arg
+end
+
 local function RenderEntry(e)
     if e.kind == "day" and e.day then return DayText(e) end
     if e.kind == "note" then return tostring(e.arg or "") end
@@ -971,14 +994,14 @@ local function RenderEntry(e)
         local curated = ns.CURATED[e.q]
         local text = curated and curated.text and (curated.text[GetLocale()] or curated.text.enUS)
         if text then
-            text = text:gsub("{quest}", function() return tostring(e.arg) end)
+            text = text:gsub("{quest}", function() return tostring(QuestTitleNow(e)) end)
             return ns.Gendered((text:gsub("{npc}", function() return npc end)))
         end
     end
 
     local list = PoolFor(e)
     if not list then return "" end
-    local shown = tostring(e.arg)
+    local shown = tostring(e.kind == "quest" and QuestTitleNow(e) or e.arg)
     if (e.kind == "zone" or e.kind == "death" or e.kind == "revive") and e.arg == e.zone then shown = tostring(ns.PlaceName(e) or e.arg) end
     if e.kind == "goal" and ns.GoalName then shown = ns.GoalName(e.arg) end
     if e.kind == "loot" then
@@ -2851,6 +2874,7 @@ local function CreateWindow()
         icon:SetSize(20, 20)
         icon:SetPoint("TOPLEFT", RX, y)
         fact.region = icon
+        fact.y = y
         icon:SetTexture(fact.icon:find("\\", 1, true) and fact.icon or ("Interface\\AddOns\\Skald\\Textures\\" .. fact.icon))
         factLabels[fact.key] = JText(stats, "SkaldBody", RX + 32, y - 4)
         factLabels[fact.key]:SetText(fact.label)
@@ -2863,6 +2887,7 @@ local function CreateWindow()
         leader:SetHeight(1)
         leader:SetPoint("BOTTOMLEFT", factLabels[fact.key], "BOTTOMRIGHT", 6, 3)
         leader:SetPoint("BOTTOMRIGHT", factValues[fact.key], "BOTTOMLEFT", -6, 3)
+        fact.leader = leader
         -- a value with a remark ("305 (Humanoid)"): the remark sits at the margin in small muted italics
         -- and the number stays where the other numbers end
         if fact.key == "topkind" then
@@ -2964,6 +2989,31 @@ local function CreateWindow()
         factLabels.kills:SetText(exactKills and L.S_KILLS or L.S_KILLS_EST)
         for key, fs in pairs(factValues) do
             if key ~= "topkindTag" then fs:SetText(tostring(values[key])) end
+        end
+        -- A line the client cannot answer (the Burning Crusade client has no gold or most-slain statistic) is left
+        -- out, and the lines below it move up, rather than a row that always says "none".
+        do
+            local row = 0
+            for _, fact in ipairs(FACTS) do
+                local missing = (fact.key == "gold" or fact.key == "topkind") and values[fact.key] == L.S_NONE
+                local parts = { fact.region, factLabels[fact.key], factValues[fact.key], fact.leader }
+                if fact.key == "topkind" then parts[#parts + 1] = factValues.topkindTag end
+                for _, part in ipairs(parts) do
+                    if missing then part:Hide() else part:Show() end
+                end
+                if not missing then
+                    local y = -98 - row * FACT_H
+                    row = row + 1
+                    fact.region:ClearAllPoints(); fact.region:SetPoint("TOPLEFT", RX, y)
+                    factLabels[fact.key]:ClearAllPoints(); factLabels[fact.key]:SetPoint("TOPLEFT", RX + 32, y - 4)
+                    if fact.key == "topkind" then
+                        factValues.topkindTag:ClearAllPoints(); factValues.topkindTag:SetPoint("TOPRIGHT", -30, y - 3)
+                        factValues.topkind:ClearAllPoints(); factValues.topkind:SetPoint("TOPRIGHT", factValues.topkindTag, "TOPLEFT", -4, 1)
+                    else
+                        factValues[fact.key]:ClearAllPoints(); factValues[fact.key]:SetPoint("TOPRIGHT", -30, y - 4)
+                    end
+                end
+            end
         end
         do
             -- "305 (Humanoid)": number apart from the remark in brackets, if the game wrote one
@@ -4140,6 +4190,7 @@ local function PageHeading(panel, text, x)
     rule:SetPoint("TOP", fs, "BOTTOM", 0, -4)
     rule:SetTexture(K.TEX .. "rule")
     rule:SetTexCoord(0, 160 / 256, 0, 14 / 16)
+    fs.rule = rule
     return fs
 end
 
@@ -5253,7 +5304,7 @@ ns.QuestTip = function(tip, e)
     local col = TIP_TIER[e.tier or 1] or TIP_TIER[1]
     tip:ClearLines()
     pcall(tip.SetMinimumWidth, tip, 260)
-    tip:AddLine(tostring(e.arg or L.UNKNOWN_QUEST), col[1], col[2], col[3], true)
+    tip:AddLine(tostring(QuestTitleNow(e) or L.UNKNOWN_QUEST), col[1], col[2], col[3], true)
 
     local qdb = _G.LibStub and LibStub("LibQuestDB-1.0", true)
     local level, objective, xp, money
@@ -5273,7 +5324,10 @@ ns.QuestTip = function(tip, e)
     if left ~= "" or right ~= "" then
         tip:AddDoubleLine(left, right, 1, 0.82, 0, col[1], col[2], col[3])
     end
-    objective = (type(e.ot) == "string" and e.ot ~= "" and Expand(e.ot)) or objective
+    -- In an English client the database's own text wins: what was kept may be in the language the game had then.
+    if not (objective and GetLocale() == "enUS") then
+        objective = (type(e.ot) == "string" and e.ot ~= "" and Expand(e.ot)) or objective
+    end
     if objective then tip:AddLine(objective, 0.9, 0.9, 0.9, true) end
 
     local reward = {}
@@ -5326,12 +5380,12 @@ K.FAMILY_ICON_FILES = {
 -- Where the animal is inside its picture (left, right, top, bottom as fractions): a wide one is drawn
 -- at the full width of its place instead of shrunk into a square.
 K.FAMILY_BOX = {
-    bat = { 0.094, 0.906, 0.164, 0.844 }, bear = { 0.117, 0.883, 0.109, 0.906 }, boar = { 0.109, 0.891, 0.109, 0.906 },
-    carrion = { 0.109, 0.891, 0.109, 0.906 }, cat = { 0.164, 0.836, 0.109, 0.906 }, crab = { 0.094, 0.906, 0.125, 0.891 },
-    crocolisk = { 0.094, 0.906, 0.156, 0.852 }, gorilla = { 0.125, 0.875, 0.109, 0.906 }, hyena = { 0.102, 0.898, 0.117, 0.898 },
-    owl = { 0.172, 0.828, 0.109, 0.906 }, raptor = { 0.156, 0.844, 0.109, 0.906 }, scorpid = { 0.109, 0.891, 0.109, 0.898 },
-    spider = { 0.094, 0.906, 0.102, 0.906 }, tallstrider = { 0.164, 0.836, 0.109, 0.906 }, turtle = { 0.094, 0.906, 0.211, 0.797 },
-    windserpent = { 0.133, 0.867, 0.109, 0.906 }, wolf = { 0.125, 0.875, 0.109, 0.898 },
+    bat = { 0.055, 0.984, 0.148, 0.852 }, bear = { 0.055, 0.945, 0.070, 0.945 }, boar = { 0.102, 0.938, 0.078, 0.930 },
+    carrion = { 0.055, 0.961, 0.055, 0.953 }, cat = { 0.078, 0.930, 0.047, 0.961 }, crab = { 0.039, 0.961, 0.086, 0.922 },
+    crocolisk = { 0.055, 0.953, 0.133, 0.867 }, gorilla = { 0.078, 0.938, 0.070, 0.930 }, hyena = { 0.047, 0.977, 0.070, 0.930 },
+    owl = { 0.188, 0.867, 0.078, 0.914 }, raptor = { 0.133, 0.906, 0.047, 0.953 }, scorpid = { 0.086, 0.945, 0.086, 0.938 },
+    spider = { 0.078, 0.938, 0.094, 0.922 }, tallstrider = { 0.180, 0.938, 0.023, 0.977 }, turtle = { 0.047, 0.984, 0.164, 0.836 },
+    windserpent = { 0.047, 0.953, 0.031, 0.969 }, wolf = { 0.109, 0.891, 0.078, 0.914 },
 }
 -- The family is saved as the client gave it, in the language of that day: a pet met in an English client stays "Wolf" in a
 -- Portuguese one. A name we know in any of the three languages is shown in the language of now; any other (the game's
@@ -5389,14 +5443,14 @@ Mile.FamilyIcon = function(family)
 end
 
 Mile.BuildPets = function(panel)
-    PageHeading(panel, L.TAB_PETS, 0)
+    local petsHead = PageHeading(panel, L.TAB_PETS, 0)
     local nowLabel = SectionLabel(panel, L.PETS_NOW, 0, -52)
     local iconFrame = panel:CreateTexture(nil, "BACKGROUND")
-    iconFrame:SetSize(56, 56)
+    iconFrame:SetSize(46, 46)
     iconFrame:SetPoint("TOPLEFT", 0, -76)
     if K.OWN_PET_ART then iconFrame:SetColorTexture(0, 0, 0, 0) else iconFrame:SetColorTexture(K.BTN.gold[1], K.BTN.gold[2], K.BTN.gold[3], 1) end
     local icon = panel:CreateTexture(nil, "ARTWORK")
-    icon:SetSize(K.OWN_PET_ART and 60 or 50, K.OWN_PET_ART and 60 or 50)
+    icon:SetSize(K.OWN_PET_ART and 50 or 42, K.OWN_PET_ART and 50 or 42)
     icon:SetPoint("CENTER", iconFrame, "CENTER")
     if not K.OWN_PET_ART then icon:SetTexCoord(0.07, 0.93, 0.07, 0.93) end
     icon:SetTexture("Interface\\AddOns\\Skald\\Textures\\ev_pet")
@@ -5408,7 +5462,7 @@ Mile.BuildPets = function(panel)
 
     -- The facts, in two columns: a small label over each value.
     local function Cell(col, row, label)
-        local x, y = 218, -230 - (row - 1) * 90
+        local x, y = 230, -230 - (row - 1) * 90
         local l = panel:CreateFontString(nil, "OVERLAY", "SkaldSec")
         l:SetPoint("TOPLEFT", x, y)
         l:SetWidth(124)
@@ -5458,12 +5512,17 @@ Mile.BuildPets = function(panel)
             end
         end)
         model:SetScript("OnMouseWheel", function(self, delta)
-            self.skaldZoom = math.max(0.6, math.min(5, (self.skaldZoom or 1.0) - (delta or 0) * 0.25))
+            self.skaldZoom = math.max(0.6, math.min(5, (self.skaldZoom or 1.4) - (delta or 0) * 0.25))
             pcall(self.SetCamDistanceScale, self, self.skaldZoom)
         end)
     end
+    local emblem = panel:CreateTexture(nil, "ARTWORK")
+    emblem:SetSize(48, 48)
+    emblem:SetPoint("TOPLEFT", 4, -80)
+    emblem:SetTexture("Interface\\AddOns\\Skald\\Textures\\ev_pet")
+    emblem:SetAlpha(0.6)
     local placeholder = holder:CreateTexture(nil, "ARTWORK")
-    placeholder:SetSize(100, 100)
+    placeholder:SetSize(56, 56)
     placeholder:SetPoint("CENTER")
     placeholder:SetTexture("Interface\\AddOns\\Skald\\Textures\\ev_pet")
     placeholder:SetAlpha(0.55)
@@ -5480,7 +5539,7 @@ Mile.BuildPets = function(panel)
         if okModel and model and petName and UnitExists("pet") and Safe(UnitName("pet")) == petName then
             out = pcall(model.SetUnit, model, "pet")
             if out then
-                model.skaldZoom, model.skaldAngle = 1.0, 0.6
+                model.skaldZoom, model.skaldAngle = 1.4, 0.6   -- far enough for the big ones to fit the arch
                 pcall(model.SetCamDistanceScale, model, model.skaldZoom)
                 pcall(model.SetFacing, model, model.skaldAngle)
             end
@@ -5489,35 +5548,58 @@ Mile.BuildPets = function(panel)
         placeholder:SetShown(not out)
     end
 
-    PageHeading(panel, L.PETS_ALL, K.RIGHT_X)
+    local listHead = PageHeading(panel, L.PETS_ALL, K.RIGHT_X)
     local rows = {}
-    for i = 1, 9 do
-        local top = -74 - (i - 1) * 46
+    for i = 1, 6 do
+        local top = -74 - (i - 1) * 58
         local frame = panel:CreateTexture(nil, "BACKGROUND")
-        frame:SetSize(36, 36)
+        frame:SetSize(46, 46)
         frame:SetPoint("TOPLEFT", K.RIGHT_X, top)
         frame:SetColorTexture(K.C_HEAD[1], K.C_HEAD[2], K.C_HEAD[3], K.OWN_PET_ART and 0 or 0.85)
         local pic = panel:CreateTexture(nil, "ARTWORK")
-        pic:SetSize(K.OWN_PET_ART and 40 or 32, K.OWN_PET_ART and 40 or 32)
+        pic:SetSize(K.OWN_PET_ART and 34 or 30, K.OWN_PET_ART and 34 or 30)
         pic:SetPoint("CENTER", frame, "CENTER")
         if not K.OWN_PET_ART then pic:SetTexCoord(0.07, 0.93, 0.07, 0.93) end
         local a = panel:CreateFontString(nil, "OVERLAY", "SkaldBody")
-        a:SetPoint("TOPLEFT", K.RIGHT_X + 46, top + 1)
-        a:SetWidth(K.CW - 46)
+        a:SetPoint("TOPLEFT", K.RIGHT_X + 58, top + 1)
+        a:SetWidth(K.CW - 58)
         a:SetJustifyH("LEFT")
         a:SetTextColor(K.C_BODY[1], K.C_BODY[2], K.C_BODY[3])
-        local b = panel:CreateFontString(nil, "OVERLAY", "SkaldSmall")
-        b:SetPoint("TOPLEFT", K.RIGHT_X + 46, top - 17)
-        b:SetWidth(K.CW - 46)
+        local b = panel:CreateFontString(nil, "OVERLAY", "SkaldBody")
+        b:SetPoint("TOPLEFT", K.RIGHT_X + 58, top - 22)
+        b:SetWidth(K.CW - 58)
         b:SetJustifyH("LEFT")
         b:SetTextColor(K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3])
         local line = panel:CreateTexture(nil, "ARTWORK")
-        line:SetPoint("TOPLEFT", K.RIGHT_X, top - 42)
+        line:SetPoint("TOPLEFT", K.RIGHT_X, top - 54)
         line:SetSize(K.CW, 1)
         line:SetColorTexture(K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3], 0.28)
         rows[i] = { a, b, frame, pic, line }
+        -- The one at my side: a thin gold outline round its row and a small tag, nothing else moves.
+        local mark = {}
+        local gold = K.BTN.gold
+        local function Edge(p1, p2, w, h)
+            local t = panel:CreateTexture(nil, "ARTWORK")
+            t:SetPoint(p1, panel, "TOPLEFT", p2[1], p2[2])
+            t:SetSize(w, h)
+            t:SetColorTexture(gold[1], gold[2], gold[3], 0.9)
+            mark[#mark + 1] = t
+        end
+        Edge("TOPLEFT", { K.RIGHT_X - 3, top + 3 }, K.CW + 6, 1)
+        Edge("TOPLEFT", { K.RIGHT_X - 3, top - 54 }, K.CW + 6, 1)
+        Edge("TOPLEFT", { K.RIGHT_X - 3, top + 3 }, 1, 58)
+        Edge("TOPLEFT", { K.RIGHT_X + K.CW + 2, top + 3 }, 1, 58)
+        local tag = panel:CreateFontString(nil, "OVERLAY", "SkaldSmall")
+        tag:SetPoint("TOPRIGHT", panel, "TOPLEFT", K.RIGHT_X + K.CW - 4, top - 1)
+        tag:SetTextColor(gold[1], gold[2], gold[3])
+        tag:SetText(Upper(L.PETS_NOW))
+        mark[#mark + 1] = tag
+        rows[i].mark = mark
     end
-    local empty = NoteText(panel, 0, -80)
+    -- With no companion yet the right page carries one short centred line instead of the list.
+    local empty = NoteText(panel, K.RIGHT_X + 20, -52)
+    empty:SetWidth(K.CW - 40)
+    empty:SetJustifyH("CENTER")
     PageRule(panel, K.RIGHT_X, -436)
     local total = NoteText(panel, K.RIGHT_X, -458)
     total:SetWidth(K.CW)
@@ -5537,8 +5619,11 @@ Mile.BuildPets = function(panel)
         -- Who is at the side now: only a pet that is really out. With none out (a loaned pet that left,
         -- one that was dismissed) the page says so and names the last one.
         local out = db and db.petNow and pets[db.petNow] and { name = db.petNow, rec = pets[db.petNow] } or nil
-        empty:SetShown(#list == 0)
-        nowLabel:SetText(out and L.PETS_NOW or L.PETS_NONE_NOW)
+        -- Empty: the big arch is hidden (an empty frame looks unfinished); a small paw stands under the label and
+        -- the right page has one short line under its title.
+        if #list == 0 then empty:Show(); emblem:Show(); holder:Hide(); alcove:Hide()
+        else empty:Hide(); emblem:Hide(); holder:Show(); alcove:Show() end
+        nowLabel:SetText(#list == 0 and L.PETS_CURRENT or (out and L.PETS_NOW or L.PETS_NONE_NOW))
         lastLine:SetText("")
         if #list == 0 then
             empty:SetText(L.PETS_NONE)
@@ -5554,18 +5639,19 @@ Mile.BuildPets = function(panel)
         else
             local rec = out.rec
             icon:Show(); iconFrame:Show(); ShowFacts(true)
-            Mile.SetFamilyIcon(icon, rec.fam, K.OWN_PET_ART and 64 or 50)
+            Mile.SetFamilyIcon(icon, rec.fam, K.OWN_PET_ART and 52 or 42)
             name:SetText(out.name)
             subLine:SetText((table.concat({ Mile.FamilyLabel(rec.fam) or "", (rec.lv and rec.lv > 0) and string.format(L.TIP_LEVEL, rec.lv) or "" }, "  -  "):gsub("^  %-  ", ""):gsub("  %-  $", "")))
-            dietV:SetText(rec.diet or "-")
+            local hasDiet = type(rec.diet) == "string" and rec.diet ~= "" and rec.diet ~= "-"
+            dietV:SetText(hasDiet and rec.diet or ""); dietL:SetShown(hasDiet)
             sinceV:SetText(date(L.DAY_DATE, rec.t or time()))
             total:SetText(string.format(L.PETS_TOTAL, #list))
             ShowPet(out.name)
         end
-        for i = 1, 9 do
+        for i = 1, 6 do
             local item = list[i]
             if item then
-                Mile.SetFamilyIcon(rows[i][4], item.rec.fam, K.OWN_PET_ART and 44 or 32)
+                Mile.SetFamilyIcon(rows[i][4], item.rec.fam, K.OWN_PET_ART and 36 or 30)
                 local atSide = out and item.name == out.name
                 rows[i][4]:SetVertexColor(1, 1, 1)
                 rows[i][4]:SetAlpha(atSide and 1 or 0.85)
@@ -5575,6 +5661,7 @@ Mile.BuildPets = function(panel)
                 end
                 rows[i][1]:SetTextColor(atSide and K.C_HEAD[1] or K.C_BODY[1], atSide and K.C_HEAD[2] or K.C_BODY[2], atSide and K.C_HEAD[3] or K.C_BODY[3])
                 rows[i][1]:SetText(item.name)
+                for _, m in ipairs(rows[i].mark) do if atSide then m:Show() else m:Hide() end end
                 local parts = {}
                 if item.rec.fam then parts[#parts + 1] = Mile.FamilyLabel(item.rec.fam) end
                 if item.rec.lv and item.rec.lv > 0 then parts[#parts + 1] = string.format(L.TIP_LEVEL, item.rec.lv) end
@@ -5583,6 +5670,7 @@ Mile.BuildPets = function(panel)
                 for _, part in ipairs(rows[i]) do part:Show() end
             else
                 for _, part in ipairs(rows[i]) do part:Hide() end
+                for _, m in ipairs(rows[i].mark) do m:Hide() end
             end
         end
     end
