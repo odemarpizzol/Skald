@@ -101,6 +101,14 @@ run('/skald forgetpet removes a companion from the list', {
 RES = (SkaldCharDB.pets.Rex == nil and SkaldCharDB.pets.Luna ~= nil) and "ok" or "the pet is still there"`,
 });
 
+run('a quest page shows the title in the language of now, not the one it was written in', {
+  pre: `C_QuestLog = { GetTitleForQuestID = function(id) if id == 777 then return "Hunting the Wolves" end end }`,
+  body: `local e = { kind = "quest", arg = "Caçando os Lobos", q = 777, tier = 2, idx = 1 }
+local old = { kind = "quest", arg = "Caçando os Lobos", q = 778, tier = 2, idx = 1 }
+local a, b = SkaldAPI.Render(e), SkaldAPI.Render(old)
+RES = (a:find("Hunting the Wolves", 1, true) and not a:find("Caçando", 1, true) and b:find("Caçando os Lobos", 1, true)) and "ok" or ("quest title: " .. a .. " / " .. b)`,
+});
+
 run('a pet on loan is not a companion', {
   pre: `function UnitExists(u) return u == "pet" end
 function UnitName(u) if u == "pet" then return "Loaner" end return "Tester" end
@@ -130,6 +138,19 @@ pb._OnClick(pb)
 local said = false
 for _, fs in ipairs(FONTS) do if rawget(fs, "_text") == ns.LOCALES.enUS.PETS_NONE_NOW then said = true end end
 RES = (said and SkaldCharDB.petNow == nil) and "ok" or "the tab still shows a pet that is gone"`,
+});
+
+run('the Pets tab with no companion says it once, on the right page', {
+  pre: SAVED('{}', 'pets = {}'),
+  body: `local pb = btn(ns.LOCALES.enUS.TAB_PETS)
+pb._OnClick(pb)
+local hint, dup = false, false
+for _, fs in ipairs(FONTS) do
+  local t = rawget(fs, "_text")
+  if t == ns.LOCALES.enUS.PETS_NONE then hint = true end
+  if t == ns.LOCALES.enUS.PETS_NONE_NOW then dup = true end
+end
+RES = (hint and not dup) and "ok" or "the empty Pets tab repeats itself"`,
 });
 
 run('the reminder on returning shows where the last visit ended', {
