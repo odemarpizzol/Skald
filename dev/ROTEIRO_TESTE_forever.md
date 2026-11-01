@@ -51,7 +51,7 @@ Ordem sugerida: Fase 0, depois A, B e C (são as novidades). D a G se sobrar tem
 ---
 
 ## Fase B: terra natal na Saga, com personagem novo (15 min)
-No Forever isso serve para o Skyborne; aqui dá para ver com as raças da TBC, que a Saga não conhecia.
+Draenei e Elfo Sangrento **não existem no Forever**: aqui eles são só substitutos do Skyborne. A Saga tem a terra natal escrita à mão para as 8 raças antigas; qualquer outra raça (o Skyborne no Forever, Draenei e Elfo Sangrento no Anniversary) passa pelo código novo, que guarda o mapa onde o personagem nasceu. Se funcionar com eles aqui, o caminho do Skyborne está certo; só o nome da raça fica para conferir no dia 04.
 
 **B1. Criar o personagem**
 1. Crie um **Draenei** ou **Elfo Sangrento** (qualquer classe) e entre. Fique parado uns **15 segundos** na área inicial.
