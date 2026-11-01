@@ -51,5 +51,6 @@ All art is made by the user, a human, directly in Claude Design; Claude Code doe
 - In the Reader text a bar `|` starts an escape code in the game's text boxes, hence the caret as field separator.
 - New textures: TGA 32-bit, power-of-two size, in `Textures/` (all names used in code are checked by `checks.js`). They only show in the game after a full restart, not `/reload`.
 - Pages are written when the event fires, in combat too (`AddEntry` has no combat check; only memories wait). Do not claim the contrary in docs; payloads the client withholds are skipped with `Safe()`.
+- The voice "Of My People" (`SkaldDB.tone == "kin"`, default of a first install) never shows a number of level or points: `K.KinPool` tells level/milestone pages from `race_<race>_kinLevel` / `tone_kin_level` / `tone_kin_milestone` (no `%s`, no digit: `validate_phrases.js` checks it). Texts follow the time of Forever (after Warcraft III, before the first raids); `validate_phrases.js` fails on names of a later time.
 - Several events are still unverified in the real client (see README "Limits").
 - User preferences: no TRP3 integration; Goals stay a clickable list; phrase variety is a permanent wish; no tiny versions; art is made by the user in Claude Design (prompt the user, they send PNGs, convert to TGA with sharp).

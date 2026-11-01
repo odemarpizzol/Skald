@@ -216,7 +216,15 @@ local function PickFlavor(kind, entry)
         return nil
     end
     local tone = SkaldDB and SkaldDB.tone
-    if tone and tone ~= "epic" and PHRASES["tone_" .. tone .. "_" .. kind] and math.random() < 0.75 then
+    if tone == "kin" then
+        -- "Of My People": a level is told by PoolFor with no number at all (K.KinPool), whatever was drawn; a new land
+        -- or a fall is told in the voice of the race three times in four.
+        if kind == "level" or kind == "milestone" then return nil end
+        if entry.race and (kind == "zone" or kind == "death") then
+            local key = "race_" .. K.RacePool(entry.race) .. "_" .. kind
+            if PHRASES[key] and math.random() < 0.75 then return key end
+        end
+    elseif tone and tone ~= "epic" and PHRASES["tone_" .. tone .. "_" .. kind] and math.random() < 0.75 then
         return "tone_" .. tone .. "_" .. kind
     end
     local keys = {}
@@ -656,7 +664,21 @@ end
 local lootJoined   -- general loot lines joined with those of a weapon type or an armour material
 
 -- Which phrase pool a page draws from: by quest type and by rarity.
+-- The voice "Of My People" (tone "kin") never tells a number of level: a level or a milestone is told from the pool of
+-- the race (race_<race>_kinLevel), or the plain one of the voice, whatever pool the page drew when it was written, so
+-- choosing the voice tells the old pages again (the voice buttons bump ns.layoutRev).
+K.KinPool = function(e)
+    if not (SkaldDB and SkaldDB.tone == "kin") then return nil end
+    if e.kind == "milestone" then return PHRASES.tone_kin_milestone end
+    if e.kind ~= "level" then return nil end
+    local race = e.race
+    if not race then local ok, _, file = pcall(UnitRace, "player"); race = ok and file or nil end
+    return (race and PHRASES["race_" .. K.RacePool(race) .. "_kinLevel"]) or PHRASES.tone_kin_level
+end
+
 function PoolFor(e)
+    local kin = K.KinPool(e)
+    if kin then return kin end
     if e.fl and PHRASES[e.fl] then return PHRASES[e.fl] end
     -- Learning a profession has lines of its own for each of the twelve.
     if e.kind == "profession" then
@@ -1053,7 +1075,7 @@ local function RenderEntry(e)
     text = text:gsub("{npc}", function() return npc end)
     -- what a goal reached is worth belongs to the page itself, so the notice tells it too
     local gain = ""
-    if e.kind == "goal" and ns.GoalPoints and L.GOAL_GAIN then
+    if e.kind == "goal" and ns.GoalPoints and L.GOAL_GAIN and not (SkaldDB and SkaldDB.tone == "kin") then
         local points = ns.GoalPoints(e.arg)
         if points then gain = " " .. string.format(L.GOAL_GAIN, points) end
     end
@@ -6003,7 +6025,8 @@ local H = EVENT_HANDLERS
 H.ADDON_LOADED = function(self, event, ...)
     local name = ...
     if name ~= ADDON_NAME then return end
-    SkaldDB = SkaldDB or {}
+    -- a first install speaks in the voice "Of My People"; whoever had Skald before keeps the voice they had (nil is epic)
+    if SkaldDB == nil then SkaldDB = { tone = "kin" } end
     SkaldDB.version = SkaldDB.version or 1
     ApplyFonts()   -- the saved text size (the files ran before the saved variables loaded)
     SkaldCharDB = SkaldCharDB or {}
@@ -7424,17 +7447,22 @@ local function BuildStyle(panel)
     PageHeading(panel, L.TAB_STYLE, 0)
     SectionLabel(panel, L.OPT_TONE, 0, -52)
     PlateGroup(panel, 0, -78, 342, 26)
+    -- four voices, two to a row ("Of My People" is a long name)
+    PlateGroup(panel, 0, -106, 342, 26)
     local toneButtons = {}
-    for i, key in ipairs({ "epic", "humble", "humor" }) do
-        local b = MakeFlatButton(panel, 114, 26, L.TONE_NAMES[key])
-        b:SetPoint("TOPLEFT", (i - 1) * 114, -78)
-        b:SetScript("OnClick", function() Settings().tone = key; Redraw() end)
+    for i, key in ipairs({ "kin", "epic", "humble", "humor" }) do
+        local b = MakeFlatButton(panel, 171, 26, L.TONE_NAMES[key])
+        b:SetPoint("TOPLEFT", ((i - 1) % 2) * 171, -78 - math.floor((i - 1) / 2) * 28)
+        b:SetScript("OnClick", function()
+            if Settings().tone ~= key then ns.layoutRev = (ns.layoutRev or 0) + 1 end   -- the voice can tell old pages again
+            Settings().tone = key; Redraw()
+        end)
         toneButtons[key] = b
     end
-    local toneHint = NoteText(panel, 0, -112)
-    SectionLabel(panel, L.TONE_SAMPLE_LABEL, 0, -146)
+    local toneHint = NoteText(panel, 0, -140)
+    SectionLabel(panel, L.TONE_SAMPLE_LABEL, 0, -168)
     local sample = panel:CreateFontString(nil, "OVERLAY", "SkaldNote")
-    sample:SetPoint("TOPLEFT", 0, -170)
+    sample:SetPoint("TOPLEFT", 0, -190)
     sample:SetWidth(K.CW)
     sample:SetJustifyH("LEFT")
     sample:SetJustifyV("TOP")

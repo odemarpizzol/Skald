@@ -60,11 +60,12 @@ local NO_NAME = { party = true, day = true, anniv7 = true, anniv30 = true, anniv
 local KNOWN = { ["{diff}"] = true, ["{gold}"] = true, ["{nth}"] = true, ["{npc}"] = true, ["{steps}"] = true, ["{standing}"] = true, ["{tries}"] = true, ["{days}"] = true, ["{place}"] = true, ["{count}"] = true }
 for kind, list in pairs(P) do
   for i, ph in ipairs(list) do
+    if (kind:find("kinLevel$") or kind:find("^tone_kin_")) and ph:find("%d") then problems[#problems+1] = "KIN NUMBER " .. kind .. "#" .. i end
     if not pcall(string.format, ph, "NAME") then problems[#problems+1] = "FORMAT " .. kind .. "#" .. i end
     local n = select(2, ph:gsub("%%s", ""))
     if kind:find("^fact_") then
       if n ~= 0 then problems[#problems+1] = "FACT NAME " .. kind .. "#" .. i end
-    elseif n ~= 1 and not NO_NAME[kind] then problems[#problems+1] = "NAMECOUNT(" .. n .. ") " .. kind .. "#" .. i end
+    elseif n ~= 1 and not NO_NAME[kind] and not kind:find("kinLevel$") and kind ~= "tone_kin_level" and kind ~= "tone_kin_milestone" then problems[#problems+1] = "NAMECOUNT(" .. n .. ") " .. kind .. "#" .. i end
     for tag in ph:gmatch("{[^}]*}") do
       if not KNOWN[tag] and not tag:match("^{g:[^|}]*|[^}]*}$") then problems[#problems+1] = "UNKNOWN TAG " .. tag .. " in " .. kind .. "#" .. i end
     end

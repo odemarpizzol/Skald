@@ -477,7 +477,8 @@ NOW = NOW + 10
 SkaldCharDB.questStart = {}
 fire("QUEST_ACCEPTED", 1, 100); fire("QUEST_TURNED_IN", 102, 5000, 0); runTimers()
 local same; for i = #SkaldCharDB.entries, 1, -1 do if SkaldCharDB.entries[i].kind == "quest" then same = SkaldCharDB.entries[i]; break end end
-RES = (one.since == 1 and text:find("esterday", 1, true) and same.since == nil) and "ok" or ("one=" .. tostring(one.since) .. " same=" .. tostring(same.since) .. " " .. text)`,
+local fromYesterday = SkaldAPI.PoolFor(one) == ns.LOCALES.enUS.phrases.questChainYesterday   -- not every line of it says "yesterday"
+RES = (one.since == 1 and fromYesterday and same.since == nil) and "ok" or ("one=" .. tostring(one.since) .. " same=" .. tostring(same.since) .. " " .. text)`,
 });
 
 run('the days a chain took stay out of the saved file once old and numerous', {
@@ -2820,6 +2821,48 @@ RES = (forever == 27 and not tbc and named and ns.IsForever()) and "ok" or ("tra
 
 run('outside Forever the Bard keeps every piece', {
   body: `RES = (#ns.Bard.TRACKS == 33 and not ns.IsForever()) and "ok" or ("tracks=" .. #ns.Bard.TRACKS)`,
+});
+
+run('the voice "Of My People": a first install speaks it, an old one keeps its voice', {
+  pre: `SkaldDB = nil`,
+  body: `local fresh = SkaldDB.tone
+RES = (fresh == "kin") and "ok" or ("fresh install tone=" .. tostring(fresh))`,
+});
+
+run('an install that had Skald before keeps the voice it had (none is epic)', {
+  pre: `SkaldDB = { version = 1 }`,
+  body: `RES = (SkaldDB.tone == nil) and "ok" or ("tone=" .. tostring(SkaldDB.tone))`,
+});
+
+run('the voice "Of My People": no number of level, the race speaks, no points on a goal, and choosing it tells old level pages again', {
+  pre: `function UnitRace() return "Orc", "Orc", 2 end`,
+  body: `SkaldDB.tone = nil
+function UnitLevel() return 21 end; fire("PLAYER_LEVEL_UP", 21); runTimers()
+local old
+for _, e in ipairs(SkaldCharDB.entries) do if e.kind == "level" then old = e end end
+local before = SkaldAPI.Render(old)
+local rev = ns.layoutRev or 0
+SkaldDB.tone = "kin"
+local after = SkaldAPI.Render(old)
+local P = ns.LOCALES.enUS.phrases
+local orcish = false
+for _, line in ipairs(P.race_Orc_kinLevel) do if after:find(line, 1, true) then orcish = true end end
+local digits, generic = {}, 0
+for lv = 22, 40 do function UnitLevel() return lv end; fire("PLAYER_LEVEL_UP", lv); runTimers() end
+for _, e in ipairs(SkaldCharDB.entries) do
+  if e.kind == "level" or e.kind == "milestone" then
+    local t = SkaldAPI.Render(e):gsub("|c%x+", ""):gsub("|H.-|h", "")
+    if t:find("%d") then digits[#digits + 1] = t end
+  end
+  if e.kind == "milestone" then for _, line in ipairs(P.tone_kin_milestone) do if SkaldAPI.Render(e):find(line, 1, true) then generic = generic + 1 end end end
+end
+local zones, raceZones = 0, 0
+for i = 1, 40 do NOW = NOW + 7200; function GetZoneText() return "Land " .. i end; fire("ZONE_CHANGED_NEW_AREA"); runTimers() end
+for _, e in ipairs(SkaldCharDB.entries) do if e.kind == "zone" then zones = zones + 1; if e.fl == "race_Orc_zone" then raceZones = raceZones + 1 end end end
+local goal = { kind = "goal", arg = "level10", idx = 1 }
+local goalText = SkaldAPI.Render(goal)
+RES = (before:find("21", 1, true) and orcish and #digits == 0 and generic >= 1 and raceZones > zones / 2 and not goalText:find("points", 1, true)) and "ok"
+  or ("before=" .. before .. " after=" .. after .. " digits=" .. table.concat(digits, " / ") .. " milestones=" .. generic .. " zones " .. raceZones .. "/" .. zones .. " goal=" .. goalText)`,
 });
 
 run('/skald probe events counts the events by name, keeps the payload of the new-looking ones, and lists them', {

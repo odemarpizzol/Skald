@@ -98,6 +98,14 @@ O Anniversary tem Garganta Brado Guerreiro, Bacia Arathi, Vale Alterac e Olho da
 
 ---
 
+## Fase C2: a voz nova "Da minha gente" (10 min)
+1. Aba **Configurações** → página **Estilo**. **Esperado:** quatro vozes em duas linhas (Da minha gente, Épico, Humilde, Bem-humorado), nada cortado; o seu personagem principal continua na voz que tinha.
+2. Escolha **Da minha gente**. **Esperado:** a dica e o exemplo mudam; volte ao livro e as páginas de nível antigas agora falam sem número ("Estou mais forte do que era...", na voz da sua raça).
+3. Suba um nível (ou use um personagem perto disso). **Esperado:** a página não tem número, e a cada dez níveis vem uma frase de marco ("Uma estação da minha vida se fecha..."). A página de meta não diz "+10 pontos".
+4. O personagem novo da Fase B (Draenei ou Elfo Sangrento) já nasce nessa voz, se for a primeira instalação do Skald na conta; senão, escolha à mão. **Esperado:** as frases de nível são as gerais da voz (essas raças não têm frases próprias).
+5. Leia algumas frases da sua raça e diga se soam fiéis à lore. É a parte mais importante deste teste.
+6. Volte para a voz que você usava, se quiser. **Esperado:** os números voltam às páginas antigas.
+
 ## Fase D: Busca (10 min, nunca vista no jogo)
 1. Aba **Busca**, digite uma palavra de uma missão que você lembra. **Esperado:** a lista aparece um instante (cerca de um quarto de segundo) depois de parar de digitar, com a palavra pintada e as mais novas primeiro.
 2. Digite sem acento ou em maiúsculas (por exemplo, "VALE" para "Vale"). **Esperado:** acha do mesmo jeito.
