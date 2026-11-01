@@ -1505,6 +1505,20 @@ local done, total = ns.ZoneCard.Quests(1438)
 RES = (done == 1 and total == 2) and "ok" or ("done " .. tostring(done) .. " of " .. tostring(total))`,
 });
 
+run('the zone card: a race newer than the quest data (Skyborne) takes the quests of its faction', {
+  pre: SAVED('{}', 'version = 99, goalsInit = true, goalsVer = 3, goals = {}, stats = { counts = {}, deathZones = {}, tiers = {}, played = 1, first = 1 }'),
+  body: ZONE_STUBS + '\n' + ZONE_ART + `
+function UnitRace() return "Skyborne", "Skyborne", 90 end
+function UnitFactionGroup() return "Alliance", "Alliance" end
+local quests = { [1] = { zoneOrSort = 10 }, [2] = { zoneOrSort = 10, requiredRaces = 77 }, [3] = { zoneOrSort = 10, requiredRaces = 178 },
+  [4] = { zoneOrSort = 10, requiredRaces = 1 } }
+local qdb = { GetQuestIds = function() return { 1, 2, 3, 4 } end, GetQuest = function(_, id) return quests[id] end, GetUiMapId = function() return 1438 end }
+_G.LibStub = function() return qdb end
+C_QuestLog = { IsQuestFlaggedCompleted = function(id) return id == 2 end }
+local done, total = ns.ZoneCard.Quests(1438)
+RES = (done == 1 and total == 2) and "ok" or ("done " .. tostring(done) .. " of " .. tostring(total))`,
+});
+
 run('the zone card builds from the tiles of the game and raises no error', {
   pre: SAVED('{}', 'version = 99, goalsInit = true, goalsVer = 3, goals = {}, stats = { counts = {}, deathZones = {}, tiers = {}, played = 1, first = 1 }'),
   body: ZONE_STUBS + '\n' + ZONE_ART + '\n' + ZONE_DB + `
@@ -2677,6 +2691,71 @@ for _, loc in ipairs({ "enUS", "ptBR", "frFR" }) do
 end
 RES = (first and war and old and clean and #miss == 0) and "ok"
   or ("first=" .. tostring(first) .. " war=" .. tostring(war) .. " old=" .. tostring(old) .. " clean=" .. tostring(clean) .. " missing: " .. table.concat(miss, ","))`,
+});
+
+// Forever (a Mainline-family client) hides some payloads from addons as "secret values": issecretvalue says so.
+// Lua 5.3 cannot make a comparison of a secret fail as the game does, so a value the mock calls secret must
+// simply never be used: no page from it and no error in the chat.
+const SECRETS = `SECRET = {}
+function issecretvalue(v) return SECRET[v] == true end
+function errorsSaid() return #(SkaldDB.errors or {}) end`;
+
+run('Forever: a secret outcome of a boss fight is not taken as a victory, and nothing is said in the chat', {
+  pre: `${SECRETS}\nfunction IsInInstance() return true, "party" end
+function GetInstanceInfo() return "The Deadmines", "party", 1, "Normal", 5, 0, false, 36 end`,
+  body: `SECRET[1] = true
+fire("ENCOUNTER_END", 1, "Edwin VanCleef", 1, 5, 1); runTimers()
+local hidden = count("boss")
+SECRET[1] = nil
+fire("ENCOUNTER_END", 2, "Cookie", 1, 5, 1); runTimers()
+RES = (hidden == 0 and count("boss") == 1 and errorsSaid() == 0) and "ok"
+  or ("secret victory pages=" .. hidden .. " plain=" .. count("boss") .. " errors=" .. errorsSaid())`,
+});
+
+run('Forever: a secret boss id is not kept, the boss page is still written', {
+  pre: `${SECRETS}\nfunction IsInInstance() return true, "party" end
+function GetInstanceInfo() return "The Deadmines", "party", 1, "Normal", 5, 0, false, 36 end`,
+  body: `SECRET[639] = true
+fire("BOSS_KILL", 639, "Edwin VanCleef"); runTimers()
+RES = (count("boss") == 1 and errorsSaid() == 0) and "ok" or ("pages=" .. count("boss") .. " errors=" .. errorsSaid())`,
+});
+
+run('Forever: a secret loot line writes no page', {
+  pre: `${SECRETS}\nLOOT_ITEM_SELF = "You receive loot: %s."`,
+  body: `local line = "You receive loot: |cff0070dd|Hitem:555::::::::15:::::|h[Worn Hatchet]|h|r."
+SECRET[line] = true
+fire("CHAT_MSG_LOOT", line); runTimers()
+local hidden = count("loot")
+SECRET[line] = nil
+fire("CHAT_MSG_LOOT", line); runTimers()
+RES = (hidden == 0 and count("loot") == 1 and errorsSaid() == 0) and "ok" or ("secret=" .. hidden .. " plain=" .. count("loot") .. " errors=" .. errorsSaid())`,
+});
+
+const FOREVER = fs.readFileSync(path.join(__dirname, 'forever.lua'), 'utf8');
+
+run('Forever profile: a day of events, the tabs and the commands raise no error, and reputation is read with C_Reputation', {
+  pre: FOREVER + `
+LOOT_ITEM_SELF = "You receive loot: %s."
+function UnitFactionGroup() return "Alliance", "Alliance" end
+function GetInstanceInfo() return "The Deadmines", "party", 1, "Normal", 5, 0, false, 36 end`,
+  body: `local before = SkaldCharDB and #SkaldCharDB.entries or 0
+fire("QUEST_DETAIL"); fire("QUEST_ACCEPTED", 77); fire("QUEST_TURNED_IN", 77, 100, 0); runTimers()
+function UnitLevel() return 21 end; fire("PLAYER_LEVEL_UP", 21); runTimers()
+function GetZoneText() return "Darkshore" end; fire("ZONE_CHANGED_NEW_AREA"); runTimers()
+fire("UPDATE_FACTION"); runTimers()
+FOREVER_FACTIONS[3].reaction = 6
+fire("UPDATE_FACTION"); runTimers()
+fire("TAXIMAP_OPENED"); fire("SKILL_LINES_CHANGED"); fire("PLAYER_MONEY"); runTimers()
+fire("CHAT_MSG_LOOT", "You receive loot: |cff0070dd|Hitem:555::::::::15:::::|h[Worn Hatchet]|h|r."); runTimers()
+fire("ENCOUNTER_START", 1, "Edwin VanCleef", 1, 5); fire("ENCOUNTER_END", 1, "Edwin VanCleef", 1, 5, 1); runTimers()
+fire("PLAYER_DEAD"); fire("PLAYER_UNGHOST"); fire("HEARTHSTONE_BOUND"); fire("GROUP_ROSTER_UPDATE"); runTimers()
+fire("ACHIEVEMENT_EARNED", 6); fire("NEW_MOUNT_ADDED", 1); fire("CHAT_MSG_ADDON", "x", "y", "PARTY", "Someone"); runTimers()
+for _, cmd in ipairs({ "report", "reader", "backup", "help" }) do SlashCmdList.SKALD(cmd); runTimers() end
+local win = _G.SkaldFrame; win:Show(); if win._OnShow then win._OnShow(win) end
+for _, f in ipairs(frames) do if rawget(f, "_OnClick") and type(rawget(f, "top")) == "number" then pcall(f._OnClick, f); runTimers() end end
+local errs = SkaldDB.errors or {}
+RES = (#errs == 0 and count("rep") == 1 and count("boss") == 1 and count("level") >= 1 and #SkaldCharDB.entries > before) and "ok"
+  or ("errors: " .. table.concat(errs, " / ") .. " rep=" .. count("rep") .. " boss=" .. count("boss") .. " level=" .. count("level"))`,
 });
 
 // every picture a look can ask for is in the folder

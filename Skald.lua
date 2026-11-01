@@ -4818,6 +4818,7 @@ end
 
 local function OnLoot(text)
     local db, s = Journal(), Settings()
+    text = Safe(text)   -- a line the client withholds (Forever, in a fight) is not read
     if not db or type(text) ~= "string" then return end
     local link, src, quantity
     for _, def in ipairs(LootPatterns()) do
@@ -6366,18 +6367,19 @@ end
 
 H.ENCOUNTER_START = function(self, event, ...)
     local id, name = ...
-    ns.encounter = { id = tonumber(id), name = Safe(name), at = time() }
+    ns.encounter = { id = tonumber(Safe(id)), name = Safe(name), at = time() }
 end
 
+-- Forever hides some of these payloads from addons (secret values): a secret outcome is no victory, a secret id is no id.
 H.ENCOUNTER_END = function(self, event, ...)
     local id, name, _, _, success = ...
     if ns.encounter then ns.encounter.ended = true end
-    if success == 1 then BossDown(name, tonumber(id)) end
+    if Safe(success) == 1 then BossDown(name, tonumber(Safe(id))) end
 end
 
 H.BOSS_KILL = function(self, event, ...)
     local id, name = ...
-    BossDown(name, tonumber(id))
+    BossDown(name, tonumber(Safe(id)))
 end
 
 H.HEARTHSTONE_BOUND = function(self, event, ...)

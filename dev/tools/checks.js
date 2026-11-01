@@ -68,7 +68,7 @@ console.log('Phrases');
 
 // 3. simulated session
 console.log('Simulated session');
-function session(locale) {
+function session(locale, profile = '') {
   const L = lauxlib.luaL_newstate(); lualib.luaL_openlibs(L);
   const run = c => { if (lauxlib.luaL_dostring(L, to_luastring(c))) throw new Error(to_jsstring(lua.lua_tolstring(L, -1))); };
   const set = (k, v) => { lua.lua_pushstring(L, to_luastring(v)); lua.lua_setglobal(L, to_luastring(k)); };
@@ -97,6 +97,7 @@ function GetStatisticsCategoryList() return {} end
 function GetStatistic(id) return "--" end
 function GetMoney() return 0 end
 Minimap=CreateFrame("Frame","Minimap",UIParent); function GetCursorPosition() return 100,100 end
+${profile}
 local ns={}
 assert(load(LOC,"=L"))("Skald",ns); assert(load(CUR,"=U"))("Skald",ns); assert(load(XPT,"=X"))("Skald",ns)
 assert(load(CH,"=C"))("Skald",ns); assert(load(AT,"=A"))("Skald",ns); assert(load(GL,"=G"))("Skald",ns); assert(load(SG,"=S"))("Skald",ns); assert(load(ZC,"=Z"))("Skald",ns); assert(load(BK,"=B"))("Skald",ns); assert(load(SR,"=R"))("Skald",ns); assert(load(BD,"=D"))("Skald",ns)
@@ -137,9 +138,12 @@ RES=string.format("%s|%s|%s|%d|%d|%d|%d|%d|%s|%s|%s", tostring(out.book), tostri
   lua.lua_getglobal(L, to_luastring('RES'));
   return to_jsstring(lua.lua_tolstring(L, -1)).split('|');
 }
-for (const loc of ['enUS', 'ptBR', 'frFR']) {
+// The Forever client is of the Mainline family: the functions of the Classic clients are gone (only their C_ forms
+// are there) and some payloads can be secret. The same session runs again with that profile.
+const FOREVER = fs.readFileSync(path.join(__dirname, 'forever.lua'), 'utf8');
+for (const [loc, profile, label] of [['enUS', '', 'enUS'], ['ptBR', '', 'ptBR'], ['frFR', '', 'frFR'], ['enUS', FOREVER, 'Forever profile (enUS)'], ['ptBR', FOREVER, 'Forever profile (ptBR)']]) {
   try {
-    const [book, style, mapTab, qa, pet, hearth, revive, texts, journey, minimap, petsTab] = session(loc);
+    const [book, style, mapTab, qa, pet, hearth, revive, texts, journey, minimap, petsTab] = session(loc, profile);
     const problems = [];
     if (book !== 'true') problems.push('the book did not open');
     if (style !== 'true') problems.push('no Settings tab');
@@ -151,8 +155,8 @@ for (const loc of ['enUS', 'ptBR', 'frFR']) {
     if (pet !== '1') problems.push('pet page: ' + pet);
     if (hearth !== '1') problems.push('hearthstone page: ' + hearth);
     if (revive !== '1') problems.push('revive page: ' + revive);
-    if (problems.length) fail(loc + ': ' + problems.join('; ')); else ok(loc + ': book, tabs, layout audit, pet, hearthstone, revive');
-  } catch (e) { fail(loc + ': ' + e.message); }
+    if (problems.length) fail(label + ': ' + problems.join('; ')); else ok(label + ': book, tabs, layout audit, pet, hearthstone, revive');
+  } catch (e) { fail(label + ': ' + e.message); }
 }
 
 // 3b. regressions: things that went wrong once
