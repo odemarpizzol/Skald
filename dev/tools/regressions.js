@@ -2865,6 +2865,30 @@ RES = (before:find("21", 1, true) and orcish and #digits == 0 and generic >= 1 a
   or ("before=" .. before .. " after=" .. after .. " digits=" .. table.concat(digits, " / ") .. " milestones=" .. generic .. " zones " .. raceZones .. "/" .. zones .. " goal=" .. goalText)`,
 });
 
+run('Skyborne by side: the Windshapers of the Horde and the High Order of the Alliance speak with their own lines, the common ones too, and a Skyborne with no side yet only the common ones', {
+  pre: `function UnitRace() return "Skyborne", "Skyborne", 90 end
+FACTION = "Horde"
+function UnitFactionGroup() return FACTION, FACTION end`,
+  body: `local P = ns.LOCALES.enUS.phrases
+local function draw(n)
+  local seen = {}
+  for i = 1, n do NOW = NOW + 7200; function UnitLevel() return 2 + (i % 8) end; fire("PLAYER_LEVEL_UP", 2 + (i % 8)); runTimers()
+    local e = SkaldCharDB.entries[#SkaldCharDB.entries]; if e.fl then seen[e.fl] = true end end
+  return seen
+end
+local horde = draw(120)
+SkaldDB.tone = "kin"
+local e = { kind = "level", arg = "5", race = "Skyborne", idx = 1 }
+local hordeKin = SkaldAPI.PoolFor(e)
+FACTION = "Alliance"
+local allianceKin = SkaldAPI.PoolFor(e)
+FACTION = "Neutral"
+local neutralKin = SkaldAPI.PoolFor(e)
+RES = (horde.race_SkyborneHorde_level and horde.race_Skyborne_level and not horde.race_SkyborneAlliance_level
+  and hordeKin == P.race_SkyborneHorde_kinLevel and allianceKin == P.race_SkyborneAlliance_kinLevel and neutralKin == P.race_Skyborne_kinLevel) and "ok"
+  or ("horde pools seen: " .. table.concat((function() local t = {} for k in pairs(horde) do t[#t+1] = k end return t end)(), ","))`,
+});
+
 run('/skald probe events counts the events by name, keeps the payload of the new-looking ones, and lists them', {
   body: `SlashCmdList.SKALD("probe events")
 fire("CAMPSITE_CONTRIBUTION", 42, "Cozy Fire"); fire("CAMPSITE_CONTRIBUTION", 43); fire("PLAYER_MONEY")

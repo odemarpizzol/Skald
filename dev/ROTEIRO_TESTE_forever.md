@@ -142,7 +142,7 @@ O Anniversary tem Garganta Brado Guerreiro, Bacia Arathi, Vale Alterac e Olho da
 ---
 
 ## O que **não** dá para testar no Anniversary (fica para o dia 04, no Forever)
-- frases do Skyborne e o nome interno da raça;
+- frases do Skyborne (as da Horda falam dos espíritos do vento e da visão do céu; as da Aliança, do arcano e de Eldre'Thalas) e o nome interno da raça;
 - valores escondidos pelo cliente (chefe e loot em luta): aqui só conferimos que nada quebrou (A2, A3);
 - leitura da reputação pela API nova (`C_Reputation`);
 - eventos de acampamento e de Legacy (com o `/skald probe events`);

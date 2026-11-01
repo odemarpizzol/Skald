@@ -203,11 +203,21 @@ end
 K.RACE_POOL_ALIAS = { { "^[Ss]ky", "Skyborne" } }
 K.RacePool = function(raceFile)
     if type(raceFile) ~= "string" then return nil end
-    for _, kind in ipairs({ "zone", "level", "death" }) do
-        if PHRASES["race_" .. raceFile .. "_" .. kind] then return raceFile end
-    end
+    -- the alias first: whatever the client calls a Skyborne ("SkyborneAlliance"...), the side comes from the faction
     for _, a in ipairs(K.RACE_POOL_ALIAS) do if raceFile:match(a[1]) then return a[2] end end
     return raceFile
+end
+-- A race whose two sides have their own lore (the Skyborne: the Windshapers of the Horde, the High Order of the
+-- Alliance) has pools named race_<race><Faction>_<kind>; the common pool race_<race>_<kind> serves a character
+-- without a side yet, and also a third of the time otherwise, so both voices of the race are heard.
+K.RacePoolKey = function(raceFile, kind, fixed)
+    local base = K.RacePool(raceFile)
+    if not base then return nil end
+    local common = "race_" .. base .. "_" .. kind
+    local okF, faction = pcall(UnitFactionGroup, "player")
+    local own = okF and type(faction) == "string" and ("race_" .. base .. faction .. "_" .. kind)
+    if own and PHRASES[own] and (fixed or not PHRASES[common] or math.random() < 0.67) then return own end
+    return PHRASES[common] and common or nil
 end
 
 local function PickFlavor(kind, entry)
@@ -221,8 +231,8 @@ local function PickFlavor(kind, entry)
         -- or a fall is told in the voice of the race three times in four.
         if kind == "level" or kind == "milestone" then return nil end
         if entry.race and (kind == "zone" or kind == "death") then
-            local key = "race_" .. K.RacePool(entry.race) .. "_" .. kind
-            if PHRASES[key] and math.random() < 0.75 then return key end
+            local key = K.RacePoolKey(entry.race, kind)
+            if key and math.random() < 0.75 then return key end
         end
     elseif tone and tone ~= "epic" and PHRASES["tone_" .. tone .. "_" .. kind] and math.random() < 0.75 then
         return "tone_" .. tone .. "_" .. kind
@@ -230,7 +240,7 @@ local function PickFlavor(kind, entry)
     local keys = {}
     local function Offer(name) if PHRASES[name] then keys[#keys + 1] = name end end
     if entry.cls then Offer("class_" .. entry.cls .. "_" .. kind) end
-    if entry.race then Offer("race_" .. K.RacePool(entry.race) .. "_" .. kind) end
+    if entry.race then local key = K.RacePoolKey(entry.race, kind); if key then Offer(key) end end
     if kind == "quest" then
         if entry.cend or (entry.tier or 1) >= 4 or (ns.CURATED and entry.q and ns.CURATED[entry.q]) then return nil end
         if entry.ql and entry.pl then
@@ -673,7 +683,8 @@ K.KinPool = function(e)
     if e.kind ~= "level" then return nil end
     local race = e.race
     if not race then local ok, _, file = pcall(UnitRace, "player"); race = ok and file or nil end
-    return (race and PHRASES["race_" .. K.RacePool(race) .. "_kinLevel"]) or PHRASES.tone_kin_level
+    local key = race and K.RacePoolKey(race, "kinLevel", true)   -- told again on every reading: no chance here
+    return (key and PHRASES[key]) or PHRASES.tone_kin_level
 end
 
 function PoolFor(e)
