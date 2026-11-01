@@ -2806,6 +2806,19 @@ RES = (early == 0 and won == 1 and e.won == true and l.won == false and inWorld 
   or ("early=" .. early .. " won=" .. won .. " world=" .. inWorld .. " wins=" .. tostring(SkaldCharDB.stats.bgWins) .. " texts: " .. wonText .. " / " .. lossText)`,
 });
 
+run('/skald probe events counts the events by name, keeps the payload of the new-looking ones, and lists them', {
+  body: `SlashCmdList.SKALD("probe events")
+fire("CAMPSITE_CONTRIBUTION", 42, "Cozy Fire"); fire("CAMPSITE_CONTRIBUTION", 43); fire("PLAYER_MONEY")
+print_out = {}
+SlashCmdList.SKALD("probe events list")
+local said = table.concat(print_out, "\\n")
+local log = SkaldDB.probeEvents
+SlashCmdList.SKALD("probe events off")
+RES = (SkaldDB.probeEvents.count.CAMPSITE_CONTRIBUTION == 2 and log.seen[1].ev == "CAMPSITE_CONTRIBUTION" and log.seen[1][2] == "Cozy Fire"
+  and said:find("CAMPSITE_CONTRIBUTION x2", 1, true) and not said:find("PLAYER_MONEY", 1, true) and SkaldDB.probeAll == nil) and "ok"
+  or ("said: " .. said)`,
+});
+
 // every picture a look can ask for is in the folder
 {
   const src = fs.readFileSync(path.join(ADDONS, 'Skald', 'Skald.lua'), 'utf8');

@@ -2,11 +2,11 @@
 
 **An epic first-person diary of your journey through Azeroth, written as you play and kept in a painted, leather-bound book.**
 
-Skald listens to what happens on the road (quests, levels, deaths, new lands, dungeons, bosses, achievements, professions) and writes each event as a short page in the first person. Quests are told by what they asked of you, and the rarer the deed, the grander the telling. Open the book any time to read your story, one day per page, and write a line of your own at the foot of each day.
+Skald listens to what happens on the road (quests, levels, deaths, new lands, dungeons, bosses, battlegrounds, achievements, professions) and writes each event as a short page in the first person. Quests are told by what they asked of you, and the rarer the deed, the grander the telling. Open the book any time to read your story, one day per page, and write a line of your own at the foot of each day.
 
 > **Beta.** Skald is in beta, like the game it is made for. It works, but some events have not been seen in a real session yet (see Limits). Please report what you find.
 
-Made for **TBC Classic Anniversary** (2.5.6) and **World of Warcraft: Forever** (1.60.1, beta). Texts in **English**, **Brazilian Portuguese** and **French** (French not yet reviewed by a native speaker): the diary follows your game client's language.
+Made for **World of Warcraft: Forever** (1.60.1, from 4 November 2026) and **TBC Classic Anniversary** (2.5.6). Texts in **English**, **Brazilian Portuguese** and **French** (French not yet reviewed by a native speaker): the diary follows your game client's language.
 
 ## Features
 
@@ -23,10 +23,12 @@ Made for **TBC Classic Anniversary** (2.5.6) and **World of Warcraft: Forever** 
 - **The journey in numbers.** Lands discovered, quests, levels, deaths, dungeons, creatures slain (read from the game's own Statistics panel), bosses, achievements, your deadliest land, time on the road, and a count of quests by rarity.
 - **One diary per character.** If a new character takes the name of an old one, the old diary is set aside and can be restored.
 - **Story, not just a log.** A boss beaten after you fell to the dungeon says so; the last quest of a chain tells how many days the story took; someone who stood beside you in a dungeon and joins your group again is told as old company; coming back to a land where something dear happened brings a quiet memory (all can be switched off in Options).
-- **Deeds and points.** A tab of 71 goals in eight groups (the road, exploration, stories, war, crafts, beasts, company, fortune and renown): levels, lands, flight paths, quests and chains, dungeons, bosses, creatures, trades, pets, companions, guild, group, gold and reputation. Each goal is worth points by the rarity of its seal (5, 10, 25, 50 or 100) and the total earns a title. The diary checks them by itself, so what you did before counts; each goal reached becomes a page that says its points. Goals added in a later version are marked quietly the first time, without pages.
+- **Deeds and points.** A tab of 74 goals in eight groups (the road, exploration, stories, war, crafts, beasts, company, fortune and renown): levels, lands, flight paths, quests and chains, dungeons, bosses, battlegrounds won, creatures, trades, pets, companions, guild, group, gold and reputation. Each goal is worth points by the rarity of its seal (5, 10, 25, 50 or 100) and the total earns a title. The diary checks them by itself, so what you did before counts; each goal reached becomes a page that says its points. Goals added in a later version are marked quietly the first time, without pages.
 - **Saga.** The diary told again as chapters, in the first person.
 - **Bard.** A jukebox of 33 pieces of the game's own music, with shuffle, skip and the volume of the game's music. With the book shut, a notice on the screen (four looks) shows the song that plays; the game cannot pause or seek a piece.
 - **Backup and restore.** `/skald backup` writes the whole diary as text, in parts; `/skald restore` takes it back, only on the character it came from, and keeps one copy to undo. Favourites and notes are never dropped, whatever the size of the book.
+- **Battlegrounds.** A match won or lost becomes a page (Darkspear Islands and the older fields), and wins count for three goals.
+- **Skyborne.** Forever's new race has lines of its own for new lands, levels and falls, and the Saga names the isle where the character was born.
 - **Crafts counted.** Making the same thing again and again is one page that says how many.
 - **Skald Reader.** Read your diary as a book outside the game: type `/skald reader`, copy the text and paste it on the Reader page (odemarpizzol.github.io/Skald/reader). It runs in your browser, sends nothing anywhere, and can be saved as a PDF.
 - **Export.** Copy your diary as plain text or Discord-ready markdown, split into parts that fit a message. The names of other players are hidden unless you choose to show them.
@@ -64,7 +66,7 @@ The **Settings** tab has three pages, turned with the corners of the book: **Sty
 ## Limits (be aware)
 
 - Skald writes pages as events happen, even in combat (a level gained at the end of a fight, for example), but it never reads anything the game withholds from addons in combat; only the quiet memories wait for the fight to end.
-- Skald is a **beta**. Developed and tested on the Anniversary client; the Forever client has not been tested in this version. Some events (dungeons, bosses, groups, mounts, achievements, guild) are wired up but have not been seen in a real game session yet; if one fails, please report it.
+- Skald is a **beta**. Forever is a client of the modern (Mainline) family that hides some values from addons; Skald skips them instead of guessing, so a boss or an item the game withholds in a fight may go unwritten. Tested in a simulation of the Forever client and in the Anniversary client; the battleground pages and the Skyborne lines have not been seen in a real Forever session yet. Some events (dungeons, bosses, groups, mounts, achievements, guild) are wired up but have not been seen in a real game session yet; if one fails, please report it.
 - In the Forever client some pieces of Bard music (from the expansions) may be silent.
 - Quest rarity is an estimate from the data available; if you see an odd grade, tell us which quest.
 

@@ -4973,6 +4973,57 @@ Mile.NoteBirthplace = function()
     if type(map) == "number" and map > 0 then db.birthMap = map end
 end
 
+-- /skald probe events: every event the client fires is counted by name in SkaldDB.probeEvents (a developer tool
+-- for Forever, whose new systems, camps and Legacy among them, have events nobody has named yet). The ones whose
+-- name looks new keep their first few payloads (plain values only). Off unless asked for; it stays on across
+-- logins until /skald probe events off.
+K.PROBE_WATCH = { "CAMP", "LEGACY", "PERK", "PVP", "BATTLEFIELD", "HARDCORE", "COLLECTION", "TRANSMOG", "RULESET", "FOREVER", "CAMELOT" }
+Mile.ProbeAllEvents = function(on)
+    local s = Settings()
+    s.probeAll = on or nil
+    if not Mile.probeFrame then
+        Mile.probeFrame = CreateFrame("Frame")
+        Mile.probeFrame:SetScript("OnEvent", function(_, event, ...)
+            local log = SkaldDB.probeEvents or {}
+            SkaldDB.probeEvents = log
+            log.count = log.count or {}
+            log.count[event] = (log.count[event] or 0) + 1
+            if log.count[event] > 3 then return end
+            for _, word in ipairs(K.PROBE_WATCH) do
+                if event:find(word, 1, true) then
+                    local rec = { ev = event, t = time() }
+                    for i = 1, math.min(select("#", ...), 6) do
+                        local v = Safe((select(i, ...)))
+                        rec[i] = (type(v) == "string" or type(v) == "number" or type(v) == "boolean") and v or type(v)
+                    end
+                    log.seen = log.seen or {}
+                    table.insert(log.seen, rec)
+                    while #log.seen > 100 do table.remove(log.seen, 1) end
+                    break
+                end
+            end
+        end)
+    end
+    if on then
+        if not pcall(Mile.probeFrame.RegisterAllEvents, Mile.probeFrame) then s.probeAll = nil end
+    else
+        pcall(Mile.probeFrame.UnregisterAllEvents, Mile.probeFrame)
+    end
+end
+-- What the probe heard whose name looks new, for the chat (the full counts stay in the saved variables).
+Mile.ProbeEventLines = function()
+    local log = SkaldDB and SkaldDB.probeEvents
+    local lines = {}
+    for event, n in pairs(log and log.count or {}) do
+        for _, word in ipairs(K.PROBE_WATCH) do
+            if event:find(word, 1, true) then lines[#lines + 1] = event .. " x" .. n; break end
+        end
+    end
+    table.sort(lines)
+    if #lines == 0 then lines[1] = L.PROBE_EVENTS_NONE end
+    return lines
+end
+
 -- The side that won a battleground: 0 is the Horde, 1 the Alliance (GetBattlefieldWinner and the Mainline
 -- C_PvP.GetActiveMatchWinner agree on it). A page once per match; the name of the field is kept as written.
 K.BG_SIDE = { Horde = 0, Alliance = 1 }
@@ -5991,6 +6042,7 @@ H.PLAYER_LOGIN = function(self, event, ...)
         CheckMarks()
         pcall(Mile.CheckPet)
         pcall(Mile.NoteBirthplace)
+        if Settings().probeAll then pcall(Mile.ProbeAllEvents, true) end
         pcall(Mile.MergeCrafts)
         pcall(Mile.Relocalize)
         C_Timer.After(10, function() pcall(Mile.Relocalize) end)   -- items load a little later
@@ -7981,6 +8033,11 @@ SlashCmdList["SKALD"] = function(msg)
     elseif msg == "probe spells" or msg == "probe spells off" then
         Settings().probeSpells = (msg == "probe spells")
         Say(Settings().probeSpells and L.PROBE_SPELLS_ON or L.PROBE_SPELLS_OFF)
+    elseif msg == "probe events" or msg == "probe events off" then
+        Mile.ProbeAllEvents(msg == "probe events")
+        Say(Settings().probeAll and L.PROBE_EVENTS_ON or L.PROBE_EVENTS_OFF)
+    elseif msg == "probe events list" then
+        for _, line in ipairs(Mile.ProbeEventLines()) do Say(line) end
     elseif msg == "clear" then
         StaticPopup_Show("SKALD_CLEAR")
     elseif msg == "quiet" then

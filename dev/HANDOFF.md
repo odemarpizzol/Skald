@@ -1,4 +1,4 @@
-# Skald: handoff para o Claude Code (2026-10-25)
+# Skald: handoff para o Claude Code (2026-11-01)
 
 Addon de World of Warcraft (família Classic), diário épico em primeira pessoa mostrado como um livro de couro aberto. O repo mantém `## Interface: 16001`; o cliente de teste atual é o Anniversary (TOC 20506 só na cópia). Os textos saem em en/ptBR/frFR.
 Autor Oddynho, MIT, CurseForge ID 1748824. Respostas ao usuário SEMPRE em português (pt-br).
@@ -11,17 +11,19 @@ Autor Oddynho, MIT, CurseForge ID 1748824. Respostas ao usuário SEMPRE em portu
 - Memória do Claude: `~/.claude-personal/projects/-home-odemarpizzol-work-dpzl-projects-Skald-Skald/memory/` (regra `prefer-game-statistics`).
 
 ## Estado
-- Publicado: **0.40.0-beta** (selos de cera por facção, rabiscos de clima e do dia, página "O dia em números"). A `dev` está à frente da `main` com: densidade das páginas (`/skald density` e botões na aba Estilo), rabiscos espalhados por `ns.DoodleSpot`, 19 metas de longo prazo (versão 4 da lista) com 3 títulos acima de 750 pontos e paginação da lista de metas. Tudo isso consta em `dev/NEXT_CHANGELOG.md` e **ainda não foi publicado**.
+- Publicado: **0.43.1-beta** (`main` = `dev` em 2026-10-31). O Forever lança em **04/11/2026, 15h PST (20h de Brasília)**.
+- O Forever é um cliente da família **Mainline** (Interface 16001, `WOW_PROJECT_ID` 18, game type "camelot"/"forever", `C_Secrets` ativo): as funções só do Classic não existem, e o cliente esconde alguns valores dos addons ("secret values", `issecretvalue`). Desde a 0.41 o teste em jogo foi no Anniversary (API Classic TBC): Bard, Busca, Backup, aba única de Configurações e a arte nova **nunca rodaram num cliente Mainline**. Primeira coisa a testar no dia 04.
+- Branch **`forever-launch`** (a partir da `dev`, ainda não mesclada; o usuário valida): valores secretos em ENCOUNTER_END/BOSS_KILL/CHAT_MSG_LOOT, ZoneCard para raças novas, perfil "forever" no mock (`dev/tools/forever.lua`, usado por `checks.js` e `regressions.js`), frases do Skyborne + terra natal na Saga (`birthMap` em `K.DIARY_STATE`), página de campo de batalha (`bg`, pools `bgWin`/`bgLoss`, metas `bg1/bg10/bg50`, `GOALS_VERSION` 5), `/skald probe events`. Bullets em `dev/NEXT_CHANGELOG.md`. Arte pedida em `dev/PROMPT_ARTE_forever.md` (ícone `ev_bg`, rabisco `dd_banner`); até chegar, a página usa `ev_boss` e `dd_sword`.
+- Não verificado no jogo: o nome do arquivo de raça do Skyborne (o código casa qualquer `raceFile` que comece com "Sky"), `PVP_MATCH_COMPLETE`/`GetBattlefieldWinner` no Forever, quais payloads o Forever marca como secretos, e os eventos de acampamento e de Legacy (por isso o `/skald probe events`).
+- Roteiro do dia 04: abrir o jogo, `/skald report` (APIs e eventos vistos), `/skald probe events` ligado durante a primeira sessão (montar acampamento, ganhar Legacy, jogar um campo de batalha), depois `/skald probe events list` e mandar o `SkaldDB.lua` (SavedVariables). Conferir `/run print((select(4, GetBuildInfo())))`: se não for 16001, publicar hotfix só com a linha do TOC.
 - Leitura em voz alta: implementada, **desligada** (`ns.SpeechOn = false` em `Skald.lua`) porque o usuário achou a voz ruim.
-- O usuário ainda precisa testar no jogo (`/reload`): densidade (botões do Estilo, comando, letra e rabiscos por densidade), a aba Metas (paginador `< 1/2 >`, dias em A Estrada), selo por facção, página "O dia em números"; e os eventos não vistos (PLAYER_DEAD, ENCOUNTER_*, BOSS_KILL, NEW_MOUNT_ADDED) em masmorra/chefe em grupo, convite recusado, teste com dois jogadores (CHAT_MSG_ADDON).
-- Aviso: o diário de teste do usuário pode ter flag errada de grupo recusado (limpar com `/skald clear`).
 
 ## Como trabalhar
 - Testes: `node dev/tools/checks.js` (sintaxe, texturas, lint, frases en/pt/fr, sessão simulada, regressões, Leitor, velocidade). SEMPRE antes de dizer que algo está pronto. A simulação (fengari/Lua 5.3 + `dev/tools/mock.lua`) NÃO é o jogo: diga isso ao usuário. `node dev/tools/saga_sample.js [loc] [female|male] [level]` imprime uma Saga.
 - Release manual (só quando o usuário disser "publica"; eu escolho o número, nada de versões minúsculas): bullets de `dev/NEXT_CHANGELOG.md` -> `CHANGELOG.md` + versão em `Skald.toc`; esvaziar NEXT_CHANGELOG; commit na `dev`; `git checkout main`; `git merge --ff-only dev`; `git push origin main`; `git tag vX.Y.Z-beta`; `git push origin vX.Y.Z-beta`; conferir `gh run list`; voltar à `dev`. (`dev/tools/release.js` ainda está no layout antigo.)
-- Commits terminam com a linha `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`. Não commitar `teste.pdf` nem `Chronicler addon icon WoW.zip`.
+- Commits terminam com a linha `Co-Authored-By:` do modelo que fez o trabalho. Não commitar `teste.pdf` nem `Chronicler addon icon WoW.zip`.
 - Regras de Lua/JS, frases (pools ≥ 8, NBSP no francês, palavras proibidas fora de combate), metas (`since` + `GOALS_VERSION`) e arte: ver `CLAUDE.md`.
-- Mock: frames devolvem função para chave desconhecida, use `rawget` em campos opcionais. Globais novos do lint vão à mão em `dev/tools/lint_baseline.json`.
+- Mock: frames devolvem função para chave desconhecida, use `rawget` em campos opcionais. O perfil Forever (`dev/tools/forever.lua`) remove as funções só do Classic e define `issecretvalue`; nas regressões use `pre: FOREVER + ...`. Globais novos do lint vão à mão em `dev/tools/lint_baseline.json`.
 
 ## Preferências do usuário
 Português; versões escolhidas por ele ou por mim em "publica"; sem integração TRP3; Metas como lista clicável; variedade de frases é desejo permanente; arte é feita por ele no Claude Design (eu escrevo o prompt, ele manda PNG, converto para TGA); personagem feminina, cliente pt-BR, testa também en/fr, com prints; onde o jogo der a estatística direta, usar (fallback: contagem do diário).
