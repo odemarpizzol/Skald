@@ -2806,6 +2806,22 @@ RES = (early == 0 and won == 1 and e.won == true and l.won == false and inWorld 
   or ("early=" .. early .. " won=" .. won .. " world=" .. inWorld .. " wins=" .. tostring(SkaldCharDB.stats.bgWins) .. " texts: " .. wonText .. " / " .. lossText)`,
 });
 
+run('Forever: the Bard leaves out the music of Outland and Eversong (a later time), every piece left has its name, and elsewhere all 33 stay', {
+  pre: FOREVER,
+  body: `local forever = #ns.Bard.TRACKS
+local named, tbc = true, false
+for i, t in ipairs(ns.Bard.TRACKS) do
+  if t.era == "tbc" then tbc = true end
+  if not ns.LOCALES.enUS.BARD_TRACKS[i] then named = false end
+end
+for i = 1, ns.Bard.Pages() * ns.Bard.PER_PAGE do if ns.Bard.TRACKS[i] and not ns.Bard.TRACKS[i].len then named = false end end
+RES = (forever == 27 and not tbc and named and ns.IsForever()) and "ok" or ("tracks=" .. forever .. " tbc=" .. tostring(tbc) .. " named=" .. tostring(named))`,
+});
+
+run('outside Forever the Bard keeps every piece', {
+  body: `RES = (#ns.Bard.TRACKS == 33 and not ns.IsForever()) and "ok" or ("tracks=" .. #ns.Bard.TRACKS)`,
+});
+
 run('/skald probe events counts the events by name, keeps the payload of the new-looking ones, and lists them', {
   body: `SlashCmdList.SKALD("probe events")
 fire("CAMPSITE_CONTRIBUTION", 42, "Cozy Fire"); fire("CAMPSITE_CONTRIBUTION", 43); fire("PLAYER_MONEY")

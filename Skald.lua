@@ -28,6 +28,13 @@ local L = LOCALES[GetLocale()] or LOCALES.enUS
 local PHRASES = L.phrases
 PHRASES.bg = PHRASES.bg or PHRASES.bgWin   -- a battleground page draws from bgWin or bgLoss (PoolFor); this only lets AddEntry know the kind
 local TITLE = "Skald"
+-- The Forever client (Interface 16001, game type "camelot", project 18): set before the first raids, so what belongs to a
+-- later time (the music of Outland, for one) is left out there.
+ns.IsForever = function()
+    if type(WOW_PROJECT_ID) == "number" and WOW_PROJECT_ID == (WOW_PROJECT_CAMELOT or 18) then return true end
+    local ok, _, _, _, toc = pcall(GetBuildInfo)
+    return ok and type(toc) == "number" and toc >= 16000 and toc < 17000 or false
+end
 
 -- Parchment palette (dark inks that read well on paper).
 K.HEAD_INK = { 0.45, 0.38, 0.26 }

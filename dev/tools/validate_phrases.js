@@ -173,3 +173,21 @@ POOLTEXT = table.concat(dump, string.char(10))`);
   });
   console.log('combat words in non-combat pools:', bad.length ? bad.join(' || ') : 'none'); if (bad.length) process.exitCode = 1;
 }
+
+// Lore: Forever is set right after Warcraft III, before the first raids of the old world. A name or an event of a later
+// time in any text the diary tells would break the world it lives in, so it fails here (all three languages).
+{
+  const LATER = ['pandaria', 'pandária', 'pandarie', 'cataclysm', 'cataclismo', 'cataclysme', 'garrosh', 'outland', 'terralém',
+    'outreterre', 'shattrath', 'exodar', 'death knight', 'cavaleiro da morte', 'chevalier de la mort', 'demon hunter',
+    'caçador de demônios', 'chasseur de démons', 'evoker', 'évocateur', 'dracthyr', 'shadowlands', 'terras sombrias',
+    'ombreterre', 'azerite', 'azerita', 'azérite', 'argus', 'teldrassil burn', 'queima de teldrassil', 'incendie de teldrassil'];
+  const found = [];
+  for (const f of ['Locales.lua', 'Saga.lua', 'Curated.lua', 'Goals.lua']) {
+    fs.readFileSync(A + 'Skald/' + f, 'utf8').split('\n').forEach((line, i) => {
+      const low = line.toLowerCase();
+      for (const w of LATER) if (low.includes(w)) found.push(`${f}:${i + 1} "${w}"`);
+    });
+  }
+  console.log('\nnames of a later time (lore):', found.length ? found.join(' ; ') : 'none');
+  if (found.length) process.exitCode = 1;
+}

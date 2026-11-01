@@ -45,13 +45,22 @@ Bard.TRACKS = {
     { id = 53453, len = 49.9, path = "Sound\\Music\\ZoneMusic\\EnchantedForest\\enchantedforest01.mp3" },
     { id = 53695, len = 97.2, path = "Sound\\Music\\ZoneMusic\\SoggyPlace\\soggyplace-zone1.mp3" },
     { id = 53812, len = 72.9, path = "Sound\\Music\\ZoneMusic\\Volcanic\\dayvolcanic01.mp3" },
-    { id = 53458, len = 65.3, path = "Sound\\Music\\ZoneMusic\\Eversong\\es_buildingwalkday01.mp3" },
-    { id = 53278, len = 191.6, path = "Sound\\Music\\ZoneMusic\\Azuremyst\\ai_draeneiwalkuni05.mp3" },
-    { id = 53585, len = 72.8, path = "Sound\\Music\\ZoneMusic\\Nagrand\\na_generalwalkday01.mp3" },
-    { id = 53819, len = 81.6, path = "Sound\\Music\\ZoneMusic\\Zangarmarsh\\za_generalwalkuni01.mp3" },
-    { id = 53689, len = 67.7, path = "Sound\\Music\\ZoneMusic\\ShadowmoonValley\\sv_generalwalkuni01.mp3" },
-    { id = 53620, len = 150.7, path = "Sound\\Music\\ZoneMusic\\Netherstorm\\ns_generalwalkuni01.mp3" },
+    { id = 53458, era = "tbc", len = 65.3, path = "Sound\\Music\\ZoneMusic\\Eversong\\es_buildingwalkday01.mp3" },
+    { id = 53278, era = "tbc", len = 191.6, path = "Sound\\Music\\ZoneMusic\\Azuremyst\\ai_draeneiwalkuni05.mp3" },
+    { id = 53585, era = "tbc", len = 72.8, path = "Sound\\Music\\ZoneMusic\\Nagrand\\na_generalwalkday01.mp3" },
+    { id = 53819, era = "tbc", len = 81.6, path = "Sound\\Music\\ZoneMusic\\Zangarmarsh\\za_generalwalkuni01.mp3" },
+    { id = 53689, era = "tbc", len = 67.7, path = "Sound\\Music\\ZoneMusic\\ShadowmoonValley\\sv_generalwalkuni01.mp3" },
+    { id = 53620, era = "tbc", len = 150.7, path = "Sound\\Music\\ZoneMusic\\Netherstorm\\ns_generalwalkuni01.mp3" },
 }
+
+-- The pieces of the burning crusade (Eversong, Azuremyst and the lands of Outland) belong to a later time than Forever's,
+-- which is set before the first raids and long before the Dark Portal opens again: there the Bard does not know them.
+-- They are the last of the list, so the names in L.BARD_TRACKS keep their numbers.
+if ns.IsForever and ns.IsForever() then
+    for i = #Bard.TRACKS, 1, -1 do
+        if Bard.TRACKS[i].era == "tbc" then table.remove(Bard.TRACKS, i) end
+    end
+end
 
 Bard.playing = nil        -- number of the piece that plays, or nil
 Bard.last = nil           -- the piece that played last: Play goes back to it after a stop (the game cannot pause)

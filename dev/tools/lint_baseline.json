@@ -1,6 +1,8 @@
 {
  "Skald/Skald.lua": [
     "C_TTSSettings",
+    "WOW_PROJECT_ID",
+    "WOW_PROJECT_CAMELOT",
     "C_PvP",
     "GetBattlefieldWinner",
     "C_VoiceChat",
