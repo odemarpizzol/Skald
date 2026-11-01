@@ -209,6 +209,7 @@
  ],
  "Skald/ZoneCard.lua": [
   "C_Map",
+  "UnitFactionGroup",
   "C_MapExplorationInfo",
   "C_QuestLog",
   "CreateFrame",
