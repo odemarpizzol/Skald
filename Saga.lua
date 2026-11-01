@@ -512,6 +512,17 @@ local function AreaName(id)
     return (ok and type(name) == "string" and name ~= "") and name or nil
 end
 
+-- A map and the land that holds it (a zone and its continent), by the game's own names; nil, nil when either is missing.
+local function MapName(id)
+    local ok, home, land = pcall(function()
+        local info = C_Map.GetMapInfo(id)
+        local up = info and info.parentMapID and info.parentMapID > 0 and C_Map.GetMapInfo(info.parentMapID)
+        return info and info.name, up and up.name
+    end)
+    if not ok or type(home) ~= "string" or home == "" or type(land) ~= "string" or land == "" or home == land then return nil, nil end
+    return home, land
+end
+
 -- What the diary knows, as plain values.
 local function Gather(db)
     local v = { entries = db.entries or {} }
@@ -570,6 +581,9 @@ local function Gather(db)
     if areas then
         v.home, v.land = AreaName(areas[1]), AreaName(areas[2])
         if not (v.home and v.land) then v.home, v.land = nil, nil end
+    elseif type(db.birthMap) == "number" then
+        -- a race this file does not know (Forever's Skyborne): the map the diary saw it on at level 1, and the land above it
+        v.home, v.land = MapName(db.birthMap)
     end
     return v
 end

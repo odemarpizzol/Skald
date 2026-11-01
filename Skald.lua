@@ -190,6 +190,18 @@ local function NoteCompanions(entry)
     end
 end
 
+-- The race pools are named by the race file of the client. A race newer than the pools (Forever's Skyborne, whose
+-- file name was not seen yet) is matched by the start of its name, so "Skyborne", "SkyborneHorde"... share one pool.
+K.RACE_POOL_ALIAS = { { "^[Ss]ky", "Skyborne" } }
+K.RacePool = function(raceFile)
+    if type(raceFile) ~= "string" then return nil end
+    for _, kind in ipairs({ "zone", "level", "death" }) do
+        if PHRASES["race_" .. raceFile .. "_" .. kind] then return raceFile end
+    end
+    for _, a in ipairs(K.RACE_POOL_ALIAS) do if raceFile:match(a[1]) then return a[2] end end
+    return raceFile
+end
+
 local function PickFlavor(kind, entry)
     if kind == "boss" and entry.tries then return nil end
     if kind == "quest" and (entry.cend or (entry.tier or 1) >= 4 or (ns.CURATED and entry.q and ns.CURATED[entry.q])) then
@@ -202,7 +214,7 @@ local function PickFlavor(kind, entry)
     local keys = {}
     local function Offer(name) if PHRASES[name] then keys[#keys + 1] = name end end
     if entry.cls then Offer("class_" .. entry.cls .. "_" .. kind) end
-    if entry.race then Offer("race_" .. entry.race .. "_" .. kind) end
+    if entry.race then Offer("race_" .. K.RacePool(entry.race) .. "_" .. kind) end
     if kind == "quest" then
         if entry.cend or (entry.tier or 1) >= 4 or (ns.CURATED and entry.q and ns.CURATED[entry.q]) then return nil end
         if entry.ql and entry.pl then
@@ -1125,7 +1137,8 @@ end
 -- It is set aside with the pages and brought back with them, and emptied with them, so a cleared diary or a new
 -- character with an old name never inherits it.
 K.DIARY_STATE = { "pets", "petNow", "companions", "questObj", "questStart", "visitedMaps", "resume", "attempts",
-    "taxi", "marks", "goals", "goalsInit", "goalsVer", "collInit", "rep", "memoryAt", "recentIdx", "anniv", "zoneKills", "killBase" }
+    "taxi", "marks", "goals", "goalsInit", "goalsVer", "collInit", "rep", "memoryAt", "recentIdx", "anniv", "zoneKills", "killBase",
+    "birthMap" }
 
 local function TakeState(db)
     local state = {}
@@ -4944,6 +4957,17 @@ end
 
 -- A hunter's companions, the reminder on returning to the game, and a probe for class events. -----
 local Mile = {}
+
+-- Where a character of a new race was born: the map it stands on at level 1 or 2, kept as a number (the Saga
+-- names it in the language of the moment). The old races have their valleys in Saga.lua and need nothing.
+Mile.NoteBirthplace = function()
+    local db = Journal()
+    if not db or db.birthMap or not (UnitLevel and C_Map and C_Map.GetBestMapForUnit) then return end
+    if (UnitLevel("player") or 99) > 2 then return end
+    local map = Safe(C_Map.GetBestMapForUnit("player"))
+    if type(map) == "number" and map > 0 then db.birthMap = map end
+end
+
 do
 -- The hunter's pets, by name. A hunter that already has a pet when the diary first looks at it is
 -- not told about it; a new hunter's first pet (level 12 or lower) and every later one are.
@@ -5933,6 +5957,7 @@ H.PLAYER_LOGIN = function(self, event, ...)
         CheckReputation()
         CheckMarks()
         pcall(Mile.CheckPet)
+        pcall(Mile.NoteBirthplace)
         pcall(Mile.MergeCrafts)
         pcall(Mile.Relocalize)
         C_Timer.After(10, function() pcall(Mile.Relocalize) end)   -- items load a little later

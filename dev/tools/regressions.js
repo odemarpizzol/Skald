@@ -2733,6 +2733,24 @@ RES = (hidden == 0 and count("loot") == 1 and errorsSaid() == 0) and "ok" or ("s
 
 const FOREVER = fs.readFileSync(path.join(__dirname, 'forever.lua'), 'utf8');
 
+run('Skyborne: a level 1 character keeps the map it was born on, the Saga names it, and the race pools are found by the start of the name', {
+  pre: `function UnitRace() return "Skyborne", "SkyborneAlliance", 90 end
+function UnitLevel() return 1 end
+C_Map.GetBestMapForUnit = function() return 2001 end
+C_Map.GetMapInfo = function(id) if id == 2001 then return { name = "Zephras Isle", parentMapID = 2000, mapType = 3 } end
+  if id == 2000 then return { name = "The Skyreach", parentMapID = 0, mapType = 2 } end end`,
+  body: `local kept = SkaldCharDB.birthMap
+function GetZoneText() return "Darkshore" end; fire("ZONE_CHANGED_NEW_AREA"); runTimers()
+local saga = ns.BuildSaga()
+local text = saga[1] and saga[1].text or ""
+local flavored = 0
+for lv = 2, 60 do function UnitLevel() return lv end; fire("PLAYER_LEVEL_UP", lv); runTimers()
+  local e = SkaldCharDB.entries[#SkaldCharDB.entries]
+  if e.kind == "level" and e.fl == "race_Skyborne_level" then flavored = flavored + 1 end end
+RES = (kept == 2001 and text:find("Zephras Isle", 1, true) and text:find("The Skyreach", 1, true) and flavored > 0) and "ok"
+  or ("birthMap=" .. tostring(kept) .. " flavored=" .. flavored .. " saga: " .. text:sub(1, 200))`,
+});
+
 run('Forever profile: a day of events, the tabs and the commands raise no error, and reputation is read with C_Reputation', {
   pre: FOREVER + `
 LOOT_ITEM_SELF = "You receive loot: %s."
