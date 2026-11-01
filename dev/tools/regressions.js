@@ -1211,7 +1211,7 @@ run('goals that came with a later list are marked quietly in a diary that alread
 local earned, possible = ns.GoalScore()
 -- flights5 was there before (5 points); the new ones (level 10 and 20, quests50, dungeons, bosses1, kills500) came quietly
 local quiet = g.level10 and g.level10.retro and g.level20 and g.level20.retro and g.quests50 and g.quests50.retro and g.kills500 and g.kills500.retro
-RES = (count("goal") == 0 and quiet and SkaldCharDB.goalsVer == 4 and earned > 5 and possible > 800 and ns.GoalPoints("level60") == 100
+RES = (count("goal") == 0 and quiet and SkaldCharDB.goalsVer == 5 and earned > 5 and possible > 800 and ns.GoalPoints("level60") == 100
   and ns.GoalPoints("flights5") == 5) and "ok" or ("pages=" .. count("goal") .. " quiet=" .. tostring(quiet) .. " ver=" .. tostring(SkaldCharDB.goalsVer) .. " score=" .. earned .. "/" .. possible)`,
 });
 
@@ -1736,7 +1736,7 @@ if not (prev and nextB) then RES = "corners not found" else
 nextB._OnClick(nextB); nextB._OnClick(nextB); nextB._OnClick(nextB)   -- past the last page: it stays on it
 local last = label()
 prev._OnClick(prev)
-RES = (first == "1 of 2" and last == "2 of 2" and label() == "1 of 2") and "ok" or ("first " .. tostring(first) .. " last " .. tostring(last) .. " back " .. tostring(label()))
+RES = (first == "1 of 3" and last == "3 of 3" and label() == "2 of 3") and "ok" or ("first " .. tostring(first) .. " last " .. tostring(last) .. " back " .. tostring(label()))
 end`,
 });
 
@@ -2774,6 +2774,36 @@ for _, f in ipairs(frames) do if rawget(f, "_OnClick") and type(rawget(f, "top")
 local errs = SkaldDB.errors or {}
 RES = (#errs == 0 and count("rep") == 1 and count("boss") == 1 and count("level") >= 1 and #SkaldCharDB.entries > before) and "ok"
   or ("errors: " .. table.concat(errs, " / ") .. " rep=" .. count("rep") .. " boss=" .. count("boss") .. " level=" .. count("level"))`,
+});
+
+run('a battleground: a won match is one page that counts for the goals, a lost one is told as a loss, nothing outside a field', {
+  pre: `function UnitFactionGroup() return "Alliance", "Alliance" end
+WINNER = nil
+function GetBattlefieldWinner() return WINNER end
+INSTANCE = { "Darkspear Islands", "pvp" }
+function GetInstanceInfo() return INSTANCE[1], INSTANCE[2], 0, "", 15 end`,
+  body: `fire("UPDATE_BATTLEFIELD_STATUS", 1); runTimers()
+local early = count("bg")
+WINNER = 1
+fire("UPDATE_BATTLEFIELD_STATUS", 1); fire("PVP_MATCH_COMPLETE", 1, 900); fire("UPDATE_BATTLEFIELD_STATUS", 1); runTimers()
+local won = count("bg")
+local e
+for _, x in ipairs(SkaldCharDB.entries) do if x.kind == "bg" then e = x end end
+local wonText = SkaldAPI.Render(e)
+NOW = NOW + 3600; WINNER = 0
+fire("PVP_MATCH_COMPLETE", 0, 900); runTimers()
+local l = SkaldCharDB.entries[#SkaldCharDB.entries]
+local lossText = SkaldAPI.Render(l)
+NOW = NOW + 3600; INSTANCE = { "Elwynn Forest", "none" }; WINNER = 1
+fire("UPDATE_BATTLEFIELD_STATUS", 1); runTimers()
+local inWorld = count("bg")
+local winLines, lossLines = 0, 0
+local P = ns.LOCALES.enUS.phrases
+for _, line in ipairs(P.bgWin) do if wonText:find(line:gsub("%%s", "Darkspear Islands"), 1, true) then winLines = winLines + 1 end end
+for _, line in ipairs(P.bgLoss) do if lossText:find(line:gsub("%%s", "Darkspear Islands"), 1, true) then lossLines = lossLines + 1 end end
+RES = (early == 0 and won == 1 and e.won == true and l.won == false and inWorld == 2 and SkaldCharDB.stats.bgWins == 1
+  and winLines == 1 and lossLines == 1 and ns.Search.GROUPS[3].kinds.bg) and "ok"
+  or ("early=" .. early .. " won=" .. won .. " world=" .. inWorld .. " wins=" .. tostring(SkaldCharDB.stats.bgWins) .. " texts: " .. wonText .. " / " .. lossText)`,
 });
 
 // every picture a look can ask for is in the folder

@@ -26,7 +26,7 @@ local UI_TEXT = {
             companions = "Companions of the road remembered: %d.", reunions = "Meet again someone from a dungeon.",
             guild = "Join a guild.", party = "Join a group for the first time.",
             mounts = "Mounts collected: %d.", critters = "Companion pets collected: %d.",
-            gold = "Hold %d gold.", repFriendly = "Become Friendly with a faction.", repHonored = "Become Honored with a faction.", repExalted = "Reach Exalted with a faction.",
+            gold = "Hold %d gold.", repFriendly = "Become Friendly with a faction.", repHonored = "Become Honored with a faction.", repExalted = "Reach Exalted with a faction.", bgWins = "Battlegrounds won: %d.",
         },
         NAMES = {
             quests800 = "Eight Hundred Doors Knocked", quests1500 = "A Life Written in Errands", quests3000 = "The Tavern's Longest Tale",
@@ -50,7 +50,7 @@ local UI_TEXT = {
             mounts1 = "The First Stirrup", mounts5 = "A Stable of My Own", mounts10 = "Hooves, Wings and Scales",
             critters1 = "A Small Companion", critters10 = "Pockets Full of Friends", critters25 = "A Little Ark of Critters",
             gold10 = "A Few Good Coins", gold100 = "A Heavy Purse", gold1000 = "A Dragon's Hoard",
-            repFriendly = "A Friendly Face", repHonored = "Honored Guest", repExalted = "Among the Exalted",
+            repFriendly = "A Friendly Face", repHonored = "Honored Guest", repExalted = "Among the Exalted", bg1 = "First Blood on the Field", bg10 = "A Veteran of the Banners", bg50 = "The Warlord's Ledger",
         },
     },
     ptBR = {
@@ -72,7 +72,7 @@ local UI_TEXT = {
             companions = "Companheiros de estrada lembrados: %d.", reunions = "Reencontre alguém de uma masmorra.",
             guild = "Entre numa guilda.", party = "Junte-se a um grupo pela primeira vez.",
             mounts = "Montarias reunidas: %d.", critters = "Mascotes reunidos: %d.",
-            gold = "Tenha %d de ouro.", repFriendly = "Torne-se Amistoso com uma facção.", repHonored = "Torne-se Honrado com uma facção.", repExalted = "Chegue a Exaltado com uma facção.",
+            gold = "Tenha %d de ouro.", repFriendly = "Torne-se Amistoso com uma facção.", repHonored = "Torne-se Honrado com uma facção.", repExalted = "Chegue a Exaltado com uma facção.", bgWins = "Campos de batalha vencidos: %d.",
         },
         NAMES = {
             quests800 = "Oitocentas Portas Batidas", quests1500 = "Uma Vida Escrita em Recados", quests3000 = "O Conto Mais Longo da Taverna",
@@ -96,7 +96,7 @@ local UI_TEXT = {
             mounts1 = "O Primeiro Estribo", mounts5 = "Uma Cocheira Só Minha", mounts10 = "Cascos, Asas e Escamas",
             critters1 = "Um Pequeno Companheiro", critters10 = "Bolsos Cheios de Amigos", critters25 = "Uma Arca de Bichinhos",
             gold10 = "Algumas Boas Moedas", gold100 = "Uma Bolsa Pesada", gold1000 = "O Tesouro de um Dragão",
-            repFriendly = "Um Rosto Amigo", repHonored = "Hóspede de Honra", repExalted = "Entre os Exaltados",
+            repFriendly = "Um Rosto Amigo", repHonored = "Hóspede de Honra", repExalted = "Entre os Exaltados", bg1 = "Primeiro Sangue no Campo", bg10 = "Uma Vida de Estandartes", bg50 = "O Livro do Senhor da Guerra",
         },
     },
     frFR = {
@@ -118,7 +118,7 @@ local UI_TEXT = {
             companions = "Compagnons de route dont on se souvient\194\160: %d.", reunions = "Retrouvez quelqu'un d'un donjon.",
             guild = "Rejoignez une guilde.", party = "Rejoignez un groupe pour la première fois.",
             mounts = "Montures réunies\194\160: %d.", critters = "Mascottes réunies\194\160: %d.",
-            gold = "Possédez %d pièces d'or.", repFriendly = "Devenez Amical avec une faction.", repHonored = "Devenez Honoré avec une faction.", repExalted = "Atteignez Exalté avec une faction.",
+            gold = "Possédez %d pièces d'or.", repFriendly = "Devenez Amical avec une faction.", repHonored = "Devenez Honoré avec une faction.", repExalted = "Atteignez Exalté avec une faction.", bgWins = "Champs de bataille gagnés\194\160: %d.",
         },
         NAMES = {
             quests800 = "Huit cents portes frappées", quests1500 = "Une vie écrite en courses", quests3000 = "Le plus long récit de la taverne",
@@ -142,7 +142,7 @@ local UI_TEXT = {
             mounts1 = "Le premier étrier", mounts5 = "Une écurie bien à moi", mounts10 = "Sabots, ailes et écailles",
             critters1 = "Un petit compagnon", critters10 = "Des poches pleines d'amis", critters25 = "Une petite arche de bestioles",
             gold10 = "Quelques bonnes pièces", gold100 = "Une bourse bien lourde", gold1000 = "Le trésor d'un dragon",
-            repFriendly = "Un visage ami", repHonored = "Hôte d'honneur", repExalted = "Parmi les exaltés",
+            repFriendly = "Un visage ami", repHonored = "Hôte d'honneur", repExalted = "Parmi les exaltés", bg1 = "Premier sang sur le champ", bg10 = "Une vie de bannières", bg50 = "Le registre du seigneur de guerre",
         },
     },
 }
@@ -161,7 +161,7 @@ local CATS = {
 -- `secret` keeps the name hidden until the feat is done.
 -- `since` is the version of the list in which a goal came: a diary that already looked at the list marks the ones that
 -- came later quietly (no page, no notice), whatever they find already done.
-local GOALS_VERSION = 4
+local GOALS_VERSION = 5
 local GOALS = {
     { id = "level10", cat = "road", tier = 1, fact = "level", target = 10, since = 2 },
     { id = "level20", cat = "road", tier = 2, fact = "level", target = 20, since = 2 },
@@ -235,6 +235,10 @@ local GOALS = {
     { id = "days30", cat = "road", tier = 2, fact = "days", target = 30, since = 4 },
     { id = "days100", cat = "road", tier = 4, fact = "days", target = 100, since = 4 },
     { id = "days365", cat = "road", tier = 5, fact = "days", target = 365, since = 4 },
+    -- the battlegrounds (version 5, for Forever's Darkspear Islands and the old fields): won matches the diary saw
+    { id = "bg1", cat = "war", tier = 2, fact = "bgWins", target = 1, since = 5 },
+    { id = "bg10", cat = "war", tier = 3, fact = "bgWins", target = 10, since = 5 },
+    { id = "bg50", cat = "war", tier = 4, fact = "bgWins", target = 50, since = 5 },
 }
 -- Points follow the rarity of the seal (common .. legendary). They are worked out when shown, from the goals reached,
 -- so a change of value needs no change to what is saved.
@@ -339,6 +343,7 @@ local function Facts()
     f.companions = Count(db.companions)
     f.guild = (db.guild and 1) or 0
     f.party = (db.flags and db.flags.party) and 1 or 0
+    f.bgWins = type(stats.bgWins) == "number" and stats.bgWins or 0
     local rare, epic = 0, 0
     for tier, n in pairs(stats.tiers or {}) do
         if type(tier) == "number" and type(n) == "number" then

@@ -26,6 +26,7 @@ local LOCALES = ns.LOCALES
 
 local L = LOCALES[GetLocale()] or LOCALES.enUS
 local PHRASES = L.phrases
+PHRASES.bg = PHRASES.bg or PHRASES.bgWin   -- a battleground page draws from bgWin or bgLoss (PoolFor); this only lets AddEntry know the kind
 local TITLE = "Skald"
 
 -- Parchment palette (dark inks that read well on paper).
@@ -130,7 +131,7 @@ K.FLAVOR_KINDS = { quest = true, level = true, death = true, boss = true, zone =
 local AddContext
 do
 local CONTEXT_KINDS = { dungeon = true, boss = true, death = true, zone = true, level = true,
-    hearth = true, revive = true, flight = true, home = true, mount = true }   -- the hour of the day, for the line that sets the scene
+    hearth = true, revive = true, flight = true, home = true, mount = true, bg = true }   -- the hour of the day, for the line that sets the scene
 local WITH_KINDS = { dungeon = true, boss = true, death = true }
 -- Another player is told apart by name and by the second part the client gives (the realm in the classic game;
 -- in the realmless Forever it comes back as the surname, even for players of one's own world): the key kept in
@@ -250,6 +251,7 @@ K.RECORD_FLAG = {
     quest = "quest", level = "level", milestone = "level", death = "death",
     boss = "boss", dungeon = "boss", zone = "zone", skill = "profession", profession = "profession",
     loot = "loot", mark = "mark", home = "mark", rep = "mark", flight = "zone", tame = "mark", revive = "death", hearth = "mark",
+    bg = "boss",
 }
 
 -- Entries store the event type, its argument and which phrase was drawn;
@@ -662,6 +664,7 @@ function PoolFor(e)
         if e.sub == "healer" and PHRASES.reviveHealer then return PHRASES.reviveHealer end
         return PHRASES.revive
     end
+    if e.kind == "bg" then return (e.won and PHRASES.bgWin) or PHRASES.bgLoss end
     if e.kind == "tame" then
         if e.sub == "first" and PHRASES.tameFirst then return PHRASES.tameFirst end
         if e.sub == "level" and PHRASES.tameLevel then return PHRASES.tameLevel end
@@ -1283,6 +1286,7 @@ K.EVENT_ICON = {
     mark = "milestone", home = "st_hearth", rep = "achievement", flight = "st_flight",
     tame = "pet",
     revive = "revive", hearth = "st_hearth",
+    bg = "boss",   -- until a battleground icon of its own is drawn (prompt in dev/PROMPT_ARTE_forever.md)
 }
 -- Professions: the game's skill line id says which one it is whatever the language; the
 -- name is the fallback (and how pages written before this existed are recognised).
@@ -1652,7 +1656,7 @@ end
 K.DOODLE_OF = {
     quest = "scroll", level = "star", milestone = "star", death = "skull", boss = "sword", dungeon = "sword",
     zone = "map", flight = "boots", mount = "boots", tame = "paw", skill = "anvil", profession = "anvil",
-    hearth = "camp", home = "camp", guild = "mug", rep = "mug",
+    hearth = "camp", home = "camp", guild = "mug", rep = "mug", bg = "sword",
 }
 K.DOODLE_ORDER = { "sword", "skull", "map", "star", "camp", "boots", "paw", "anvil", "mug", "scroll" }
 K.DOODLE_WEIGHT = { scroll = 0.3 }
@@ -1886,7 +1890,7 @@ do
 local toastFrame, lastToast = nil, 0
 local NOTIFY_KINDS = {
     level = true, milestone = true, mark = true, boss = true, dungeon = true, achievement = true,
-    mount = true, home = true, rep = true, flight = true, guild = true, tame = true, goal = true,
+    mount = true, home = true, rep = true, flight = true, guild = true, tame = true, goal = true, bg = true,
 }
 local function PlainLine(s)
     s = tostring(s or "")
@@ -1942,7 +1946,7 @@ end
 -- The rarity of a page that is not a quest, for the colour of its seal (as on the map).
 local TOAST_TIER = {
     zone = 1, level = 2, milestone = 4, death = 1, dungeon = 3, boss = 4, mount = 3, guild = 3,
-    party = 2, reunion = 2, goal = 3, achievement = 5, skill = 2, profession = 2, tame = 2, mark = 4, home = 1, rep = 3, flight = 1, hearth = 1,
+    party = 2, reunion = 2, goal = 3, achievement = 5, skill = 2, profession = 2, tame = 2, mark = 4, home = 1, rep = 3, flight = 1, hearth = 1, bg = 3,
 }
 local TEXD = "Interface\\AddOns\\Skald\\Textures\\"
 
@@ -4330,6 +4334,7 @@ K.OPTIONAL_EVENTS = {
     "HEARTHSTONE_BOUND", "UPDATE_FACTION", "TAXIMAP_OPENED", "PLAYER_MONEY",
     "LEARNED_SPELL_IN_TAB", "QUEST_ACCEPTED", "CHAT_MSG_ADDON", "VOICE_CHAT_TTS_PLAYBACK_FINISHED",
     "PLAYER_UNGHOST", "PLAYER_ALIVE", "CONFIRM_XP_LOSS", "RESURRECT_REQUEST",
+    "UPDATE_BATTLEFIELD_STATUS", "PVP_MATCH_COMPLETE",
 }
 for _, ev in ipairs(K.OPTIONAL_EVENTS) do
     pcall(frame.RegisterEvent, frame, ev)
@@ -4966,6 +4971,34 @@ Mile.NoteBirthplace = function()
     if (UnitLevel("player") or 99) > 2 then return end
     local map = Safe(C_Map.GetBestMapForUnit("player"))
     if type(map) == "number" and map > 0 then db.birthMap = map end
+end
+
+-- The side that won a battleground: 0 is the Horde, 1 the Alliance (GetBattlefieldWinner and the Mainline
+-- C_PvP.GetActiveMatchWinner agree on it). A page once per match; the name of the field is kept as written.
+K.BG_SIDE = { Horde = 0, Alliance = 1 }
+K.BG_AGAIN = 600   -- seconds: the same field won again within this time is the same match told twice
+Mile.CheckBattleground = function(given)
+    local db = Journal()
+    if not db then return end
+    local okI, name, instanceType = pcall(GetInstanceInfo)
+    if not okI or instanceType ~= "pvp" then return end
+    name = Safe(name)
+    if type(name) ~= "string" or name == "" then return end
+    local winner = given
+    if type(winner) ~= "number" and C_PvP and C_PvP.GetActiveMatchWinner then
+        local ok, w = pcall(C_PvP.GetActiveMatchWinner); winner = ok and Safe(w) or nil
+    end
+    if type(winner) ~= "number" and GetBattlefieldWinner then
+        local ok, w = pcall(GetBattlefieldWinner); winner = ok and Safe(w) or nil
+    end
+    if type(winner) ~= "number" then return end
+    if Mile.bgLast == name and time() - (Mile.bgLastAt or 0) < K.BG_AGAIN then return end
+    Mile.bgLast, Mile.bgLastAt = name, time()
+    local okF, faction = pcall(UnitFactionGroup, "player")
+    local won = okF and K.BG_SIDE[faction] == winner or false
+    db.stats = db.stats or {}
+    if won then db.stats.bgWins = (db.stats.bgWins or 0) + 1 end
+    AddEntry("bg", name, nil, { won = won, tier = won and 3 or 2 })
 end
 
 do
@@ -6405,6 +6438,15 @@ end
 H.BOSS_KILL = function(self, event, ...)
     local id, name = ...
     BossDown(name, tonumber(Safe(id)))
+end
+
+-- A battleground that ends: won or lost, once per match. PVP_MATCH_COMPLETE is the Mainline event (Forever);
+-- UPDATE_BATTLEFIELD_STATUS fires in every client and the winner is read the same way. (Not seen in Forever yet.)
+H.PVP_MATCH_COMPLETE = function(self, event, ...)
+    if ready then pcall(Mile.CheckBattleground, Safe((...))) end
+end
+H.UPDATE_BATTLEFIELD_STATUS = function(self, event, ...)
+    if ready then pcall(Mile.CheckBattleground) end
 end
 
 H.HEARTHSTONE_BOUND = function(self, event, ...)

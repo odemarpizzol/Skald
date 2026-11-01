@@ -1,6 +1,8 @@
 {
  "Skald/Skald.lua": [
     "C_TTSSettings",
+    "C_PvP",
+    "GetBattlefieldWinner",
     "C_VoiceChat",
     "C_MapExplorationInfo",
     "CombatLogGetCurrentEventInfo",
