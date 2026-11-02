@@ -267,6 +267,34 @@ RES = (own == 30 and other == 0 and grand.fl ~= "race_Orc_quest" and fromPool an
 
 // The Anniversary client has two races the first Azeroth did not: the Draenei and the Blood Elves (the Burning Crusade). Their lines
 // exist for that client only (no one can be of these races in Forever), and name what that time knew: the Naaru, the Sunwell...
+run('the first land of a new Orc is told with the lines of its first steps (race_Orc_start), once; a later land, or a character past level two, with the common ones', {
+  pre: `function UnitRace() return "Orc", "Orc", 2 end
+function UnitLevel() return 1 end
+SkaldDB.tone = "kin"`,
+  body: `local P = ns.LOCALES.enUS.phrases
+local function zoneAt(name, m) function GetZoneText() return name end; C_Map.GetBestMapForUnit = function() return m end
+  C_Map.GetMapInfo = function() return { name = name, mapType = 3, parentMapID = 12 } end
+  NOW = NOW + 7200; fire("ZONE_CHANGED_NEW_AREA"); runTimers() end
+zoneAt("Valley of Trials", 5001)
+local first
+for _, e in ipairs(SkaldCharDB.entries) do if e.kind == "zone" then first = first or e end end
+local ok1 = first and first.fl == "race_Orc_start" and SkaldAPI.PoolFor(first) == P.race_Orc_start
+function UnitLevel() return 20 end
+local late
+zoneAt("Elsewhere", 5002)
+for _, e in ipairs(SkaldCharDB.entries) do if e.kind == "zone" and e ~= first then late = e end end
+local ok2 = late and late.fl ~= "race_Orc_start"
+-- every line holds the place once, and none holds a digit
+local bad = {}
+for _, loc in ipairs({ "enUS", "ptBR", "frFR" }) do
+  local pool = ns.LOCALES[loc].phrases.race_Orc_start
+  if type(pool) ~= "table" or #pool < 8 then bad[#bad + 1] = loc .. " size" else
+    for i, ph in ipairs(pool) do local _, n = ph:gsub("%%s", ""); if n ~= 1 or ph:find("%d") then bad[#bad + 1] = loc .. "#" .. i end end
+  end
+end
+RES = (ok1 and ok2 and #bad == 0 and SkaldDB.errors == nil) and "ok" or ("first=" .. tostring(first and first.fl) .. " late=" .. tostring(late and late.fl) .. " bad=" .. table.concat(bad, ","))`,
+});
+
 run('the Draenei and the Blood Elves have lines of their own in the three languages: for a land, a fall, a rising level and a quest', {
   body: `local bad, count = {}, 0
 local kinds = { zone = 1, death = 1, quest = 1, kinLevel = 0 }   -- how many titles or places each line holds

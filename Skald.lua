@@ -233,6 +233,12 @@ end
 
 local function PickFlavor(kind, entry)
     if kind == "boss" and entry.tries then return nil end
+    -- the first land of a new character (a page of a land is written once for each land, so at level one or two it is the
+    -- starting area): a race with lines for its first steps (race_<race>_start) tells it with them
+    if kind == "zone" and entry.race and (UnitLevel("player") or 99) <= 2 then
+        local key = K.RacePoolKey(entry.race, "start")
+        if key then return key end
+    end
     if kind == "quest" and (entry.cend or (entry.tier or 1) >= 4 or (ns.CURATED and entry.q and ns.CURATED[entry.q])) then
         return nil
     end
