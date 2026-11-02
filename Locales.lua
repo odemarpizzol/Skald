@@ -2501,6 +2501,7 @@ ns.LOCALES = {
         PROBE_LORE_FULL = "the lore probe reached its limit (%d texts) and stopped saving.",
         PROBE_LORE_NONE = "no text saved yet.",
         PROBE_LORE_COUNT = "%d texts saved: quests %d, talks %d, creatures %d, books %d.",
+        PROBE_HELP = "probes (developer tools): /skald probe [off|clear] (quest data), /skald probe lore [list|off|clear], /skald probe events [list|off], /skald probe spells [off], /skald probe comms.",
     },
     ptBR = {
         phrases = {
@@ -4999,6 +5000,7 @@ ns.LOCALES = {
         PROBE_LORE_FULL = "o probe de lore chegou ao limite (%d textos) e parou de guardar.",
         PROBE_LORE_NONE = "nenhum texto guardado ainda.",
         PROBE_LORE_COUNT = "%d textos guardados: missões %d, conversas %d, criaturas %d, livros %d.",
+        PROBE_HELP = "probes (ferramentas de desenvolvimento): /skald probe [off|clear] (dados de missões), /skald probe lore [list|off|clear], /skald probe events [list|off], /skald probe spells [off], /skald probe comms.",
     },
     frFR = {
         phrases = {
@@ -7362,6 +7364,7 @@ ns.LOCALES = {
         PROBE_LORE_FULL = "la sonde de lore a atteint sa limite (%d textes) et ne conserve plus rien.",
         PROBE_LORE_NONE = "aucun texte conservé pour l'instant.",
         PROBE_LORE_COUNT = "%d textes conservés\194\160: quêtes %d, conversations %d, créatures %d, livres %d.",
+        PROBE_HELP = "sondes (outils de développement)\194\160: /skald probe [off|clear] (données de quêtes), /skald probe lore [list|off|clear], /skald probe events [list|off], /skald probe spells [off], /skald probe comms.",
         EMPTY = "Aucune page écrite pour l'instant. Partez vivre votre aventure\194\160!",
         ERROR_PREFIX = "erreur (merci de la signaler)\194\160:",
         EXPORT_BTN = "Exporter le journal",

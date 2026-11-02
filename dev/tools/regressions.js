@@ -496,6 +496,21 @@ expect("empty", {}, 600, 700)
 RES = #bad == 0 and "ok" or table.concat(bad, " ; ")`,
 });
 
+// Seen in the game: a word typed after /skald probe that no probe knew (list, lorelist...) turned the old calibration probe on and said so.
+run('/skald probe with a word no probe knows does not turn the calibration probe on: it says what the probes are; the plain command and off still work', {
+  body: `SlashCmdList.SKALD("probe list")
+local typo = SkaldDB.probe
+local said = table.concat(print_out, " ")
+SlashCmdList.SKALD("probe lorelist")
+local typo2 = SkaldDB.probe
+SlashCmdList.SKALD("probe")
+local on = SkaldDB.probe
+SlashCmdList.SKALD("probe off")
+local off = SkaldDB.probe
+RES = (not typo and not typo2 and on == true and not off and said:find("probe lore", 1, true)) and "ok"
+  or ("typo=" .. tostring(typo) .. "/" .. tostring(typo2) .. " on=" .. tostring(on) .. " off=" .. tostring(off) .. " said=" .. said)`,
+});
+
 run('a pet on loan is not a companion', {
   pre: `function UnitExists(u) return u == "pet" end
 function UnitName(u) if u == "pet" then return "Loaner" end return "Tester" end

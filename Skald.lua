@@ -8361,9 +8361,11 @@ SlashCmdList["SKALD"] = function(msg)
         if arg == "clear" then
             Settings().probeLog = nil
             Say(L.PROBE_CLEARED)
-        else
+        elseif arg == "" or arg == "on" or arg == "off" then
             Settings().probe = (arg ~= "off")
             Say(Settings().probe and L.PROBE_ON or L.PROBE_OFF)
+        else
+            Say(L.PROBE_HELP)   -- a word no probe knows must not turn a probe on
         end
     elseif msg == "minimap" then
         local shown = Settings().minimap and Settings().minimap.hide
