@@ -40,6 +40,7 @@ As páginas guardam só números e o índice da frase, então o diário antigo d
 | 2.5 | Nome do lugar | `/dump C_Map.GetMapInfo(SkaldCharDB.birthMap).name` | O nome do mapa da ilha, em português | | |
 | 2.6 | Primeiras missões | Faça 2 ou 3 missões | Páginas de missão aparecem no livro | | |
 | 2.7 | Saga | Aba **Saga** | O primeiro capítulo diz que você nasceu na ilha, "em Kalimdor"; **não** abre como "Prólogo" sem lugar | | |
+| 2.7b | Artigo do lugar | Leia o primeiro capítulo da Saga e as páginas de zona e morte | "na Ilha Névoa Lazúli", "no Vale Ammen"; nunca "em Ilha Névoa Lazúli" nem o nome seco no começo da frase | | |
 | 2.8 | Gênero | Leia o texto da Saga | Concordância certa com o sexo do personagem (por exemplo "um Draenei Paladino" ou "uma Draenei Paladina") | | |
 
 ## 3. A voz "Da minha gente" (10 min)

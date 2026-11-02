@@ -122,6 +122,96 @@ RES = (pt:find("Voce Sobreviveu!", 1, true) and not pt:find("You Survived!", 1, 
   or ("pt: " .. pt .. " / en: " .. en)`,
 });
 
+// Seen in the Portuguese client: "Em Ilha Névoa Lazúli perdi", "e Ilha Névoa Lazúli começou". The phrases are written for a name with
+// no article (Durotar), which is wrong for a name of a thing with a gender ("na Ilha", "no Vale", "das Planícies").
+const PT_BAD_BEFORE = `local function bareBefore(pre)
+  return pre == "" or pre:match("[Ee]m $") or pre:match("[Dd]e $") or pre:match("[ ,]e $") or pre:match("por $") or pre:match("[%.!?:] $") or pre:match(", $")
+end`;
+
+run('Portuguese: a place name takes its article and its contraction (na Ilha, no Vale, das Planícies, à Ilha), a name with none is left alone, and other languages are untouched', {
+  pre: `__locale = "ptBR"`,
+  body: `local A = ns.PlaceArticles
+local ok, bad = true, {}
+local function chk(phrase, name, want)
+  local got = A(phrase, name, "%s")
+  if got ~= want then ok = false; bad[#bad + 1] = phrase .. " [" .. name .. "] gave " .. tostring(got) .. ", wanted " .. want end
+end
+chk("Caí em %s, mas", "Ilha Névoa Lazúli", "Caí na %s, mas")
+chk("Em %s, uma voz", "Ilha Névoa Lazúli", "Na %s, uma voz")
+chk("%s me recebeu como sempre", "Vale Ammen", "O %s me recebeu como sempre")
+chk("A estrada acabou, e %s começou.", "Ilha Névoa Lazúli", "A estrada acabou, e a %s começou.")
+chk("de volta a %s.", "Ilha Névoa Lazúli", "de volta à %s.")
+chk("de volta a %s.", "Vale Ammen", "de volta ao %s.")
+chk("O vento de %s cheirava", "Planícies Áridas", "O vento das %s cheirava")
+chk("Meu povo vela por %s há tempo", "Ilha Névoa Lazúli", "Meu povo vela pela %s há tempo")
+chk("Sem caminhada longa desta vez: %s e um lugar", "Vale Ammen", "Sem caminhada longa desta vez: o %s e um lugar")
+chk("Chegou. %s vai durar", "Ilha Névoa Lazúli", "Chegou. A %s vai durar")
+chk("Em %s, só restava eu", "Durotar", "Em %s, só restava eu")
+chk("Caí em %s, mas", "Orgrimmar", "Caí em %s, mas")
+chk('O lugar "%s" é', "Ilha Névoa Lazúli", 'O lugar "%s" é')
+__locale = "enUS"
+chk("Caí em %s, mas", "Ilha Névoa Lazúli", "Caí em %s, mas")
+RES = ok and "ok" or table.concat(bad, " ; ")`,
+});
+
+run('Portuguese: in every phrase of the lands, the dead, the hearth and the dungeons the name comes with its article, whichever phrase a page was told with', {
+  pre: `__locale = "ptBR"
+${PT_BAD_BEFORE}`,
+  body: `local P = ns.LOCALES.ptBR.phrases
+local place = "Ilha Névoa Lazúli"
+local bad, n = {}, 0
+local function wanted(name)
+  return name == "zone" or name == "death" or name == "revive" or name == "reviveHealer" or name == "hearth" or name == "home" or name == "dungeon"
+    or name:find("^race_.*_zone$") or name:find("^race_.*_death$") or name:find("^class_.*_death$") or name:find("^tone_.*_zone$") or name:find("^tone_.*_death$") or name:find("^tone_.*_dungeon$")
+end
+for name, list in pairs(P) do
+  if type(list) == "table" and wanted(name) then
+    for i, ph in ipairs(list) do
+      if type(ph) == "string" then
+        n = n + 1
+        local s = string.format(ns.PlaceArticles(ph, place, "%s"), place)
+        local at = s:find(place, 1, true)
+        if at and bareBefore(s:sub(1, at - 1)) then bad[#bad + 1] = name .. "#" .. i .. ": " .. s:sub(1, 70) end
+      end
+    end
+  end
+end
+-- and the way a page is really told: the entry of a land, a fall, a rising, the hearth and a dungeon
+for _, kind in ipairs({ "zone", "death", "revive", "hearth", "home", "dungeon" }) do
+  for i = 1, 12 do
+    local text = SkaldAPI.Render({ kind = kind, arg = place, zone = place, idx = i })
+    local at = text:find(place, 1, true)
+    if at and bareBefore(text:sub(1, at - 1)) then bad[#bad + 1] = "page " .. kind .. " " .. i .. ": " .. text:sub(1, 70) end
+  end
+end
+RES = (#bad == 0 and n > 300) and "ok" or (n .. " phrases, bad (" .. #bad .. "): " .. table.concat(bad, " ; "):sub(1, 600))`,
+});
+
+run('Portuguese: the Saga tells the place of birth with its article ("na Ilha Névoa Lazúli, em Kalimdor") in every opening it has', {
+  pre: `__locale = "ptBR"
+${PT_BAD_BEFORE}
+function UnitRace() return "Draenei", "Draenei", 11 end
+function UnitLevel() return 1 end
+C_Map.GetBestMapForUnit = function() return 1943 end
+C_Map.GetMapInfo = function(id)
+  if id == 1943 then return { name = "Ilha Névoa Lazúli", parentMapID = 1414, mapType = 3 } end
+  if id == 1414 then return { name = "Kalimdor", parentMapID = 947, mapType = 2 } end
+end`,
+  body: `local seen, kalimdor, bad = 0, 0, {}
+for k = 0, 79 do
+  SkaldCharDB.stats.first = 1790000000 + k * 777777
+  local ch = ns.BuildSaga()[1]
+  local text = ch and ch.text or ""
+  local at = text:find("Ilha Névoa Lazúli", 1, true)
+  if at then
+    seen = seen + 1
+    if bareBefore(text:sub(1, at - 1)) then bad[#bad + 1] = text:sub(math.max(1, at - 25), at + 30) end
+  end
+  if text:find("em Kalimdor", 1, true) then kalimdor = kalimdor + 1 end
+end
+RES = (#bad == 0 and seen > 10 and kalimdor > 5) and "ok" or ("seen=" .. seen .. " kalimdor=" .. kalimdor .. " bad (" .. #bad .. "): " .. table.concat(bad, " | "):sub(1, 500))`,
+});
+
 run('a pet on loan is not a companion', {
   pre: `function UnitExists(u) return u == "pet" end
 function UnitName(u) if u == "pet" then return "Loaner" end return "Tester" end

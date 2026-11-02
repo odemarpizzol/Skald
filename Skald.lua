@@ -1042,6 +1042,63 @@ local function QuestTitleNow(e)
     return hit or e.arg
 end
 
+-- Place names in Portuguese. The phrases are written for a name with no article ("Em %s", "%s me recebeu"), which is right for
+-- Durotar and wrong for "Ilha Névoa Lazúli" ("Na Ilha...", "A Ilha ... me recebeu"). The first word of the name says its gender
+-- and number when it is a noun of a place; any other name (Durotar, Orgrimmar, Ventobravo, "As Minas Mortas") is left as it is.
+K.PLACE_NOUNS = {
+    f = "Ilha Floresta Costa Planície Península Baía Ponte Cidade Fortaleza Aldeia Vila Torre Caverna Gruta Cratera Praia Região Passagem Garganta Bacia Clareira Estrada Colina Montanha Serra Cordilheira Terra Mina Cripta Ruína Selva Fonte Nascente Ravina Abadia Praça Câmara Ponta Enseada Represa Savana Tundra Pradaria Baixada Encosta Escarpa Lagoa Geleira Caldeira",
+    m = "Vale Lago Pântano Deserto Monte Bosque Porto Forte Ponto Campo Rio Mar Passo Covil Acampamento Posto Santuário Templo Palácio Castelo Reduto Entreposto Mirante Barranco Desfiladeiro Abismo Altiplano Planalto Cânion Poço Jardim Cemitério Mosteiro Salão Pico Bastião Cume Istmo Rochedo Penhasco Túnel Orfanato Vulcão Lamaçal",
+    fp = "Planícies Colinas Montanhas Terras Ruínas Cavernas Minas Catacumbas Profundezas Cataratas Ilhas Florestas Costas Cordilheiras Pradarias Gargantas Fontes Torres Passagens Savanas Geleiras",
+    mp = "Pântanos Montes Campos Picos Bosques Vales Lagos Desertos Salões Túneis Penhascos Bastiões Desfiladeiros",
+}
+K.PLACE_GENDER = {}
+for gender, words in pairs(K.PLACE_NOUNS) do
+    for word in words:gmatch("%S+") do K.PLACE_GENDER[word] = gender end
+end
+K.PLACE_FORMS = {   -- the article, and its contractions with em, de, a and por
+    f  = { art = "a",  em = "na",  de = "da",  a = "à",  por = "pela" },
+    m  = { art = "o",  em = "no",  de = "do",  a = "ao", por = "pelo" },
+    fp = { art = "as", em = "nas", de = "das", a = "às", por = "pelas" },
+    mp = { art = "os", em = "nos", de = "dos", a = "aos", por = "pelos" },
+}
+K.PLACE_KINDS = { zone = true, death = true, revive = true, hearth = true, home = true, dungeon = true }   -- the pages whose %s is a place
+-- `phrase` with the article put where `token` (the %s, or a {tag} of the Saga) stands for `name`: em, de, a and por become
+-- na/no, da/do, à/ao and pela/pelo; after any other word, or at the start, the article comes before the name.
+K.PlaceArticles = function(phrase, name, token)
+    if type(phrase) ~= "string" or type(name) ~= "string" or GetLocale() ~= "ptBR" then return phrase end
+    local forms = K.PLACE_FORMS[K.PLACE_GENDER[name:match("^(%S+)") or ""] or ""]
+    if not forms then return phrase end
+    local result, from = "", 1
+    while true do
+        local at = phrase:find(token, from, true)
+        if not at then break end
+        local before = result .. phrase:sub(from, at - 1)
+        local head = ""
+        if before == "" then
+            head = forms.art:sub(1, 1):upper() .. forms.art:sub(2) .. " "
+        else
+            local word = before:match("(%S+) $")   -- the word right before the name, when a space is all that parts them
+            if word then
+                local lower = word:lower()   -- ASCII only, which is all em, de, a and por need
+                if lower == "em" or lower == "de" or lower == "a" or lower == "por" then
+                    local prep = forms[lower]
+                    if word:match("^%u") then prep = prep:sub(1, 1):upper() .. prep:sub(2) end
+                    before = before:sub(1, #before - #word - 1)
+                    head = prep .. " "
+                elseif word:match("[%.!?]$") then
+                    head = forms.art:sub(1, 1):upper() .. forms.art:sub(2) .. " "
+                else
+                    head = forms.art .. " "
+                end
+            end   -- after a quote or a bracket the name is left as it is
+        end
+        result = before .. head .. token
+        from = at + #token
+    end
+    return result .. phrase:sub(from)
+end
+ns.PlaceArticles = K.PlaceArticles
+
 local function RenderEntry(e)
     if e.kind == "day" and e.day then return DayText(e) end
     if e.kind == "note" then return tostring(e.arg or "") end
@@ -1077,7 +1134,9 @@ local function RenderEntry(e)
             shown = ColoredItem(ref, live or name, quality)
         end
     end
-    local text = string.format(list[((e.idx or 1) - 1) % #list + 1], shown)
+    local phrase = list[((e.idx or 1) - 1) % #list + 1]
+    if K.PLACE_KINDS[e.kind] then phrase = K.PlaceArticles(phrase, shown, "%s") end
+    local text = string.format(phrase, shown)
     text = text:gsub("{steps}", function() return tostring(e.cend or "") end)
     text = text:gsub("{tries}", function() return tostring(e.tries or "") end)
     text = text:gsub("{days}", function() return tostring(e.since or "") end)

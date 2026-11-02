@@ -484,6 +484,12 @@ end
 -- `marks`, when given, collects what the tab shows in another colour: places, bosses, titles, numbers and counted nouns.
 local MARKED = { place = true, boss = true, home = true, land = true, title = true, n = true, points = true, level = true, tries = true }
 local function Fill(phrase, vars, marks)
+    -- a place of Portuguese with its article ("na Ilha Névoa Lazúli", "em Kalimdor")
+    if ns.PlaceArticles then
+        for _, key in ipairs({ "home", "land", "place" }) do
+            if vars[key] then phrase = ns.PlaceArticles(phrase, tostring(vars[key]), "{" .. key .. "}") end
+        end
+    end
     -- {#n:one|many}: the number and its noun, in the singular for one ("1 quest") and the plural otherwise
     local counted = phrase:gsub("{#(%a+):([^|}]*)|([^}]*)}", function(key, one, many)
         local n = tonumber(vars[key])
