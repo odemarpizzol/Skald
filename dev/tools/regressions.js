@@ -287,9 +287,11 @@ local ok2 = late and late.fl ~= "race_Orc_start"
 -- every line holds the place once, and none holds a digit
 local bad = {}
 for _, loc in ipairs({ "enUS", "ptBR", "frFR" }) do
-  local pool = ns.LOCALES[loc].phrases.race_Orc_start
-  if type(pool) ~= "table" or #pool < 8 then bad[#bad + 1] = loc .. " size" else
-    for i, ph in ipairs(pool) do local _, n = ph:gsub("%%s", ""); if n ~= 1 or ph:find("%d") then bad[#bad + 1] = loc .. "#" .. i end end
+  for _, race in ipairs({ "Orc", "Human", "Dwarf", "Gnome", "NightElf", "Tauren", "Troll", "Scourge" }) do
+    local pool = ns.LOCALES[loc].phrases["race_" .. race .. "_start"]
+    if type(pool) ~= "table" or #pool < 8 then bad[#bad + 1] = loc .. " " .. race .. " size" else
+      for i, ph in ipairs(pool) do local _, n = ph:gsub("%%s", ""); if n ~= 1 or ph:find("%d") then bad[#bad + 1] = loc .. " " .. race .. "#" .. i end end
+    end
   end
 end
 RES = (ok1 and ok2 and #bad == 0 and SkaldDB.errors == nil) and "ok" or ("first=" .. tostring(first and first.fl) .. " late=" .. tostring(late and late.fl) .. " bad=" .. table.concat(bad, ","))`,
