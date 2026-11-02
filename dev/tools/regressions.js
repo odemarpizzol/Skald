@@ -212,6 +212,59 @@ end
 RES = (#bad == 0 and seen > 10 and kalimdor > 5) and "ok" or ("seen=" .. seen .. " kalimdor=" .. kalimdor .. " bad (" .. #bad .. "): " .. table.concat(bad, " | "):sub(1, 500))`,
 });
 
+// Seen in the Portuguese client: the same phrase of a goal twice in one page, for two goals of different seals. The window that keeps a
+// phrase from coming back (the last five of a kind) was kept for each seal; for the goals it is one.
+run('goal pages do not repeat a phrase within five pages, whatever the seal of each goal', {
+  body: `local ids = { "level10", "zones3", "quests50", "bosses1", "repHonored" }
+for i = 1, 40 do SkaldAPI.AddEntry("goal", ids[(i - 1) % 5 + 1], nil, { tier = (i - 1) % 5 + 1 }) end
+local goals = {}
+for _, e in ipairs(SkaldCharDB.entries) do if e.kind == "goal" then goals[#goals + 1] = e end end
+local repeated = 0
+for i = 1, #goals do for j = i + 1, math.min(i + 5, #goals) do if goals[i].idx == goals[j].idx then repeated = repeated + 1 end end end
+RES = (#goals >= 40 and repeated == 0) and "ok" or ("goals " .. #goals .. ", a phrase back within five pages " .. repeated .. " times")`,
+});
+
+run('the voice of each old race has its lines for a quest in the three languages: at least eight, one title each, no number, nothing of a later time', {
+  body: `local bad, count = {}, 0
+for _, loc in ipairs({ "enUS", "ptBR", "frFR" }) do
+  local P = ns.LOCALES[loc].phrases
+  for _, race in ipairs({ "Human", "Dwarf", "NightElf", "Gnome", "Orc", "Scourge", "Tauren", "Troll" }) do
+    local pool = P["race_" .. race .. "_quest"]
+    if type(pool) ~= "table" or #pool < 8 then bad[#bad + 1] = loc .. " " .. race .. ": " .. (pool and #pool or 0) .. " lines"
+    else
+      count = count + 1
+      for i, ph in ipairs(pool) do
+        local _, titles = ph:gsub("%%s", "")
+        if titles ~= 1 or ph:find("%d") or ph:find("{") and not ph:find("{g:") then bad[#bad + 1] = loc .. " " .. race .. "#" .. i end
+      end
+    end
+  end
+end
+RES = (#bad == 0 and count == 24) and "ok" or table.concat(bad, " ; ")`,
+});
+
+run('the voice "Of My People": a quest of a race with lines of its own is told with them, a quest of the highest seals keeps its own telling, and a race without lines raises no error', {
+  pre: `function UnitRace() return "Orc", "Orc", 2 end`,
+  body: `SkaldDB.tone = "kin"
+local draw = math.random
+math.random = function(...) if select("#", ...) > 0 then return draw(...) end return 0.1 end   -- the draw of the voice made certain
+for i = 1, 30 do SkaldAPI.AddEntry("quest", "Quest " .. i, nil, { q = 700 + i, tier = 1 + (i % 2) }) end
+SkaldAPI.AddEntry("quest", "Grand", nil, { q = 799, tier = 4 })
+local own, other = 0, 0
+local grand
+for _, e in ipairs(SkaldCharDB.entries) do
+  if e.kind == "quest" and e.arg ~= "Grand" then if e.fl == "race_Orc_quest" then own = own + 1 else other = other + 1 end end
+  if e.arg == "Grand" then grand = e end
+end
+local fromPool = SkaldAPI.PoolFor(SkaldCharDB.entries[#SkaldCharDB.entries - 1]) == ns.LOCALES.enUS.phrases.race_Orc_quest
+-- a race with no lines of its own (the Draenei of the Anniversary client)
+function UnitRace() return "Draenei", "Draenei", 11 end
+for i = 1, 10 do SkaldAPI.AddEntry("quest", "Other " .. i, nil, { q = 900 + i, tier = 2 }) end
+math.random = draw
+RES = (own == 30 and other == 0 and grand.fl ~= "race_Orc_quest" and fromPool and (SkaldDB.errors == nil)) and "ok"
+  or ("own=" .. own .. " other=" .. other .. " grandfl=" .. tostring(grand and grand.fl) .. " fromPool=" .. tostring(fromPool) .. " errors=" .. tostring(SkaldDB.errors and SkaldDB.errors[1]))`,
+});
+
 run('a pet on loan is not a companion', {
   pre: `function UnitExists(u) return u == "pet" end
 function UnitName(u) if u == "pet" then return "Loaner" end return "Tester" end

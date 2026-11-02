@@ -56,6 +56,7 @@ A voz é da **conta**: o novo personagem usa a que você escolheu por último. E
 | 3.5 | Morrer | Morra uma vez (queda ou criatura) | Página de morte. Pode vir uma frase de **Paladino** falando da Luz | | |
 | 3.6 | Marco | No **nível 10**, se chegar | Frase de marco, sem número: "Uma estação da minha vida se fecha. Não sou mais quem partiu." (ou outra do mesmo conjunto) | | |
 | 3.7 | Meta cumprida | Cumpra qualquer meta nova, se houver | A página da meta **não** diz "(+10 pontos)" | | |
+| 3.7b | Missão na voz do povo | Com um personagem de **raça antiga** (por exemplo o Tauren), na voz Da minha gente, complete 6 a 8 missões e leia as páginas | Cerca de metade das páginas de missão falam como o seu povo (por exemplo, "A Mãe Terra me viu terminar ... e foi paciente comigo"); as demais seguem o tom de antes. O Draenei não tem essas frases: nele tudo segue como antes | | |
 | 3.8 | Trocar de voz | Volte a **Épico** e depois a **Da minha gente** | As páginas de nível antigas ganham e perdem o número ao trocar | | |
 | 3.9 | **Lore** | Leia 5 frases de nível ou morte | Soam fiéis ao mundo do jogo? Anote as que destoam: ____ | | |
 

@@ -234,6 +234,12 @@ local function PickFlavor(kind, entry)
             local key = K.RacePoolKey(entry.race, kind)
             if key and math.random() < 0.75 then return key end
         end
+        -- a quest done is told with the lines of one's people half of the time (the highest seals, chains and the
+        -- hand-written stories were left out above, and a race with no lines of its own tells the quest as usual)
+        if kind == "quest" and entry.race then
+            local key = K.RacePoolKey(entry.race, "quest")
+            if key and math.random() < 0.5 then return key end
+        end
     elseif tone and tone ~= "epic" and PHRASES["tone_" .. tone .. "_" .. kind] and math.random() < 0.75 then
         return "tone_" .. tone .. "_" .. kind
     end
@@ -384,7 +390,7 @@ local function AddEntry(kind, arg, zone, extra)
     -- Not one of the last few phrases told of this kind (as many as the pool allows, up to five).
     db.recentIdx = db.recentIdx or {}
     local key = table.concat({ kind, tostring(entry.qtype or entry.cat or ""), tostring(entry.src or ""),
-        tostring(entry.tier or ""), tostring(entry.fl or ""), tostring(entry.tries and math.min(entry.tries, 4) or (entry.since and (entry.since >= 2 and "d" or "y")) or "") }, ":")
+        tostring(kind ~= "goal" and entry.tier or ""), tostring(entry.fl or ""), tostring(entry.tries and math.min(entry.tries, 4) or (entry.since and (entry.since >= 2 and "d" or "y")) or "") }, ":")
     local recent = db.recentIdx[key] or {}
     local keep = math.min(5, #list - 1)
     local idx = math.random(#list)
