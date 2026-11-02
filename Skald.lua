@@ -1417,7 +1417,7 @@ K.PROFESSION_BY_LINE = {
 }
 -- The professions that have a picture of their own (Textures/pf_<key>.tga); the others use the general one of the trades.
 K.PF_ICONS = { alchemy = true, blacksmithing = true, cooking = true, enchanting = true, engineering = true, firstaid = true,
-    fishing = true, herbalism = true, leatherworking = true, mining = true, skinning = true, tailoring = true }
+    fishing = true, herbalism = true, jewelcrafting = true, leatherworking = true, mining = true, skinning = true, tailoring = true }
 K.PROFESSION_BY_NAME = {
     -- enUS
     ["alchemy"] = "alchemy", ["blacksmithing"] = "blacksmithing", ["enchanting"] = "enchanting",

@@ -334,7 +334,8 @@ local again = 0
 for _, e in ipairs(SkaldCharDB.entries) do if e.kind == "profession" and e.pf == "jewelcrafting" then again = again + 1 end end
 local text = page and SkaldAPI.Render(page) or ""
 local icon = page and SkaldAPI.EventIconPath("profession", page) or ""
-RES = (byLine == "jewelcrafting" and byName and pools and n == 1 and again == 1 and text:find("Jewelcrafting", 1, true) and not icon:find("pf_jewelcrafting", 1, true)) and "ok"
+local plain = SkaldAPI.EventIconPath("profession", { pf = "inscription" })   -- a profession with no picture of its own: the general one, never a missing file
+RES = (byLine == "jewelcrafting" and byName and pools and n == 1 and again == 1 and text:find("Jewelcrafting", 1, true) and icon:find("pf_jewelcrafting", 1, true) and plain:find("ev_profession", 1, true)) and "ok"
   or ("line=" .. tostring(byLine) .. " names=" .. tostring(byName) .. " pools=" .. tostring(pools) .. " pages=" .. n .. "/" .. again .. " icon=" .. icon .. " text=" .. text)`,
 });
 
@@ -3225,6 +3226,16 @@ RES = (SkaldDB.probeEvents.count.CAMPSITE_CONTRIBUTION == 2 and log.seen[1].ev =
   and said:find("CAMPSITE_CONTRIBUTION x2", 1, true) and not said:find("PLAYER_MONEY", 1, true) and SkaldDB.probeAll == nil) and "ok"
   or ("said: " .. said)`,
 });
+
+// every profession that says it has a picture of its own has the file
+{
+  const src = fs.readFileSync(path.join(ADDONS, 'Skald', 'Skald.lua'), 'utf8');
+  const block = (src.match(/K\.PF_ICONS = \{([^}]*)\}/) || [])[1] || '';
+  const keys = [...block.matchAll(/(\w+) = true/g)].map(m => m[1]);
+  const lost = keys.filter(k => !fs.existsSync(path.join(ADDONS, 'Skald', 'Textures', 'pf_' + k + '.tga')));
+  if (keys.length >= 13 && !lost.length) console.log('  ok    every profession with a picture of its own has the file (' + keys.length + ')');
+  else { failed++; console.log('  FAIL  pictures of the professions: ' + keys.length + ' named, missing: ' + lost.join(', ')); }
+}
 
 // every picture a look can ask for is in the folder
 {
