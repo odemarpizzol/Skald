@@ -1,5 +1,7 @@
 # Prompts de arte: WoW Forever (branch `forever-launch`)
 
+> **Feito (2026-11-02, pelo Codex) e já ligado no código:** `Textures/ev_bg.tga` (64x64), `Textures/skald2/dd_banner.tga` (128x128) e `docs/reader/img/ev_bg.png`. Os TGAs foram regravados sem compressão (como os outros 270 do addon) e os PNGs de trabalho ficam em `output/forever-art/` (fora do git). A página de campo de batalha usa agora `ev_bg` e o rabisco `banner`. Os passos "Depois que os PNG chegarem" abaixo já foram feitos.
+
 Arte nova pedida pelas features do Forever. Hoje o código usa arte que já existe no lugar (o elmo `ev_boss` na página de campo de batalha, a espada `dd_sword` nos rabiscos). Nada inventado foi colocado no addon.
 
 Anexe como referência: `Textures/ev_boss.tga`, `Textures/ev_goal.tga`, `Textures/st_flight.tga` (ou os PNG equivalentes em `docs/reader/img/`), e `Textures/skald2/dd_sword.tga` e `dd_camp.tga` para os rabiscos.

@@ -81,7 +81,7 @@ O Anniversary tem Garganta Brado Guerreiro, Bacia Arathi, Vale Alterac e Olho da
 3. Abra o livro. **Esperado:**
    - a página diz o nome do campo e combina com o resultado. Vitória: "Vitória em ...", "Tomamos ...", "Nossa bandeira...". Derrota: "Derrota em ...", "ficou com o outro lado...";
    - **uma** página só por partida, mesmo ficando no placar um tempo;
-   - o ícone é o elmo de chefe (provisório até a arte nova chegar).
+   - o ícone é o dos dois estandartes cruzados (um vermelho, um azul), com a ponta de lança dourada. Esta arte é nova: **reinicie o jogo por completo** antes de testar, `/reload` não basta. Se aparecer um quadrado branco ou o elmo, me avise;
 4. Se venceu: aba **Feitos** → Guerra. **Esperado:** "Primeiro Sangue no Campo" cumprida, com página de meta e aviso de pontos.
 5. Se der, jogue uma **segunda** partida (de preferência com resultado diferente). **Esperado:** outra página, com o texto do resultado certo.
 

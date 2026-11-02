@@ -1326,7 +1326,7 @@ K.EVENT_ICON = {
     mark = "milestone", home = "st_hearth", rep = "achievement", flight = "st_flight",
     tame = "pet",
     revive = "revive", hearth = "st_hearth",
-    bg = "boss",   -- until a battleground icon of its own is drawn (prompt in dev/PROMPT_ARTE_forever.md)
+    bg = "bg",
 }
 -- Professions: the game's skill line id says which one it is whatever the language; the
 -- name is the fallback (and how pages written before this existed are recognised).
@@ -1696,9 +1696,9 @@ end
 K.DOODLE_OF = {
     quest = "scroll", level = "star", milestone = "star", death = "skull", boss = "sword", dungeon = "sword",
     zone = "map", flight = "boots", mount = "boots", tame = "paw", skill = "anvil", profession = "anvil",
-    hearth = "camp", home = "camp", guild = "mug", rep = "mug", bg = "sword",
+    hearth = "camp", home = "camp", guild = "mug", rep = "mug", bg = "banner",
 }
-K.DOODLE_ORDER = { "sword", "skull", "map", "star", "camp", "boots", "paw", "anvil", "mug", "scroll" }
+K.DOODLE_ORDER = { "sword", "banner", "skull", "map", "star", "camp", "boots", "paw", "anvil", "mug", "scroll" }
 K.DOODLE_WEIGHT = { scroll = 0.3 }
 function ns.DensityBand()
     local d = ns.DensityCfg()
