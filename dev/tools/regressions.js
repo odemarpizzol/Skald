@@ -463,6 +463,39 @@ RES = (hidden.text == nil and hidden.title == "Hidden" and n == 800 and said == 
   else { failed++; console.log('  FAIL  the lore tool: ' + why); }
 }
 
+run('/skatlas debug with the map shut does not fail: it arms itself and says what to do', {
+  body: `print_out = {}
+SlashCmdList.SKALDATLAS("debug")
+local said = table.concat(print_out, " ")
+RES = (said:find("armed", 1, true) and not said:find("error", 1, true) and (SkaldDB.errors == nil)) and "ok" or ("said: " .. said)`,
+});
+
+// Seen in the Anniversary client with the RestedXP Guides on the same map: the tooltip of a marker of the diary showed, the marker did
+// not. The frames of the map sit at level 2000 and over (the layers of the picture, the pins of the game); with none of the game's
+// small pins to go by the diary put its markers at 603, under the layers, where they are hit by the mouse and never seen.
+run('the markers of the diary are above the layers of the map and under its small pins', {
+  body: `local PinLevel = SkaldAPI.AtlasPure.PinLevel
+local function child(level, width, mouse) return { GetFrameLevel = function() return level end, GetWidth = function() return width end,
+  IsMouseEnabled = function() return mouse end, IsShown = function() return true end } end
+local function canvasOf(list) return { GetFrameLevel = function() return 3 end, GetChildren = function() return table.unpack(list) end } end
+local bad = {}
+local function expect(name, list, lo, hi)
+  local got = PinLevel(canvasOf(list))
+  if got < lo or got > hi then bad[#bad + 1] = name .. ": " .. got .. " (wanted " .. lo .. ".." .. hi .. ")" end
+end
+-- layers as wide as the map at 2000..2006 and no small pin: above all of them
+expect("layers only", { child(2000, 1002, false), child(2003, 1002, true), child(2006, 1002, false) }, 2007, 2200)
+-- small pins of the game at 2003 over a layer at 2000: between the layer and the pins
+expect("layer and pins", { child(2000, 1002, false), child(2003, 30, true), child(2005, 24, true) }, 2001, 2002)
+-- the pins sit on the layer's own level: just over it
+expect("pin on the layer", { child(2000, 1002, false), child(2000, 30, true) }, 2001, 2001)
+-- a long line of another addon over the pins does not lift the markers over the game's pins
+expect("a line above", { child(2000, 1002, false), child(2003, 30, true), child(2010, 400, true) }, 2001, 2002)
+-- nothing on the map: well above the base, as before
+expect("empty", {}, 600, 700)
+RES = #bad == 0 and "ok" or table.concat(bad, " ; ")`,
+});
+
 run('a pet on loan is not a companion', {
   pre: `function UnitExists(u) return u == "pet" end
 function UnitName(u) if u == "pet" then return "Loaner" end return "Tester" end
