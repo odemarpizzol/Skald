@@ -1027,7 +1027,10 @@ local function QuestTitleNow(e)
         hit = false
         pcall(function()
             local t = C_QuestLog and C_QuestLog.GetTitleForQuestID and C_QuestLog.GetTitleForQuestID(id)
-            if type(t) ~= "string" or t == "" then
+            -- The game gives no title for a quest already handed in (not in the log, not in its cache). QuestDB knows it, but
+            -- only in English: another language keeps the title written down on the page, which is in the client's own words.
+            local english = tostring(GetLocale and GetLocale() or ""):sub(1, 2) == "en"
+            if (type(t) ~= "string" or t == "") and english then
                 local qdb = _G.LibStub and LibStub("LibQuestDB-1.0", true)
                 local q = qdb and qdb:GetQuest(id)
                 t = type(q) == "table" and (q.title or q.name) or nil

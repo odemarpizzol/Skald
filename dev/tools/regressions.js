@@ -109,6 +109,19 @@ local a, b = SkaldAPI.Render(e), SkaldAPI.Render(old)
 RES = (a:find("Hunting the Wolves", 1, true) and not a:find("Caçando", 1, true) and b:find("Caçando os Lobos", 1, true)) and "ok" or ("quest title: " .. a .. " / " .. b)`,
 });
 
+// Seen in a Portuguese client with QuestDB installed: the game gave no title for a quest already handed in, and the page told
+// the English title of QuestDB ("You Survived!") instead of the one written down in Portuguese at the hand-in.
+run('a quest title: when the game gives none, a client that is not English keeps the title written down, not the English one of QuestDB; an English client may use QuestDB', {
+  pre: `__locale = "ptBR"
+C_QuestLog = { GetTitleForQuestID = function() return nil end }
+LibStub = function(name) if name ~= "LibQuestDB-1.0" then return nil end return { GetQuest = function(_, id) return { title = "You Survived!" } end } end`,
+  body: `local pt = SkaldAPI.Render({ kind = "quest", arg = "Voce Sobreviveu!", q = 9279, tier = 2, idx = 1 })
+__locale = "enUS"
+local en = SkaldAPI.Render({ kind = "quest", arg = "Sobreviveu", q = 9280, tier = 2, idx = 1 })
+RES = (pt:find("Voce Sobreviveu!", 1, true) and not pt:find("You Survived!", 1, true) and en:find("You Survived!", 1, true)) and "ok"
+  or ("pt: " .. pt .. " / en: " .. en)`,
+});
+
 run('a pet on loan is not a companion', {
   pre: `function UnitExists(u) return u == "pet" end
 function UnitName(u) if u == "pet" then return "Loaner" end return "Tester" end
