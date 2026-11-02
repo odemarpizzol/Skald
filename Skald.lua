@@ -30,6 +30,17 @@ PHRASES.bg = PHRASES.bg or PHRASES.bgWin   -- a battleground page draws from bgW
 local TITLE = "Skald"
 -- The Forever client (Interface 16001, game type "camelot", project 18): set before the first raids, so what belongs to a
 -- later time (the music of Outland, for one) is left out there.
+-- The level cap of this client: 60 in Forever and in the first Azeroth, 70 in the Burning Crusade.
+ns.MaxLevel = function()
+    local cap
+    pcall(function() cap = GetMaxPlayerLevel and GetMaxPlayerLevel() end)
+    if type(cap) ~= "number" or cap < 1 then cap = tonumber(_G.MAX_PLAYER_LEVEL) end
+    if type(cap) ~= "number" or cap < 1 then
+        local ok, _, _, _, toc = pcall(GetBuildInfo)
+        cap = (ok and type(toc) == "number" and toc >= 20000 and toc < 30000) and 70 or 60
+    end
+    return cap
+end
 ns.IsForever = function()
     if type(WOW_PROJECT_ID) == "number" and WOW_PROJECT_ID == (WOW_PROJECT_CAMELOT or 18) then return true end
     local ok, _, _, _, toc = pcall(GetBuildInfo)
@@ -1249,7 +1260,7 @@ end
 -- character with an old name never inherits it.
 K.DIARY_STATE = { "pets", "petNow", "companions", "questObj", "questStart", "visitedMaps", "resume", "attempts",
     "taxi", "marks", "goals", "goalsInit", "goalsVer", "collInit", "rep", "memoryAt", "recentIdx", "anniv", "zoneKills", "killBase",
-    "birthMap" }
+    "birthMap", "mountSpells" }
 
 local function TakeState(db)
     local state = {}
@@ -1402,23 +1413,27 @@ K.PROFESSION_BY_LINE = {
     [171] = "alchemy", [164] = "blacksmithing", [333] = "enchanting", [202] = "engineering",
     [182] = "herbalism", [165] = "leatherworking", [186] = "mining", [393] = "skinning",
     [197] = "tailoring", [185] = "cooking", [129] = "firstaid", [356] = "fishing",
+    [755] = "jewelcrafting",   -- the Burning Crusade
 }
+-- The professions that have a picture of their own (Textures/pf_<key>.tga); the others use the general one of the trades.
+K.PF_ICONS = { alchemy = true, blacksmithing = true, cooking = true, enchanting = true, engineering = true, firstaid = true,
+    fishing = true, herbalism = true, leatherworking = true, mining = true, skinning = true, tailoring = true }
 K.PROFESSION_BY_NAME = {
     -- enUS
     ["alchemy"] = "alchemy", ["blacksmithing"] = "blacksmithing", ["enchanting"] = "enchanting",
     ["engineering"] = "engineering", ["herbalism"] = "herbalism", ["leatherworking"] = "leatherworking",
     ["mining"] = "mining", ["skinning"] = "skinning", ["tailoring"] = "tailoring",
-    ["cooking"] = "cooking", ["first aid"] = "firstaid", ["fishing"] = "fishing",
+    ["cooking"] = "cooking", ["first aid"] = "firstaid", ["fishing"] = "fishing", ["jewelcrafting"] = "jewelcrafting",
     -- ptBR
     ["alquimia"] = "alchemy", ["ferraria"] = "blacksmithing", ["encantamento"] = "enchanting",
     ["engenharia"] = "engineering", ["herborismo"] = "herbalism", ["couraria"] = "leatherworking",
     ["mineração"] = "mining", ["esfolamento"] = "skinning", ["alfaiataria"] = "tailoring",
-    ["culinária"] = "cooking", ["primeiros socorros"] = "firstaid", ["pesca"] = "fishing",
+    ["culinária"] = "cooking", ["primeiros socorros"] = "firstaid", ["pesca"] = "fishing", ["joalheria"] = "jewelcrafting",
     -- frFR
     ["alchimie"] = "alchemy", ["forge"] = "blacksmithing", ["enchantement"] = "enchanting",
     ["ingénierie"] = "engineering", ["herboristerie"] = "herbalism", ["travail du cuir"] = "leatherworking",
     ["minage"] = "mining", ["dépeçage"] = "skinning", ["couture"] = "tailoring",
-    ["cuisine"] = "cooking", ["secourisme"] = "firstaid", ["pêche"] = "fishing",
+    ["cuisine"] = "cooking", ["secourisme"] = "firstaid", ["pêche"] = "fishing", ["joaillerie"] = "jewelcrafting",
 }
 local function ProfessionKey(skillLine, name)
     local key = skillLine and K.PROFESSION_BY_LINE[tonumber(skillLine)]
@@ -1438,10 +1453,11 @@ local function EventIconPath(kind, entry)
     local file = (name:sub(1, 3) == "st_") and name or ("ev_" .. name)
     if kind == "profession" or kind == "skill" then
         local key = (entry and entry.pf) or (entry and ProfessionKey(nil, entry.arg))
-        if key then file = "pf_" .. key end
+        if key and K.PF_ICONS[key] then file = "pf_" .. key end
     end
     return "Interface\\AddOns\\Skald\\Textures\\" .. file
 end
+SkaldAPI.EventIconPath = EventIconPath
 
 -- Parchment buttons ----------------------------------------------------------
 -- Flat leather tabs that sit on the sheet like the index tabs of a book, in place of
@@ -4383,8 +4399,10 @@ K.Collections = function()
             end
         end
     end)
+    -- The Burning Crusade has no mount journal, only the companions of the game: they answer at once, so they make the collection ready
     pcall(function()
-        if GetNumCompanions then v.mounts = math.max(v.mounts or 0, GetNumCompanions("MOUNT") or 0) end
+        local n = GetNumCompanions and GetNumCompanions("MOUNT")
+        if type(n) == "number" then v.mounts, v.ready, v.mountsReady = math.max(v.mounts or 0, n), true, true end
     end)
     pcall(function()
         local P = C_PetJournal
@@ -4394,7 +4412,8 @@ K.Collections = function()
         end
     end)
     pcall(function()
-        if GetNumCompanions then v.critters = math.max(v.critters or 0, GetNumCompanions("CRITTER") or 0) end
+        local n = GetNumCompanions and GetNumCompanions("CRITTER")
+        if type(n) == "number" then v.critters, v.ready, v.petsReady = math.max(v.critters or 0, n), true, true end
     end)
     K.collCache = { at = now, v = v }
     return v
@@ -4442,7 +4461,7 @@ K.OPTIONAL_EVENTS = {
     "HEARTHSTONE_BOUND", "UPDATE_FACTION", "TAXIMAP_OPENED", "PLAYER_MONEY",
     "LEARNED_SPELL_IN_TAB", "QUEST_ACCEPTED", "CHAT_MSG_ADDON", "VOICE_CHAT_TTS_PLAYBACK_FINISHED",
     "PLAYER_UNGHOST", "PLAYER_ALIVE", "CONFIRM_XP_LOSS", "RESURRECT_REQUEST",
-    "UPDATE_BATTLEFIELD_STATUS", "PVP_MATCH_COMPLETE",
+    "UPDATE_BATTLEFIELD_STATUS", "PVP_MATCH_COMPLETE", "COMPANION_LEARNED",
 }
 for _, ev in ipairs(K.OPTIONAL_EVENTS) do
     pcall(frame.RegisterEvent, frame, ev)
@@ -5140,6 +5159,27 @@ Mile.ProbeEventLines = function()
     table.sort(lines)
     if #lines == 0 then lines[1] = L.PROBE_EVENTS_NONE end
     return lines
+end
+
+-- The Burning Crusade has no mount journal and no NEW_MOUNT_ADDED: a mount learned is found among the companions of the game.
+-- The spells of the mounts already known are kept (db.mountSpells); the first look only learns them, a later one writes a
+-- page for each new one. (Not seen in the Anniversary client yet.)
+Mile.CheckMounts = function()
+    local db = Journal()
+    if not db or not (GetNumCompanions and GetCompanionInfo) then return end
+    local ok, n = pcall(GetNumCompanions, "MOUNT")
+    if not ok or type(n) ~= "number" then return end
+    local first = db.mountSpells == nil
+    local known = db.mountSpells or {}
+    for i = 1, n do
+        local okInfo, _, name, spell = pcall(GetCompanionInfo, "MOUNT", i)   -- creature id, name, spell id
+        name, spell = Safe(name), Safe(spell)
+        if okInfo and type(spell) == "number" and not known[spell] then
+            known[spell] = true
+            if not first and type(name) == "string" and name ~= "" then AddEntry("mount", name) end
+        end
+    end
+    db.mountSpells = known
 end
 
 -- The side that won a battleground: 0 is the Horde, 1 the Alliance (GetBattlefieldWinner and the Mainline
@@ -6161,6 +6201,7 @@ H.PLAYER_LOGIN = function(self, event, ...)
         CheckMarks()
         pcall(Mile.CheckPet)
         pcall(Mile.NoteBirthplace)
+        pcall(Mile.CheckMounts)
         C_Timer.After(25, function() pcall(Mile.NoteBirthplace) end)   -- the game may still answer with the continent
         if Settings().probeAll then pcall(Mile.ProbeAllEvents, true) end
         pcall(Mile.MergeCrafts)
@@ -6645,6 +6686,13 @@ H.PLAYER_MONEY = function(self, event, ...)
         ns.moneyPending = true
         C_Timer.After(3, function() ns.moneyPending = false; CheckMarks() end)
     end
+end
+
+-- (the Burning Crusade: the companions learned, one second and a few after, when the game has them listed)
+H.COMPANION_LEARNED = function(self, event, ...)
+    if not ready then return end
+    C_Timer.After(1, function() pcall(Mile.CheckMounts) end)
+    C_Timer.After(6, function() pcall(Mile.CheckMounts) end)
 end
 
 H.NEW_MOUNT_ADDED = function(self, event, ...)

@@ -149,13 +149,13 @@ local TEXT = {
                 "Close the book gently, and leave the quill nearby. {name}, level {level}, has more to tell. The page tally so far: {pages}.",
             },
             epilogueTop = {
-                "Level sixty. The top of the world, and the page where a saga might rightly end. It will not: {name} has {#pages:page|pages} kept, and the road still has its turns.",
+                "Level {level}. The top of the world, and the page where a saga might rightly end. It will not: {name} has {#pages:page|pages} kept, and the road still has its turns.",
                 "I reached the summit, and the view was worth every one of {#pages:page|pages} written on the way. Now I look at the horizon, because there is always one more.",
                 "From the top of the world, {name} looks back along the road: {#pages:page|pages} kept, and every one a step.",
                 "This is the end of the climb and the beginning of the legend. {#pages:page|pages} written. The title: {title}.",
                 "They said the road had a top. They were right, and I stood on it. The page count on the way: {pages}.",
                 "At the top, one thing is clear: the story was never the level, it was the road. In this book the road runs {#pages:page|pages} long, and it is still open.",
-                "Sixty levels, and the diary kept me honest across {#pages:page|pages}. {name}, {title}, closes the book only to open another.",
+                "{level} levels, and the diary kept me honest across {#pages:page|pages}. {name}, {title}, closes the book only to open another.",
                 "A saga's last chapter is the promise of the next. I have kept {#pages:page|pages}, and I have kept the promise too.",
             },
         },
@@ -298,13 +298,13 @@ local TEXT = {
                 "Feche o livro com delicadeza e deixe a pena por perto. {name}, nível {level}, ainda tem o que contar. A conta de páginas até aqui: {pages}.",
             },
             epilogueTop = {
-                "Nível sessenta. O topo do mundo, e a página em que uma saga poderia terminar com razão. Não termina: {name} tem {#pages:página guardada|páginas guardadas}, e a estrada ainda tem curvas.",
+                "Nível {level}. O topo do mundo, e a página em que uma saga poderia terminar com razão. Não termina: {name} tem {#pages:página guardada|páginas guardadas}, e a estrada ainda tem curvas.",
                 "Cheguei ao cume, e a vista valeu cada uma das {#pages:página escrita|páginas escritas} pelo caminho. Agora olho o horizonte, porque há sempre mais um.",
                 "Do topo do mundo, {name} olha para trás ao longo da estrada: {#pages:página guardada|páginas guardadas}, e cada uma um passo.",
                 "Este é o fim da subida e o começo da lenda. {#pages:página escrita|páginas escritas}. O título: {title}.",
                 "Diziam que a estrada tinha um topo. Tinham razão, e estive nele. A conta de páginas no caminho: {pages}.",
                 "No topo, uma coisa fica clara: a história nunca foi o nível, foi a estrada. Neste livro ela tem {#pages:página|páginas} de comprimento, e continua aberta.",
-                "Sessenta níveis, e o diário me manteve {g:honesto|honesta} ao longo de {#pages:página|páginas}. {name}, {title}, fecha o livro só para abrir outro.",
+                "{level} níveis, e o diário me manteve {g:honesto|honesta} ao longo de {#pages:página|páginas}. {name}, {title}, fecha o livro só para abrir outro.",
                 "O último capítulo de uma saga é a promessa do próximo. Guardei {#pages:página|páginas}, e guardei também a promessa.",
             },
         },
@@ -447,13 +447,13 @@ local TEXT = {
                 "Fermez le livre doucement et laissez la plume à portée. {name}, niveau {level}, a encore à conter. Le compte des pages jusqu'ici\194\160: {pages}.",
             },
             epilogueTop = {
-                "Niveau soixante. Le sommet du monde, et la page où une saga pourrait finir à bon droit. Elle ne finira pas\194\160: {name} a {#pages:page gardée|pages gardées}, et la route a encore des détours.",
+                "Niveau {level}. Le sommet du monde, et la page où une saga pourrait finir à bon droit. Elle ne finira pas\194\160: {name} a {#pages:page gardée|pages gardées}, et la route a encore des détours.",
                 "J'ai atteint le sommet, et la vue valait chacune des {#pages:page écrite|pages écrites} en chemin. Je regarde maintenant l'horizon, car il y en a toujours un autre.",
                 "Du sommet du monde, {name} regarde en arrière le long de la route\194\160: {#pages:page gardée|pages gardées}, et chacune un pas.",
                 "Voici la fin de la montée et le début de la légende. {#pages:page écrite|pages écrites}. Le titre\194\160: {title}.",
                 "On disait que la route avait un sommet. On avait raison, et j'y suis monté{g:|e}. Le compte des pages en chemin\194\160: {pages}.",
                 "Au sommet, une chose est claire\194\160: l'histoire n'a jamais été le niveau, c'était la route. Dans ce livre elle s'étend sur {#pages:page|pages}, et reste ouverte.",
-                "Soixante niveaux, et le journal m'a gardé{g:|e} honnête sur {#pages:page|pages}. {name}, {title}, ne ferme le livre que pour en ouvrir un autre.",
+                "{level} niveaux, et le journal m'a gardé{g:|e} honnête sur {#pages:page|pages}. {name}, {title}, ne ferme le livre que pour en ouvrir un autre.",
                 "Le dernier chapitre d'une saga est la promesse du suivant. J'ai gardé {#pages:page|pages}, et j'ai gardé aussi la promesse.",
             },
         },
@@ -654,7 +654,7 @@ ns.BuildSaga = function()
         Add("company", parts)
     end
     if v.goals > 0 then Add("marks", { { "marks", { n = v.goals, points = v.points or 0, title = v.title } } }) end
-    Add("epilogue", { { v.level >= 60 and "epilogueTop" or "epilogue", base } })
+    Add("epilogue", { { v.level >= (ns.MaxLevel and ns.MaxLevel() or 60) and "epilogueTop" or "epilogue", base } })
     return chapters
 end
 

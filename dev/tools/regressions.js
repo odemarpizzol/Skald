@@ -316,6 +316,83 @@ math.random = draw
 RES = ok and "ok" or table.concat(bad, " ; ")`,
 });
 
+// The Anniversary client is the Burning Crusade. What it has that Forever and the first Azeroth do not: a profession (Jewelcrafting),
+// a level cap of seventy, and mounts known only through the companions of the game (no mount journal, no NEW_MOUNT_ADDED).
+run('Jewelcrafting: the skill line and the names of three languages find it, each language has its lines for it, its page is written once, and it does not ask for a picture that does not exist', {
+  pre: `${SAVED('{}', 'skills = { cooking = 0 }, skillsInit = true')}
+function GetProfessions() return 1, 2 end
+function GetProfessionInfo(i) if i == 1 then return "Cooking", nil, 1, nil, nil, nil, 185 end return "Jewelcrafting", nil, 1, nil, nil, nil, 755 end`,
+  body: `local byLine = SkaldAPI.ProfessionKey(755, nil)
+local byName = SkaldAPI.ProfessionKey(nil, "Joalheria") == "jewelcrafting" and SkaldAPI.ProfessionKey(nil, "Joaillerie") == "jewelcrafting" and SkaldAPI.ProfessionKey(nil, "Jewelcrafting 150") == "jewelcrafting"
+local pools = true
+for _, loc in ipairs({ "enUS", "ptBR", "frFR" }) do local P = ns.LOCALES[loc].phrases.profession_jewelcrafting; if type(P) ~= "table" or #P < 8 then pools = false end end
+fire("SKILL_LINES_CHANGED"); runTimers()
+local page, n = nil, 0
+for _, e in ipairs(SkaldCharDB.entries) do if e.kind == "profession" and e.pf == "jewelcrafting" then page = e; n = n + 1 end end
+fire("SKILL_LINES_CHANGED"); runTimers()
+local again = 0
+for _, e in ipairs(SkaldCharDB.entries) do if e.kind == "profession" and e.pf == "jewelcrafting" then again = again + 1 end end
+local text = page and SkaldAPI.Render(page) or ""
+local icon = page and SkaldAPI.EventIconPath("profession", page) or ""
+RES = (byLine == "jewelcrafting" and byName and pools and n == 1 and again == 1 and text:find("Jewelcrafting", 1, true) and not icon:find("pf_jewelcrafting", 1, true)) and "ok"
+  or ("line=" .. tostring(byLine) .. " names=" .. tostring(byName) .. " pools=" .. tostring(pools) .. " pages=" .. n .. "/" .. again .. " icon=" .. icon .. " text=" .. text)`,
+});
+
+run('the level cap: with the cap at seventy there is a goal for level 70, sixty is no longer the top of the world (the goal and the end of the Saga say so), and with the cap at sixty nothing changes', {
+  pre: `CAP = 60
+function GetMaxPlayerLevel() return CAP end`,
+  body: `local _, all60 = ns.GoalScore()
+local name60 = ns.GoalName("level60")
+CAP = 70
+local _, all70 = ns.GoalScore()
+local name60b = ns.GoalName("level60")
+local has70 = ns.GoalName("level70") ~= "level70"
+local function ending(level)
+  function UnitLevel() return level end
+  local text, seen = "", {}
+  for k = 0, 119 do
+    SkaldCharDB.stats.first = 1700000000 + k * 123457 + k * k * 31   -- many different first dates: the telling is picked by the first date
+    local chapters = ns.BuildSaga()
+    local last = chapters[#chapters]
+    text = text .. " " .. (last and last.text or "")
+  end
+  return text
+end
+local at65 = ending(65)
+local at70 = ending(70)
+CAP = 60
+local at60 = ending(60)
+local noTop = not at65:lower():find("top of the world", 1, true)
+local sevenNotSixty = at70:find("70", 1, true) and not at70:lower():find("sixty", 1, true)
+local oldTop = at60:lower():find("top of the world", 1, true)
+local pools = true
+for _, loc in ipairs({ "enUS", "ptBR", "frFR" }) do
+  for _, ph in ipairs(ns.SagaTexts[loc].POOLS.epilogueTop) do
+    local low = ph:lower()
+    if low:find("sixty", 1, true) or low:find("sessenta", 1, true) or low:find("soixante", 1, true) then pools = false end
+  end
+end
+RES = (all70 == all60 + 100 and name60 == "At the Top of the World" and name60b ~= name60 and has70 and noTop and sevenNotSixty and oldTop and pools) and "ok"
+  or ("all " .. all60 .. "/" .. all70 .. " name60=" .. name60 .. "/" .. name60b .. " has70=" .. tostring(has70) .. " noTop=" .. tostring(noTop) .. " seven=" .. tostring(sevenNotSixty) .. " oldTop=" .. tostring(oldTop) .. " pools=" .. tostring(pools))`,
+});
+
+run('mounts of the Burning Crusade (no mount journal): they are counted from the companions of the game, the collection goals are listed, the mounts already known write no page and a mount learned writes one, once', {
+  pre: `MOUNTS = { { 100, "Brown Horse", 458 }, { 101, "Gray Ram", 6896 } }
+function GetNumCompanions(kind) if kind == "MOUNT" then return #MOUNTS end return 0 end
+function GetCompanionInfo(kind, i) local m = kind == "MOUNT" and MOUNTS[i]; if m then return m[1], m[2], m[3], "icon", false, 1 end end`,
+  body: `local c = SkaldAPI.Collections()
+local ready = c.mountsReady and c.petsReady and c.mounts == 2
+local before = count("mount")
+MOUNTS[3] = { 102, "Black Stallion", 470 }
+fire("COMPANION_LEARNED"); runTimers(); runTimers()
+fire("COMPANION_LEARNED"); runTimers(); runTimers()
+local page
+for _, e in ipairs(SkaldCharDB.entries) do if e.kind == "mount" then page = e end end
+local text = page and SkaldAPI.Render(page) or ""
+RES = (ready and before == 0 and count("mount") == 1 and text:find("Black Stallion", 1, true) and SkaldCharDB.mountSpells and SkaldCharDB.mountSpells[470]) and "ok"
+  or ("ready=" .. tostring(ready) .. " before=" .. before .. " pages=" .. count("mount") .. " text=" .. text)`,
+});
+
 run('a pet on loan is not a companion', {
   pre: `function UnitExists(u) return u == "pet" end
 function UnitName(u) if u == "pet" then return "Loaner" end return "Tester" end
@@ -1419,7 +1496,7 @@ run('goals that came with a later list are marked quietly in a diary that alread
 local earned, possible = ns.GoalScore()
 -- flights5 was there before (5 points); the new ones (level 10 and 20, quests50, dungeons, bosses1, kills500) came quietly
 local quiet = g.level10 and g.level10.retro and g.level20 and g.level20.retro and g.quests50 and g.quests50.retro and g.kills500 and g.kills500.retro
-RES = (count("goal") == 0 and quiet and SkaldCharDB.goalsVer == 5 and earned > 5 and possible > 800 and ns.GoalPoints("level60") == 100
+RES = (count("goal") == 0 and quiet and SkaldCharDB.goalsVer == 6 and earned > 5 and possible > 800 and ns.GoalPoints("level60") == 100
   and ns.GoalPoints("flights5") == 5) and "ok" or ("pages=" .. count("goal") .. " quiet=" .. tostring(quiet) .. " ver=" .. tostring(SkaldCharDB.goalsVer) .. " score=" .. earned .. "/" .. possible)`,
 });
 

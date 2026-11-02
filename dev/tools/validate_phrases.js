@@ -88,7 +88,7 @@ do
     local ALLOWED = {
         prologue = "name race class date place a A", birth = "name race class home land a A", firstPage = "date place", road = "level place days", stories = "n", war = "n", warHard = "boss tries",
         falls = "n", fallsPlace = "place", company = "n", companyNames = "names", marks = "n points title", epilogue = "name level pages title",
-        epilogueTop = "name pages title",
+        epilogueTop = "name level pages title",
     }
     local MUST = { prologue = "date place", birth = "home land", firstPage = "date place", road = "level place", stories = "n", war = "n", warHard = "boss tries",
         falls = "n", fallsPlace = "place", company = "n", companyNames = "names", marks = "n points title", epilogue = "level", epilogueTop = "pages" }
