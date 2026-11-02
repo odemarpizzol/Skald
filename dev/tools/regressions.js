@@ -2807,6 +2807,40 @@ RES = (early == 0 and won == 1 and e.won == true and l.won == false and inWorld 
   or ("early=" .. early .. " won=" .. won .. " world=" .. inWorld .. " wins=" .. tostring(SkaldCharDB.stats.bgWins) .. " texts: " .. wonText .. " / " .. lossText)`,
 });
 
+// Seen in the Anniversary client with a Draenei: eight seconds after the login the game still answered with the map of the
+// continent (Kalimdor), and that was kept as the birthplace for good ("born in Kalimdor, in Azeroth").
+const BIRTH_MAPS = `NOWMAP = 2000
+C_Map.GetBestMapForUnit = function() return NOWMAP end
+C_Map.GetMapInfo = function(id)
+  if id == 2001 then return { name = "Zephras Isle", parentMapID = 2000, mapType = 3 } end
+  if id == 2000 then return { name = "The Skyreach", parentMapID = 947, mapType = 2 } end
+  if id == 947 then return { name = "Azeroth", parentMapID = 0, mapType = 1 } end
+end
+function UnitRace() return "Draenei", "Draenei", 11 end
+function UnitLevel() return 1 end`;
+
+run('the birthplace is a zone, never a continent: the first answer of the game may be the continent and is not kept, a zone read later is', {
+  pre: BIRTH_MAPS,
+  body: `local first = SkaldCharDB.birthMap
+NOWMAP = 2001
+fire("ZONE_CHANGED_NEW_AREA"); runTimers()
+RES = (first == nil and SkaldCharDB.birthMap == 2001) and "ok" or ("first=" .. tostring(first) .. " later=" .. tostring(SkaldCharDB.birthMap))`,
+});
+
+run('a continent already kept as the birthplace is replaced by the zone at level 1 or 2, and past that the Saga does not tell it', {
+  pre: `${BIRTH_MAPS}
+${SAVED('{ { t = 1792000000, kind = "quest", arg = "x", q = 1, tier = 1, zone = "Y", idx = 1 } }', 'birthMap = 2000, version = 99, goalsInit = true, goalsVer = 5, goals = {}')}`,
+  body: `NOWMAP = 2001
+fire("ZONE_CHANGED_NEW_AREA"); runTimers()
+local healed = SkaldCharDB.birthMap
+function UnitLevel() return 20 end
+SkaldCharDB.birthMap = 2000
+local text = ""
+for _, c in ipairs(ns.BuildSaga()) do text = text .. c.text end
+RES = (healed == 2001 and not text:find("Azeroth", 1, true) and not text:find("The Skyreach", 1, true)) and "ok"
+  or ("healed=" .. tostring(healed) .. " saga: " .. text:sub(1, 200))`,
+});
+
 run('Forever: the Bard leaves out the music of Outland and Eversong (a later time), every piece left has its name, and elsewhere all 33 stay', {
   pre: FOREVER,
   body: `local forever = #ns.Bard.TRACKS
@@ -2857,11 +2891,17 @@ for _, e in ipairs(SkaldCharDB.entries) do
   if e.kind == "milestone" then for _, line in ipairs(P.tone_kin_milestone) do if SkaldAPI.Render(e):find(line, 1, true) then generic = generic + 1 end end end
 end
 local zones, raceZones = 0, 0
-for i = 1, 40 do NOW = NOW + 7200; function GetZoneText() return "Land " .. i end; fire("ZONE_CHANGED_NEW_AREA"); runTimers() end
+local draw = math.random
+math.random = function(...) if select("#", ...) > 0 then return draw(...) end return 0.1 end   -- the voice draws its race lines three times in four: made certain here
+local here = 0   -- a page of a land is written once for each map: every land gets a map of its own
+C_Map.GetBestMapForUnit = function() return 5000 + here end
+C_Map.GetMapInfo = function(id) return { name = "Land", mapType = 3, parentMapID = 12 } end
+for i = 1, 40 do here = i; NOW = NOW + 7200; function GetZoneText() return "Land " .. i end; fire("ZONE_CHANGED_NEW_AREA"); runTimers() end
+math.random = draw
 for _, e in ipairs(SkaldCharDB.entries) do if e.kind == "zone" then zones = zones + 1; if e.fl == "race_Orc_zone" then raceZones = raceZones + 1 end end end
 local goal = { kind = "goal", arg = "level10", idx = 1 }
 local goalText = SkaldAPI.Render(goal)
-RES = (before:find("21", 1, true) and orcish and #digits == 0 and generic >= 1 and raceZones > zones / 2 and not goalText:find("points", 1, true)) and "ok"
+RES = (before:find("21", 1, true) and orcish and #digits == 0 and generic >= 1 and zones >= 20 and raceZones >= zones - 1 and not goalText:find("points", 1, true)) and "ok"
   or ("before=" .. before .. " after=" .. after .. " digits=" .. table.concat(digits, " / ") .. " milestones=" .. generic .. " zones " .. raceZones .. "/" .. zones .. " goal=" .. goalText)`,
 });
 

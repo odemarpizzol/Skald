@@ -5005,12 +5005,22 @@ local Mile = {}
 
 -- Where a character of a new race was born: the map it stands on at level 1 or 2, kept as a number (the Saga
 -- names it in the language of the moment). The old races have their valleys in Saga.lua and need nothing.
+-- The birthplace is a zone: the map of the world, of a continent (Kalimdor) is too wide to tell. The game can still answer
+-- with the continent in the first seconds after the login (seen with a Draenei: that first answer was kept for good), so a continent is
+-- never kept, one kept before is dropped, and the look is repeated (zone change, the minute, the first seconds) until a zone
+-- answers while the character is at level 1 or 2.
+K.IsZoneMap = function(id)
+    local ok, info = pcall(C_Map.GetMapInfo, id)
+    if not ok or type(info) ~= "table" then return false end
+    return type(info.mapType) ~= "number" or info.mapType >= 3   -- 0 cosmic, 1 world, 2 continent
+end
 Mile.NoteBirthplace = function()
     local db = Journal()
-    if not db or db.birthMap or not (UnitLevel and C_Map and C_Map.GetBestMapForUnit) then return end
-    if (UnitLevel("player") or 99) > 2 then return end
+    if not db or not (UnitLevel and C_Map and C_Map.GetBestMapForUnit and C_Map.GetMapInfo) then return end
+    if db.birthMap and not K.IsZoneMap(db.birthMap) then db.birthMap = nil end
+    if db.birthMap or (UnitLevel("player") or 99) > 2 then return end
     local map = Safe(C_Map.GetBestMapForUnit("player"))
-    if type(map) == "number" and map > 0 then db.birthMap = map end
+    if type(map) == "number" and map > 0 and K.IsZoneMap(map) then db.birthMap = map end
 end
 
 -- /skald probe events: every event the client fires is counted by name in SkaldDB.probeEvents (a developer tool
@@ -6083,11 +6093,12 @@ H.PLAYER_LOGIN = function(self, event, ...)
         CheckMarks()
         pcall(Mile.CheckPet)
         pcall(Mile.NoteBirthplace)
+        C_Timer.After(25, function() pcall(Mile.NoteBirthplace) end)   -- the game may still answer with the continent
         if Settings().probeAll then pcall(Mile.ProbeAllEvents, true) end
         pcall(Mile.MergeCrafts)
         pcall(Mile.Relocalize)
         C_Timer.After(10, function() pcall(Mile.Relocalize) end)   -- items load a little later
-        if C_Timer.NewTicker then C_Timer.NewTicker(60, function() pcall(CheckMarks); pcall(Mile.CheckPet); pcall(ns.CheckAnniversary); pcall(Mile.TrackKills) end) end
+        if C_Timer.NewTicker then C_Timer.NewTicker(60, function() pcall(CheckMarks); pcall(Mile.CheckPet); pcall(ns.CheckAnniversary); pcall(Mile.TrackKills); pcall(Mile.NoteBirthplace) end) end
         C_Timer.After(2, function() pcall(Mile.ShowResume) end)
     end)
     if not Settings().quiet then
@@ -6119,6 +6130,7 @@ H.DISPLAY_SIZE_CHANGED = H.UI_SCALE_CHANGED
 
 H.ZONE_CHANGED_NEW_AREA = function(self, event, ...)
     if window then CheckZone() end
+    if ready then pcall(Mile.NoteBirthplace) end
 end
 H.PLAYER_ENTERING_WORLD = H.ZONE_CHANGED_NEW_AREA
 

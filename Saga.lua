@@ -516,6 +516,7 @@ end
 local function MapName(id)
     local ok, home, land = pcall(function()
         local info = C_Map.GetMapInfo(id)
+        if info and type(info.mapType) == "number" and info.mapType < 3 then return nil end   -- a continent or the world is no birthplace
         local up = info and info.parentMapID and info.parentMapID > 0 and C_Map.GetMapInfo(info.parentMapID)
         return info and info.name, up and up.name
     end)
