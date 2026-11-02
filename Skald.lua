@@ -5182,6 +5182,96 @@ Mile.CheckMounts = function()
     db.mountSpells = known
 end
 
+-- /skald probe lore: while it is on, what the game tells in words (a quest offered, asked about and handed in; a talk; a creature
+-- that speaks; a book) is kept in SkaldDB.loreProbe with who told it and where, so the lines of a race and of a land can be written
+-- from what the game itself says (a developer tool, for Forever's new lands and the Skyborne). Off unless asked for; it stays on
+-- across logins until /skald probe lore off. Plain text, at most K.LORE_MAX of them. dev/tools/lore_extract.js reads the result.
+K.LORE_MAX, K.LORE_TEXT = 800, 1600
+K.LORE_EVENTS = { "QUEST_DETAIL", "QUEST_PROGRESS", "QUEST_COMPLETE", "GOSSIP_SHOW", "CHAT_MSG_MONSTER_SAY",
+    "CHAT_MSG_MONSTER_YELL", "CHAT_MSG_MONSTER_EMOTE", "CHAT_MSG_MONSTER_WHISPER", "ITEM_TEXT_READY" }
+local function LoreText(v)
+    v = Safe(v)
+    if type(v) ~= "string" or v == "" then return nil end
+    return v:sub(1, K.LORE_TEXT)
+end
+Mile.LoreKeep = function(kind, title, text, extra)
+    local s = SkaldDB
+    local log = s and s.loreProbe
+    if not (s and s.probeLore and log) then return end
+    title, text = LoreText(title), LoreText(text)
+    if not title and not text then return end
+    local who = LoreText(extra and extra.who)
+    local key = kind .. "|" .. tostring(who) .. "|" .. tostring(title) .. "|" .. tostring(text):sub(1, 100)
+    if log.seen[key] then return end
+    if #log.items >= K.LORE_MAX then
+        if not log.full then log.full = true; Say(string.format(L.PROBE_LORE_FULL, K.LORE_MAX)) end
+        return
+    end
+    log.seen[key] = true
+    local okR, _, raceFile = pcall(UnitRace, "player")
+    local rec = { k = kind, t = time(), z = Safe(GetZoneText and GetZoneText()), sz = Safe(GetSubZoneText and GetSubZoneText()),
+        n = who, title = title, text = text, r = okR and Safe(raceFile) or nil }
+    if extra then
+        rec.obj = LoreText(extra.obj)
+        rec.q = type(extra.q) == "number" and extra.q > 0 and extra.q or nil
+    end
+    log.items[#log.items + 1] = rec
+end
+Mile.LoreEvent = function(event, ...)
+    local npc = UnitName and UnitName("npc")
+    if event == "QUEST_DETAIL" then
+        Mile.LoreKeep("detail", GetTitleText and GetTitleText(), GetQuestText and GetQuestText(),
+            { who = npc, obj = GetObjectiveText and GetObjectiveText(), q = GetQuestID and GetQuestID() })
+    elseif event == "QUEST_PROGRESS" then
+        Mile.LoreKeep("progress", GetTitleText and GetTitleText(), GetProgressText and GetProgressText(), { who = npc, q = GetQuestID and GetQuestID() })
+    elseif event == "QUEST_COMPLETE" then
+        Mile.LoreKeep("complete", GetTitleText and GetTitleText(), GetRewardText and GetRewardText(), { who = npc, q = GetQuestID and GetQuestID() })
+    elseif event == "GOSSIP_SHOW" then
+        local text = (C_GossipInfo and C_GossipInfo.GetText and C_GossipInfo.GetText()) or (GetGossipText and GetGossipText())
+        Mile.LoreKeep("gossip", nil, text, { who = npc })
+    elseif event == "ITEM_TEXT_READY" then
+        Mile.LoreKeep("book", ItemTextGetItem and ItemTextGetItem(), ItemTextGetText and ItemTextGetText(), nil)
+    elseif event:find("^CHAT_MSG_MONSTER_") then
+        local text, sender = ...
+        Mile.LoreKeep(event:sub(#"CHAT_MSG_MONSTER_" + 1):lower(), nil, text, { who = sender })
+    end
+end
+Mile.ProbeLore = function(on)
+    local s = Settings()
+    s.probeLore = on or nil
+    if on then
+        local log = s.loreProbe
+        if type(log) ~= "table" then log = {}; s.loreProbe = log end
+        log.items, log.seen = log.items or {}, log.seen or {}
+        local okR, _, raceFile = pcall(UnitRace, "player")
+        local okC, _, classFile = pcall(UnitClass, "player")
+        local okF, faction = pcall(UnitFactionGroup, "player")
+        local okB, version, build = pcall(GetBuildInfo)
+        log.meta = { race = okR and Safe(raceFile) or nil, class = okC and Safe(classFile) or nil, faction = okF and Safe(faction) or nil,
+            locale = GetLocale(), build = okB and (tostring(version) .. "." .. tostring(build)) or nil, started = log.meta and log.meta.started or time() }
+    end
+    if not Mile.loreFrame then
+        Mile.loreFrame = CreateFrame("Frame")
+        Mile.loreFrame:SetScript("OnEvent", function(_, event, ...) pcall(Mile.LoreEvent, event, ...) end)
+    end
+    if on then
+        for _, ev in ipairs(K.LORE_EVENTS) do pcall(Mile.loreFrame.RegisterEvent, Mile.loreFrame, ev) end
+    else
+        pcall(Mile.loreFrame.UnregisterAllEvents, Mile.loreFrame)
+    end
+end
+-- What the probe holds, for the chat (the texts themselves stay in the saved variables).
+Mile.LoreLines = function()
+    local log = SkaldDB and SkaldDB.loreProbe
+    local n = log and log.items and #log.items or 0
+    if n == 0 then return { L.PROBE_LORE_NONE } end
+    local c = {}
+    for _, r in ipairs(log.items) do c[r.k] = (c[r.k] or 0) + 1 end
+    local quests = (c.detail or 0) + (c.progress or 0) + (c.complete or 0)
+    local creatures = (c.say or 0) + (c.yell or 0) + (c.emote or 0) + (c.whisper or 0)
+    return { string.format(L.PROBE_LORE_COUNT, n, quests, c.gossip or 0, creatures, c.book or 0) }
+end
+
 -- The side that won a battleground: 0 is the Horde, 1 the Alliance (GetBattlefieldWinner and the Mainline
 -- C_PvP.GetActiveMatchWinner agree on it). A page once per match; the name of the field is kept as written.
 K.BG_SIDE = { Horde = 0, Alliance = 1 }
@@ -6204,6 +6294,7 @@ H.PLAYER_LOGIN = function(self, event, ...)
         pcall(Mile.CheckMounts)
         C_Timer.After(25, function() pcall(Mile.NoteBirthplace) end)   -- the game may still answer with the continent
         if Settings().probeAll then pcall(Mile.ProbeAllEvents, true) end
+        if Settings().probeLore then pcall(Mile.ProbeLore, true) end
         pcall(Mile.MergeCrafts)
         pcall(Mile.Relocalize)
         C_Timer.After(10, function() pcall(Mile.Relocalize) end)   -- items load a little later
@@ -8212,6 +8303,14 @@ SlashCmdList["SKALD"] = function(msg)
         Say(Settings().probeAll and L.PROBE_EVENTS_ON or L.PROBE_EVENTS_OFF)
     elseif msg == "probe events list" then
         for _, line in ipairs(Mile.ProbeEventLines()) do Say(line) end
+    elseif msg == "probe lore" or msg == "probe lore off" then
+        Mile.ProbeLore(msg == "probe lore")
+        Say(Settings().probeLore and L.PROBE_LORE_ON or L.PROBE_LORE_OFF)
+    elseif msg == "probe lore list" then
+        for _, line in ipairs(Mile.LoreLines()) do Say(line) end
+    elseif msg == "probe lore clear" then
+        Settings().loreProbe = nil
+        Say(L.PROBE_LORE_CLEARED)
     elseif msg == "clear" then
         StaticPopup_Show("SKALD_CLEAR")
     elseif msg == "quiet" then

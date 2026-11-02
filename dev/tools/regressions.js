@@ -394,6 +394,75 @@ RES = (ready and before == 0 and count("mount") == 1 and text:find("Black Stalli
   or ("ready=" .. tostring(ready) .. " before=" .. before .. " pages=" .. count("mount") .. " text=" .. text)`,
 });
 
+// /skald probe lore: a developer tool for the day Forever opens. The texts of the game (what a quest says, what a talk and a creature
+// say, a book) are kept with who told them and where, to write the lines of a race and a land from what the game itself says.
+const LORE_STUBS = `QT, QX, QO = "Sky Anchors", "The elders spoke of the anchors that hold the isle.", "Mend three anchors."
+function GetTitleText() return QT end
+function GetQuestText() return QX end
+function GetObjectiveText() return QO end
+function GetProgressText() return "Have you mended them yet?" end
+function GetRewardText() return "Well done, windshaper." end
+function GetGossipText() return "The wind is silent here." end
+function GetQuestID() return 5001 end
+function UnitName(u) if u == "npc" then return "Elder Zephyr" end return "Tester" end
+function GetSubZoneText() return "The Landing" end
+function ItemTextGetText() return "A page from an old log." end
+function ItemTextGetItem() return "Weathered Log" end`;
+
+const LORE_SECRET = `SECRET = {}
+function issecretvalue(v) return SECRET[v] == true end
+function errorsSaid() return #(SkaldDB.errors or {}) end`;
+
+run('/skald probe lore keeps what the game tells (a quest offered, asked about and handed in, a talk, a creature, a book) once each, with who and where, and nothing when it is off', {
+  pre: LORE_STUBS,
+  body: `SlashCmdList.SKALD("probe lore")
+fire("QUEST_DETAIL"); fire("QUEST_PROGRESS"); fire("QUEST_COMPLETE"); fire("GOSSIP_SHOW")
+fire("CHAT_MSG_MONSTER_SAY", "Hold fast, children of the wind.", "Elder Zephyr"); fire("ITEM_TEXT_READY")
+fire("QUEST_DETAIL"); fire("GOSSIP_SHOW")   -- the same again: not kept twice
+local log = SkaldDB.loreProbe
+local kinds = {}
+for _, r in ipairs(log.items) do kinds[r.k] = (kinds[r.k] or 0) + 1 end
+local f = log.items[1]
+local keptOn = #log.items
+SlashCmdList.SKALD("probe lore off")
+fire("QUEST_DETAIL"); QT = "Another"; fire("QUEST_DETAIL")
+RES = (keptOn == 6 and #log.items == 6 and SkaldDB.probeLore == nil and kinds.detail == 1 and kinds.progress == 1 and kinds.complete == 1 and kinds.gossip == 1 and kinds.say == 1 and kinds.book == 1
+  and f.title == "Sky Anchors" and f.text:find("anchors that hold", 1, true) and f.n == "Elder Zephyr" and f.obj == "Mend three anchors." and f.q == 5001 and f.z and f.sz == "The Landing"
+  and log.meta and log.meta.race) and "ok"
+  or ("kept " .. keptOn .. " then " .. #log.items .. " probeLore=" .. tostring(SkaldDB.probeLore) .. " first=" .. tostring(f and f.title))`,
+});
+
+run('/skald probe lore leaves out the text the client withholds, stops at its limit and says so once, lists what it holds, and clear erases it', {
+  pre: LORE_SECRET + '\n' + LORE_STUBS,
+  body: `SlashCmdList.SKALD("probe lore")
+SECRET["Hidden words"] = true; QT = "Hidden"; QX = "Hidden words"; fire("QUEST_DETAIL")
+local hidden = SkaldDB.loreProbe.items[1]
+for i = 1, 810 do QT = "T" .. i; QX = "X" .. i; fire("QUEST_DETAIL") end
+local n = #SkaldDB.loreProbe.items
+local said = 0
+for _, line in ipairs(print_out) do if line:find("800", 1, true) then said = said + 1 end end
+print_out = {}
+SlashCmdList.SKALD("probe lore list")
+local listed = table.concat(print_out, " ")
+SlashCmdList.SKALD("probe lore clear")
+RES = (hidden.text == nil and hidden.title == "Hidden" and n == 800 and said == 1 and listed:find("800", 1, true) and SkaldDB.loreProbe == nil and errorsSaid() == 0) and "ok"
+  or ("hidden text=" .. tostring(hidden.text) .. " n=" .. n .. " said=" .. said .. " listed=" .. listed .. " after clear=" .. tostring(SkaldDB.loreProbe))`,
+});
+
+// the tool that turns the saved variables into text to read
+{
+  let okTool = false, why = '';
+  try {
+    const { toMarkdown } = require('./lore_extract');
+    const sample = 'SkaldDB = { ["loreProbe"] = { ["meta"] = { ["race"] = "Skyborne", ["class"] = "MAGE", ["faction"] = "Alliance", ["locale"] = "enUS", ["build"] = "1.60.1.70374" }, ["items"] = { { ["k"] = "detail", ["t"] = 1, ["z"] = "Zephras Isle", ["sz"] = "The Landing", ["n"] = "Elder Zephyr", ["title"] = "Sky Anchors", ["text"] = "The anchors fail.", ["obj"] = "Mend three anchors.", ["q"] = 5001 }, { ["k"] = "say", ["t"] = 2, ["z"] = "Zephras Isle", ["n"] = "Windcaller", ["text"] = "Hold fast." } } } }';
+    const md = toMarkdown(sample);
+    okTool = ['Skyborne', 'Zephras Isle', 'Elder Zephyr', 'Sky Anchors', 'The anchors fail.', 'Mend three anchors.', 'Windcaller', 'Hold fast.'].every(w => md.includes(w));
+    if (!okTool) why = md.slice(0, 200);
+  } catch (e) { why = e.message; }
+  if (okTool) console.log('  ok    the lore tool turns the saved variables into text to read');
+  else { failed++; console.log('  FAIL  the lore tool: ' + why); }
+}
+
 run('a pet on loan is not a companion', {
   pre: `function UnitExists(u) return u == "pet" end
 function UnitName(u) if u == "pet" then return "Loaner" end return "Tester" end
