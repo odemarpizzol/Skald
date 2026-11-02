@@ -265,6 +265,57 @@ RES = (own == 30 and other == 0 and grand.fl ~= "race_Orc_quest" and fromPool an
   or ("own=" .. own .. " other=" .. other .. " grandfl=" .. tostring(grand and grand.fl) .. " fromPool=" .. tostring(fromPool) .. " errors=" .. tostring(SkaldDB.errors and SkaldDB.errors[1]))`,
 });
 
+// The Anniversary client has two races the first Azeroth did not: the Draenei and the Blood Elves (the Burning Crusade). Their lines
+// exist for that client only (no one can be of these races in Forever), and name what that time knew: the Naaru, the Sunwell...
+run('the Draenei and the Blood Elves have lines of their own in the three languages: for a land, a fall, a rising level and a quest', {
+  body: `local bad, count = {}, 0
+local kinds = { zone = 1, death = 1, quest = 1, kinLevel = 0 }   -- how many titles or places each line holds
+for _, loc in ipairs({ "enUS", "ptBR", "frFR" }) do
+  local P = ns.LOCALES[loc].phrases
+  for _, race in ipairs({ "Draenei", "BloodElf" }) do
+    for kind, names in pairs(kinds) do
+      local pool = P["race_" .. race .. "_" .. kind]
+      if type(pool) ~= "table" or #pool < 8 then bad[#bad + 1] = loc .. " " .. race .. " " .. kind .. ": " .. (pool and #pool or 0)
+      else
+        count = count + 1
+        for i, ph in ipairs(pool) do
+          local _, n = ph:gsub("%%s", "")
+          if n ~= names or (kind == "kinLevel" or kind == "quest") and ph:find("%d") or ph:find("{") and not ph:find("{g:") then bad[#bad + 1] = loc .. " " .. race .. " " .. kind .. "#" .. i end
+        end
+      end
+    end
+  end
+end
+RES = (#bad == 0 and count == 24) and "ok" or table.concat(bad, " ; ")`,
+});
+
+run('a Draenei or a Blood Elf in the voice "Of My People": the level, the land, the fall and the quest are told with the lines of the race', {
+  pre: `function UnitRace() return "Draenei", "Draenei", 11 end`,
+  body: `SkaldDB.tone = "kin"
+local draw = math.random
+math.random = function(...) if select("#", ...) > 0 then return draw(...) end return 0.1 end
+local function flavors(race)
+  function UnitRace() return race, race, 11 end
+  local seen = {}
+  SkaldAPI.AddEntry("level", 4); seen.level = SkaldAPI.PoolFor(SkaldCharDB.entries[#SkaldCharDB.entries])
+  SkaldAPI.AddEntry("quest", "A Quest", nil, { q = 5001, tier = 2 }); seen.quest = SkaldCharDB.entries[#SkaldCharDB.entries].fl
+  SkaldAPI.AddEntry("zone", "Some Land", "Some Land"); seen.zone = SkaldCharDB.entries[#SkaldCharDB.entries].fl
+  SkaldAPI.AddEntry("death", "Some Land", "Some Land"); seen.death = SkaldCharDB.entries[#SkaldCharDB.entries].fl
+  return seen
+end
+local P = ns.LOCALES.enUS.phrases
+local ok, bad = true, {}
+for _, race in ipairs({ "Draenei", "BloodElf" }) do
+  local s = flavors(race)
+  if s.level ~= P["race_" .. race .. "_kinLevel"] then ok = false; bad[#bad + 1] = race .. " level" end
+  for _, kind in ipairs({ "quest", "zone", "death" }) do
+    if s[kind] ~= "race_" .. race .. "_" .. kind then ok = false; bad[#bad + 1] = race .. " " .. kind .. "=" .. tostring(s[kind]) end
+  end
+end
+math.random = draw
+RES = ok and "ok" or table.concat(bad, " ; ")`,
+});
+
 run('a pet on loan is not a companion', {
   pre: `function UnitExists(u) return u == "pet" end
 function UnitName(u) if u == "pet" then return "Loaner" end return "Tester" end

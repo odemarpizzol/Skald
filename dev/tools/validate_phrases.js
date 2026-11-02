@@ -175,18 +175,28 @@ POOLTEXT = table.concat(dump, string.char(10))`);
   console.log('combat words in non-combat pools:', bad.length ? bad.join(' || ') : 'none'); if (bad.length) process.exitCode = 1;
 }
 
-// Lore: Forever is set right after Warcraft III, before the first raids of the old world. A name or an event of a later
-// time in any text the diary tells would break the world it lives in, so it fails here (all three languages).
+// Lore, by era. Forever is set right after Warcraft III, before the first raids of the old world; the Anniversary client is the
+// Burning Crusade. A name of a time after the Burning Crusade breaks the world in every text. A name of the Burning Crusade breaks
+// it in Forever, so it is allowed only in the lines of the two races that exist only then (race_Draenei_*, race_BloodElf_*) and in
+// the names of the pieces of music of the Bard (which are left out of the Forever client).
 {
-  const LATER = ['pandaria', 'pandária', 'pandarie', 'cataclysm', 'cataclismo', 'cataclysme', 'garrosh', 'outland', 'terralém',
-    'outreterre', 'shattrath', 'exodar', 'death knight', 'cavaleiro da morte', 'chevalier de la mort', 'demon hunter',
-    'caçador de demônios', 'chasseur de démons', 'evoker', 'évocateur', 'dracthyr', 'shadowlands', 'terras sombrias',
-    'ombreterre', 'azerite', 'azerita', 'azérite', 'argus', 'teldrassil burn', 'queima de teldrassil', 'incendie de teldrassil'];
+  const AFTER = ['pandaria', 'pandária', 'pandarie', 'cataclysm', 'cataclismo', 'cataclysme', 'garrosh', 'death knight',
+    'cavaleiro da morte', 'chevalier de la mort', 'demon hunter', 'caçador de demônios', 'chasseur de démons', 'evoker',
+    'évocateur', 'dracthyr', 'shadowlands', 'terras sombrias', 'ombreterre', 'azerite', 'azerita', 'azérite', 'argus',
+    'teldrassil burn', 'queima de teldrassil', 'incendie de teldrassil'];
+  const TBC = ['outland', 'terralém', 'outreterre', 'shattrath', 'exodar', 'naaru', 'sunwell', 'poço do sol', 'puits de soleil',
+    'draenei', 'elfo sangrento', 'elfos sangrentos', 'elfe de sang', 'elfes de sang', 'blood elf', 'velen', 'draenor',
+    'legião ardente', 'légion ardente', 'burning legion', 'silvermoon', 'luaprata', "lune-d'argent"];
   const found = [];
   for (const f of ['Locales.lua', 'Saga.lua', 'Curated.lua', 'Goals.lua']) {
+    let pool = null;
     fs.readFileSync(A + 'Skald/' + f, 'utf8').split('\n').forEach((line, i) => {
+      const open = line.match(/^ {12}([A-Za-z0-9_]+) = \{\s*$/);
+      if (open) pool = open[1]; else if (/^ {12}\},?\s*$/.test(line)) pool = null;
       const low = line.toLowerCase();
-      for (const w of LATER) if (low.includes(w)) found.push(`${f}:${i + 1} "${w}"`);
+      for (const w of AFTER) if (low.includes(w)) found.push(`${f}:${i + 1} "${w}"`);
+      const tbcOk = (pool && /^race_(Draenei|BloodElf)_/.test(pool)) || /BARD_TRACKS/.test(line);
+      if (!tbcOk) for (const w of TBC) if (low.includes(w)) found.push(`${f}:${i + 1} "${w}" (a name of the Burning Crusade outside its own lines)`);
     });
   }
   console.log('\nnames of a later time (lore):', found.length ? found.join(' ; ') : 'none');
