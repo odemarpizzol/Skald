@@ -8,7 +8,9 @@ O Anniversary **não é** o Forever: ele não esconde valores dos addons e não 
 2. o que **dá** para ver aqui: campos de batalha, metas novas, terra natal na Saga (com Draenei ou Elfo Sangrento) e o `/skald probe events`;
 3. as partes das versões 0.41 a 0.43 que **ainda não foram vistas** no jogo: Busca, Bardo, Backup e Configurações.
 
-Ordem sugerida: Fase 0, depois A, B e C (são as novidades). D a G se sobrar tempo. Total de 1h30 a 2h, fora a fila de campo de batalha.
+Ordem sugerida: Fase 0, depois A, B, C e H (são as novidades). D a G se sobrar tempo. Total de 1h30 a 2h, fora a fila de campo de batalha.
+
+Os nomes abaixo estão em português. Se o seu cliente estiver em inglês: Feitos = Deeds, Guerra = War, Busca = Search, Bardo = Bard, Configurações = Settings, Estilo = Style, Índice = Contents, Jornadas = Journeys, Atlas = Atlas.
 
 ---
 
@@ -20,14 +22,11 @@ Ordem sugerida: Fase 0, depois A, B e C (são as novidades). D a G se sobrar tem
 2. Faça a cópia simulada para o jogo (o `-n` só lista o que mudaria):
    ```bash
    D="/mnt/d/Games/World of Warcraft/_anniversary_/Interface/AddOns/Skald"
-   rsync -rcn --itemize-changes --exclude=.git --exclude=.github --exclude=.gitignore --exclude=.pkgmeta --exclude=.claude --exclude=dev --exclude=docs --exclude=CLAUDE.md --exclude=README.md --exclude=CHANGELOG.md --exclude=LICENSE ./ "$D/"
+   rsync -rcn --itemize-changes --exclude=.git --exclude=.github --exclude=.gitignore --exclude=.pkgmeta --exclude=.claude --exclude=dev --exclude=docs --exclude=output --exclude=CLAUDE.md --exclude=README.md --exclude=CHANGELOG.md --exclude=LICENSE --exclude=teste.pdf "--exclude=Chronicler*" ./ "$D/"
    ```
-   Se a lista fizer sentido (Lua e o TOC), rode de novo sem o `-n`, e depois:
-   ```bash
-   sed -i "s/^## Interface:.*/## Interface: 20506/" "$D/Skald.toc"
-   ```
+   Se a lista fizer sentido (arquivos `.lua`, o `Skald.toc` e duas texturas: `Textures/ev_bg.tga` e `Textures/skald2/dd_banner.tga`), rode de novo sem o `-n`. O TOC do repositório já traz `## Interface: 16001, 20506`, então **não** é preciso trocar a linha com `sed`. (Se usar zsh, escreva as exclusões direto no comando, como acima: guardar em uma variável não funciona.)
 3. Antes de abrir o jogo, **faça backup** de `WTF\Account\<conta>\SavedVariables\Skald.lua` e dos `Skald.lua` dentro das pastas de personagem. O teste B usa um personagem novo, mas nunca se sabe.
-4. Abra o jogo (não há textura nova: um jogo recém-aberto basta) e entre com o seu personagem principal.
+4. **Feche o jogo por completo e abra de novo.** Esta branch traz duas texturas novas (o ícone e o rabisco do campo de batalha) e `/reload` não as carrega. Entre com o seu personagem principal.
 5. `/skald`. **Esperado:** o livro abre, sem erro no chat. Se aparecer erro, mande o texto inteiro, e também o de `/skald report`.
 
 ---
@@ -81,7 +80,8 @@ O Anniversary tem Garganta Brado Guerreiro, Bacia Arathi, Vale Alterac e Olho da
 3. Abra o livro. **Esperado:**
    - a página diz o nome do campo e combina com o resultado. Vitória: "Vitória em ...", "Tomamos ...", "Nossa bandeira...". Derrota: "Derrota em ...", "ficou com o outro lado...";
    - **uma** página só por partida, mesmo ficando no placar um tempo;
-   - o ícone é o dos dois estandartes cruzados (um vermelho, um azul), com a ponta de lança dourada. Esta arte é nova: **reinicie o jogo por completo** antes de testar, `/reload` não basta. Se aparecer um quadrado branco ou o elmo, me avise;
+   - o ícone é o dos dois estandartes cruzados (um vermelho, um azul), com a ponta de lança dourada. Se aparecer um quadrado branco ou o elmo de chefe, o jogo não foi reiniciado por completo ou a textura falhou: me avise;
+   - no pé do dia dessa página, entre os desenhinhos, pode aparecer um **estandarte vermelho** fincado no chão (o rabisco do campo de batalha). Ele só aparece quando o dia tem poucos outros desenhos, então não é erro se não vier;
 4. Se venceu: aba **Feitos** → Guerra. **Esperado:** "Primeiro Sangue no Campo" cumprida, com página de meta e aviso de pontos.
 5. Se der, jogue uma **segunda** partida (de preferência com resultado diferente). **Esperado:** outra página, com o texto do resultado certo.
 
@@ -98,7 +98,9 @@ O Anniversary tem Garganta Brado Guerreiro, Bacia Arathi, Vale Alterac e Olho da
 
 ---
 
-## Fase C2: a voz nova "Da minha gente" (10 min)
+## Fase H: a voz nova "Da minha gente" (10 min)
+Esta primeira etapa da voz só muda as páginas de **nível, marco de dez níveis, chegada a terra nova e morte**. As páginas de **missão, chefe e item continuam no tom de antes**: isso é esperado (a etapa 2 cuida delas). Para julgar a voz, abra uma página dessas, não um dia só de missões.
+
 1. Aba **Configurações** → página **Estilo**. **Esperado:** quatro vozes em duas linhas (Da minha gente, Épico, Humilde, Bem-humorado), nada cortado; o seu personagem principal continua na voz que tinha.
 2. Escolha **Da minha gente**. **Esperado:** a dica e o exemplo mudam; volte ao livro e as páginas de nível antigas agora falam sem número ("Estou mais forte do que era...", na voz da sua raça).
 3. Suba um nível (ou use um personagem perto disso). **Esperado:** a página não tem número, e a cada dez níveis vem uma frase de marco ("Uma estação da minha vida se fecha..."). A página de meta não diz "+10 pontos".
