@@ -2034,7 +2034,7 @@ C_Timer.After = function(_, fn) queued = queued + 1 end
 ns.ZoneCard.WarmQuests()
 local afterFirst = calls
 local done, total = ns.ZoneCard.Quests(1438)
-RES = (afterFirst == 250 and queued == 1 and done == 5 and total == 600 and calls == 600) and "ok"
+RES = (afterFirst == 20 and queued == 1 and done == 5 and total == 600 and calls == 600) and "ok"
   or ("first " .. afterFirst .. " queued " .. queued .. " done " .. tostring(done) .. " of " .. tostring(total) .. " calls " .. calls)`,
 });
 

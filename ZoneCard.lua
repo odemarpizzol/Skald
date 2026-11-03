@@ -230,7 +230,7 @@ local function RaceAllowed(mask, raceID)
     return true
 end
 -- The index is built from every quest of QuestDB (thousands): that is the stop felt the first time the Index is opened.
--- So it is built in steps, a few hundred quests at a time, a little after login (ZC.WarmQuests); if the book is opened
+-- So it is built in steps, a few at a time, about 5 ms per step, a little after login (ZC.WarmQuests); if the book is opened
 -- before it ends, what is left is built then (QuestIndex), from where the steps stopped.
 local build   -- { key, ids, pos, index, qdb, raceID, classID, okR, okC }
 local function QuestStep(st, count)
@@ -293,12 +293,19 @@ function ZC.QuestState()
     return "not started"
 end
 
--- Reads the quests in the background, 250 at a time, one step every tenth of a second.
+-- Reads the quests in the background, a step of about 5 ms every twentieth of a second.
 function ZC.WarmQuests()
     if not (C_Timer and C_Timer.After) then return end
+    -- each step is held to about 5 ms (a frame is 16), so the game never feels it
+    local clock = debugprofilestop
     local function Step()
-        local index, more = QuestAdvance(250)
-        if more then C_Timer.After(0.1, Step) end
+        local started = clock and clock()
+        local more = true
+        repeat
+            local index, left = QuestAdvance(20)
+            more = left
+        until not more or not clock or clock() - started > 5
+        if more then C_Timer.After(0.05, Step) end
     end
     pcall(Step)
 end
