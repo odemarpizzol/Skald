@@ -72,7 +72,7 @@ The **Settings** tab has three pages, turned with the corners of the book: **Sty
 
 ## Credits
 
-- Quest data (optional): the **QuestDB** addon, whose data comes from the CMaNGOS project.
+- Quest data: the **QuestDB** addon by Pimptasty (MIT), whose data comes from the **CMaNGOS** project (classic-db and tbc-db, GPL-3.0, facts re-expressed). The quests of each land that the Index counts travel with Skald in `QuestZones.lua`, derived from QuestDB's data (the notice is in the file); WoW Forever's own quests come from TOGTools through QuestDB.
 - Fonts: **Cinzel**, **EB Garamond** and **Caveat**, under the SIL Open Font License (licences in `Fonts/`).
 - All book art, icons and seals are original to Skald.
 
