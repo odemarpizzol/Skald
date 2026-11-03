@@ -2084,6 +2084,43 @@ end
 RES = ok and "ok" or "one or more custom maps missing"`,
 });
 
+run('all Classic high-level maps resolve to their custom art', {
+  pre: SAVED('{}', 'version = 99, goalsInit = true, goalsVer = 3, goals = {}, stats = { counts = {}, deathZones = {}, tiers = {}, played = 1, first = 1 }'),
+  body: ZONE_STUBS + '\n' + ZONE_ART + `
+local maps = {
+  [1434] = "map_stranglethorn", [1446] = "map_tanaris", [1449] = "map_ungoro",
+  [1447] = "map_azshara", [1448] = "map_felwood", [1452] = "map_winterspring",
+  [1451] = "map_silithus", [1450] = "map_moonglade", [1427] = "map_searinggorge",
+  [1428] = "map_burningsteppes", [1419] = "map_blastedlands", [1430] = "map_deadwind",
+  [1422] = "map_westernplague", [1423] = "map_easternplague",
+}
+local card = ns.ZoneCard.Build(UIParent, 342)
+local ok = true
+for id, name in pairs(maps) do
+  card:Set(id)
+  if #card.tiles ~= 1 or not card.tiles[1]._tex or not card.tiles[1]._tex:find(name, 1, true) then ok = false; break end
+end
+RES = ok and "ok" or "one or more Classic high-level maps missing"`,
+});
+
+run('all Burning Crusade maps resolve to their custom art', {
+  pre: SAVED('{}', 'version = 99, goalsInit = true, goalsVer = 3, goals = {}, stats = { counts = {}, deathZones = {}, tiers = {}, played = 1, first = 1 }'),
+  body: ZONE_STUBS + '\n' + ZONE_ART + `
+local maps = {
+  [1942] = "map_ghostlands", [1950] = "map_bloodmyst", [1957] = "map_quel_danas",
+  [1944] = "map_hellfire", [1946] = "map_zangarmarsh", [1952] = "map_terokkar",
+  [1951] = "map_nagrand", [1949] = "map_bladesedge", [1953] = "map_netherstorm",
+  [1948] = "map_shadowmoon",
+}
+local card = ns.ZoneCard.Build(UIParent, 342)
+local ok = true
+for id, name in pairs(maps) do
+  card:Set(id)
+  if #card.tiles ~= 1 or not card.tiles[1]._tex or not card.tiles[1]._tex:find(name, 1, true) then ok = false; break end
+end
+RES = ok and "ok" or "one or more Burning Crusade maps missing"`,
+});
+
 run('the zone card still comes out without the map art and without QuestDB', {
   pre: SAVED('{}', 'version = 99, goalsInit = true, goalsVer = 3, goals = {}, stats = { counts = {}, deathZones = {}, tiers = {}, played = 1, first = 1 }'),
   body: ZONE_STUBS + `
