@@ -1,0 +1,1 @@
+- `/skald probe maps` also says, inside a dungeon, a raid, a battleground or an arena, what the game calls it (name, instance id, kind, difficulty) and the type of its map
