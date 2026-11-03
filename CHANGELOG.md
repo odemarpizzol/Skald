@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.47.0-beta
+
+- **Our own maps of the capital cities** on the Index: Stormwind, Ironforge, Darnassus, Orgrimmar, Thunder Bluff and Undercity, and the Exodar, Silvermoon and Shattrath of the Anniversary client, hand-drawn in ink and wash like the lands
+- The Index no longer stops the game for a moment the first time it is opened after logging in: the count of quests of each land now comes from a table that ships with Skald (no walk over every quest of QuestDB, which took over half a second), and the pictures of the map are read a few seconds after you arrive somewhere
+- `/skald perf` (a developer tool): times opening the book and each tab, and says which step makes a long frame (over 50 ms), to find what is slow in the game
+- The count of quests of each land also works without the QuestDB addon installed (the table travels with Skald; it is made from QuestDB's data)
+
 ## 0.46.0-beta
 
 - **Maps of dungeons, raids and battlegrounds, drawn and waiting:** thirty hand-drawn maps (the four battlegrounds, nineteen dungeons and seven raids of the old world) travel in the package, listed by the number of the instance; the Index does not show them yet, that comes once the numbers are checked in the game

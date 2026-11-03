@@ -108,12 +108,63 @@ ZC.ART = {
     [1949] = "map_bladesedge",
     [1953] = "map_netherstorm",
     [1948] = "map_shadowmoon",
+    [1453] = "map_stormwind",
+    [1455] = "map_ironforge",
+    [1457] = "map_darnassus",
+    [1947] = "map_exodar",
+    [1454] = "map_orgrimmar",
+    [1456] = "map_thunderbluff",
+    [1458] = "map_undercity",
+    [1954] = "map_silvermoon",
+    [1955] = "map_shattrath",
 }
 -- How the map of the zone sits on the page: it is a drawing of the old kind, not a window. The unfound part is faint (the
 -- ink of the map, thin on the paper), the regions found are darker, and the borders fade into the paper in steps (no frame).
 ZC.TILE_ALPHA, ZC.FOUND_ALPHA = 0.5, 0.92
 ZC.PAPER = { 0.97, 0.89, 0.73 }   -- the colour of the page the map fades into
 ZC.FADE, ZC.FADE_STEPS = 30, 15   -- how far (in pixels) the border fades, and in how many strips
+
+-- The game reads a picture from the disk the first time it is drawn, and that is the small stop felt when the map is
+-- opened for the first time. So the pictures are shown once, nearly clear and the size of a dot, a little after the
+-- player arrives somewhere (the map of the place, the corners, the compass), one at a time, so the book finds them in memory.
+function ZC.Preload()
+    if ZC.preloading or not (CreateFrame and C_Timer and C_Timer.After and UIParent) then return end
+    local names = { "skald2\\map_corner", "skald2\\map_compass", "skald2\\rule" }
+    local ok, mapID = pcall(ZC.CurrentMap)
+    local art = ok and mapID and ZC.ART[mapID]
+    if art then table.insert(names, 1, "skald2\\" .. art) end
+    local todo = {}
+    ZC.warmed = ZC.warmed or {}
+    for _, n in ipairs(names) do if not ZC.warmed[n] then todo[#todo + 1] = n end end
+    if #todo == 0 then return end
+    ZC.preloading = true
+    local frame = ZC.warmFrame
+    if not frame then
+        frame = CreateFrame("Frame", nil, UIParent)
+        frame:SetSize(8, 8)
+        frame:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", 0, 0)
+        frame:SetFrameStrata("BACKGROUND")
+        frame.tex = frame:CreateTexture(nil, "BACKGROUND")
+        frame.tex:SetAllPoints()
+        frame.tex:SetAlpha(0.02)
+        ZC.warmFrame = frame
+    end
+    local i = 0
+    local function Step()
+        i = i + 1
+        local n = todo[i]
+        if not n then
+            frame:Hide()
+            ZC.preloading = false
+            return
+        end
+        ZC.warmed[n] = true
+        pcall(frame.tex.SetTexture, frame.tex, TEX .. n)
+        frame:Show()
+        C_Timer.After(0.3, Step)
+    end
+    Step()
+end
 
 -- The map of the zone that holds a map (a city district, a cave) : climb until a zone (type 3) is reached.
 function ZC.ZoneMap(mapID)
@@ -178,43 +229,135 @@ local function RaceAllowed(mask, raceID)
     for _, r in ipairs(own) do if not HasBit(mask, r) then return false end end
     return true
 end
-local function QuestIndex()
-    local qdb = _G.LibStub and LibStub("LibQuestDB-1.0", true)
-    if not (qdb and qdb.GetQuestIds and qdb.GetQuest and qdb.GetUiMapId) then return nil end
-    local okR, _, _, raceID = pcall(UnitRace, "player")
-    local okC, _, _, classID = pcall(UnitClass, "player")
-    local key = tostring(okR and raceID) .. ":" .. tostring(okC and classID)
-    if byMap and builtFor == key then return byMap end
-    local index = {}
-    local ok = pcall(function()
-        for _, id in ipairs(qdb:GetQuestIds() or {}) do
-            local q = qdb:GetQuest(id)
-            local zone = q and q.zoneOrSort
-            if type(zone) == "number" and zone > 0 and not q.hidden then
-                local special = q.specialFlags or 0
-                local repeatable = special % 2 == 1 or math.floor(special / 2) % 2 == 1
-                local races, classes = q.requiredRaces or 0, q.requiredClasses or 0
-                local raceOk = races == 0 or not okR or type(raceID) ~= "number" or RaceAllowed(races, raceID)
-                local classOk = classes == 0 or not okC or type(classID) ~= "number" or HasBit(classes, classID)
-                if not repeatable and raceOk and classOk then
-                    local map = qdb:GetUiMapId(zone)
-                    if map then
-                        index[map] = index[map] or {}
-                        index[map][#index[map] + 1] = id
-                    end
+-- The index is built from every quest of QuestDB (thousands): that is the stop felt the first time the Index is opened.
+-- So it is built in steps, a few at a time, about 5 ms per step, a little after login (ZC.WarmQuests); if the book is opened
+-- before it ends, what is left is built then (QuestIndex), from where the steps stopped.
+local build   -- { key, ids, pos, index, qdb, raceID, classID, okR, okC }
+local function QuestStep(st, count)
+    local qdb = st.qdb
+    local last = math.min(#st.ids, st.pos + count - 1)
+    for i = st.pos, last do
+        local id = st.ids[i]
+        local q = qdb:GetQuest(id)
+        local zone = q and q.zoneOrSort
+        if type(zone) == "number" and zone > 0 and not q.hidden then
+            local special = q.specialFlags or 0
+            local repeatable = special % 2 == 1 or math.floor(special / 2) % 2 == 1
+            local races, classes = q.requiredRaces or 0, q.requiredClasses or 0
+            local raceOk = races == 0 or not st.okR or type(st.raceID) ~= "number" or RaceAllowed(races, st.raceID)
+            local classOk = classes == 0 or not st.okC or type(st.classID) ~= "number" or HasBit(classes, st.classID)
+            if not repeatable and raceOk and classOk then
+                local map = qdb:GetUiMapId(zone)
+                if map then
+                    st.index[map] = st.index[map] or {}
+                    st.index[map][#st.index[map] + 1] = id
                 end
             end
         end
-    end)
-    if not ok then return nil end
-    byMap, builtFor = index, key
-    return index
+    end
+    st.pos = last + 1
+    return st.pos > #st.ids
+end
+local function QuestKey()
+    local okR, _, _, raceID = pcall(UnitRace, "player")
+    local okC, _, _, classID = pcall(UnitClass, "player")
+    return tostring(okR and raceID) .. ":" .. tostring(okC and classID), okR, raceID, okC, classID
+end
+-- count = how many quests to read now (nil = all that are left)
+local function QuestAdvance(count)
+    local qdb = _G.LibStub and LibStub("LibQuestDB-1.0", true)
+    if not (qdb and qdb.GetQuestIds and qdb.GetQuest and qdb.GetUiMapId) then return nil end
+    local key, okR, raceID, okC, classID = QuestKey()
+    if byMap and builtFor == key then return byMap end
+    if not build or build.key ~= key then
+        -- the list of ids is a table of thousands that the library sorts: that is a step of its own
+        local t0 = debugprofilestop and debugprofilestop()
+        local okI, ids = pcall(function() return qdb:GetQuestIds() or {} end)
+        if not okI then return nil end
+        build = { key = key, ids = ids, pos = 1, index = {}, qdb = qdb, raceID = raceID, classID = classID, okR = okR, okC = okC }
+        if ns.NoteStall and t0 then ns.NoteStall("quest ids", debugprofilestop() - t0) end
+        if count then return nil, true end
+    end
+    local ok, finished = pcall(QuestStep, build, count or #build.ids)
+    if not ok then build = nil; return nil end
+    if finished then
+        byMap, builtFor, build = build.index, key, nil
+        return byMap
+    end
+    return nil, true   -- not finished yet
+end
+local function QuestIndex()
+    return (QuestAdvance(nil))
+end
+
+-- The quests of a map from the table the build made (QuestZones.lua, from dev/tools/gen_quest_zones.js): a few hundred
+-- numbers of the map shown, filtered by the race and the class, and no walk over the quest data of the whole game.
+-- nil when there is no table for this client (then the quest data is read as before).
+local function Flavour()
+    local _, _, _, _, toc = pcall(function() return GetBuildInfo() end)
+    local v = tonumber(toc)
+    if not v then return nil end
+    if v >= 16000 and v < 20000 then return "Forever" end
+    if v >= 20000 and v < 30000 then return "TBC" end
+    if v >= 10000 and v < 16000 then return "Vanilla" end
+    return nil
+end
+local listCache = {}
+local function TableList(mapID)
+    local all = ns.QuestZones
+    local flavour = all and Flavour()
+    local data = flavour and all[flavour]
+    if not data then return nil end
+    local key = QuestKey()
+    local cached = listCache[mapID]
+    if cached and cached.key == key then return cached.list end
+    local list = {}
+    local okR, _, _, raceID = pcall(UnitRace, "player")
+    local okC, _, _, classID = pcall(UnitClass, "player")
+    for id, races, classes in string.gmatch(data[mapID] or "", "(%d+):(%d+):(%d+)") do
+        races, classes = tonumber(races), tonumber(classes)
+        local raceOk = races == 0 or not okR or type(raceID) ~= "number" or RaceAllowed(races, raceID)
+        local classOk = classes == 0 or not okC or type(classID) ~= "number" or HasBit(classes, classID)
+        if raceOk and classOk then list[#list + 1] = tonumber(id) end
+    end
+    listCache[mapID] = { key = key, list = list }
+    return list
+end
+
+-- For /skald perf: how far the quest index is.
+function ZC.QuestState()
+    if ns.QuestZones and Flavour() and ns.QuestZones[Flavour()] then return "table of the build (" .. Flavour() .. ")" end
+    if byMap then return "ready" end
+    if build then return build.pos .. " of " .. #build.ids end
+    return "not started"
+end
+
+-- Reads the quests in the background, a step of about 5 ms every twentieth of a second.
+function ZC.WarmQuests()
+    if not (C_Timer and C_Timer.After) then return end
+    if ns.QuestZones and Flavour() and ns.QuestZones[Flavour()] then return end   -- the table of the build is read instead
+    -- each step is held to about 2 ms (a frame is 16), so the game never feels it
+    local clock = debugprofilestop
+    local function Step()
+        local started = clock and clock()
+        local more = true
+        repeat
+            local _, left = QuestAdvance(5)
+            more = left
+        until not more or not clock or clock() - started > 2
+        if clock and ns.NoteStall then ns.NoteStall("quest step", clock() - started) end
+        if more then C_Timer.After(0.05, Step) end
+    end
+    pcall(Step)
 end
 
 -- Quests done in the zone, out of the total QuestDB knows (nil without QuestDB or without data for the zone).
 function ZC.Quests(mapID)
-    local index = QuestIndex()
-    local list = index and index[mapID]
+    local list = TableList(mapID)
+    if list == nil then
+        local index = QuestIndex()
+        list = index and index[mapID]
+    end
     if list and #list > 0 and C_QuestLog and C_QuestLog.IsQuestFlaggedCompleted then
         local done = 0
         for _, id in ipairs(list) do

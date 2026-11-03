@@ -16,7 +16,7 @@ const ok = msg => console.log('  ok    ' + msg);
 
 // 1. syntax
 console.log('Syntax');
-for (const f of ['Skald/Locales.lua', 'Skald/Curated.lua', 'Skald/XPTiers.lua', 'Skald/Skald.lua', 'Skald/Atlas.lua', 'Skald/Goals.lua', 'Skald/Saga.lua', 'Skald/ZoneCard.lua', 'Skald/Backup.lua', 'Skald/Search.lua', 'Skald/Bard.lua'].concat(fs.existsSync(path.join(ADDONS, 'SkaldAtlas')) ? ['SkaldAtlas/SkaldAtlas.lua'] : [])) {
+for (const f of ['Skald/Locales.lua', 'Skald/Curated.lua', 'Skald/XPTiers.lua', 'Skald/Skald.lua', 'Skald/Atlas.lua', 'Skald/Goals.lua', 'Skald/Saga.lua', 'Skald/QuestZones.lua', 'Skald/ZoneCard.lua', 'Skald/Backup.lua', 'Skald/Search.lua', 'Skald/Bard.lua'].concat(fs.existsSync(path.join(ADDONS, 'SkaldAtlas')) ? ['SkaldAtlas/SkaldAtlas.lua'] : [])) {
   const installed = path.join(ADDONS, f);
   const p = f === 'SkaldAtlas/SkaldAtlas.lua' && !fs.existsSync(installed)
     ? path.resolve(__dirname, '../skald-atlas-repo/SkaldAtlas.lua') : installed;

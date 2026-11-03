@@ -2021,6 +2021,38 @@ local done, total = ns.ZoneCard.Quests(1438)
 RES = (done == 1 and total == 2) and "ok" or ("done " .. tostring(done) .. " of " .. tostring(total))`,
 });
 
+run('the zone card reads the quests in steps in the background, and the book opened half-way through finishes the rest with none lost or counted twice', {
+  pre: SAVED('{}', 'version = 99, goalsInit = true, goalsVer = 3, goals = {}, stats = { counts = {}, deathZones = {}, tiers = {}, played = 1, first = 1 }'),
+  body: ZONE_STUBS + `
+local ids, calls = {}, 0
+for i = 1, 600 do ids[i] = i end
+local qdb = { GetQuestIds = function() return ids end, GetQuest = function(_, id) calls = calls + 1; return { zoneOrSort = 10 } end, GetUiMapId = function() return 1438 end }
+_G.LibStub = function() return qdb end
+C_QuestLog = { IsQuestFlaggedCompleted = function(id) return id <= 5 end }
+local queued = 0
+C_Timer.After = function(_, fn) queued = queued + 1 end
+ns.ZoneCard.WarmQuests()
+local afterFirst = calls
+local done, total = ns.ZoneCard.Quests(1438)
+RES = (afterFirst == 0 and queued == 1 and done == 5 and total == 600 and calls == 600) and "ok"
+  or ("first " .. afterFirst .. " queued " .. queued .. " done " .. tostring(done) .. " of " .. tostring(total) .. " calls " .. calls)`,
+});
+
+run('the zone card counts the quests of the zone from the table of the build, with no walk over the quest data, filtered by race and class', {
+  pre: SAVED('{}', 'version = 99, goalsInit = true, goalsVer = 3, goals = {}, stats = { counts = {}, deathZones = {}, tiers = {}, played = 1, first = 1 }'),
+  body: ZONE_STUBS + `
+function GetBuildInfo() return "2.5.6", "1", "Jan 1 2026", 20506 end
+-- the library must not be touched: 1 and 2 for everyone, 3 is for races with bit 2 only (not a Human, id 1), 4 for warriors only (class 1), the mage (class 8) keeps 1, 2 and 5
+local touched = false
+_G.LibStub = function() touched = true; return nil end
+ns.QuestZones = { TBC = { [1438] = "1:0:0 2:0:0 3:2:0 4:0:1 5:0:0", [1411] = "9:0:0" }, Vanilla = { [1438] = "1:0:0" } }
+C_QuestLog = { IsQuestFlaggedCompleted = function(id) return id == 2 or id == 5 end }
+local done, total = ns.ZoneCard.Quests(1438)
+local other, otherTotal = ns.ZoneCard.Quests(1411)
+RES = (done == 2 and total == 3 and other == 0 and otherTotal == 1 and not touched and ns.ZoneCard.QuestState():find("TBC", 1, true)) and "ok"
+  or ("done " .. tostring(done) .. " of " .. tostring(total) .. " / " .. tostring(other) .. " of " .. tostring(otherTotal) .. " touched " .. tostring(touched))`,
+});
+
 run('the zone card: a race newer than the quest data (Skyborne) takes the quests of its faction', {
   pre: SAVED('{}', 'version = 99, goalsInit = true, goalsVer = 3, goals = {}, stats = { counts = {}, deathZones = {}, tiers = {}, played = 1, first = 1 }'),
   body: ZONE_STUBS + '\n' + ZONE_ART + `
@@ -2119,6 +2151,23 @@ for id, name in pairs(maps) do
   if #card.tiles ~= 1 or not card.tiles[1]._tex or not card.tiles[1]._tex:find(name, 1, true) then ok = false; break end
 end
 RES = ok and "ok" or "one or more Burning Crusade maps missing"`,
+});
+
+run('all capital maps resolve to their custom art', {
+  pre: SAVED('{}', 'version = 99, goalsInit = true, goalsVer = 3, goals = {}, stats = { counts = {}, deathZones = {}, tiers = {}, played = 1, first = 1 }'),
+  body: ZONE_STUBS + '\n' + ZONE_ART + `
+local maps = {
+  [1453] = "map_stormwind", [1455] = "map_ironforge", [1457] = "map_darnassus",
+  [1947] = "map_exodar", [1454] = "map_orgrimmar", [1456] = "map_thunderbluff",
+  [1458] = "map_undercity", [1954] = "map_silvermoon", [1955] = "map_shattrath",
+}
+local card = ns.ZoneCard.Build(UIParent, 342)
+local ok = true
+for id, name in pairs(maps) do
+  card:Set(id)
+  if #card.tiles ~= 1 or not card.tiles[1]._tex or not card.tiles[1]._tex:find(name, 1, true) then ok = false; break end
+end
+RES = ok and "ok" or "one or more capital maps missing"`,
 });
 
 run('the zone card still comes out without the map art and without QuestDB', {
@@ -3531,6 +3580,15 @@ local count = 0
 for _ in pairs(ns.ZoneCard.ART) do count = count + 1 end
 RES = (count >= 8 and said:find("map under the player", 1, true) and said:find("1429", 1, true) and said:find("map_elwynn", 1, true) and (SkaldDB.errors == nil)) and "ok"
   or ("said: " .. said)`,
+});
+
+run('/skald perf starts the timing of the book, says the client, the pages and the state of the quest index, and raises no error', {
+  body: `debugprofilestop = function() return os.clock() * 1000 end
+print_out = {}
+SlashCmdList.SKALD("perf")
+local said = table.concat(print_out, "\\n")
+RES = (said:find("perf: client", 1, true) and said:find("quest index", 1, true) and (SkaldDB.errors == nil)) and "ok"
+  or ("said: " .. said .. " errors: " .. tostring(SkaldDB.errors and SkaldDB.errors[1]))`,
 });
 
 run('/skald probe maps inside an instance says what the game calls it and its id', {
