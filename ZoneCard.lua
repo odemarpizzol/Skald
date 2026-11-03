@@ -124,6 +124,48 @@ ZC.TILE_ALPHA, ZC.FOUND_ALPHA = 0.5, 0.92
 ZC.PAPER = { 0.97, 0.89, 0.73 }   -- the colour of the page the map fades into
 ZC.FADE, ZC.FADE_STEPS = 30, 15   -- how far (in pixels) the border fades, and in how many strips
 
+-- The game reads a picture from the disk the first time it is drawn, and that is the small stop felt when the map is
+-- opened for the first time. So the pictures are shown once, nearly clear and the size of a dot, a little after the
+-- player arrives somewhere (the map of the place, the corners, the compass), one at a time, so the book finds them in memory.
+function ZC.Preload()
+    if ZC.preloading or not (CreateFrame and C_Timer and C_Timer.After and UIParent) then return end
+    local names = { "skald2\\map_corner", "skald2\\map_compass", "skald2\\rule" }
+    local ok, mapID = pcall(ZC.CurrentMap)
+    local art = ok and mapID and ZC.ART[mapID]
+    if art then table.insert(names, 1, "skald2\\" .. art) end
+    local todo = {}
+    ZC.warmed = ZC.warmed or {}
+    for _, n in ipairs(names) do if not ZC.warmed[n] then todo[#todo + 1] = n end end
+    if #todo == 0 then return end
+    ZC.preloading = true
+    local frame = ZC.warmFrame
+    if not frame then
+        frame = CreateFrame("Frame", nil, UIParent)
+        frame:SetSize(8, 8)
+        frame:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", 0, 0)
+        frame:SetFrameStrata("BACKGROUND")
+        frame.tex = frame:CreateTexture(nil, "BACKGROUND")
+        frame.tex:SetAllPoints()
+        frame.tex:SetAlpha(0.02)
+        ZC.warmFrame = frame
+    end
+    local i = 0
+    local function Step()
+        i = i + 1
+        local n = todo[i]
+        if not n then
+            frame:Hide()
+            ZC.preloading = false
+            return
+        end
+        ZC.warmed[n] = true
+        pcall(frame.tex.SetTexture, frame.tex, TEX .. n)
+        frame:Show()
+        C_Timer.After(0.3, Step)
+    end
+    Step()
+end
+
 -- The map of the zone that holds a map (a city district, a cave) : climb until a zone (type 3) is reached.
 function ZC.ZoneMap(mapID)
     if type(mapID) ~= "number" or not (C_Map and C_Map.GetMapInfo) then return nil end

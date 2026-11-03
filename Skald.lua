@@ -6466,6 +6466,7 @@ H.DISPLAY_SIZE_CHANGED = H.UI_SCALE_CHANGED
 H.ZONE_CHANGED_NEW_AREA = function(self, event, ...)
     if window then CheckZone() end
     if ready then pcall(Mile.NoteBirthplace) end
+    if ns.ZoneCard and ns.ZoneCard.Preload then C_Timer.After(4, function() pcall(ns.ZoneCard.Preload) end) end
 end
 H.PLAYER_ENTERING_WORLD = H.ZONE_CHANGED_NEW_AREA
 
