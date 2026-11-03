@@ -22,6 +22,11 @@ ns.ZoneCard = ZC
 
 local TEX = "Interface\\AddOns\\Skald\\Textures\\"
 local MAP_W = 342
+-- How the map of the zone sits on the page: it is a drawing of the old kind, not a window. The unfound part is faint (the
+-- ink of the map, thin on the paper), the regions found are darker, and the borders fade into the paper in steps (no frame).
+ZC.TILE_ALPHA, ZC.FOUND_ALPHA = 0.5, 0.92
+ZC.PAPER = { 0.97, 0.89, 0.73 }   -- the colour of the page the map fades into
+ZC.FADE, ZC.FADE_STEPS = 30, 15   -- how far (in pixels) the border fades, and in how many strips
 
 -- The map of the zone that holds a map (a city district, a cave) : climb until a zone (type 3) is reached.
 function ZC.ZoneMap(mapID)
@@ -158,12 +163,19 @@ function ZC.Build(parent, width)
     mapBox:SetPoint("TOPLEFT", 0, 0)
     mapBox:SetClipsChildren(true)
     card.mapBox = mapBox
-    local edge = {}
-    for i = 1, 4 do
-        edge[i] = card:CreateTexture(nil, "OVERLAY")
-        edge[i]:SetColorTexture(0.24, 0.13, 0.07, 0.85)
+    -- four sets of strips of the colour of the paper, each fainter than the one outside it: the map melts into the page.
+    -- They are on the map box itself (a frame's own textures lie under its children, not over them).
+    local fade = {}
+    for side = 1, 4 do
+        fade[side] = {}
+        for i = 1, ZC.FADE_STEPS do
+            local strip = mapBox:CreateTexture(nil, "OVERLAY")
+            local k = (i - 1) / ZC.FADE_STEPS                  -- 0 at the border, nearly 1 inside
+            strip:SetColorTexture(ZC.PAPER[1], ZC.PAPER[2], ZC.PAPER[3], 0.96 * (1 - k) ^ 1.7)
+            fade[side][i] = strip
+        end
     end
-    card.edge = edge
+    card.fade = fade
 
     local title = card:CreateFontString(nil, "OVERLAY", "SkaldHead2")
     title:SetWidth(width)
@@ -205,6 +217,7 @@ function ZC.Build(parent, width)
             tex = mapBox:CreateTexture(nil, "ARTWORK")
             tex:SetDesaturated(true)
             tex:SetVertexColor(0.93, 0.80, 0.60)
+            tex:SetAlpha(ZC.TILE_ALPHA)
             card.tiles[n] = tex
         end
         return tex
@@ -217,6 +230,7 @@ function ZC.Build(parent, width)
             tex = mapBox:CreateTexture(nil, "ARTWORK", nil, 1)
             tex:SetDesaturated(true)
             tex:SetVertexColor(0.93, 0.80, 0.60)
+            tex:SetAlpha(ZC.FOUND_ALPHA)
             card.found[n] = tex
         end
         return tex
@@ -279,12 +293,18 @@ function ZC.Build(parent, width)
             y = 20
         end
         for n = drawn + 1, #card.tiles do card.tiles[n]:Hide() end
-        for _, e in ipairs(card.edge) do e:SetShown(mapBox:IsShown()) end
-        if mapBox:IsShown() then
-            card.edge[1]:ClearAllPoints(); card.edge[1]:SetPoint("TOPLEFT", mapBox, "TOPLEFT"); card.edge[1]:SetPoint("TOPRIGHT", mapBox, "TOPRIGHT"); card.edge[1]:SetHeight(2)
-            card.edge[2]:ClearAllPoints(); card.edge[2]:SetPoint("BOTTOMLEFT", mapBox, "BOTTOMLEFT"); card.edge[2]:SetPoint("BOTTOMRIGHT", mapBox, "BOTTOMRIGHT"); card.edge[2]:SetHeight(2)
-            card.edge[3]:ClearAllPoints(); card.edge[3]:SetPoint("TOPLEFT", mapBox, "TOPLEFT"); card.edge[3]:SetPoint("BOTTOMLEFT", mapBox, "BOTTOMLEFT"); card.edge[3]:SetWidth(2)
-            card.edge[4]:ClearAllPoints(); card.edge[4]:SetPoint("TOPRIGHT", mapBox, "TOPRIGHT"); card.edge[4]:SetPoint("BOTTOMRIGHT", mapBox, "BOTTOMRIGHT"); card.edge[4]:SetWidth(2)
+        local shown = mapBox:IsShown()
+        for side = 1, 4 do for _, strip in ipairs(card.fade[side]) do strip:SetShown(shown) end end
+        if shown then
+            local step = ZC.FADE / ZC.FADE_STEPS
+            for i = 1, ZC.FADE_STEPS do
+                local at = (i - 1) * step
+                local top, bottom, left, right = card.fade[1][i], card.fade[2][i], card.fade[3][i], card.fade[4][i]
+                top:ClearAllPoints(); top:SetPoint("TOPLEFT", mapBox, "TOPLEFT", 0, -at); top:SetPoint("TOPRIGHT", mapBox, "TOPRIGHT", 0, -at); top:SetHeight(step)
+                bottom:ClearAllPoints(); bottom:SetPoint("BOTTOMLEFT", mapBox, "BOTTOMLEFT", 0, at); bottom:SetPoint("BOTTOMRIGHT", mapBox, "BOTTOMRIGHT", 0, at); bottom:SetHeight(step)
+                left:ClearAllPoints(); left:SetPoint("TOPLEFT", mapBox, "TOPLEFT", at, 0); left:SetPoint("BOTTOMLEFT", mapBox, "BOTTOMLEFT", at, 0); left:SetWidth(step)
+                right:ClearAllPoints(); right:SetPoint("TOPRIGHT", mapBox, "TOPRIGHT", -at, 0); right:SetPoint("BOTTOMRIGHT", mapBox, "BOTTOMRIGHT", -at, 0); right:SetWidth(step)
+            end
         end
 
         local name = ZC.Name(mapID) or "?"

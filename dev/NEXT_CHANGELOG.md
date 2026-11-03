@@ -1,0 +1,1 @@
+- **The map on the Index** is drawn like an old map and not like a window: the part you have not found is faint, the regions found are darker, and the borders melt into the page (no dark frame, no hard blocks)
