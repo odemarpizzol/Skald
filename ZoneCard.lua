@@ -270,9 +270,13 @@ local function QuestAdvance(count)
     local key, okR, raceID, okC, classID = QuestKey()
     if byMap and builtFor == key then return byMap end
     if not build or build.key ~= key then
+        -- the list of ids is a table of thousands that the library sorts: that is a step of its own
+        local t0 = debugprofilestop and debugprofilestop()
         local okI, ids = pcall(function() return qdb:GetQuestIds() or {} end)
         if not okI then return nil end
         build = { key = key, ids = ids, pos = 1, index = {}, qdb = qdb, raceID = raceID, classID = classID, okR = okR, okC = okC }
+        if ns.NoteStall and t0 then ns.NoteStall("quest ids", debugprofilestop() - t0) end
+        if count then return nil, true end
     end
     local ok, finished = pcall(QuestStep, build, count or #build.ids)
     if not ok then build = nil; return nil end
@@ -296,15 +300,16 @@ end
 -- Reads the quests in the background, a step of about 5 ms every twentieth of a second.
 function ZC.WarmQuests()
     if not (C_Timer and C_Timer.After) then return end
-    -- each step is held to about 5 ms (a frame is 16), so the game never feels it
+    -- each step is held to about 2 ms (a frame is 16), so the game never feels it
     local clock = debugprofilestop
     local function Step()
         local started = clock and clock()
         local more = true
         repeat
-            local index, left = QuestAdvance(20)
+            local _, left = QuestAdvance(5)
             more = left
-        until not more or not clock or clock() - started > 5
+        until not more or not clock or clock() - started > 2
+        if clock and ns.NoteStall then ns.NoteStall("quest step", clock() - started) end
         if more then C_Timer.After(0.05, Step) end
     end
     pcall(Step)

@@ -5219,6 +5219,31 @@ Mile.NoteBirthplace = function()
     if type(map) == "number" and map > 0 and K.IsZoneMap(map) then db.birthMap = map end
 end
 
+-- What was slow in the first minute and a half after login (the book shut): ns.NoteStall(name, ms) is called by the
+-- background work that times itself, and a frame that took over 40 ms is noted too (whoever made it: another addon
+-- counts). /skald perf prints the list with the seconds since login.
+ns.stalls = {}
+ns.loginAt = nil
+function ns.NoteStall(name, ms)
+    if not ns.loginAt or ms < 6 or #ns.stalls >= 40 then return end
+    ns.stalls[#ns.stalls + 1] = { GetTime() - ns.loginAt, name, ms }
+end
+Mile.StartStallMeter = function()
+    ns.loginAt = GetTime()
+    ns.stalls = {}
+    local meter = CreateFrame("Frame")
+    meter:SetScript("OnUpdate", function(self, elapsed)
+        if elapsed > 0.04 then ns.NoteStall("frame", elapsed * 1000) end
+        if GetTime() - ns.loginAt > 90 then self:SetScript("OnUpdate", nil) end
+    end)
+end
+Mile.Timed = function(name, fn, ...)
+    local t0 = debugprofilestop and debugprofilestop()
+    local ok, err = pcall(fn, ...)
+    if t0 then ns.NoteStall(name, debugprofilestop() - t0) end
+    return ok, err
+end
+
 -- /skald perf: times what the book does, to see what is slow in the real game. For each step it says the time the addon
 -- itself spent (Lua) and the longest of the next three frames (that one holds what the game does after: reading a
 -- picture from the disk, drawing). A frame over 50 ms is felt as a stop. The steps run one after another, a few
@@ -5239,6 +5264,12 @@ Mile.Perf = function()
     local zc = ns.ZoneCard
     Say("perf: client " .. tostring(select(2, pcall(function() return (select(4, GetBuildInfo())) end))) .. "; pages " .. tostring(#((Journal() or {}).entries or {})) ..
         "; quest index " .. tostring(zc and zc.QuestState and zc.QuestState() or "-") .. ". Wait a few seconds...")
+    if #ns.stalls == 0 then
+        Say("  since login nothing over 6 ms in the background work, no frame over 40 ms (first 90 s)")
+    else
+        Say("  since login, slow things (seconds | what | ms):")
+        for _, st in ipairs(ns.stalls) do Say(string.format("    %5.1f s | %-14s | %6.1f ms", st[1], st[2], st[3])) end
+    end
     local meter = CreateFrame("Frame")
     local i = 0
     local function Next()
@@ -6464,6 +6495,7 @@ H.PLAYER_LOGIN = function(self, event, ...)
         end
     end
     sessionMark = time()
+    pcall(Mile.StartStallMeter)
     RollDay()   -- closes any earlier day with a summary page
     window = CreateWindow()
     for _, t in ipairs(pendingTabs) do window:AddTab(t[1], t[2], t[3]) end
@@ -6477,19 +6509,19 @@ H.PLAYER_LOGIN = function(self, event, ...)
     C_Timer.After(8, function()
         lastXP, lastXPLevel = ReadXP()
         ready = true
-        CheckGuild()
-        CheckSkills()
-        CheckReputation()
-        CheckMarks()
-        pcall(Mile.CheckPet)
-        pcall(Mile.NoteBirthplace)
-        pcall(Mile.CheckMounts)
+        Mile.Timed("CheckGuild", CheckGuild)
+        Mile.Timed("CheckSkills", CheckSkills)
+        Mile.Timed("CheckReputation", CheckReputation)
+        Mile.Timed("CheckMarks", CheckMarks)
+        Mile.Timed("CheckPet", Mile.CheckPet)
+        Mile.Timed("NoteBirthplace", Mile.NoteBirthplace)
+        Mile.Timed("CheckMounts", Mile.CheckMounts)
         C_Timer.After(25, function() pcall(Mile.NoteBirthplace) end)   -- the game may still answer with the continent
         if Settings().probeAll then pcall(Mile.ProbeAllEvents, true) end
         if Settings().probeLore then pcall(Mile.ProbeLore, true) end
-        pcall(Mile.MergeCrafts)
-        pcall(Mile.Relocalize)
-        C_Timer.After(10, function() pcall(Mile.Relocalize) end)   -- items load a little later
+        Mile.Timed("MergeCrafts", Mile.MergeCrafts)
+        Mile.Timed("Relocalize", Mile.Relocalize)
+        C_Timer.After(10, function() Mile.Timed("Relocalize 2", Mile.Relocalize) end)   -- items load a little later
         if C_Timer.NewTicker then C_Timer.NewTicker(60, function() pcall(CheckMarks); pcall(Mile.CheckPet); pcall(ns.CheckAnniversary); pcall(Mile.TrackKills); pcall(Mile.NoteBirthplace) end) end
         C_Timer.After(2, function() pcall(Mile.ShowResume) end)
         if ns.ZoneCard then
