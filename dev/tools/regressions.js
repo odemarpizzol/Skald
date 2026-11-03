@@ -3465,6 +3465,16 @@ RES = (horde.race_SkyborneHorde_level and horde.race_Skyborne_level and not hord
   or ("horde pools seen: " .. table.concat((function() local t = {} for k in pairs(horde) do t[#t+1] = k end return t end)(), ","))`,
 });
 
+run('/skald probe maps says the map under the player and the name the game gives each hand-drawn map of the Index', {
+  body: `print_out = {}
+SlashCmdList.SKALD("probe maps")
+local said = table.concat(print_out, "\\n")
+local count = 0
+for _ in pairs(ns.ZoneCard.ART) do count = count + 1 end
+RES = (count >= 8 and said:find("map under the player", 1, true) and said:find("1429", 1, true) and said:find("map_elwynn", 1, true) and (SkaldDB.errors == nil)) and "ok"
+  or ("said: " .. said)`,
+});
+
 run('/skald probe events counts the events by name, keeps the payload of the new-looking ones, and lists them', {
   body: `SlashCmdList.SKALD("probe events")
 fire("CAMPSITE_CONTRIBUTION", 42, "Cozy Fire"); fire("CAMPSITE_CONTRIBUTION", 43); fire("PLAYER_MONEY")
