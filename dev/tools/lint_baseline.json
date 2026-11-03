@@ -236,6 +236,7 @@
   "UnitFactionGroup",
   "UnitRace",
   "_G",
+  "debugprofilestop",
   "ipairs",
   "math",
   "pcall",
