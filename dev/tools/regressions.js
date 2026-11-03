@@ -332,6 +332,22 @@ for _, c in ipairs(cases) do local got = say(c[1], c[2]); if got ~= c[3] then ba
 RES = #bad == 0 and "ok" or table.concat(bad, " ; ")`,
 });
 
+run('a phrase that names a time of the day ("this morning") is not followed by the line that sets the scene (the light of dusk, say)', {
+  pre: `function UnitRace() return "Orc", "Orc", 2 end`,
+  body: `SkaldDB.tone = "kin"
+local P = ns.LOCALES.enUS.phrases
+local function find(text) for i, l in ipairs(P.tone_kin_level) do if l == text then return i end end end
+local named = find("I am stronger than I was this morning.")
+local plain = find("I feel the change in my arms and in my judgement both.")
+local dusk = ns.LOCALES.enUS.AMBIENT.dusk
+local function hasScene(text) for _, l in ipairs(dusk) do if text:find(l, 1, true) then return true end end return false end
+-- an odd number draws the scene line; the Orc has its own level lines, so the page is drawn from the plain pool of the voice
+SkaldDB.tone = "kin"
+local function render(idx) return SkaldAPI.Render({ kind = "level", arg = "5", idx = idx, hr = 18, race = "NoSuchRace" }) end
+local a, b = render(named), render(plain)
+RES = (named % 2 == 1 and plain % 2 == 1 and not hasScene(a) and hasScene(b)) and "ok" or ("named " .. tostring(named) .. " plain " .. tostring(plain) .. " | " .. a .. " | " .. b)`,
+});
+
 run('the first land of a new Orc is told with the lines of its first steps (race_Orc_start), once; a later land, or a character past level two, with the common ones', {
   pre: `function UnitRace() return "Orc", "Orc", 2 end
 function UnitLevel() return 1 end
