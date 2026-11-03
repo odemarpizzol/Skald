@@ -6496,8 +6496,12 @@ H.PLAYER_LOGIN = function(self, event, ...)
     end
     sessionMark = time()
     pcall(Mile.StartStallMeter)
-    RollDay()   -- closes any earlier day with a summary page
-    window = CreateWindow()
+    Mile.Timed("RollDay", RollDay)   -- closes any earlier day with a summary page
+    do
+        local t0 = debugprofilestop and debugprofilestop()
+        window = CreateWindow()
+        if t0 then ns.NoteStall("CreateWindow", debugprofilestop() - t0) end
+    end
     for _, t in ipairs(pendingTabs) do window:AddTab(t[1], t[2], t[3]) end
     pendingTabs = {}
     do
