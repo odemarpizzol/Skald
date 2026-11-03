@@ -709,7 +709,24 @@ K.KinPool = function(e)
     local race = e.race
     if not race then local ok, _, file = pcall(UnitRace, "player"); race = ok and file or nil end
     local key = race and K.RacePoolKey(race, "kinLevel", true)   -- told again on every reading: no chance here
-    return (key and PHRASES[key]) or PHRASES.tone_kin_level
+    -- the lines of the race and the plain ones of the voice are drawn together (the race first: a line keeps its place
+    -- when lines are added to the common ones), so a long climb has two pools of sixteen to take a level from
+    return K.KinMix(key and PHRASES[key], PHRASES.tone_kin_level)
+end
+K.kinMixes = {}
+K.KinMix = function(own, common)
+    if not own or own == common then return common end
+    if not common then return own end
+    local byOwn = K.kinMixes[own]
+    if not byOwn then byOwn = {}; K.kinMixes[own] = byOwn end
+    local mix = byOwn[common]
+    if not mix or #mix ~= #own + #common then
+        mix = {}
+        for _, line in ipairs(own) do mix[#mix + 1] = line end
+        for _, line in ipairs(common) do mix[#mix + 1] = line end
+        byOwn[common] = mix
+    end
+    return mix
 end
 
 function PoolFor(e)

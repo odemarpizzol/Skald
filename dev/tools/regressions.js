@@ -303,9 +303,9 @@ Measure("boss", 150, function(i) local r = math.random(); local tries
   SkaldAPI.AddEntry("boss", "Boss " .. i, zone, { tries = tries, tier = 2 + (i % 3) }) end)
 RES = #bad == 0 and "ok" or table.concat(bad, " ; ")`,
 });
-run('a long climb in the voice "Of My People" (Orc, Warrior, English): no line takes more than its share of the pages of its kind', CLIMB('Orc', 'WARRIOR', 'enUS', '{ quest = { 0.05, 150 }, death = { 0.12, 24 }, level = { 0.20, 14 }, boss = { 0.09, 35 } }'));
-run('a long climb in the voice "Of My People" (Draenei, Mage, Portuguese): no line takes more than its share of the pages of its kind', CLIMB('Draenei', 'MAGE', 'ptBR', '{ quest = { 0.05, 150 }, death = { 0.12, 24 }, level = { 0.20, 14 }, boss = { 0.09, 35 } }'));
-run('a long climb in the voice "Of My People" (Scourge, Priest, French): no line takes more than its share of the pages of its kind', CLIMB('Scourge', 'PRIEST', 'frFR', '{ quest = { 0.05, 150 }, death = { 0.12, 24 }, level = { 0.20, 14 }, boss = { 0.09, 35 } }'));
+run('a long climb in the voice "Of My People" (Orc, Warrior, English): no line takes more than its share of the pages of its kind', CLIMB('Orc', 'WARRIOR', 'enUS', '{ quest = { 0.05, 150 }, death = { 0.12, 24 }, level = { 0.12, 24 }, boss = { 0.09, 35 } }'));
+run('a long climb in the voice "Of My People" (Draenei, Mage, Portuguese): no line takes more than its share of the pages of its kind', CLIMB('Draenei', 'MAGE', 'ptBR', '{ quest = { 0.05, 150 }, death = { 0.12, 24 }, level = { 0.12, 24 }, boss = { 0.09, 35 } }'));
+run('a long climb in the voice "Of My People" (Scourge, Priest, French): no line takes more than its share of the pages of its kind', CLIMB('Scourge', 'PRIEST', 'frFR', '{ quest = { 0.05, 150 }, death = { 0.12, 24 }, level = { 0.12, 24 }, boss = { 0.09, 35 } }'));
 
 run('the first land of a new Orc is told with the lines of its first steps (race_Orc_start), once; a later land, or a character past level two, with the common ones', {
   pre: `function UnitRace() return "Orc", "Orc", 2 end
@@ -375,9 +375,11 @@ local function flavors(race)
 end
 local P = ns.LOCALES.enUS.phrases
 local ok, bad = true, {}
+-- a level of the voice is told from the lines of the race followed by the common ones
+local function leads(list, base) if type(list) ~= "table" or #list ~= #base + #P.tone_kin_level then return false end for i = 1, #base do if list[i] ~= base[i] then return false end end return true end
 for _, race in ipairs({ "Draenei", "BloodElf" }) do
   local s = flavors(race)
-  if s.level ~= P["race_" .. race .. "_kinLevel"] then ok = false; bad[#bad + 1] = race .. " level" end
+  if not leads(s.level, P["race_" .. race .. "_kinLevel"]) then ok = false; bad[#bad + 1] = race .. " level" end
   for _, kind in ipairs({ "quest", "zone", "death" }) do
     if s[kind] ~= "race_" .. race .. "_" .. kind then ok = false; bad[#bad + 1] = race .. " " .. kind .. "=" .. tostring(s[kind]) end
   end
@@ -3391,13 +3393,14 @@ end
 local horde = draw(120)
 SkaldDB.tone = "kin"
 local e = { kind = "level", arg = "5", race = "Skyborne", idx = 1 }
+local function leads(list, base) if type(list) ~= "table" or #list ~= #base + #P.tone_kin_level then return false end for i = 1, #base do if list[i] ~= base[i] then return false end end return true end
 local hordeKin = SkaldAPI.PoolFor(e)
 FACTION = "Alliance"
 local allianceKin = SkaldAPI.PoolFor(e)
 FACTION = "Neutral"
 local neutralKin = SkaldAPI.PoolFor(e)
 RES = (horde.race_SkyborneHorde_level and horde.race_Skyborne_level and not horde.race_SkyborneAlliance_level
-  and hordeKin == P.race_SkyborneHorde_kinLevel and allianceKin == P.race_SkyborneAlliance_kinLevel and neutralKin == P.race_Skyborne_kinLevel) and "ok"
+  and leads(hordeKin, P.race_SkyborneHorde_kinLevel) and leads(allianceKin, P.race_SkyborneAlliance_kinLevel) and leads(neutralKin, P.race_Skyborne_kinLevel)) and "ok"
   or ("horde pools seen: " .. table.concat((function() local t = {} for k in pairs(horde) do t[#t+1] = k end return t end)(), ","))`,
 });
 
