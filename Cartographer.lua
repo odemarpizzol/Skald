@@ -29,8 +29,8 @@ ns.Cartographer = C
 
 C.COLS, C.ROWS = 2, 4                 -- the cells on one page; two pages make a spread
 C.PER_PAGE = C.COLS * C.ROWS
-C.THUMB_W, C.THUMB_H = 160, 80
-C.CELL_W, C.CELL_H = 170, 106
+C.THUMB_W, C.THUMB_H = 150, 75   -- the frame (map_thumb_frame) leaves 88% of its width free: it is drawn 1/0.88 larger
+C.CELL_W, C.CELL_H = 170, 108
 
 -- The maps of this client with a drawing: the map must exist in the game (a Burning Crusade land does not on an
 -- older client), sorted by the name the game gives it, accents and case folded so the order is natural.
@@ -72,7 +72,7 @@ function C.Count(list)
 end
 
 -- The pages of the diary written in a land (the newest first, at most `limit`), and how many there are in all.
-function C.Pages(mapID, limit)
+function C.Pages(mapID, limit)   -- limit: how many to keep (default 700)
     local db = SkaldCharDB
     local entries = db and db.entries
     local zc = ns.ZoneCard
@@ -89,7 +89,7 @@ function C.Pages(mapID, limit)
             end
             if zone == mapID then
                 total = total + 1
-                if #out < (limit or 7) then out[#out + 1] = e end
+                if #out < (limit or 700) then out[#out + 1] = e end
             end
         end
     end
@@ -105,6 +105,10 @@ local function BuildTab(panel)
     local TEX = "Interface\\AddOns\\Skald\\Textures\\skald2\\"
 
     SkaldAPI.PageHeading(panel, UI.TITLE, 0)
+    local seal = panel:CreateTexture(nil, "ARTWORK")
+    seal:SetSize(34, 34)
+    seal:SetPoint("TOPLEFT", panel, "TOPLEFT", 44, -2)
+    seal:SetTexture(TEX .. "map_title_seal")
     local count = panel:CreateFontString(nil, "OVERLAY", "SkaldSmall")
     count:SetPoint("TOPLEFT", RIGHT_X, -12)
     count:SetWidth(CW)
@@ -128,6 +132,16 @@ local function BuildTab(panel)
             cell.map = cell:CreateTexture(nil, "ARTWORK")
             cell.map:SetSize(C.THUMB_W, C.THUMB_H)
             cell.map:SetPoint("TOP", 0, -2)
+            -- the frame of an album over the drawing, and the stamp of the lands walked on its corner
+            cell.frame = cell:CreateTexture(nil, "OVERLAY", nil, 1)
+            cell.frame:SetSize(C.THUMB_W / 0.88, C.THUMB_H / 0.88)
+            cell.frame:SetPoint("CENTER", cell.map, "CENTER", 0, 0)
+            cell.frame:SetTexture(TEX .. "map_thumb_frame")
+            cell.stamp = cell:CreateTexture(nil, "OVERLAY", nil, 2)
+            cell.stamp:SetSize(32, 32)
+            cell.stamp:SetPoint("CENTER", cell.map, "BOTTOMRIGHT", -8, 8)
+            cell.stamp:SetTexture(TEX .. "map_stamp")
+            cell.stamp:SetAlpha(0.92)
             cell.name = cell:CreateFontString(nil, "OVERLAY", "SkaldSmall")
             cell.name:SetPoint("TOP", cell.map, "BOTTOM", 0, -2)
             cell.name:SetWidth(C.CELL_W - 6)
@@ -146,12 +160,12 @@ local function BuildTab(panel)
 
     -- The detail of a land you have walked: its card (the map, the quests, the creatures) on the left page, the
     -- pages written there on the right one; the left corner of the book, or this button, goes back to the grid.
-    local detail
+    local detail, detailPage = nil, 1
     local card
     -- the same brass plate the other tabs use, at the foot of the left page under the card
     local back = SkaldAPI.MakeButton and SkaldAPI.MakeButton(panel, 130, 28, UI.BACK)
         or CreateFrame("Button", nil, panel)
-    back:SetPoint("TOP", panel, "TOPLEFT", CW / 2, -488)
+    back:SetPoint("TOP", panel, "TOPLEFT", CW / 2, -410)
     back:Hide()
     local rows = {}
     for i = 1, 7 do
@@ -191,7 +205,7 @@ local function BuildTab(panel)
     back:SetScript("OnClick", Close)
     for _, cell in ipairs(cells) do
         cell:SetScript("OnClick", function(self)
-            if self.info and self.walked then detail = self.info; Refresh() end
+            if self.info and self.walked then detail = self.info; detail.list, detail.total = C.Pages(self.info.id); detailPage = 1; Refresh() end
         end)
     end
 
@@ -215,8 +229,12 @@ local function BuildTab(panel)
                 pcall(card.Set, card, detail.id)
                 card:Show()
             end
-            local pages, total = C.Pages(detail.id, #rows)
-            count:SetText(UI.HERE .. " (" .. total .. ")")
+            local all, total = detail.list or {}, detail.total or 0
+            local pagesOf = math.max(1, math.ceil(#all / #rows))
+            detailPage = math.max(1, math.min(detailPage, pagesOf))
+            count:SetText(UI.HERE .. " (" .. total .. ")" .. (pagesOf > 1 and ("   " .. string.format(UI.OF, detailPage, pagesOf)) or ""))
+            local pages = {}
+            for i = 1, #rows do pages[i] = all[(detailPage - 1) * #rows + i] end
             for i, row in ipairs(rows) do
                 local e = pages[i]
                 if e then
@@ -230,7 +248,7 @@ local function BuildTab(panel)
                     row:Show()
                 end
             end
-            none:SetShown(#pages == 0)
+            none:SetShown(#all == 0)
             return
         end
         local per = C.PER_PAGE * 2
@@ -250,6 +268,8 @@ local function BuildTab(panel)
                 cell.map:SetTexture(TEX .. info.art)
                 pcall(cell.map.SetDesaturated, cell.map, not walked)
                 cell.map:SetAlpha(walked and 0.95 or 0.38)
+                cell.frame:SetAlpha(walked and 1 or 0.5)
+                cell.stamp:SetShown(walked)
                 cell.name:SetText(info.name)
                 if walked then cell.name:SetTextColor(head[1], head[2], head[3])
                 else cell.name:SetTextColor(muted[1], muted[2], muted[3]) end
@@ -259,11 +279,17 @@ local function BuildTab(panel)
 
     local pager = {
         Turn = function(delta)
-            if detail then if delta < 0 then detail = nil end return end
+            if detail then
+                local pagesOf = math.max(1, math.ceil(#(detail.list or {}) / 7))
+                if delta > 0 then detailPage = math.min(pagesOf, detailPage + 1)
+                elseif detailPage > 1 then detailPage = detailPage - 1
+                else detail = nil end
+                return
+            end
             spread = math.max(1, math.min(spreads, spread + delta))
         end,
         CanPrev = function() return detail ~= nil or spread > 1 end,
-        CanNext = function() return detail == nil and spread < spreads end,
+        CanNext = function() if detail then return detailPage < math.ceil(#(detail.list or {}) / 7) end return spread < spreads end,
     }
     C.refresh = Refresh
     C.pager = pager

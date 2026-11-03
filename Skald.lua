@@ -7866,10 +7866,11 @@ local function BuildOptions(panel)
     local discard = MakeFlatButton(panel, 166, 26, L.BTN_DISCARD)
     discard:SetPoint("TOPLEFT", K.RIGHT_X + 176, -362)
     discard:SetScript("OnClick", function() StaticPopup_Show("SKALD_DISCARD") end)
-    local exportButton = MakeFlatButton(panel, 166, 28, L.EXPORT_BTN, "gold")
+    local exportButton = MakeFlatButton(panel, 166, 28, L.EXPORT_BTN)
     exportButton:SetPoint("TOPLEFT", K.RIGHT_X, -402)
     exportButton:SetScript("OnClick", function() ShowExport() end)
-    local erase = MakeFlatButton(panel, 166, 28, L.BTN_ERASE, "burn")
+    local erase = MakeFlatButton(panel, 166, 28, L.BTN_ERASE)
+    erase:SetActive(true)   -- the wine-red plate: the one that destroys
     erase:SetPoint("TOPLEFT", K.RIGHT_X + 176, -402)
     erase:SetScript("OnClick", function() StaticPopup_Show("SKALD_CLEAR") end)
 
@@ -7896,7 +7897,7 @@ local function BuildOptions(panel)
             info:SetText(L.ARCHIVE_NONE)
         end
         for _, b in ipairs({ restore, discard }) do
-            b:SetAlpha(count > 0 and 1 or 0.4)
+            b:SetAlpha(count > 0 and 1 or 0.62)
             b:EnableMouse(count > 0)
         end
     end

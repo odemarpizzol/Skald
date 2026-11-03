@@ -2005,11 +2005,16 @@ if not tab then RES = "no Cartographer tab" else
   if cell then
     SkaldCharDB.visitedMaps["map:" .. cell.info.id] = true
     ns.Cartographer.refresh()
+    for i = 1, 20 do table.insert(SkaldCharDB.entries, { kind = "zone", m = cell.info.id, t = 1700000000 + i, idx = 1 }) end
     cell._OnClick(cell)
-    opened = ns.Cartographer.pager.CanPrev() and not ns.Cartographer.pager.CanNext()
-    ns.Cartographer.pager.Turn(-1)
+    local P = ns.Cartographer.pager
+    -- twenty pages written there are three pages of seven: the corner turns on twice, then there is no more
+    opened = P.CanPrev() and P.CanNext()
+    P.Turn(1); ns.Cartographer.refresh(); P.Turn(1); ns.Cartographer.refresh()
+    opened = opened and not P.CanNext()
+    P.Turn(-1); P.Turn(-1); P.Turn(-1)   -- back to page 1, then out to the grid
     ns.Cartographer.refresh()
-    backOk = ns.Cartographer.pager.CanNext() or ns.Cartographer.pager.CanPrev() == false
+    backOk = not ns.Cartographer.pager.CanPrev()   -- the grid again, on its first spread
   end
   RES = (cell and opened and backOk and #list >= 50 and walked == 2 and ns.Cartographer.Walked(1429) and (SkaldDB.errors == nil)) and "ok"
     or ("list " .. #list .. " walked " .. walked .. " errors: " .. tostring(SkaldDB.errors and SkaldDB.errors[1]))
