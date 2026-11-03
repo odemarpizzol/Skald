@@ -307,6 +307,31 @@ run('a long climb in the voice "Of My People" (Orc, Warrior, English): no line t
 run('a long climb in the voice "Of My People" (Draenei, Mage, Portuguese): no line takes more than its share of the pages of its kind', CLIMB('Draenei', 'MAGE', 'ptBR', '{ quest = { 0.05, 150 }, death = { 0.12, 24 }, level = { 0.12, 24 }, boss = { 0.09, 35 } }'));
 run('a long climb in the voice "Of My People" (Scourge, Priest, French): no line takes more than its share of the pages of its kind', CLIMB('Scourge', 'PRIEST', 'frFR', '{ quest = { 0.05, 150 }, death = { 0.12, 24 }, level = { 0.12, 24 }, boss = { 0.09, 35 } }'));
 
+run('French: the place takes its article after à, de, dans and sur (à la Forêt d\'Elwynn, au Mont Hyjal, aux Tarides, à l\'Île, d\'Elwynn), and a name no noun tells is left as it was', {
+  pre: `__locale = "frFR"`,
+  body: `local function say(phrase, name) return ns.PlaceArticles(phrase, name, "%s"):format(name) end
+local nb = "\\194\\160"
+local cases = {
+  { "À %s, la route", "Forêt d'Elwynn", "À la Forêt d'Elwynn, la route" },
+  { "J'ai marché à %s.", "Mont Hyjal", "J'ai marché au Mont Hyjal." },
+  { "Je suis tombé à %s.", "Les Tarides", "Je suis tombé aux Tarides." },
+  { "Le soir à %s.", "Île de Quel'Danas", "Le soir à l'Île de Quel'Danas." },
+  { "Le vent de %s.", "Mont Hyjal", "Le vent du Mont Hyjal." },
+  { "Le vent de %s.", "Plaines d'Arathi", "Le vent des Plaines d'Arathi." },
+  { "Le vent de %s.", "Forêt d'Elwynn", "Le vent de la Forêt d'Elwynn." },
+  { "Le vent de %s.", "Elwynn", "Le vent d'Elwynn." },
+  { "Le vent de %s.", "Durotar", "Le vent de Durotar." },
+  { "J'ai marché à %s.", "Durotar", "J'ai marché à Durotar." },
+  { "Une nuit dans %s.", "Clairières de Tirisfal", "Une nuit dans les Clairières de Tirisfal." },
+  { "Une nuit dans %s.", "Les Tarides", "Une nuit dans les Tarides." },
+  { "%s" .. nb .. ": le début.", "Forêt d'Elwynn", "Forêt d'Elwynn" .. nb .. ": le début." },
+  { "Contre %s.", "Mont Hyjal", "Contre Mont Hyjal." },
+}
+local bad = {}
+for _, c in ipairs(cases) do local got = say(c[1], c[2]); if got ~= c[3] then bad[#bad + 1] = c[2] .. " -> " .. got end end
+RES = #bad == 0 and "ok" or table.concat(bad, " ; ")`,
+});
+
 run('the first land of a new Orc is told with the lines of its first steps (race_Orc_start), once; a later land, or a character past level two, with the common ones', {
   pre: `function UnitRace() return "Orc", "Orc", 2 end
 function UnitLevel() return 1 end

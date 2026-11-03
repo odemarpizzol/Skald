@@ -145,7 +145,7 @@ local Notify, PulseMinimap   -- the toast and the glow of the minimap button (de
 
 -- Who is writing, and how it went, flavour some pages: a class's own words, a race's, a quest that
 -- was hard or easy for your level. The pool chosen is stored with the page, so it reads the same later.
-K.FLAVOR_KINDS = { quest = true, level = true, death = true, boss = true, zone = true, dungeon = true }
+K.FLAVOR_KINDS = { quest = true, level = true, death = true, boss = true, zone = true, dungeon = true, hearth = true }
 local AddContext
 do
 local CONTEXT_KINDS = { dungeon = true, boss = true, death = true, zone = true, level = true,
@@ -1106,7 +1106,71 @@ K.PLACE_FORMS = {   -- the article, and its contractions with em, de, a and por
 K.PLACE_KINDS = { zone = true, death = true, revive = true, hearth = true, home = true, dungeon = true }   -- the pages whose %s is a place
 -- `phrase` with the article put where `token` (the %s, or a {tag} of the Saga) stands for `name`: em, de, a and por become
 -- na/no, da/do, à/ao and pela/pelo; after any other word, or at the start, the article comes before the name.
+-- French: the same, for à and de (au, à la, aux, à l'; du, de la, des, de l', and d' before a bare name that starts with a
+-- vowel: d'Elwynn), and the article put after dans, sur, vers, depuis and devant. A name that carries its own article ("Les
+-- Tarides") loses it where the preposition takes it ("aux Tarides"). A name no noun below tells is left as it was.
+K.PLACE_NOUNS_FR = {
+    f = "Forêt Vallée Île Baie Côte Plaine Colline Montagne Grotte Caverne Mine Tour Forteresse Cité Ville Terre Crique Falaise Passe Route Rivière Source Prairie Savane Jungle Lande Citadelle Abbaye Cathédrale Chapelle Salle Crypte Fosse Gorge Brèche Cascade Péninsule Région Zone Frontière Marche Steppe Toundra Dune Oasis Cime Clairière Auberge Taverne Mer Rive Presqu'île Gorge Voie",
+    m = "Mont Marais Désert Plateau Lac Pic Cap Gouffre Ravin Bois Fleuve Détroit Camp Village Port Refuge Poste Pont Temple Palais Château Repaire Sanctuaire Bastion Fort Domaine Cimetière Canyon Défilé Rivage Littoral Territoire Quartier Donjon Cratère Glacier Récif Archipel Continent Royaume Havre Bourg Hameau Belvédère Océan Val Col Sentier Chemin Marché",
+    p = "Plaines Collines Montagnes Terres Ruines Cavernes Mines Catacombes Profondeurs Cascades Îles Forêts Côtes Clairières Prairies Gorges Falaises Salles Tours Sources Landes Steppes Dunes Marches Monts Pics Bois Lacs Déserts Canyons Défilés Bastions Récifs Vallées Marécages Champs",
+}
+K.PLACE_GENDER_FR = {}
+for gender, words in pairs(K.PLACE_NOUNS_FR) do
+    for word in words:gmatch("%S+") do K.PLACE_GENDER_FR[word] = gender end
+end
+K.FR_PREPS = { ["à"] = "à", ["À"] = "à", ["de"] = "de", ["De"] = "de", dans = "keep", Dans = "keep", sur = "keep", Sur = "keep",
+    vers = "keep", Vers = "keep", depuis = "keep", Depuis = "keep", devant = "keep", Devant = "keep" }
+K.FR_FORMS = {
+    f = { art = "la", ["à"] = "à la", de = "de la" }, m = { art = "le", ["à"] = "au", de = "du" },
+    p = { art = "les", ["à"] = "aux", de = "des" }, el = { art = "l'", ["à"] = "à l'", de = "de l'" },
+}
+K.FrVowel = function(name) return name:find("^[AEIOUYaeiouy]") ~= nil or name:find("^\195[\128-\134\136-\143\146-\150\152-\156]") ~= nil end
+K.FrCap = function(text)
+    if text:sub(1, 2) == "\195\160" then return "\195\128" .. text:sub(3) end
+    return text:sub(1, 1):upper() .. text:sub(2)
+end
+K.PlaceArticlesFr = function(phrase, name, token)
+    local first = name:match("^(%S+)") or ""
+    local gender, shownName = K.PLACE_GENDER_FR[first], nil
+    if first == "Les" then gender, shownName = "p", name:sub(5)
+    elseif first == "Le" then gender, shownName = "m", name:sub(4)
+    elseif first == "La" then gender, shownName = "f", name:sub(4)
+    elseif name:sub(1, 2) == "L'" then gender, shownName = "el", name:sub(3) end
+    if shownName == "" then return phrase end
+    local singular = gender == "f" or gender == "m"
+    if singular and not shownName and K.FrVowel(name) then gender = "el" end
+    local forms = gender and K.FR_FORMS[gender]
+    local bare = not gender and K.FrVowel(name)   -- a name with no article that starts with a vowel: d'Elwynn
+    if not forms and not bare then return phrase end
+    local result, from = "", 1
+    while true do
+        local at = phrase:find(token, from, true)
+        if not at then break end
+        local before = result .. phrase:sub(from, at - 1)
+        local word = before:match("(%S+) $")
+        local kind = word and K.FR_PREPS[word]
+        local head, literal = "", token
+        if kind and forms then
+            if kind == "keep" then head = forms.art .. (gender == "el" and "" or " ")
+            else
+                head = forms[kind] .. (gender == "el" and "" or " ")
+                before = before:sub(1, #before - #word - 1)
+                if word:match("^%u") or word:sub(1, 2) == "\195\128" then head = K.FrCap(head) end
+                if before ~= "" and not before:match("%s$") then before = before .. " " end
+            end
+            if shownName then literal = (shownName:gsub("%%", "%%%%")) end
+        elseif kind == "de" and bare then
+            before = before:sub(1, #before - #word - 1)
+            head = word:match("^%u") and "D'" or "d'"
+            if before ~= "" and not before:match("%s$") then before = before .. " " end
+        end
+        result = before .. head .. literal
+        from = at + #token
+    end
+    return result .. phrase:sub(from)
+end
 K.PlaceArticles = function(phrase, name, token)
+    if type(phrase) == "string" and type(name) == "string" and GetLocale() == "frFR" then return K.PlaceArticlesFr(phrase, name, token) end
     if type(phrase) ~= "string" or type(name) ~= "string" or GetLocale() ~= "ptBR" then return phrase end
     local forms = K.PLACE_FORMS[K.PLACE_GENDER[name:match("^(%S+)") or ""] or ""]
     if not forms then return phrase end
