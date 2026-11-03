@@ -21,6 +21,39 @@ ns.ZoneCard = ZC
 
 local TEX = "Interface\\AddOns\\Skald\\Textures\\"
 local MAP_W = 342
+-- Custom instance maps are catalogued by GetInstanceInfo's instance ID. The Index does not render them yet.
+ZC.INSTANCE_ART = {
+    [489] = "map_warsong",
+    [529] = "map_arathibasin",
+    [30] = "map_alterac_valley",
+    [566] = "map_eyestorm",
+    [389] = "map_ragefire",
+    [36] = "map_deadmines",
+    [43] = "map_wailingcaverns",
+    [33] = "map_shadowfang",
+    [48] = "map_blackfathom",
+    [34] = "map_stockade",
+    [90] = "map_gnomeregan",
+    [47] = "map_razorfenkraul",
+    [189] = "map_scarletmonastery",
+    [129] = "map_razorfendowns",
+    [70] = "map_uldaman",
+    [209] = "map_zulfarrak",
+    [349] = "map_maraudon",
+    [109] = "map_sunkentemple",
+    [230] = "map_blackrockdepths",
+    [229] = "map_blackrockspire",
+    [329] = "map_stratholme",
+    [289] = "map_scholomance",
+    [429] = "map_diremaul",
+    [409] = "map_moltencore",
+    [249] = "map_onyxia",
+    [469] = "map_blackwinglair",
+    [309] = "map_zulgurub",
+    [509] = "map_ruinsahnqiraj",
+    [531] = "map_templeahnqiraj",
+    [533] = "map_naxxramas",
+}
 -- Hand-drawn map art for supported zones. Other zones keep the client's explored-map tiles.
 ZC.ART = {
     [1429] = "map_elwynn",

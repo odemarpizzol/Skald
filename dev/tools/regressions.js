@@ -3578,5 +3578,15 @@ RES = (SkaldDB.probeEvents.count.CAMPSITE_CONTRIBUTION == 2 and log.seen[1].ev =
   else { failed++; console.log('  FAIL  pictures of the looks of the tabs: ' + names.size + ' named, missing: ' + lost.join(', ')); }
 }
 
+// every instance with custom map art has its TGA texture
+{
+  const src = fs.readFileSync(path.join(ADDONS, 'Skald', 'ZoneCard.lua'), 'utf8');
+  const block = (src.match(/ZC\.INSTANCE_ART\s*=\s*\{([\s\S]*?)\n\}/) || [])[1] || '';
+  const names = [...block.matchAll(/\[\d+\]\s*=\s*"(map_[a-z_]+)"/g)].map(m => m[1]);
+  const lost = names.filter(n => !fs.existsSync(path.join(ADDONS, 'Skald', 'Textures', 'skald2', n + '.tga')));
+  if (names.length === 30 && !lost.length) console.log('  ok    every instance map has its texture (' + names.length + ')');
+  else { failed++; console.log('  FAIL  instance map textures: ' + names.length + ' named, missing: ' + lost.join(', ')); }
+}
+
 console.log(failed ? `\n${failed} regression(s) FAILED` : '\nAll regressions passed');
 process.exit(failed ? 1 : 0);
