@@ -290,8 +290,43 @@ local function QuestIndex()
     return (QuestAdvance(nil))
 end
 
+-- The quests of a map from the table the build made (QuestZones.lua, from dev/tools/gen_quest_zones.js): a few hundred
+-- numbers of the map shown, filtered by the race and the class, and no walk over the quest data of the whole game.
+-- nil when there is no table for this client (then the quest data is read as before).
+local function Flavour()
+    local _, _, _, _, toc = pcall(function() return GetBuildInfo() end)
+    local v = tonumber(toc)
+    if not v then return nil end
+    if v >= 16000 and v < 20000 then return "Forever" end
+    if v >= 20000 and v < 30000 then return "TBC" end
+    if v >= 10000 and v < 16000 then return "Vanilla" end
+    return nil
+end
+local listCache = {}
+local function TableList(mapID)
+    local all = ns.QuestZones
+    local flavour = all and Flavour()
+    local data = flavour and all[flavour]
+    if not data then return nil end
+    local key = QuestKey()
+    local cached = listCache[mapID]
+    if cached and cached.key == key then return cached.list end
+    local list = {}
+    local okR, _, _, raceID = pcall(UnitRace, "player")
+    local okC, _, _, classID = pcall(UnitClass, "player")
+    for id, races, classes in string.gmatch(data[mapID] or "", "(%d+):(%d+):(%d+)") do
+        races, classes = tonumber(races), tonumber(classes)
+        local raceOk = races == 0 or not okR or type(raceID) ~= "number" or RaceAllowed(races, raceID)
+        local classOk = classes == 0 or not okC or type(classID) ~= "number" or HasBit(classes, classID)
+        if raceOk and classOk then list[#list + 1] = tonumber(id) end
+    end
+    listCache[mapID] = { key = key, list = list }
+    return list
+end
+
 -- For /skald perf: how far the quest index is.
 function ZC.QuestState()
+    if ns.QuestZones and Flavour() and ns.QuestZones[Flavour()] then return "table of the build (" .. Flavour() .. ")" end
     if byMap then return "ready" end
     if build then return build.pos .. " of " .. #build.ids end
     return "not started"
@@ -300,6 +335,7 @@ end
 -- Reads the quests in the background, a step of about 5 ms every twentieth of a second.
 function ZC.WarmQuests()
     if not (C_Timer and C_Timer.After) then return end
+    if ns.QuestZones and Flavour() and ns.QuestZones[Flavour()] then return end   -- the table of the build is read instead
     -- each step is held to about 2 ms (a frame is 16), so the game never feels it
     local clock = debugprofilestop
     local function Step()
@@ -317,8 +353,11 @@ end
 
 -- Quests done in the zone, out of the total QuestDB knows (nil without QuestDB or without data for the zone).
 function ZC.Quests(mapID)
-    local index = QuestIndex()
-    local list = index and index[mapID]
+    local list = TableList(mapID)
+    if list == nil then
+        local index = QuestIndex()
+        list = index and index[mapID]
+    end
     if list and #list > 0 and C_QuestLog and C_QuestLog.IsQuestFlaggedCompleted then
         local done = 0
         for _, id in ipairs(list) do

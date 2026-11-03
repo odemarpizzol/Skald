@@ -22,6 +22,7 @@ Skald.lua
 Atlas.lua
 Goals.lua
 Saga.lua
+QuestZones.lua
 ZoneCard.lua
 Backup.lua
 Search.lua

@@ -227,6 +227,7 @@
   "C_QuestLog",
   "C_Timer",
   "CreateFrame",
+  "GetBuildInfo",
   "GetLocale",
   "LibStub",
   "SkaldAPI",
@@ -242,6 +243,7 @@
   "pcall",
   "string",
   "table",
+  "tonumber",
   "tostring",
   "type"
  ],

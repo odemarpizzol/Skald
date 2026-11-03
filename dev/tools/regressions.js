@@ -2038,6 +2038,21 @@ RES = (afterFirst == 0 and queued == 1 and done == 5 and total == 600 and calls 
   or ("first " .. afterFirst .. " queued " .. queued .. " done " .. tostring(done) .. " of " .. tostring(total) .. " calls " .. calls)`,
 });
 
+run('the zone card counts the quests of the zone from the table of the build, with no walk over the quest data, filtered by race and class', {
+  pre: SAVED('{}', 'version = 99, goalsInit = true, goalsVer = 3, goals = {}, stats = { counts = {}, deathZones = {}, tiers = {}, played = 1, first = 1 }'),
+  body: ZONE_STUBS + `
+function GetBuildInfo() return "2.5.6", "1", "Jan 1 2026", 20506 end
+-- the library must not be touched: 1 and 2 for everyone, 3 is for races with bit 2 only (not a Human, id 1), 4 for warriors only (class 1), the mage (class 8) keeps 1, 2 and 5
+local touched = false
+_G.LibStub = function() touched = true; return nil end
+ns.QuestZones = { TBC = { [1438] = "1:0:0 2:0:0 3:2:0 4:0:1 5:0:0", [1411] = "9:0:0" }, Vanilla = { [1438] = "1:0:0" } }
+C_QuestLog = { IsQuestFlaggedCompleted = function(id) return id == 2 or id == 5 end }
+local done, total = ns.ZoneCard.Quests(1438)
+local other, otherTotal = ns.ZoneCard.Quests(1411)
+RES = (done == 2 and total == 3 and other == 0 and otherTotal == 1 and not touched and ns.ZoneCard.QuestState():find("TBC", 1, true)) and "ok"
+  or ("done " .. tostring(done) .. " of " .. tostring(total) .. " / " .. tostring(other) .. " of " .. tostring(otherTotal) .. " touched " .. tostring(touched))`,
+});
+
 run('the zone card: a race newer than the quest data (Skyborne) takes the quests of its faction', {
   pre: SAVED('{}', 'version = 99, goalsInit = true, goalsVer = 3, goals = {}, stats = { counts = {}, deathZones = {}, tiers = {}, played = 1, first = 1 }'),
   body: ZONE_STUBS + '\n' + ZONE_ART + `
