@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.47.1-beta
+
+- Credits: the quests-per-land table that travels with Skald names QuestDB (MIT) and CMaNGOS in its header
+- A failure in the checks Skald makes a few seconds after login is now kept in the error list (`/skald report`) instead of vanishing
+- The table of quests per land is smaller (Forever shares the one of Vanilla)
+
 ## 0.47.0-beta
 
 - **Our own maps of the capital cities** on the Index: Stormwind, Ironforge, Darnassus, Orgrimmar, Thunder Bluff and Undercity, and the Exodar, Silvermoon and Shattrath of the Anniversary client, hand-drawn in ink and wash like the lands
