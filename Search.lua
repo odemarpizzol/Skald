@@ -18,7 +18,7 @@ Search.ROWS = 7        -- rows on the right page
 Search.GROUPS = {
     { key = "all" },
     { key = "quests",  kinds = { quest = true } },
-    { key = "battles", kinds = { boss = true, dungeon = true, death = true, revive = true } },
+    { key = "battles", kinds = { boss = true, dungeon = true, death = true, revive = true, bg = true } },
     { key = "loot",    kinds = { loot = true } },
     { key = "company", kinds = { party = true, reunion = true, guild = true, guildleave = true, tame = true } },
     { key = "journeys", kinds = { zone = true, flight = true, hearth = true, home = true, mount = true } },

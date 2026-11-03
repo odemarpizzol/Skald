@@ -26,8 +26,9 @@ local UI_TEXT = {
             companions = "Companions of the road remembered: %d.", reunions = "Meet again someone from a dungeon.",
             guild = "Join a guild.", party = "Join a group for the first time.",
             mounts = "Mounts collected: %d.", critters = "Companion pets collected: %d.",
-            gold = "Hold %d gold.", repFriendly = "Become Friendly with a faction.", repHonored = "Become Honored with a faction.", repExalted = "Reach Exalted with a faction.",
+            gold = "Hold %d gold.", repFriendly = "Become Friendly with a faction.", repHonored = "Become Honored with a faction.", repExalted = "Reach Exalted with a faction.", bgWins = "Battlegrounds won: %d.",
         },
+        NAMES_AT70 = { level60 = "Sixty, and the Road Goes On" },
         NAMES = {
             quests800 = "Eight Hundred Doors Knocked", quests1500 = "A Life Written in Errands", quests3000 = "The Tavern's Longest Tale",
             kills10000 = "A Harvest of Ten Thousand", kills25000 = "The Reaper's Ledger", bosses50 = "Fifty Thrones Toppled", bosses100 = "A Hundred Crowns in the Dust",
@@ -50,7 +51,7 @@ local UI_TEXT = {
             mounts1 = "The First Stirrup", mounts5 = "A Stable of My Own", mounts10 = "Hooves, Wings and Scales",
             critters1 = "A Small Companion", critters10 = "Pockets Full of Friends", critters25 = "A Little Ark of Critters",
             gold10 = "A Few Good Coins", gold100 = "A Heavy Purse", gold1000 = "A Dragon's Hoard",
-            repFriendly = "A Friendly Face", repHonored = "Honored Guest", repExalted = "Among the Exalted",
+            repFriendly = "A Friendly Face", repHonored = "Honored Guest", repExalted = "Among the Exalted", bg1 = "First Blood on the Field", bg10 = "A Veteran of the Banners", bg50 = "The Warlord's Ledger", level70 = "Two Worlds Under My Boots",
         },
     },
     ptBR = {
@@ -72,8 +73,9 @@ local UI_TEXT = {
             companions = "Companheiros de estrada lembrados: %d.", reunions = "Reencontre alguém de uma masmorra.",
             guild = "Entre numa guilda.", party = "Junte-se a um grupo pela primeira vez.",
             mounts = "Montarias reunidas: %d.", critters = "Mascotes reunidos: %d.",
-            gold = "Tenha %d de ouro.", repFriendly = "Torne-se Amistoso com uma facção.", repHonored = "Torne-se Honrado com uma facção.", repExalted = "Chegue a Exaltado com uma facção.",
+            gold = "Tenha %d de ouro.", repFriendly = "Torne-se Amistoso com uma facção.", repHonored = "Torne-se Honrado com uma facção.", repExalted = "Chegue a Exaltado com uma facção.", bgWins = "Campos de batalha vencidos: %d.",
         },
+        NAMES_AT70 = { level60 = "Sessenta, e a Estrada Continua" },
         NAMES = {
             quests800 = "Oitocentas Portas Batidas", quests1500 = "Uma Vida Escrita em Recados", quests3000 = "O Conto Mais Longo da Taverna",
             kills10000 = "Uma Colheita de Dez Mil", kills25000 = "O Livro de Contas do Ceifador", bosses50 = "Cinquenta Tronos Derrubados", bosses100 = "Cem Coroas no Pó",
@@ -96,7 +98,7 @@ local UI_TEXT = {
             mounts1 = "O Primeiro Estribo", mounts5 = "Uma Cocheira Só Minha", mounts10 = "Cascos, Asas e Escamas",
             critters1 = "Um Pequeno Companheiro", critters10 = "Bolsos Cheios de Amigos", critters25 = "Uma Arca de Bichinhos",
             gold10 = "Algumas Boas Moedas", gold100 = "Uma Bolsa Pesada", gold1000 = "O Tesouro de um Dragão",
-            repFriendly = "Um Rosto Amigo", repHonored = "Hóspede de Honra", repExalted = "Entre os Exaltados",
+            repFriendly = "Um Rosto Amigo", repHonored = "Hóspede de Honra", repExalted = "Entre os Exaltados", bg1 = "Primeiro Sangue no Campo", bg10 = "Uma Vida de Estandartes", bg50 = "O Livro do Senhor da Guerra", level70 = "Dois Mundos Sob as Minhas Botas",
         },
     },
     frFR = {
@@ -118,8 +120,9 @@ local UI_TEXT = {
             companions = "Compagnons de route dont on se souvient\194\160: %d.", reunions = "Retrouvez quelqu'un d'un donjon.",
             guild = "Rejoignez une guilde.", party = "Rejoignez un groupe pour la première fois.",
             mounts = "Montures réunies\194\160: %d.", critters = "Mascottes réunies\194\160: %d.",
-            gold = "Possédez %d pièces d'or.", repFriendly = "Devenez Amical avec une faction.", repHonored = "Devenez Honoré avec une faction.", repExalted = "Atteignez Exalté avec une faction.",
+            gold = "Possédez %d pièces d'or.", repFriendly = "Devenez Amical avec une faction.", repHonored = "Devenez Honoré avec une faction.", repExalted = "Atteignez Exalté avec une faction.", bgWins = "Champs de bataille gagnés\194\160: %d.",
         },
+        NAMES_AT70 = { level60 = "Soixante, et la route continue" },
         NAMES = {
             quests800 = "Huit cents portes frappées", quests1500 = "Une vie écrite en courses", quests3000 = "Le plus long récit de la taverne",
             kills10000 = "Une moisson de dix mille", kills25000 = "Le registre du faucheur", bosses50 = "Cinquante trônes renversés", bosses100 = "Cent couronnes dans la poussière",
@@ -142,7 +145,7 @@ local UI_TEXT = {
             mounts1 = "Le premier étrier", mounts5 = "Une écurie bien à moi", mounts10 = "Sabots, ailes et écailles",
             critters1 = "Un petit compagnon", critters10 = "Des poches pleines d'amis", critters25 = "Une petite arche de bestioles",
             gold10 = "Quelques bonnes pièces", gold100 = "Une bourse bien lourde", gold1000 = "Le trésor d'un dragon",
-            repFriendly = "Un visage ami", repHonored = "Hôte d'honneur", repExalted = "Parmi les exaltés",
+            repFriendly = "Un visage ami", repHonored = "Hôte d'honneur", repExalted = "Parmi les exaltés", bg1 = "Premier sang sur le champ", bg10 = "Une vie de bannières", bg50 = "Le registre du seigneur de guerre", level70 = "Deux mondes sous mes bottes",
         },
     },
 }
@@ -161,7 +164,7 @@ local CATS = {
 -- `secret` keeps the name hidden until the feat is done.
 -- `since` is the version of the list in which a goal came: a diary that already looked at the list marks the ones that
 -- came later quietly (no page, no notice), whatever they find already done.
-local GOALS_VERSION = 4
+local GOALS_VERSION = 6
 local GOALS = {
     { id = "level10", cat = "road", tier = 1, fact = "level", target = 10, since = 2 },
     { id = "level20", cat = "road", tier = 2, fact = "level", target = 20, since = 2 },
@@ -235,6 +238,12 @@ local GOALS = {
     { id = "days30", cat = "road", tier = 2, fact = "days", target = 30, since = 4 },
     { id = "days100", cat = "road", tier = 4, fact = "days", target = 100, since = 4 },
     { id = "days365", cat = "road", tier = 5, fact = "days", target = 365, since = 4 },
+    -- the battlegrounds (version 5, for Forever's Darkspear Islands and the old fields): won matches the diary saw
+    { id = "bg1", cat = "war", tier = 2, fact = "bgWins", target = 1, since = 5 },
+    { id = "bg10", cat = "war", tier = 3, fact = "bgWins", target = 10, since = 5 },
+    { id = "bg50", cat = "war", tier = 4, fact = "bgWins", target = 50, since = 5 },
+    -- the Burning Crusade (version 6): a goal for the level cap of a client where it is seventy (listed only there)
+    { id = "level70", cat = "road", tier = 5, fact = "level", target = 70, since = 6, cap = 70 },
 }
 -- Points follow the rarity of the seal (common .. legendary). They are worked out when shown, from the goals reached,
 -- so a change of value needs no change to what is saved.
@@ -243,7 +252,13 @@ local POINTS = { 5, 10, 25, 50, 100 }
 local GOAL_BY_ID = {}
 for _, g in ipairs(GOALS) do GOAL_BY_ID[g.id] = g end
 
-ns.GoalName = function(id) return UI.NAMES[id] or tostring(id) end
+-- the name of a goal: sixty is the top of the world where the cap is sixty, and only a step where it is seventy
+local function NameOf(id)
+    local alt = UI.NAMES_AT70 and UI.NAMES_AT70[id]
+    if alt and ns.MaxLevel and ns.MaxLevel() >= 70 then return alt end
+    return UI.NAMES[id]
+end
+ns.GoalName = function(id) return NameOf(id) or tostring(id) end
 ns.GoalPoints = function(id)
     local g = GOAL_BY_ID[id]
     return g and POINTS[g.tier] or nil
@@ -253,6 +268,8 @@ end
 -- A collection goal is listed only when this client's journal answered for it (or when it was already reached):
 -- a system the client lacks would leave a goal that can never be done.
 local function Listed(g, db)
+    -- a goal of a level cap is listed where the client has that cap (or when it was already reached)
+    if g.cap and not (db and db.goals and db.goals[g.id]) and (not ns.MaxLevel or ns.MaxLevel() < g.cap) then return false end
     if not g.coll then return true end
     if db and db.goals and db.goals[g.id] then return true end
     local c = SkaldAPI.Collections and SkaldAPI.Collections() or {}
@@ -339,6 +356,7 @@ local function Facts()
     f.companions = Count(db.companions)
     f.guild = (db.guild and 1) or 0
     f.party = (db.flags and db.flags.party) and 1 or 0
+    f.bgWins = type(stats.bgWins) == "number" and stats.bgWins or 0
     local rare, epic = 0, 0
     for tier, n in pairs(stats.tiers or {}) do
         if type(tier) == "number" and type(n) == "number" then
@@ -700,7 +718,7 @@ local function BuildGoalsTab(panel)
                 local value = facts[g.fact] or 0
                 local target = g.target
                 row.evidence, row.entry = nil, nil
-                row.worth, row.title = (not g.secret or rec) and (POINTS[g.tier] or 0) or nil, UI.NAMES[g.id]
+                row.worth, row.title = (not g.secret or rec) and (POINTS[g.tier] or 0) or nil, NameOf(g.id)
                 row.points:SetText((g.secret and not rec) and "?" or tostring(POINTS[g.tier] or 0))
                 if rec then
                     row.points:SetTextColor(head[1], head[2], head[3])
@@ -714,10 +732,10 @@ local function BuildGoalsTab(panel)
                 if rec then
                     row.icon:SetTexture(TEX .. "goal_medal" .. g.tier)
                     row.icon:SetAlpha(1)
-                    row.name:SetText(UI.NAMES[g.id])
+                    row.name:SetText(NameOf(g.id))
                     row.name:SetTextColor(head[1], head[2], head[3])
                     local line, entry = Evidence(g, db)
-                    row.evidence, row.entry, row.title = line, entry, UI.NAMES[g.id]
+                    row.evidence, row.entry, row.title = line, entry, NameOf(g.id)
                     row.desc:SetText(line or (rec.retro and UI.BEFORE or string.format(UI.DONE_ON, date(UI.DATE, rec.t or time()))))
                     row.bar:Set(1)
                     row.count:SetText((not rec.retro and rec.t) and date(UI.DATE, rec.t) or "")
@@ -732,7 +750,7 @@ local function BuildGoalsTab(panel)
                 else
                     row.icon:SetTexture(TEX .. "goal_medal" .. g.tier)
                     row.icon:SetAlpha(0.6)
-                    row.name:SetText(UI.NAMES[g.id])
+                    row.name:SetText(NameOf(g.id))
                     row.name:SetTextColor(body[1], body[2], body[3])
                     local shownTarget = target * (g.mult or 1)
                     row.desc:SetText(string.format(UI.FACT[g.fact], shownTarget))

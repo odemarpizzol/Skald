@@ -13,9 +13,10 @@ node dev/tools/regressions.js         # only the regression scenarios (add one p
 node dev/tools/validate_phrases.js    # only the phrase pools
 node dev/tools/lint.js [--update-baseline]   # scope-aware lint; --update-baseline accepts a new game API global
 node dev/tools/serve_docs.js          # preview of the web Reader (docs/reader)
+node dev/tools/variety.js [race] [class] [tone] [locale]   # measures how often a phrase comes back in a long climb (700 quests, 100 falls, 60 levels, 150 bosses); not part of checks.js
 ```
 
-Run `checks.js` before saying anything is ready. It runs Lua 5.3 in fengari with `dev/tools/mock.lua` standing in for the WoW API: a green run means "no obvious error", **not** "works in the game". Always tell the user the simulation is not the game.
+Run `checks.js` before saying anything is ready. It runs Lua 5.3 in fengari with `dev/tools/mock.lua` standing in for the WoW API (and runs the session again with `dev/tools/forever.lua`, the Forever client: a Mainline-family client without the Classic-only functions and with `issecretvalue`; regressions load it with `pre: FOREVER + ...`): a green run means "no obvious error", **not** "works in the game". Always tell the user the simulation is not the game.
 
 The tools resolve the addon as `<parent of repo>/Skald`, so the clone folder must be named `Skald`. `dev/tools/release.js` still assumes the old `Skald-publish` layout and has not been adapted to this clone.
 
@@ -51,5 +52,8 @@ All art is made by the user, a human, directly in Claude Design; Claude Code doe
 - In the Reader text a bar `|` starts an escape code in the game's text boxes, hence the caret as field separator.
 - New textures: TGA 32-bit, power-of-two size, in `Textures/` (all names used in code are checked by `checks.js`). They only show in the game after a full restart, not `/reload`.
 - Pages are written when the event fires, in combat too (`AddEntry` has no combat check; only memories wait). Do not claim the contrary in docs; payloads the client withholds are skipped with `Safe()`.
+- The voice "Of My People" (`SkaldDB.tone == "kin"`, default of a first install) never shows a number of level or points: `K.KinPool` tells level/milestone pages from `race_<race>_kinLevel` / `tone_kin_level` / `tone_kin_milestone` (no `%s`, no digit: `validate_phrases.js` checks it). Texts follow the time of each client: Forever is after Warcraft III, before the first raids; the Anniversary client is the Burning Crusade. `validate_phrases.js` fails on names of a time after the Burning Crusade everywhere, and on names of the Burning Crusade (Naaru, Sunwell, Exodar, Outland...) anywhere but in the lines of the two races that exist only then, `race_Draenei_*` and `race_BloodElf_*` (and the names of the Bard's pieces of music).
+- A profession needs its key in `K.PROFESSION_BY_LINE` and `K.PROFESSION_BY_NAME` (three languages), a `profession_<key>` pool in each language and, for its picture, an entry in `K.PF_ICONS` (without one the general icon of the trades is used). The level cap comes from `ns.MaxLevel()` (a goal with `cap = N` is listed only where the cap is N).
+- `dev/lore/` (what `/skald probe lore` kept, read by `dev/tools/lore_extract.js`) is the game's own text: it is in `.gitignore` and never goes to the public repository.
 - Several events are still unverified in the real client (see README "Limits").
 - User preferences: no TRP3 integration; Goals stay a clickable list; phrase variety is a permanent wish; no tiny versions; art is made by the user in Claude Design (prompt the user, they send PNGs, convert to TGA with sharp).

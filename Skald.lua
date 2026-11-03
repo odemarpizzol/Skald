@@ -26,7 +26,26 @@ local LOCALES = ns.LOCALES
 
 local L = LOCALES[GetLocale()] or LOCALES.enUS
 local PHRASES = L.phrases
+PHRASES.bg = PHRASES.bg or PHRASES.bgWin   -- a battleground page draws from bgWin or bgLoss (PoolFor); this only lets AddEntry know the kind
 local TITLE = "Skald"
+-- The Forever client (Interface 16001, game type "camelot", project 18): set before the first raids, so what belongs to a
+-- later time (the music of Outland, for one) is left out there.
+-- The level cap of this client: 60 in Forever and in the first Azeroth, 70 in the Burning Crusade.
+ns.MaxLevel = function()
+    local cap
+    pcall(function() cap = GetMaxPlayerLevel and GetMaxPlayerLevel() end)
+    if type(cap) ~= "number" or cap < 1 then cap = tonumber(_G.MAX_PLAYER_LEVEL) end
+    if type(cap) ~= "number" or cap < 1 then
+        local ok, _, _, _, toc = pcall(GetBuildInfo)
+        cap = (ok and type(toc) == "number" and toc >= 20000 and toc < 30000) and 70 or 60
+    end
+    return cap
+end
+ns.IsForever = function()
+    if type(WOW_PROJECT_ID) == "number" and WOW_PROJECT_ID == (WOW_PROJECT_CAMELOT or 18) then return true end
+    local ok, _, _, _, toc = pcall(GetBuildInfo)
+    return ok and type(toc) == "number" and toc >= 16000 and toc < 17000 or false
+end
 
 -- Parchment palette (dark inks that read well on paper).
 K.HEAD_INK = { 0.45, 0.38, 0.26 }
@@ -126,11 +145,11 @@ local Notify, PulseMinimap   -- the toast and the glow of the minimap button (de
 
 -- Who is writing, and how it went, flavour some pages: a class's own words, a race's, a quest that
 -- was hard or easy for your level. The pool chosen is stored with the page, so it reads the same later.
-K.FLAVOR_KINDS = { quest = true, level = true, death = true, boss = true, zone = true, dungeon = true }
+K.FLAVOR_KINDS = { quest = true, level = true, death = true, boss = true, zone = true, dungeon = true, hearth = true }
 local AddContext
 do
 local CONTEXT_KINDS = { dungeon = true, boss = true, death = true, zone = true, level = true,
-    hearth = true, revive = true, flight = true, home = true, mount = true }   -- the hour of the day, for the line that sets the scene
+    hearth = true, revive = true, flight = true, home = true, mount = true, bg = true }   -- the hour of the day, for the line that sets the scene
 local WITH_KINDS = { dungeon = true, boss = true, death = true }
 -- Another player is told apart by name and by the second part the client gives (the realm in the classic game;
 -- in the realmless Forever it comes back as the surname, even for players of one's own world): the key kept in
@@ -190,19 +209,62 @@ local function NoteCompanions(entry)
     end
 end
 
+-- The race pools are named by the race file of the client. A race newer than the pools (Forever's Skyborne, whose
+-- file name was not seen yet) is matched by the start of its name, so "Skyborne", "SkyborneHorde"... share one pool.
+K.RACE_POOL_ALIAS = { { "^[Ss]ky", "Skyborne" } }
+K.RacePool = function(raceFile)
+    if type(raceFile) ~= "string" then return nil end
+    -- the alias first: whatever the client calls a Skyborne ("SkyborneAlliance"...), the side comes from the faction
+    for _, a in ipairs(K.RACE_POOL_ALIAS) do if raceFile:match(a[1]) then return a[2] end end
+    return raceFile
+end
+-- A race whose two sides have their own lore (the Skyborne: the Windshapers of the Horde, the High Order of the
+-- Alliance) has pools named race_<race><Faction>_<kind>; the common pool race_<race>_<kind> serves a character
+-- without a side yet, and also a third of the time otherwise, so both voices of the race are heard.
+K.RacePoolKey = function(raceFile, kind, fixed)
+    local base = K.RacePool(raceFile)
+    if not base then return nil end
+    local common = "race_" .. base .. "_" .. kind
+    local okF, faction = pcall(UnitFactionGroup, "player")
+    local own = okF and type(faction) == "string" and ("race_" .. base .. faction .. "_" .. kind)
+    if own and PHRASES[own] and (fixed or not PHRASES[common] or math.random() < 0.67) then return own end
+    return PHRASES[common] and common or nil
+end
+
 local function PickFlavor(kind, entry)
     if kind == "boss" and entry.tries then return nil end
+    -- the first land of a new character (a page of a land is written once for each land, so at level one or two it is the
+    -- starting area): a race with lines for its first steps (race_<race>_start) tells it with them
+    if kind == "zone" and entry.race and (UnitLevel("player") or 99) <= 2 then
+        local key = K.RacePoolKey(entry.race, "start")
+        if key then return key end
+    end
     if kind == "quest" and (entry.cend or (entry.tier or 1) >= 4 or (ns.CURATED and entry.q and ns.CURATED[entry.q])) then
         return nil
     end
     local tone = SkaldDB and SkaldDB.tone
-    if tone and tone ~= "epic" and PHRASES["tone_" .. tone .. "_" .. kind] and math.random() < 0.75 then
+    if tone == "kin" then
+        -- "Of My People": a level is told by PoolFor with no number at all (K.KinPool), whatever was drawn; a new land
+        -- or a fall is told in the voice of the race three times in four.
+        if kind == "level" or kind == "milestone" then return nil end
+        if entry.race and (kind == "zone" or kind == "death") then
+            local key = K.RacePoolKey(entry.race, kind)
+            if key and math.random() < 0.75 then return key end
+        end
+        -- a quest done is told with the lines of one's people about a third of the time (the highest seals, chains and the
+        -- hand-written stories were left out above, and a race with no lines of its own tells the quest as usual); it is the
+        -- commonest page of a long climb, so a line of a pool of sixteen must not come back too soon (dev/tools/variety.js)
+        if kind == "quest" and entry.race then
+            local key = K.RacePoolKey(entry.race, "quest")
+            if key and math.random() < K.RACE_QUEST_CHANCE then return key end
+        end
+    elseif tone and tone ~= "epic" and PHRASES["tone_" .. tone .. "_" .. kind] and math.random() < 0.75 then
         return "tone_" .. tone .. "_" .. kind
     end
     local keys = {}
     local function Offer(name) if PHRASES[name] then keys[#keys + 1] = name end end
     if entry.cls then Offer("class_" .. entry.cls .. "_" .. kind) end
-    if entry.race then Offer("race_" .. entry.race .. "_" .. kind) end
+    if entry.race then local key = K.RacePoolKey(entry.race, kind); if key then Offer(key) end end
     if kind == "quest" then
         if entry.cend or (entry.tier or 1) >= 4 or (ns.CURATED and entry.q and ns.CURATED[entry.q]) then return nil end
         if entry.ql and entry.pl then
@@ -218,6 +280,7 @@ local function PickFlavor(kind, entry)
     return pick
 end
 
+K.RACE_QUEST_CHANCE = 0.35   -- how often a quest is told with the lines of the race, in the voice "Of My People"
 K.FLAVOR_FULL = 8   -- the lines a class or race pool needs to be drawn as often as the plain ones
 K.CRAFT_MERGE = 1200   -- seconds: making the same thing again within this time adds to the page of the last one
 K.QUEST_START_MAX, K.QUEST_START_DAYS = 300, 60   -- quests whose acceptance is kept, and for how long
@@ -238,6 +301,7 @@ K.RECORD_FLAG = {
     quest = "quest", level = "level", milestone = "level", death = "death",
     boss = "boss", dungeon = "boss", zone = "zone", skill = "profession", profession = "profession",
     loot = "loot", mark = "mark", home = "mark", rep = "mark", flight = "zone", tame = "mark", revive = "death", hearth = "mark",
+    bg = "boss",
 }
 
 -- Entries store the event type, its argument and which phrase was drawn;
@@ -345,7 +409,7 @@ local function AddEntry(kind, arg, zone, extra)
     -- Not one of the last few phrases told of this kind (as many as the pool allows, up to five).
     db.recentIdx = db.recentIdx or {}
     local key = table.concat({ kind, tostring(entry.qtype or entry.cat or ""), tostring(entry.src or ""),
-        tostring(entry.tier or ""), tostring(entry.fl or ""), tostring(entry.tries and math.min(entry.tries, 4) or (entry.since and (entry.since >= 2 and "d" or "y")) or "") }, ":")
+        tostring(kind ~= "goal" and entry.tier or ""), tostring(entry.fl or ""), tostring(entry.tries and math.min(entry.tries, 4) or (entry.since and (entry.since >= 2 and "d" or "y")) or "") }, ":")
     local recent = db.recentIdx[key] or {}
     local keep = math.min(5, #list - 1)
     local idx = math.random(#list)
@@ -635,7 +699,39 @@ end
 local lootJoined   -- general loot lines joined with those of a weapon type or an armour material
 
 -- Which phrase pool a page draws from: by quest type and by rarity.
+-- The voice "Of My People" (tone "kin") never tells a number of level: a level or a milestone is told from the pool of
+-- the race (race_<race>_kinLevel), or the plain one of the voice, whatever pool the page drew when it was written, so
+-- choosing the voice tells the old pages again (the voice buttons bump ns.layoutRev).
+K.KinPool = function(e)
+    if not (SkaldDB and SkaldDB.tone == "kin") then return nil end
+    if e.kind == "milestone" then return PHRASES.tone_kin_milestone end
+    if e.kind ~= "level" then return nil end
+    local race = e.race
+    if not race then local ok, _, file = pcall(UnitRace, "player"); race = ok and file or nil end
+    local key = race and K.RacePoolKey(race, "kinLevel", true)   -- told again on every reading: no chance here
+    -- the lines of the race and the plain ones of the voice are drawn together (the race first: a line keeps its place
+    -- when lines are added to the common ones), so a long climb has two pools of sixteen to take a level from
+    return K.KinMix(key and PHRASES[key], PHRASES.tone_kin_level)
+end
+K.kinMixes = {}
+K.KinMix = function(own, common)
+    if not own or own == common then return common end
+    if not common then return own end
+    local byOwn = K.kinMixes[own]
+    if not byOwn then byOwn = {}; K.kinMixes[own] = byOwn end
+    local mix = byOwn[common]
+    if not mix or #mix ~= #own + #common then
+        mix = {}
+        for _, line in ipairs(own) do mix[#mix + 1] = line end
+        for _, line in ipairs(common) do mix[#mix + 1] = line end
+        byOwn[common] = mix
+    end
+    return mix
+end
+
 function PoolFor(e)
+    local kin = K.KinPool(e)
+    if kin then return kin end
     if e.fl and PHRASES[e.fl] then return PHRASES[e.fl] end
     -- Learning a profession has lines of its own for each of the twelve.
     if e.kind == "profession" then
@@ -650,6 +746,7 @@ function PoolFor(e)
         if e.sub == "healer" and PHRASES.reviveHealer then return PHRASES.reviveHealer end
         return PHRASES.revive
     end
+    if e.kind == "bg" then return (e.won and PHRASES.bgWin) or PHRASES.bgLoss end
     if e.kind == "tame" then
         if e.sub == "first" and PHRASES.tameFirst then return PHRASES.tameFirst end
         if e.sub == "level" and PHRASES.tameLevel then return PHRASES.tameLevel end
@@ -972,7 +1069,10 @@ local function QuestTitleNow(e)
         hit = false
         pcall(function()
             local t = C_QuestLog and C_QuestLog.GetTitleForQuestID and C_QuestLog.GetTitleForQuestID(id)
-            if type(t) ~= "string" or t == "" then
+            -- The game gives no title for a quest already handed in (not in the log, not in its cache). QuestDB knows it, but
+            -- only in English: another language keeps the title written down on the page, which is in the client's own words.
+            local english = tostring(GetLocale and GetLocale() or ""):sub(1, 2) == "en"
+            if (type(t) ~= "string" or t == "") and english then
                 local qdb = _G.LibStub and LibStub("LibQuestDB-1.0", true)
                 local q = qdb and qdb:GetQuest(id)
                 t = type(q) == "table" and (q.title or q.name) or nil
@@ -983,6 +1083,127 @@ local function QuestTitleNow(e)
     end
     return hit or e.arg
 end
+
+-- Place names in Portuguese. The phrases are written for a name with no article ("Em %s", "%s me recebeu"), which is right for
+-- Durotar and wrong for "Ilha Névoa Lazúli" ("Na Ilha...", "A Ilha ... me recebeu"). The first word of the name says its gender
+-- and number when it is a noun of a place; any other name (Durotar, Orgrimmar, Ventobravo, "As Minas Mortas") is left as it is.
+K.PLACE_NOUNS = {
+    f = "Ilha Floresta Costa Planície Península Baía Ponte Cidade Fortaleza Aldeia Vila Torre Caverna Gruta Cratera Praia Região Passagem Garganta Bacia Clareira Estrada Colina Montanha Serra Cordilheira Terra Mina Cripta Ruína Selva Fonte Nascente Ravina Abadia Praça Câmara Ponta Enseada Represa Savana Tundra Pradaria Baixada Encosta Escarpa Lagoa Geleira Caldeira",
+    m = "Vale Lago Pântano Deserto Monte Bosque Porto Forte Ponto Campo Rio Mar Passo Covil Acampamento Posto Santuário Templo Palácio Castelo Reduto Entreposto Mirante Barranco Desfiladeiro Abismo Altiplano Planalto Cânion Poço Jardim Cemitério Mosteiro Salão Pico Bastião Cume Istmo Rochedo Penhasco Túnel Orfanato Vulcão Lamaçal",
+    fp = "Planícies Colinas Montanhas Terras Ruínas Cavernas Minas Catacumbas Profundezas Cataratas Ilhas Florestas Costas Cordilheiras Pradarias Gargantas Fontes Torres Passagens Savanas Geleiras",
+    mp = "Pântanos Montes Campos Picos Bosques Vales Lagos Desertos Salões Túneis Penhascos Bastiões Desfiladeiros",
+}
+K.PLACE_GENDER = {}
+for gender, words in pairs(K.PLACE_NOUNS) do
+    for word in words:gmatch("%S+") do K.PLACE_GENDER[word] = gender end
+end
+K.PLACE_FORMS = {   -- the article, and its contractions with em, de, a and por
+    f  = { art = "a",  em = "na",  de = "da",  a = "à",  por = "pela" },
+    m  = { art = "o",  em = "no",  de = "do",  a = "ao", por = "pelo" },
+    fp = { art = "as", em = "nas", de = "das", a = "às", por = "pelas" },
+    mp = { art = "os", em = "nos", de = "dos", a = "aos", por = "pelos" },
+}
+K.PLACE_KINDS = { zone = true, death = true, revive = true, hearth = true, home = true, dungeon = true }   -- the pages whose %s is a place
+-- `phrase` with the article put where `token` (the %s, or a {tag} of the Saga) stands for `name`: em, de, a and por become
+-- na/no, da/do, à/ao and pela/pelo; after any other word, or at the start, the article comes before the name.
+-- French: the same, for à and de (au, à la, aux, à l'; du, de la, des, de l', and d' before a bare name that starts with a
+-- vowel: d'Elwynn), and the article put after dans, sur, vers, depuis and devant. A name that carries its own article ("Les
+-- Tarides") loses it where the preposition takes it ("aux Tarides"). A name no noun below tells is left as it was.
+K.PLACE_NOUNS_FR = {
+    f = "Forêt Vallée Île Baie Côte Plaine Colline Montagne Grotte Caverne Mine Tour Forteresse Cité Ville Terre Crique Falaise Passe Route Rivière Source Prairie Savane Jungle Lande Citadelle Abbaye Cathédrale Chapelle Salle Crypte Fosse Gorge Brèche Cascade Péninsule Région Zone Frontière Marche Steppe Toundra Dune Oasis Cime Clairière Auberge Taverne Mer Rive Presqu'île Gorge Voie",
+    m = "Mont Marais Désert Plateau Lac Pic Cap Gouffre Ravin Bois Fleuve Détroit Camp Village Port Refuge Poste Pont Temple Palais Château Repaire Sanctuaire Bastion Fort Domaine Cimetière Canyon Défilé Rivage Littoral Territoire Quartier Donjon Cratère Glacier Récif Archipel Continent Royaume Havre Bourg Hameau Belvédère Océan Val Col Sentier Chemin Marché",
+    p = "Plaines Collines Montagnes Terres Ruines Cavernes Mines Catacombes Profondeurs Cascades Îles Forêts Côtes Clairières Prairies Gorges Falaises Salles Tours Sources Landes Steppes Dunes Marches Monts Pics Bois Lacs Déserts Canyons Défilés Bastions Récifs Vallées Marécages Champs",
+}
+K.PLACE_GENDER_FR = {}
+for gender, words in pairs(K.PLACE_NOUNS_FR) do
+    for word in words:gmatch("%S+") do K.PLACE_GENDER_FR[word] = gender end
+end
+K.FR_PREPS = { ["à"] = "à", ["À"] = "à", ["de"] = "de", ["De"] = "de", dans = "keep", Dans = "keep", sur = "keep", Sur = "keep",
+    vers = "keep", Vers = "keep", depuis = "keep", Depuis = "keep", devant = "keep", Devant = "keep" }
+K.FR_FORMS = {
+    f = { art = "la", ["à"] = "à la", de = "de la" }, m = { art = "le", ["à"] = "au", de = "du" },
+    p = { art = "les", ["à"] = "aux", de = "des" }, el = { art = "l'", ["à"] = "à l'", de = "de l'" },
+}
+K.FrVowel = function(name) return name:find("^[AEIOUYaeiouy]") ~= nil or name:find("^\195[\128-\134\136-\143\146-\150\152-\156]") ~= nil end
+K.FrCap = function(text)
+    if text:sub(1, 2) == "\195\160" then return "\195\128" .. text:sub(3) end
+    return text:sub(1, 1):upper() .. text:sub(2)
+end
+K.PlaceArticlesFr = function(phrase, name, token)
+    local first = name:match("^(%S+)") or ""
+    local gender, shownName = K.PLACE_GENDER_FR[first], nil
+    if first == "Les" then gender, shownName = "p", name:sub(5)
+    elseif first == "Le" then gender, shownName = "m", name:sub(4)
+    elseif first == "La" then gender, shownName = "f", name:sub(4)
+    elseif name:sub(1, 2) == "L'" then gender, shownName = "el", name:sub(3) end
+    if shownName == "" then return phrase end
+    local singular = gender == "f" or gender == "m"
+    if singular and not shownName and K.FrVowel(name) then gender = "el" end
+    local forms = gender and K.FR_FORMS[gender]
+    local bare = not gender and K.FrVowel(name)   -- a name with no article that starts with a vowel: d'Elwynn
+    if not forms and not bare then return phrase end
+    local result, from = "", 1
+    while true do
+        local at = phrase:find(token, from, true)
+        if not at then break end
+        local before = result .. phrase:sub(from, at - 1)
+        local word = before:match("(%S+) $")
+        local kind = word and K.FR_PREPS[word]
+        local head, literal = "", token
+        if kind and forms then
+            if kind == "keep" then head = forms.art .. (gender == "el" and "" or " ")
+            else
+                head = forms[kind] .. (gender == "el" and "" or " ")
+                before = before:sub(1, #before - #word - 1)
+                if word:match("^%u") or word:sub(1, 2) == "\195\128" then head = K.FrCap(head) end
+                if before ~= "" and not before:match("%s$") then before = before .. " " end
+            end
+            if shownName then literal = (shownName:gsub("%%", "%%%%")) end
+        elseif kind == "de" and bare then
+            before = before:sub(1, #before - #word - 1)
+            head = word:match("^%u") and "D'" or "d'"
+            if before ~= "" and not before:match("%s$") then before = before .. " " end
+        end
+        result = before .. head .. literal
+        from = at + #token
+    end
+    return result .. phrase:sub(from)
+end
+K.PlaceArticles = function(phrase, name, token)
+    if type(phrase) == "string" and type(name) == "string" and GetLocale() == "frFR" then return K.PlaceArticlesFr(phrase, name, token) end
+    if type(phrase) ~= "string" or type(name) ~= "string" or GetLocale() ~= "ptBR" then return phrase end
+    local forms = K.PLACE_FORMS[K.PLACE_GENDER[name:match("^(%S+)") or ""] or ""]
+    if not forms then return phrase end
+    local result, from = "", 1
+    while true do
+        local at = phrase:find(token, from, true)
+        if not at then break end
+        local before = result .. phrase:sub(from, at - 1)
+        local head = ""
+        if before == "" then
+            head = forms.art:sub(1, 1):upper() .. forms.art:sub(2) .. " "
+        else
+            local word = before:match("(%S+) $")   -- the word right before the name, when a space is all that parts them
+            if word then
+                local lower = word:lower()   -- ASCII only, which is all em, de, a and por need
+                if lower == "em" or lower == "de" or lower == "a" or lower == "por" then
+                    local prep = forms[lower]
+                    if word:match("^%u") then prep = prep:sub(1, 1):upper() .. prep:sub(2) end
+                    before = before:sub(1, #before - #word - 1)
+                    head = prep .. " "
+                elseif word:match("[%.!?]$") then
+                    head = forms.art:sub(1, 1):upper() .. forms.art:sub(2) .. " "
+                else
+                    head = forms.art .. " "
+                end
+            end   -- after a quote or a bracket the name is left as it is
+        end
+        result = before .. head .. token
+        from = at + #token
+    end
+    return result .. phrase:sub(from)
+end
+ns.PlaceArticles = K.PlaceArticles
 
 local function RenderEntry(e)
     if e.kind == "day" and e.day then return DayText(e) end
@@ -1019,7 +1240,9 @@ local function RenderEntry(e)
             shown = ColoredItem(ref, live or name, quality)
         end
     end
-    local text = string.format(list[((e.idx or 1) - 1) % #list + 1], shown)
+    local phrase = list[((e.idx or 1) - 1) % #list + 1]
+    if K.PLACE_KINDS[e.kind] then phrase = K.PlaceArticles(phrase, shown, "%s") end
+    local text = string.format(phrase, shown)
     text = text:gsub("{steps}", function() return tostring(e.cend or "") end)
     text = text:gsub("{tries}", function() return tostring(e.tries or "") end)
     text = text:gsub("{days}", function() return tostring(e.since or "") end)
@@ -1031,7 +1254,7 @@ local function RenderEntry(e)
     text = text:gsub("{npc}", function() return npc end)
     -- what a goal reached is worth belongs to the page itself, so the notice tells it too
     local gain = ""
-    if e.kind == "goal" and ns.GoalPoints and L.GOAL_GAIN then
+    if e.kind == "goal" and ns.GoalPoints and L.GOAL_GAIN and not (SkaldDB and SkaldDB.tone == "kin") then
         local points = ns.GoalPoints(e.arg)
         if points then gain = " " .. string.format(L.GOAL_GAIN, points) end
     end
@@ -1125,7 +1348,8 @@ end
 -- It is set aside with the pages and brought back with them, and emptied with them, so a cleared diary or a new
 -- character with an old name never inherits it.
 K.DIARY_STATE = { "pets", "petNow", "companions", "questObj", "questStart", "visitedMaps", "resume", "attempts",
-    "taxi", "marks", "goals", "goalsInit", "goalsVer", "collInit", "rep", "memoryAt", "recentIdx", "anniv", "zoneKills", "killBase" }
+    "taxi", "marks", "goals", "goalsInit", "goalsVer", "collInit", "rep", "memoryAt", "recentIdx", "anniv", "zoneKills", "killBase",
+    "birthMap", "mountSpells" }
 
 local function TakeState(db)
     local state = {}
@@ -1270,6 +1494,7 @@ K.EVENT_ICON = {
     mark = "milestone", home = "st_hearth", rep = "achievement", flight = "st_flight",
     tame = "pet",
     revive = "revive", hearth = "st_hearth",
+    bg = "bg",
 }
 -- Professions: the game's skill line id says which one it is whatever the language; the
 -- name is the fallback (and how pages written before this existed are recognised).
@@ -1277,23 +1502,27 @@ K.PROFESSION_BY_LINE = {
     [171] = "alchemy", [164] = "blacksmithing", [333] = "enchanting", [202] = "engineering",
     [182] = "herbalism", [165] = "leatherworking", [186] = "mining", [393] = "skinning",
     [197] = "tailoring", [185] = "cooking", [129] = "firstaid", [356] = "fishing",
+    [755] = "jewelcrafting",   -- the Burning Crusade
 }
+-- The professions that have a picture of their own (Textures/pf_<key>.tga); the others use the general one of the trades.
+K.PF_ICONS = { alchemy = true, blacksmithing = true, cooking = true, enchanting = true, engineering = true, firstaid = true,
+    fishing = true, herbalism = true, jewelcrafting = true, leatherworking = true, mining = true, skinning = true, tailoring = true }
 K.PROFESSION_BY_NAME = {
     -- enUS
     ["alchemy"] = "alchemy", ["blacksmithing"] = "blacksmithing", ["enchanting"] = "enchanting",
     ["engineering"] = "engineering", ["herbalism"] = "herbalism", ["leatherworking"] = "leatherworking",
     ["mining"] = "mining", ["skinning"] = "skinning", ["tailoring"] = "tailoring",
-    ["cooking"] = "cooking", ["first aid"] = "firstaid", ["fishing"] = "fishing",
+    ["cooking"] = "cooking", ["first aid"] = "firstaid", ["fishing"] = "fishing", ["jewelcrafting"] = "jewelcrafting",
     -- ptBR
     ["alquimia"] = "alchemy", ["ferraria"] = "blacksmithing", ["encantamento"] = "enchanting",
     ["engenharia"] = "engineering", ["herborismo"] = "herbalism", ["couraria"] = "leatherworking",
     ["mineração"] = "mining", ["esfolamento"] = "skinning", ["alfaiataria"] = "tailoring",
-    ["culinária"] = "cooking", ["primeiros socorros"] = "firstaid", ["pesca"] = "fishing",
+    ["culinária"] = "cooking", ["primeiros socorros"] = "firstaid", ["pesca"] = "fishing", ["joalheria"] = "jewelcrafting",
     -- frFR
     ["alchimie"] = "alchemy", ["forge"] = "blacksmithing", ["enchantement"] = "enchanting",
     ["ingénierie"] = "engineering", ["herboristerie"] = "herbalism", ["travail du cuir"] = "leatherworking",
     ["minage"] = "mining", ["dépeçage"] = "skinning", ["couture"] = "tailoring",
-    ["cuisine"] = "cooking", ["secourisme"] = "firstaid", ["pêche"] = "fishing",
+    ["cuisine"] = "cooking", ["secourisme"] = "firstaid", ["pêche"] = "fishing", ["joaillerie"] = "jewelcrafting",
 }
 local function ProfessionKey(skillLine, name)
     local key = skillLine and K.PROFESSION_BY_LINE[tonumber(skillLine)]
@@ -1313,10 +1542,11 @@ local function EventIconPath(kind, entry)
     local file = (name:sub(1, 3) == "st_") and name or ("ev_" .. name)
     if kind == "profession" or kind == "skill" then
         local key = (entry and entry.pf) or (entry and ProfessionKey(nil, entry.arg))
-        if key then file = "pf_" .. key end
+        if key and K.PF_ICONS[key] then file = "pf_" .. key end
     end
     return "Interface\\AddOns\\Skald\\Textures\\" .. file
 end
+SkaldAPI.EventIconPath = EventIconPath
 
 -- Parchment buttons ----------------------------------------------------------
 -- Flat leather tabs that sit on the sheet like the index tabs of a book, in place of
@@ -1639,9 +1869,9 @@ end
 K.DOODLE_OF = {
     quest = "scroll", level = "star", milestone = "star", death = "skull", boss = "sword", dungeon = "sword",
     zone = "map", flight = "boots", mount = "boots", tame = "paw", skill = "anvil", profession = "anvil",
-    hearth = "camp", home = "camp", guild = "mug", rep = "mug",
+    hearth = "camp", home = "camp", guild = "mug", rep = "mug", bg = "banner",
 }
-K.DOODLE_ORDER = { "sword", "skull", "map", "star", "camp", "boots", "paw", "anvil", "mug", "scroll" }
+K.DOODLE_ORDER = { "sword", "banner", "skull", "map", "star", "camp", "boots", "paw", "anvil", "mug", "scroll" }
 K.DOODLE_WEIGHT = { scroll = 0.3 }
 function ns.DensityBand()
     local d = ns.DensityCfg()
@@ -1873,7 +2103,7 @@ do
 local toastFrame, lastToast = nil, 0
 local NOTIFY_KINDS = {
     level = true, milestone = true, mark = true, boss = true, dungeon = true, achievement = true,
-    mount = true, home = true, rep = true, flight = true, guild = true, tame = true, goal = true,
+    mount = true, home = true, rep = true, flight = true, guild = true, tame = true, goal = true, bg = true,
 }
 local function PlainLine(s)
     s = tostring(s or "")
@@ -1929,7 +2159,7 @@ end
 -- The rarity of a page that is not a quest, for the colour of its seal (as on the map).
 local TOAST_TIER = {
     zone = 1, level = 2, milestone = 4, death = 1, dungeon = 3, boss = 4, mount = 3, guild = 3,
-    party = 2, reunion = 2, goal = 3, achievement = 5, skill = 2, profession = 2, tame = 2, mark = 4, home = 1, rep = 3, flight = 1, hearth = 1,
+    party = 2, reunion = 2, goal = 3, achievement = 5, skill = 2, profession = 2, tame = 2, mark = 4, home = 1, rep = 3, flight = 1, hearth = 1, bg = 3,
 }
 local TEXD = "Interface\\AddOns\\Skald\\Textures\\"
 
@@ -4258,8 +4488,10 @@ K.Collections = function()
             end
         end
     end)
+    -- The Burning Crusade has no mount journal, only the companions of the game: they answer at once, so they make the collection ready
     pcall(function()
-        if GetNumCompanions then v.mounts = math.max(v.mounts or 0, GetNumCompanions("MOUNT") or 0) end
+        local n = GetNumCompanions and GetNumCompanions("MOUNT")
+        if type(n) == "number" then v.mounts, v.ready, v.mountsReady = math.max(v.mounts or 0, n), true, true end
     end)
     pcall(function()
         local P = C_PetJournal
@@ -4269,7 +4501,8 @@ K.Collections = function()
         end
     end)
     pcall(function()
-        if GetNumCompanions then v.critters = math.max(v.critters or 0, GetNumCompanions("CRITTER") or 0) end
+        local n = GetNumCompanions and GetNumCompanions("CRITTER")
+        if type(n) == "number" then v.critters, v.ready, v.petsReady = math.max(v.critters or 0, n), true, true end
     end)
     K.collCache = { at = now, v = v }
     return v
@@ -4317,6 +4550,7 @@ K.OPTIONAL_EVENTS = {
     "HEARTHSTONE_BOUND", "UPDATE_FACTION", "TAXIMAP_OPENED", "PLAYER_MONEY",
     "LEARNED_SPELL_IN_TAB", "QUEST_ACCEPTED", "CHAT_MSG_ADDON", "VOICE_CHAT_TTS_PLAYBACK_FINISHED",
     "PLAYER_UNGHOST", "PLAYER_ALIVE", "CONFIRM_XP_LOSS", "RESURRECT_REQUEST",
+    "UPDATE_BATTLEFIELD_STATUS", "PVP_MATCH_COMPLETE", "COMPANION_LEARNED",
 }
 for _, ev in ipairs(K.OPTIONAL_EVENTS) do
     pcall(frame.RegisterEvent, frame, ev)
@@ -4818,6 +5052,7 @@ end
 
 local function OnLoot(text)
     local db, s = Journal(), Settings()
+    text = Safe(text)   -- a line the client withholds (Forever, in a fight) is not read
     if not db or type(text) ~= "string" then return end
     local link, src, quantity
     for _, def in ipairs(LootPatterns()) do
@@ -4943,6 +5178,217 @@ end
 
 -- A hunter's companions, the reminder on returning to the game, and a probe for class events. -----
 local Mile = {}
+
+-- Where a character of a new race was born: the map it stands on at level 1 or 2, kept as a number (the Saga
+-- names it in the language of the moment). The old races have their valleys in Saga.lua and need nothing.
+-- The birthplace is a zone: the map of the world, of a continent (Kalimdor) is too wide to tell. The game can still answer
+-- with the continent in the first seconds after the login (seen with a Draenei: that first answer was kept for good), so a continent is
+-- never kept, one kept before is dropped, and the look is repeated (zone change, the minute, the first seconds) until a zone
+-- answers while the character is at level 1 or 2.
+K.IsZoneMap = function(id)
+    local ok, info = pcall(C_Map.GetMapInfo, id)
+    if not ok or type(info) ~= "table" then return false end
+    return type(info.mapType) ~= "number" or info.mapType >= 3   -- 0 cosmic, 1 world, 2 continent
+end
+Mile.NoteBirthplace = function()
+    local db = Journal()
+    if not db or not (UnitLevel and C_Map and C_Map.GetBestMapForUnit and C_Map.GetMapInfo) then return end
+    if db.birthMap and not K.IsZoneMap(db.birthMap) then db.birthMap = nil end
+    if db.birthMap or (UnitLevel("player") or 99) > 2 then return end
+    local map = Safe(C_Map.GetBestMapForUnit("player"))
+    if type(map) == "number" and map > 0 and K.IsZoneMap(map) then db.birthMap = map end
+end
+
+-- /skald probe events: every event the client fires is counted by name in SkaldDB.probeEvents (a developer tool
+-- for Forever, whose new systems, camps and Legacy among them, have events nobody has named yet). The ones whose
+-- name looks new keep their first few payloads (plain values only). Off unless asked for; it stays on across
+-- logins until /skald probe events off.
+K.PROBE_WATCH = { "CAMP", "LEGACY", "PERK", "PVP", "BATTLEFIELD", "HARDCORE", "COLLECTION", "TRANSMOG", "RULESET", "FOREVER", "CAMELOT" }
+Mile.ProbeAllEvents = function(on)
+    local s = Settings()
+    s.probeAll = on or nil
+    if not Mile.probeFrame then
+        Mile.probeFrame = CreateFrame("Frame")
+        Mile.probeFrame:SetScript("OnEvent", function(_, event, ...)
+            local log = SkaldDB.probeEvents or {}
+            SkaldDB.probeEvents = log
+            log.count = log.count or {}
+            log.count[event] = (log.count[event] or 0) + 1
+            if log.count[event] > 3 then return end
+            for _, word in ipairs(K.PROBE_WATCH) do
+                if event:find(word, 1, true) then
+                    local rec = { ev = event, t = time() }
+                    for i = 1, math.min(select("#", ...), 6) do
+                        local v = Safe((select(i, ...)))
+                        rec[i] = (type(v) == "string" or type(v) == "number" or type(v) == "boolean") and v or type(v)
+                    end
+                    log.seen = log.seen or {}
+                    table.insert(log.seen, rec)
+                    while #log.seen > 100 do table.remove(log.seen, 1) end
+                    break
+                end
+            end
+        end)
+    end
+    if on then
+        if not pcall(Mile.probeFrame.RegisterAllEvents, Mile.probeFrame) then s.probeAll = nil end
+    else
+        pcall(Mile.probeFrame.UnregisterAllEvents, Mile.probeFrame)
+    end
+end
+-- What the probe heard whose name looks new, for the chat (the full counts stay in the saved variables).
+Mile.ProbeEventLines = function()
+    local log = SkaldDB and SkaldDB.probeEvents
+    local lines = {}
+    for event, n in pairs(log and log.count or {}) do
+        for _, word in ipairs(K.PROBE_WATCH) do
+            if event:find(word, 1, true) then lines[#lines + 1] = event .. " x" .. n; break end
+        end
+    end
+    table.sort(lines)
+    if #lines == 0 then lines[1] = L.PROBE_EVENTS_NONE end
+    return lines
+end
+
+-- The Burning Crusade has no mount journal and no NEW_MOUNT_ADDED: a mount learned is found among the companions of the game.
+-- The spells of the mounts already known are kept (db.mountSpells); the first look only learns them, a later one writes a
+-- page for each new one. (Not seen in the Anniversary client yet.)
+Mile.CheckMounts = function()
+    local db = Journal()
+    if not db or not (GetNumCompanions and GetCompanionInfo) then return end
+    local ok, n = pcall(GetNumCompanions, "MOUNT")
+    if not ok or type(n) ~= "number" then return end
+    local first = db.mountSpells == nil
+    local known = db.mountSpells or {}
+    for i = 1, n do
+        local okInfo, _, name, spell = pcall(GetCompanionInfo, "MOUNT", i)   -- creature id, name, spell id
+        name, spell = Safe(name), Safe(spell)
+        if okInfo and type(spell) == "number" and not known[spell] then
+            known[spell] = true
+            if not first and type(name) == "string" and name ~= "" then AddEntry("mount", name) end
+        end
+    end
+    db.mountSpells = known
+end
+
+-- /skald probe lore: while it is on, what the game tells in words (a quest offered, asked about and handed in; a talk; a creature
+-- that speaks; a book) is kept in SkaldDB.loreProbe with who told it and where, so the lines of a race and of a land can be written
+-- from what the game itself says (a developer tool, for Forever's new lands and the Skyborne). Off unless asked for; it stays on
+-- across logins until /skald probe lore off. Plain text, at most K.LORE_MAX of them. dev/tools/lore_extract.js reads the result.
+K.LORE_MAX, K.LORE_TEXT = 800, 1600
+K.LORE_EVENTS = { "QUEST_DETAIL", "QUEST_PROGRESS", "QUEST_COMPLETE", "GOSSIP_SHOW", "CHAT_MSG_MONSTER_SAY",
+    "CHAT_MSG_MONSTER_YELL", "CHAT_MSG_MONSTER_EMOTE", "CHAT_MSG_MONSTER_WHISPER", "ITEM_TEXT_READY" }
+local function LoreText(v)
+    v = Safe(v)
+    if type(v) ~= "string" or v == "" then return nil end
+    return v:sub(1, K.LORE_TEXT)
+end
+Mile.LoreKeep = function(kind, title, text, extra)
+    local s = SkaldDB
+    local log = s and s.loreProbe
+    if not (s and s.probeLore and log) then return end
+    title, text = LoreText(title), LoreText(text)
+    if not title and not text then return end
+    local who = LoreText(extra and extra.who)
+    local key = kind .. "|" .. tostring(who) .. "|" .. tostring(title) .. "|" .. tostring(text):sub(1, 100)
+    if log.seen[key] then return end
+    if #log.items >= K.LORE_MAX then
+        if not log.full then log.full = true; Say(string.format(L.PROBE_LORE_FULL, K.LORE_MAX)) end
+        return
+    end
+    log.seen[key] = true
+    local okR, _, raceFile = pcall(UnitRace, "player")
+    local rec = { k = kind, t = time(), z = Safe(GetZoneText and GetZoneText()), sz = Safe(GetSubZoneText and GetSubZoneText()),
+        n = who, title = title, text = text, r = okR and Safe(raceFile) or nil }
+    if extra then
+        rec.obj = LoreText(extra.obj)
+        rec.q = type(extra.q) == "number" and extra.q > 0 and extra.q or nil
+    end
+    log.items[#log.items + 1] = rec
+end
+Mile.LoreEvent = function(event, ...)
+    local npc = UnitName and UnitName("npc")
+    if event == "QUEST_DETAIL" then
+        Mile.LoreKeep("detail", GetTitleText and GetTitleText(), GetQuestText and GetQuestText(),
+            { who = npc, obj = GetObjectiveText and GetObjectiveText(), q = GetQuestID and GetQuestID() })
+    elseif event == "QUEST_PROGRESS" then
+        Mile.LoreKeep("progress", GetTitleText and GetTitleText(), GetProgressText and GetProgressText(), { who = npc, q = GetQuestID and GetQuestID() })
+    elseif event == "QUEST_COMPLETE" then
+        Mile.LoreKeep("complete", GetTitleText and GetTitleText(), GetRewardText and GetRewardText(), { who = npc, q = GetQuestID and GetQuestID() })
+    elseif event == "GOSSIP_SHOW" then
+        local text = (C_GossipInfo and C_GossipInfo.GetText and C_GossipInfo.GetText()) or (GetGossipText and GetGossipText())
+        Mile.LoreKeep("gossip", nil, text, { who = npc })
+    elseif event == "ITEM_TEXT_READY" then
+        Mile.LoreKeep("book", ItemTextGetItem and ItemTextGetItem(), ItemTextGetText and ItemTextGetText(), nil)
+    elseif event:find("^CHAT_MSG_MONSTER_") then
+        local text, sender = ...
+        Mile.LoreKeep(event:sub(#"CHAT_MSG_MONSTER_" + 1):lower(), nil, text, { who = sender })
+    end
+end
+Mile.ProbeLore = function(on)
+    local s = Settings()
+    s.probeLore = on or nil
+    if on then
+        local log = s.loreProbe
+        if type(log) ~= "table" then log = {}; s.loreProbe = log end
+        log.items, log.seen = log.items or {}, log.seen or {}
+        local okR, _, raceFile = pcall(UnitRace, "player")
+        local okC, _, classFile = pcall(UnitClass, "player")
+        local okF, faction = pcall(UnitFactionGroup, "player")
+        local okB, version, build = pcall(GetBuildInfo)
+        log.meta = { race = okR and Safe(raceFile) or nil, class = okC and Safe(classFile) or nil, faction = okF and Safe(faction) or nil,
+            locale = GetLocale(), build = okB and (tostring(version) .. "." .. tostring(build)) or nil, started = log.meta and log.meta.started or time() }
+    end
+    if not Mile.loreFrame then
+        Mile.loreFrame = CreateFrame("Frame")
+        Mile.loreFrame:SetScript("OnEvent", function(_, event, ...) pcall(Mile.LoreEvent, event, ...) end)
+    end
+    if on then
+        for _, ev in ipairs(K.LORE_EVENTS) do pcall(Mile.loreFrame.RegisterEvent, Mile.loreFrame, ev) end
+    else
+        pcall(Mile.loreFrame.UnregisterAllEvents, Mile.loreFrame)
+    end
+end
+-- What the probe holds, for the chat (the texts themselves stay in the saved variables).
+Mile.LoreLines = function()
+    local log = SkaldDB and SkaldDB.loreProbe
+    local n = log and log.items and #log.items or 0
+    if n == 0 then return { L.PROBE_LORE_NONE } end
+    local c = {}
+    for _, r in ipairs(log.items) do c[r.k] = (c[r.k] or 0) + 1 end
+    local quests = (c.detail or 0) + (c.progress or 0) + (c.complete or 0)
+    local creatures = (c.say or 0) + (c.yell or 0) + (c.emote or 0) + (c.whisper or 0)
+    return { string.format(L.PROBE_LORE_COUNT, n, quests, c.gossip or 0, creatures, c.book or 0) }
+end
+
+-- The side that won a battleground: 0 is the Horde, 1 the Alliance (GetBattlefieldWinner and the Mainline
+-- C_PvP.GetActiveMatchWinner agree on it). A page once per match; the name of the field is kept as written.
+K.BG_SIDE = { Horde = 0, Alliance = 1 }
+K.BG_AGAIN = 600   -- seconds: the same field won again within this time is the same match told twice
+Mile.CheckBattleground = function(given)
+    local db = Journal()
+    if not db then return end
+    local okI, name, instanceType = pcall(GetInstanceInfo)
+    if not okI or instanceType ~= "pvp" then return end
+    name = Safe(name)
+    if type(name) ~= "string" or name == "" then return end
+    local winner = given
+    if type(winner) ~= "number" and C_PvP and C_PvP.GetActiveMatchWinner then
+        local ok, w = pcall(C_PvP.GetActiveMatchWinner); winner = ok and Safe(w) or nil
+    end
+    if type(winner) ~= "number" and GetBattlefieldWinner then
+        local ok, w = pcall(GetBattlefieldWinner); winner = ok and Safe(w) or nil
+    end
+    if type(winner) ~= "number" then return end
+    if Mile.bgLast == name and time() - (Mile.bgLastAt or 0) < K.BG_AGAIN then return end
+    Mile.bgLast, Mile.bgLastAt = name, time()
+    local okF, faction = pcall(UnitFactionGroup, "player")
+    local won = okF and K.BG_SIDE[faction] == winner or false
+    db.stats = db.stats or {}
+    if won then db.stats.bgWins = (db.stats.bgWins or 0) + 1 end
+    AddEntry("bg", name, nil, { won = won, tier = won and 3 or 2 })
+end
+
 do
 -- The hunter's pets, by name. A hunter that already has a pet when the diary first looks at it is
 -- not told about it; a new hunter's first pet (level 12 or lower) and every later one are.
@@ -5887,7 +6333,8 @@ local H = EVENT_HANDLERS
 H.ADDON_LOADED = function(self, event, ...)
     local name = ...
     if name ~= ADDON_NAME then return end
-    SkaldDB = SkaldDB or {}
+    -- a first install speaks in the voice "Of My People"; whoever had Skald before keeps the voice they had (nil is epic)
+    if SkaldDB == nil then SkaldDB = { tone = "kin" } end
     SkaldDB.version = SkaldDB.version or 1
     ApplyFonts()   -- the saved text size (the files ran before the saved variables loaded)
     SkaldCharDB = SkaldCharDB or {}
@@ -5932,10 +6379,15 @@ H.PLAYER_LOGIN = function(self, event, ...)
         CheckReputation()
         CheckMarks()
         pcall(Mile.CheckPet)
+        pcall(Mile.NoteBirthplace)
+        pcall(Mile.CheckMounts)
+        C_Timer.After(25, function() pcall(Mile.NoteBirthplace) end)   -- the game may still answer with the continent
+        if Settings().probeAll then pcall(Mile.ProbeAllEvents, true) end
+        if Settings().probeLore then pcall(Mile.ProbeLore, true) end
         pcall(Mile.MergeCrafts)
         pcall(Mile.Relocalize)
         C_Timer.After(10, function() pcall(Mile.Relocalize) end)   -- items load a little later
-        if C_Timer.NewTicker then C_Timer.NewTicker(60, function() pcall(CheckMarks); pcall(Mile.CheckPet); pcall(ns.CheckAnniversary); pcall(Mile.TrackKills) end) end
+        if C_Timer.NewTicker then C_Timer.NewTicker(60, function() pcall(CheckMarks); pcall(Mile.CheckPet); pcall(ns.CheckAnniversary); pcall(Mile.TrackKills); pcall(Mile.NoteBirthplace) end) end
         C_Timer.After(2, function() pcall(Mile.ShowResume) end)
     end)
     if not Settings().quiet then
@@ -5967,6 +6419,7 @@ H.DISPLAY_SIZE_CHANGED = H.UI_SCALE_CHANGED
 
 H.ZONE_CHANGED_NEW_AREA = function(self, event, ...)
     if window then CheckZone() end
+    if ready then pcall(Mile.NoteBirthplace) end
 end
 H.PLAYER_ENTERING_WORLD = H.ZONE_CHANGED_NEW_AREA
 
@@ -6366,18 +6819,28 @@ end
 
 H.ENCOUNTER_START = function(self, event, ...)
     local id, name = ...
-    ns.encounter = { id = tonumber(id), name = Safe(name), at = time() }
+    ns.encounter = { id = tonumber(Safe(id)), name = Safe(name), at = time() }
 end
 
+-- Forever hides some of these payloads from addons (secret values): a secret outcome is no victory, a secret id is no id.
 H.ENCOUNTER_END = function(self, event, ...)
     local id, name, _, _, success = ...
     if ns.encounter then ns.encounter.ended = true end
-    if success == 1 then BossDown(name, tonumber(id)) end
+    if Safe(success) == 1 then BossDown(name, tonumber(Safe(id))) end
 end
 
 H.BOSS_KILL = function(self, event, ...)
     local id, name = ...
-    BossDown(name, tonumber(id))
+    BossDown(name, tonumber(Safe(id)))
+end
+
+-- A battleground that ends: won or lost, once per match. PVP_MATCH_COMPLETE is the Mainline event (Forever);
+-- UPDATE_BATTLEFIELD_STATUS fires in every client and the winner is read the same way. (Not seen in Forever yet.)
+H.PVP_MATCH_COMPLETE = function(self, event, ...)
+    if ready then pcall(Mile.CheckBattleground, Safe((...))) end
+end
+H.UPDATE_BATTLEFIELD_STATUS = function(self, event, ...)
+    if ready then pcall(Mile.CheckBattleground) end
 end
 
 H.HEARTHSTONE_BOUND = function(self, event, ...)
@@ -6403,6 +6866,13 @@ H.PLAYER_MONEY = function(self, event, ...)
         ns.moneyPending = true
         C_Timer.After(3, function() ns.moneyPending = false; CheckMarks() end)
     end
+end
+
+-- (the Burning Crusade: the companions learned, one second and a few after, when the game has them listed)
+H.COMPANION_LEARNED = function(self, event, ...)
+    if not ready then return end
+    C_Timer.After(1, function() pcall(Mile.CheckMounts) end)
+    C_Timer.After(6, function() pcall(Mile.CheckMounts) end)
 end
 
 H.NEW_MOUNT_ADDED = function(self, event, ...)
@@ -7296,17 +7766,22 @@ local function BuildStyle(panel)
     PageHeading(panel, L.TAB_STYLE, 0)
     SectionLabel(panel, L.OPT_TONE, 0, -52)
     PlateGroup(panel, 0, -78, 342, 26)
+    -- four voices, two to a row ("Of My People" is a long name)
+    PlateGroup(panel, 0, -106, 342, 26)
     local toneButtons = {}
-    for i, key in ipairs({ "epic", "humble", "humor" }) do
-        local b = MakeFlatButton(panel, 114, 26, L.TONE_NAMES[key])
-        b:SetPoint("TOPLEFT", (i - 1) * 114, -78)
-        b:SetScript("OnClick", function() Settings().tone = key; Redraw() end)
+    for i, key in ipairs({ "kin", "epic", "humble", "humor" }) do
+        local b = MakeFlatButton(panel, 171, 26, L.TONE_NAMES[key])
+        b:SetPoint("TOPLEFT", ((i - 1) % 2) * 171, -78 - math.floor((i - 1) / 2) * 28)
+        b:SetScript("OnClick", function()
+            if Settings().tone ~= key then ns.layoutRev = (ns.layoutRev or 0) + 1 end   -- the voice can tell old pages again
+            Settings().tone = key; Redraw()
+        end)
         toneButtons[key] = b
     end
-    local toneHint = NoteText(panel, 0, -112)
-    SectionLabel(panel, L.TONE_SAMPLE_LABEL, 0, -146)
+    local toneHint = NoteText(panel, 0, -140)
+    SectionLabel(panel, L.TONE_SAMPLE_LABEL, 0, -168)
     local sample = panel:CreateFontString(nil, "OVERLAY", "SkaldNote")
-    sample:SetPoint("TOPLEFT", 0, -170)
+    sample:SetPoint("TOPLEFT", 0, -190)
     sample:SetWidth(K.CW)
     sample:SetJustifyH("LEFT")
     sample:SetJustifyV("TOP")
@@ -7912,6 +8387,19 @@ SlashCmdList["SKALD"] = function(msg)
     elseif msg == "probe spells" or msg == "probe spells off" then
         Settings().probeSpells = (msg == "probe spells")
         Say(Settings().probeSpells and L.PROBE_SPELLS_ON or L.PROBE_SPELLS_OFF)
+    elseif msg == "probe events" or msg == "probe events off" then
+        Mile.ProbeAllEvents(msg == "probe events")
+        Say(Settings().probeAll and L.PROBE_EVENTS_ON or L.PROBE_EVENTS_OFF)
+    elseif msg == "probe events list" then
+        for _, line in ipairs(Mile.ProbeEventLines()) do Say(line) end
+    elseif msg == "probe lore" or msg == "probe lore off" then
+        Mile.ProbeLore(msg == "probe lore")
+        Say(Settings().probeLore and L.PROBE_LORE_ON or L.PROBE_LORE_OFF)
+    elseif msg == "probe lore list" then
+        for _, line in ipairs(Mile.LoreLines()) do Say(line) end
+    elseif msg == "probe lore clear" then
+        Settings().loreProbe = nil
+        Say(L.PROBE_LORE_CLEARED)
     elseif msg == "clear" then
         StaticPopup_Show("SKALD_CLEAR")
     elseif msg == "quiet" then
@@ -7962,9 +8450,11 @@ SlashCmdList["SKALD"] = function(msg)
         if arg == "clear" then
             Settings().probeLog = nil
             Say(L.PROBE_CLEARED)
-        else
+        elseif arg == "" or arg == "on" or arg == "off" then
             Settings().probe = (arg ~= "off")
             Say(Settings().probe and L.PROBE_ON or L.PROBE_OFF)
+        else
+            Say(L.PROBE_HELP)   -- a word no probe knows must not turn a probe on
         end
     elseif msg == "minimap" then
         local shown = Settings().minimap and Settings().minimap.hide

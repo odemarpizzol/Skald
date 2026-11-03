@@ -388,18 +388,26 @@ end
 
 local function PinLevel(canvas)
     local base = canvas:GetFrameLevel()
-    local lowest
+    local lowest, layers = nil, {}
     for _, child in ipairs({ canvas:GetChildren() }) do
-        if not rawget(child, "skaldPin") and child:IsShown() and child:IsMouseEnabled() then
+        if not rawget(child, "skaldPin") and child:IsShown() then
             local w = child:GetWidth()
-            if w and w > 0 and w < 120 then   -- a marker, not a layer that covers the whole map
-                local lv = child:GetFrameLevel()
-                if not lowest or lv < lowest then lowest = lv end
+            local lv = child:GetFrameLevel()
+            if w and w >= 120 then
+                layers[#layers + 1] = lv   -- a layer as wide as the map (the picture, the explored overlay, a pin container)
+            elseif w and w > 0 and child:IsMouseEnabled() then
+                if not lowest or lv < lowest then lowest = lv end   -- a marker of the game
             end
         end
     end
-    if lowest then return math.max(base + 150, lowest - 1) end   -- never down among the terrain layers
-    return base + 600
+    -- A marker has to be above the layers of the map, or it is under the picture: the mouse finds it (the tooltip shows) and the
+    -- eye does not. The layers above the game's own small pins (a long line of another addon) are not a reason to rise over those.
+    local floor = base + 150   -- never down among the terrain layers
+    for _, lv in ipairs(layers) do
+        if not lowest or lv <= lowest then floor = math.max(floor, lv + 1) end
+    end
+    if lowest then return math.max(floor, lowest - 1) end   -- just under the game's pins, so that they stay the ones clicked
+    return math.max(floor, base + 600)
 end
 
 local function Refresh()
@@ -448,15 +456,29 @@ end
 -- A star marked or unmarked in the book changes the pins at once.
 SkaldAPI.favHook = Refresh
 -- (kept reachable for the regression scenarios)
-SkaldAPI.AtlasPure = { MakeFilter = MakeFilter, Cluster = Cluster }
+SkaldAPI.AtlasPure = { MakeFilter = MakeFilter, Cluster = Cluster, PinLevel = PinLevel }
 
 -- The world map frame can load on demand, so hook it as soon as it exists.
 local hooked = false
+local debugArmed, debugLines, DebugLines   -- /skatlas debug with the map shut: it looks when the map opens and tells when it is shut again
+local function FlushDebug()
+    if debugArmed and debugLines then
+        for _, line in ipairs(debugLines) do Say(line) end
+    end
+    debugArmed, debugLines = false, nil
+end
 local function InstallHooks()
     if hooked or not WorldMapFrame then return end
     hooked = true
-    WorldMapFrame:HookScript("OnShow", RefreshSoon)
-    WorldMapFrame:HookScript("OnHide", HideAll)
+    WorldMapFrame:HookScript("OnShow", function()
+        RefreshSoon()
+        if debugArmed and C_Timer and C_Timer.After then
+            C_Timer.After(2, function()
+                if debugArmed and WorldMapFrame:IsShown() and DebugLines then debugLines = DebugLines() end
+            end)
+        end
+    end)
+    WorldMapFrame:HookScript("OnHide", function() HideAll(); FlushDebug() end)
     if WorldMapFrame.OnMapChanged then
         hooksecurefunc(WorldMapFrame, "OnMapChanged", RefreshSoon)
     end
@@ -716,7 +738,9 @@ f:SetScript("OnEvent", function(_, event, name)
     end
 end)
 
-local function Debug()
+DebugLines = function()
+    local out = {}
+    local function Say(line) out[#out + 1] = line end
     local canvas = Canvas()
     local mapID = WorldMapFrame and WorldMapFrame.GetMapID and WorldMapFrame:GetMapID()
     local total, onMap, withPos = 0, 0, 0
@@ -734,6 +758,36 @@ local function Debug()
         tostring(canvas ~= nil), w or 0, h or 0, tostring(SkaldAtlasDB.hidden)))
     Say(string.format("pages=%d withPosition=%d onThisMap=%d pinsShown=%d",
         total, withPos, onMap, activePins))
+    -- where the markers sit among the frames of the map (a marker that is drawn but not seen is under something)
+    pcall(function()
+        if not canvas then return end
+        local n, lo, hi = 0, nil, nil
+        for _, child in ipairs({ canvas:GetChildren() }) do
+            n = n + 1
+            local lv = child:GetFrameLevel()
+            lo = lo and math.min(lo, lv) or lv
+            hi = hi and math.max(hi, lv) or lv
+        end
+        Say(string.format("canvas: level=%s strata=%s children=%d (levels %s..%s) markerLevel=%s",
+            tostring(canvas:GetFrameLevel()), tostring(canvas:GetFrameStrata()), n, tostring(lo), tostring(hi), tostring(PinLevel(canvas))))
+        for i, child in ipairs({ canvas:GetChildren() }) do
+            if i > 12 then break end
+            Say(string.format("  child %d: level=%s width=%.0f shown=%s mouse=%s%s", i, tostring(child:GetFrameLevel()), child:GetWidth() or 0,
+                tostring(child:IsShown()), tostring(child:IsMouseEnabled()), rawget(child, "skaldPin") and " (a Skald marker)" or ""))
+        end
+        local p = pins[1]
+        if p then
+            local point, _, _, x, y = p:GetPoint()
+            Say(string.format("marker 1: shown=%s visible=%s alpha=%.2f size=%.0fx%.0f level=%s strata=%s onCanvas=%s at=%s %.0f,%.0f",
+                tostring(p:IsShown()), tostring(p:IsVisible()), p:GetEffectiveAlpha(), p:GetWidth(), p:GetHeight(),
+                tostring(p:GetFrameLevel()), tostring(p:GetFrameStrata()), tostring(p:GetParent() == canvas), tostring(point), x or 0, y or 0))
+            Say("medallion=" .. tostring(p.medallion:GetTexture()) .. " glyph=" .. tostring(p.glyph:GetTexture()))
+        end
+    end)
+    return out
+end
+local function Debug()
+    for _, line in ipairs(DebugLines()) do Say(line) end
 end
 
 SLASH_SKALDATLAS1 = "/skatlas"
@@ -754,8 +808,13 @@ SlashCmdList["SKALDATLAS"] = function(msg)
         return
     end
     if msg == "debug" then
-        Refresh()
-        Debug()
+        if WorldMapFrame and WorldMapFrame:IsShown() then
+            Refresh()
+            Debug()
+        else
+            debugArmed, debugLines = true, nil
+            Say("debug armed: open the world map, wait three seconds and shut it; the lines are written here when it is shut.")
+        end
         return
     end
     SkaldAtlasDB.hidden = not SkaldAtlasDB.hidden

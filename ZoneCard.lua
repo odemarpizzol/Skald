@@ -73,6 +73,19 @@ end
 -- the hidden and the repeatable ones. Built once, when first asked, and kept.
 local byMap, builtFor
 local function HasBit(mask, n) return math.floor(mask / 2 ^ (n - 1)) % 2 == 1 end
+-- The quest data knows the eight races of old. A newer race (Forever's Skyborne) has no bit in its masks, so a
+-- quest is open to it when the mask holds every old race of its faction (a quest "for the Alliance" or "for the Horde").
+local OLD_RACES = { [1] = true, [2] = true, [3] = true, [4] = true, [5] = true, [6] = true, [7] = true, [8] = true }
+local FACTION_RACES = { Alliance = { 1, 3, 4, 7 }, Horde = { 2, 5, 6, 8 } }
+local function RaceAllowed(mask, raceID)
+    if HasBit(mask, raceID) then return true end
+    if OLD_RACES[raceID] then return false end
+    local okF, faction = pcall(UnitFactionGroup, "player")
+    local own = okF and FACTION_RACES[faction]
+    if not own then return true end
+    for _, r in ipairs(own) do if not HasBit(mask, r) then return false end end
+    return true
+end
 local function QuestIndex()
     local qdb = _G.LibStub and LibStub("LibQuestDB-1.0", true)
     if not (qdb and qdb.GetQuestIds and qdb.GetQuest and qdb.GetUiMapId) then return nil end
@@ -89,7 +102,7 @@ local function QuestIndex()
                 local special = q.specialFlags or 0
                 local repeatable = special % 2 == 1 or math.floor(special / 2) % 2 == 1
                 local races, classes = q.requiredRaces or 0, q.requiredClasses or 0
-                local raceOk = races == 0 or not okR or type(raceID) ~= "number" or HasBit(races, raceID)
+                local raceOk = races == 0 or not okR or type(raceID) ~= "number" or RaceAllowed(races, raceID)
                 local classOk = classes == 0 or not okC or type(classID) ~= "number" or HasBit(classes, classID)
                 if not repeatable and raceOk and classOk then
                     local map = qdb:GetUiMapId(zone)

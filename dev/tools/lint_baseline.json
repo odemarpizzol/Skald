@@ -1,6 +1,20 @@
 {
  "Skald/Skald.lua": [
     "C_TTSSettings",
+    "C_GossipInfo",
+    "GetGossipText",
+    "GetCompanionInfo",
+    "GetProgressText",
+    "GetQuestText",
+    "GetRewardText",
+    "GetSubZoneText",
+    "ItemTextGetItem",
+    "ItemTextGetText",
+    "GetMaxPlayerLevel",
+    "WOW_PROJECT_ID",
+    "WOW_PROJECT_CAMELOT",
+    "C_PvP",
+    "GetBattlefieldWinner",
     "C_VoiceChat",
     "C_MapExplorationInfo",
     "CombatLogGetCurrentEventInfo",
@@ -209,6 +223,7 @@
  ],
  "Skald/ZoneCard.lua": [
   "C_Map",
+  "UnitFactionGroup",
   "C_MapExplorationInfo",
   "C_QuestLog",
   "CreateFrame",

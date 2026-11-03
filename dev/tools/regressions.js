@@ -109,6 +109,505 @@ local a, b = SkaldAPI.Render(e), SkaldAPI.Render(old)
 RES = (a:find("Hunting the Wolves", 1, true) and not a:find("Caçando", 1, true) and b:find("Caçando os Lobos", 1, true)) and "ok" or ("quest title: " .. a .. " / " .. b)`,
 });
 
+// Seen in a Portuguese client with QuestDB installed: the game gave no title for a quest already handed in, and the page told
+// the English title of QuestDB ("You Survived!") instead of the one written down in Portuguese at the hand-in.
+run('a quest title: when the game gives none, a client that is not English keeps the title written down, not the English one of QuestDB; an English client may use QuestDB', {
+  pre: `__locale = "ptBR"
+C_QuestLog = { GetTitleForQuestID = function() return nil end }
+LibStub = function(name) if name ~= "LibQuestDB-1.0" then return nil end return { GetQuest = function(_, id) return { title = "You Survived!" } end } end`,
+  body: `local pt = SkaldAPI.Render({ kind = "quest", arg = "Voce Sobreviveu!", q = 9279, tier = 2, idx = 1 })
+__locale = "enUS"
+local en = SkaldAPI.Render({ kind = "quest", arg = "Sobreviveu", q = 9280, tier = 2, idx = 1 })
+RES = (pt:find("Voce Sobreviveu!", 1, true) and not pt:find("You Survived!", 1, true) and en:find("You Survived!", 1, true)) and "ok"
+  or ("pt: " .. pt .. " / en: " .. en)`,
+});
+
+// Seen in the Portuguese client: "Em Ilha Névoa Lazúli perdi", "e Ilha Névoa Lazúli começou". The phrases are written for a name with
+// no article (Durotar), which is wrong for a name of a thing with a gender ("na Ilha", "no Vale", "das Planícies").
+const PT_BAD_BEFORE = `local function bareBefore(pre)
+  return pre == "" or pre:match("[Ee]m $") or pre:match("[Dd]e $") or pre:match("[ ,]e $") or pre:match("por $") or pre:match("[%.!?:] $") or pre:match(", $")
+end`;
+
+run('Portuguese: a place name takes its article and its contraction (na Ilha, no Vale, das Planícies, à Ilha), a name with none is left alone, and other languages are untouched', {
+  pre: `__locale = "ptBR"`,
+  body: `local A = ns.PlaceArticles
+local ok, bad = true, {}
+local function chk(phrase, name, want)
+  local got = A(phrase, name, "%s")
+  if got ~= want then ok = false; bad[#bad + 1] = phrase .. " [" .. name .. "] gave " .. tostring(got) .. ", wanted " .. want end
+end
+chk("Caí em %s, mas", "Ilha Névoa Lazúli", "Caí na %s, mas")
+chk("Em %s, uma voz", "Ilha Névoa Lazúli", "Na %s, uma voz")
+chk("%s me recebeu como sempre", "Vale Ammen", "O %s me recebeu como sempre")
+chk("A estrada acabou, e %s começou.", "Ilha Névoa Lazúli", "A estrada acabou, e a %s começou.")
+chk("de volta a %s.", "Ilha Névoa Lazúli", "de volta à %s.")
+chk("de volta a %s.", "Vale Ammen", "de volta ao %s.")
+chk("O vento de %s cheirava", "Planícies Áridas", "O vento das %s cheirava")
+chk("Meu povo vela por %s há tempo", "Ilha Névoa Lazúli", "Meu povo vela pela %s há tempo")
+chk("Sem caminhada longa desta vez: %s e um lugar", "Vale Ammen", "Sem caminhada longa desta vez: o %s e um lugar")
+chk("Chegou. %s vai durar", "Ilha Névoa Lazúli", "Chegou. A %s vai durar")
+chk("Em %s, só restava eu", "Durotar", "Em %s, só restava eu")
+chk("Caí em %s, mas", "Orgrimmar", "Caí em %s, mas")
+chk('O lugar "%s" é', "Ilha Névoa Lazúli", 'O lugar "%s" é')
+__locale = "enUS"
+chk("Caí em %s, mas", "Ilha Névoa Lazúli", "Caí em %s, mas")
+RES = ok and "ok" or table.concat(bad, " ; ")`,
+});
+
+run('Portuguese: in every phrase of the lands, the dead, the hearth and the dungeons the name comes with its article, whichever phrase a page was told with', {
+  pre: `__locale = "ptBR"
+${PT_BAD_BEFORE}`,
+  body: `local P = ns.LOCALES.ptBR.phrases
+local place = "Ilha Névoa Lazúli"
+local bad, n = {}, 0
+local function wanted(name)
+  return name == "zone" or name == "death" or name == "revive" or name == "reviveHealer" or name == "hearth" or name == "home" or name == "dungeon"
+    or name:find("^race_.*_zone$") or name:find("^race_.*_death$") or name:find("^class_.*_death$") or name:find("^tone_.*_zone$") or name:find("^tone_.*_death$") or name:find("^tone_.*_dungeon$")
+end
+for name, list in pairs(P) do
+  if type(list) == "table" and wanted(name) then
+    for i, ph in ipairs(list) do
+      if type(ph) == "string" then
+        n = n + 1
+        local s = string.format(ns.PlaceArticles(ph, place, "%s"), place)
+        local at = s:find(place, 1, true)
+        if at and bareBefore(s:sub(1, at - 1)) then bad[#bad + 1] = name .. "#" .. i .. ": " .. s:sub(1, 70) end
+      end
+    end
+  end
+end
+-- and the way a page is really told: the entry of a land, a fall, a rising, the hearth and a dungeon
+for _, kind in ipairs({ "zone", "death", "revive", "hearth", "home", "dungeon" }) do
+  for i = 1, 12 do
+    local text = SkaldAPI.Render({ kind = kind, arg = place, zone = place, idx = i })
+    local at = text:find(place, 1, true)
+    if at and bareBefore(text:sub(1, at - 1)) then bad[#bad + 1] = "page " .. kind .. " " .. i .. ": " .. text:sub(1, 70) end
+  end
+end
+RES = (#bad == 0 and n > 300) and "ok" or (n .. " phrases, bad (" .. #bad .. "): " .. table.concat(bad, " ; "):sub(1, 600))`,
+});
+
+run('Portuguese: the Saga tells the place of birth with its article ("na Ilha Névoa Lazúli, em Kalimdor") in every opening it has', {
+  pre: `__locale = "ptBR"
+${PT_BAD_BEFORE}
+function UnitRace() return "Draenei", "Draenei", 11 end
+function UnitLevel() return 1 end
+C_Map.GetBestMapForUnit = function() return 1943 end
+C_Map.GetMapInfo = function(id)
+  if id == 1943 then return { name = "Ilha Névoa Lazúli", parentMapID = 1414, mapType = 3 } end
+  if id == 1414 then return { name = "Kalimdor", parentMapID = 947, mapType = 2 } end
+end`,
+  body: `local seen, kalimdor, bad = 0, 0, {}
+for k = 0, 79 do
+  SkaldCharDB.stats.first = 1790000000 + k * 777777
+  local ch = ns.BuildSaga()[1]
+  local text = ch and ch.text or ""
+  local at = text:find("Ilha Névoa Lazúli", 1, true)
+  if at then
+    seen = seen + 1
+    if bareBefore(text:sub(1, at - 1)) then bad[#bad + 1] = text:sub(math.max(1, at - 25), at + 30) end
+  end
+  if text:find("em Kalimdor", 1, true) then kalimdor = kalimdor + 1 end
+end
+RES = (#bad == 0 and seen > 10 and kalimdor > 5) and "ok" or ("seen=" .. seen .. " kalimdor=" .. kalimdor .. " bad (" .. #bad .. "): " .. table.concat(bad, " | "):sub(1, 500))`,
+});
+
+// Seen in the Portuguese client: the same phrase of a goal twice in one page, for two goals of different seals. The window that keeps a
+// phrase from coming back (the last five of a kind) was kept for each seal; for the goals it is one.
+run('goal pages do not repeat a phrase within five pages, whatever the seal of each goal', {
+  body: `local ids = { "level10", "zones3", "quests50", "bosses1", "repHonored" }
+for i = 1, 40 do SkaldAPI.AddEntry("goal", ids[(i - 1) % 5 + 1], nil, { tier = (i - 1) % 5 + 1 }) end
+local goals = {}
+for _, e in ipairs(SkaldCharDB.entries) do if e.kind == "goal" then goals[#goals + 1] = e end end
+local repeated = 0
+for i = 1, #goals do for j = i + 1, math.min(i + 5, #goals) do if goals[i].idx == goals[j].idx then repeated = repeated + 1 end end end
+RES = (#goals >= 40 and repeated == 0) and "ok" or ("goals " .. #goals .. ", a phrase back within five pages " .. repeated .. " times")`,
+});
+
+run('the voice of each old race has its lines for a quest in the three languages: at least eight, one title each, no number, nothing of a later time', {
+  body: `local bad, count = {}, 0
+for _, loc in ipairs({ "enUS", "ptBR", "frFR" }) do
+  local P = ns.LOCALES[loc].phrases
+  for _, race in ipairs({ "Human", "Dwarf", "NightElf", "Gnome", "Orc", "Scourge", "Tauren", "Troll" }) do
+    local pool = P["race_" .. race .. "_quest"]
+    if type(pool) ~= "table" or #pool < 8 then bad[#bad + 1] = loc .. " " .. race .. ": " .. (pool and #pool or 0) .. " lines"
+    else
+      count = count + 1
+      for i, ph in ipairs(pool) do
+        local _, titles = ph:gsub("%%s", "")
+        if titles ~= 1 or ph:find("%d") or ph:find("{") and not ph:find("{g:") then bad[#bad + 1] = loc .. " " .. race .. "#" .. i end
+      end
+    end
+  end
+end
+RES = (#bad == 0 and count == 24) and "ok" or table.concat(bad, " ; ")`,
+});
+
+run('the voice "Of My People": a quest of a race with lines of its own is told with them, a quest of the highest seals keeps its own telling, and a race without lines raises no error', {
+  pre: `function UnitRace() return "Orc", "Orc", 2 end`,
+  body: `SkaldDB.tone = "kin"
+local draw = math.random
+math.random = function(...) if select("#", ...) > 0 then return draw(...) end return 0.1 end   -- the draw of the voice made certain
+for i = 1, 30 do SkaldAPI.AddEntry("quest", "Quest " .. i, nil, { q = 700 + i, tier = 1 + (i % 2) }) end
+SkaldAPI.AddEntry("quest", "Grand", nil, { q = 799, tier = 4 })
+local own, other = 0, 0
+local grand
+for _, e in ipairs(SkaldCharDB.entries) do
+  if e.kind == "quest" and e.arg ~= "Grand" then if e.fl == "race_Orc_quest" then own = own + 1 else other = other + 1 end end
+  if e.arg == "Grand" then grand = e end
+end
+local fromPool = SkaldAPI.PoolFor(SkaldCharDB.entries[#SkaldCharDB.entries - 1]) == ns.LOCALES.enUS.phrases.race_Orc_quest
+-- a race with no lines of its own (the Draenei of the Anniversary client)
+function UnitRace() return "Draenei", "Draenei", 11 end
+for i = 1, 10 do SkaldAPI.AddEntry("quest", "Other " .. i, nil, { q = 900 + i, tier = 2 }) end
+math.random = draw
+RES = (own == 30 and other == 0 and grand.fl ~= "race_Orc_quest" and fromPool and (SkaldDB.errors == nil)) and "ok"
+  or ("own=" .. own .. " other=" .. other .. " grandfl=" .. tostring(grand and grand.fl) .. " fromPool=" .. tostring(fromPool) .. " errors=" .. tostring(SkaldDB.errors and SkaldDB.errors[1]))`,
+});
+
+// The Anniversary client has two races the first Azeroth did not: the Draenei and the Blood Elves (the Burning Crusade). Their lines
+// exist for that client only (no one can be of these races in Forever), and name what that time knew: the Naaru, the Sunwell...
+// A long climb must not read the same: with the voice "Of My People", a race and a class, 700 quests, 100 falls, 60 levels and 150
+// bosses are written and no line may take more than its share (a fixed seed keeps the draw the same on each run; dev/tools/variety.js
+// prints the same figures for any race, class and language). The limits leave room; they fail when a pool is cut short again.
+const CLIMB = (race, cls, loc, limits) => ({
+  pre: `function UnitRace() return "${race}", "${race}", 2 end
+function UnitClass() return "Class", "${cls}" end
+function UnitLevel() return 30 end`,
+  body: `SkaldDB.tone = "kin"; __locale = "${loc}"; math.randomseed(20261102)
+local limits = ${limits}
+local function told(e) local pool = SkaldAPI.PoolFor(e); return pool and pool[e.idx] end
+local bad = {}
+local function Measure(kind, n, make)
+  local counts, pages = {}, 0
+  for i = 1, n do
+    make(i)
+    local e = SkaldCharDB.entries[#SkaldCharDB.entries]
+    local ph = e and e.kind == kind and told(e)
+    if ph then pages = pages + 1; counts[ph] = (counts[ph] or 0) + 1 end
+  end
+  local distinct, top = 0, 0
+  for _, c in pairs(counts) do distinct = distinct + 1; if c > top then top = c end end
+  local share = pages > 0 and top / pages or 1
+  local lim = limits[kind]
+  if pages < n * 0.9 or share > lim[1] or distinct < lim[2] then bad[#bad + 1] = string.format("%s: %d pages, %d distinct (min %d), top %.1f%% (max %.1f%%)", kind, pages, distinct, lim[2], 100 * share, 100 * lim[1]) end
+end
+local QT, qi, zone = { "fight", "gather", "explore", "seek", "delivery" }, 0, "Somewhere"
+Measure("quest", 700, function() qi = qi + 1; local r = math.random()
+  local tier = r < 0.78 and 1 or r < 0.9 and 2 or r < 0.96 and 3 or r < 0.99 and 4 or 5
+  SkaldAPI.AddEntry("quest", "Quest " .. qi, zone, { tier = tier, q = 90000 + qi, qtype = QT[math.random(#QT)], ql = 10, pl = 10 }) end)
+Measure("death", 100, function() SkaldAPI.AddEntry("death", zone) end)
+Measure("level", 60, function(i) SkaldAPI.AddEntry("level", i + 1) end)
+Measure("boss", 150, function(i) local r = math.random(); local tries
+  if r >= 0.85 then tries = (r < 0.95 and 1) or (r < 0.99 and 2) or 4 end
+  SkaldAPI.AddEntry("boss", "Boss " .. i, zone, { tries = tries, tier = 2 + (i % 3) }) end)
+RES = #bad == 0 and "ok" or table.concat(bad, " ; ")`,
+});
+run('a long climb in the voice "Of My People" (Orc, Warrior, English): no line takes more than its share of the pages of its kind', CLIMB('Orc', 'WARRIOR', 'enUS', '{ quest = { 0.05, 150 }, death = { 0.12, 24 }, level = { 0.12, 24 }, boss = { 0.09, 35 } }'));
+run('a long climb in the voice "Of My People" (Draenei, Mage, Portuguese): no line takes more than its share of the pages of its kind', CLIMB('Draenei', 'MAGE', 'ptBR', '{ quest = { 0.05, 150 }, death = { 0.12, 24 }, level = { 0.12, 24 }, boss = { 0.09, 35 } }'));
+run('a long climb in the voice "Of My People" (Scourge, Priest, French): no line takes more than its share of the pages of its kind', CLIMB('Scourge', 'PRIEST', 'frFR', '{ quest = { 0.05, 150 }, death = { 0.12, 24 }, level = { 0.12, 24 }, boss = { 0.09, 35 } }'));
+
+run('French: the place takes its article after à, de, dans and sur (à la Forêt d\'Elwynn, au Mont Hyjal, aux Tarides, à l\'Île, d\'Elwynn), and a name no noun tells is left as it was', {
+  pre: `__locale = "frFR"`,
+  body: `local function say(phrase, name) return ns.PlaceArticles(phrase, name, "%s"):format(name) end
+local nb = "\\194\\160"
+local cases = {
+  { "À %s, la route", "Forêt d'Elwynn", "À la Forêt d'Elwynn, la route" },
+  { "J'ai marché à %s.", "Mont Hyjal", "J'ai marché au Mont Hyjal." },
+  { "Je suis tombé à %s.", "Les Tarides", "Je suis tombé aux Tarides." },
+  { "Le soir à %s.", "Île de Quel'Danas", "Le soir à l'Île de Quel'Danas." },
+  { "Le vent de %s.", "Mont Hyjal", "Le vent du Mont Hyjal." },
+  { "Le vent de %s.", "Plaines d'Arathi", "Le vent des Plaines d'Arathi." },
+  { "Le vent de %s.", "Forêt d'Elwynn", "Le vent de la Forêt d'Elwynn." },
+  { "Le vent de %s.", "Elwynn", "Le vent d'Elwynn." },
+  { "Le vent de %s.", "Durotar", "Le vent de Durotar." },
+  { "J'ai marché à %s.", "Durotar", "J'ai marché à Durotar." },
+  { "Une nuit dans %s.", "Clairières de Tirisfal", "Une nuit dans les Clairières de Tirisfal." },
+  { "Une nuit dans %s.", "Les Tarides", "Une nuit dans les Tarides." },
+  { "%s" .. nb .. ": le début.", "Forêt d'Elwynn", "Forêt d'Elwynn" .. nb .. ": le début." },
+  { "Contre %s.", "Mont Hyjal", "Contre Mont Hyjal." },
+}
+local bad = {}
+for _, c in ipairs(cases) do local got = say(c[1], c[2]); if got ~= c[3] then bad[#bad + 1] = c[2] .. " -> " .. got end end
+RES = #bad == 0 and "ok" or table.concat(bad, " ; ")`,
+});
+
+run('the first land of a new Orc is told with the lines of its first steps (race_Orc_start), once; a later land, or a character past level two, with the common ones', {
+  pre: `function UnitRace() return "Orc", "Orc", 2 end
+function UnitLevel() return 1 end
+SkaldDB.tone = "kin"`,
+  body: `local P = ns.LOCALES.enUS.phrases
+local function zoneAt(name, m) function GetZoneText() return name end; C_Map.GetBestMapForUnit = function() return m end
+  C_Map.GetMapInfo = function() return { name = name, mapType = 3, parentMapID = 12 } end
+  NOW = NOW + 7200; fire("ZONE_CHANGED_NEW_AREA"); runTimers() end
+zoneAt("Valley of Trials", 5001)
+local first
+for _, e in ipairs(SkaldCharDB.entries) do if e.kind == "zone" then first = first or e end end
+local ok1 = first and first.fl == "race_Orc_start" and SkaldAPI.PoolFor(first) == P.race_Orc_start
+function UnitLevel() return 20 end
+local late
+zoneAt("Elsewhere", 5002)
+for _, e in ipairs(SkaldCharDB.entries) do if e.kind == "zone" and e ~= first then late = e end end
+local ok2 = late and late.fl ~= "race_Orc_start"
+-- every line holds the place once, and none holds a digit
+local bad = {}
+for _, loc in ipairs({ "enUS", "ptBR", "frFR" }) do
+  for _, race in ipairs({ "Orc", "Human", "Dwarf", "Gnome", "NightElf", "Tauren", "Troll", "Scourge", "Draenei", "BloodElf" }) do
+    local pool = ns.LOCALES[loc].phrases["race_" .. race .. "_start"]
+    if type(pool) ~= "table" or #pool < 8 then bad[#bad + 1] = loc .. " " .. race .. " size" else
+      for i, ph in ipairs(pool) do local _, n = ph:gsub("%%s", ""); if n ~= 1 or ph:find("%d") then bad[#bad + 1] = loc .. " " .. race .. "#" .. i end end
+    end
+  end
+end
+RES = (ok1 and ok2 and #bad == 0 and SkaldDB.errors == nil) and "ok" or ("first=" .. tostring(first and first.fl) .. " late=" .. tostring(late and late.fl) .. " bad=" .. table.concat(bad, ","))`,
+});
+
+run('the Draenei and the Blood Elves have lines of their own in the three languages: for a land, a fall, a rising level and a quest', {
+  body: `local bad, count = {}, 0
+local kinds = { zone = 1, death = 1, quest = 1, kinLevel = 0 }   -- how many titles or places each line holds
+for _, loc in ipairs({ "enUS", "ptBR", "frFR" }) do
+  local P = ns.LOCALES[loc].phrases
+  for _, race in ipairs({ "Draenei", "BloodElf" }) do
+    for kind, names in pairs(kinds) do
+      local pool = P["race_" .. race .. "_" .. kind]
+      if type(pool) ~= "table" or #pool < 8 then bad[#bad + 1] = loc .. " " .. race .. " " .. kind .. ": " .. (pool and #pool or 0)
+      else
+        count = count + 1
+        for i, ph in ipairs(pool) do
+          local _, n = ph:gsub("%%s", "")
+          if n ~= names or (kind == "kinLevel" or kind == "quest") and ph:find("%d") or ph:find("{") and not ph:find("{g:") then bad[#bad + 1] = loc .. " " .. race .. " " .. kind .. "#" .. i end
+        end
+      end
+    end
+  end
+end
+RES = (#bad == 0 and count == 24) and "ok" or table.concat(bad, " ; ")`,
+});
+
+run('a Draenei or a Blood Elf in the voice "Of My People": the level, the land, the fall and the quest are told with the lines of the race', {
+  pre: `function UnitRace() return "Draenei", "Draenei", 11 end`,
+  body: `SkaldDB.tone = "kin"
+local draw = math.random
+math.random = function(...) if select("#", ...) > 0 then return draw(...) end return 0.1 end
+local function flavors(race)
+  function UnitRace() return race, race, 11 end
+  local seen = {}
+  SkaldAPI.AddEntry("level", 4); seen.level = SkaldAPI.PoolFor(SkaldCharDB.entries[#SkaldCharDB.entries])
+  SkaldAPI.AddEntry("quest", "A Quest", nil, { q = 5001, tier = 2 }); seen.quest = SkaldCharDB.entries[#SkaldCharDB.entries].fl
+  SkaldAPI.AddEntry("zone", "Some Land", "Some Land"); seen.zone = SkaldCharDB.entries[#SkaldCharDB.entries].fl
+  SkaldAPI.AddEntry("death", "Some Land", "Some Land"); seen.death = SkaldCharDB.entries[#SkaldCharDB.entries].fl
+  return seen
+end
+local P = ns.LOCALES.enUS.phrases
+local ok, bad = true, {}
+-- a level of the voice is told from the lines of the race followed by the common ones
+local function leads(list, base) if type(list) ~= "table" or #list ~= #base + #P.tone_kin_level then return false end for i = 1, #base do if list[i] ~= base[i] then return false end end return true end
+for _, race in ipairs({ "Draenei", "BloodElf" }) do
+  local s = flavors(race)
+  if not leads(s.level, P["race_" .. race .. "_kinLevel"]) then ok = false; bad[#bad + 1] = race .. " level" end
+  for _, kind in ipairs({ "quest", "zone", "death" }) do
+    if s[kind] ~= "race_" .. race .. "_" .. kind then ok = false; bad[#bad + 1] = race .. " " .. kind .. "=" .. tostring(s[kind]) end
+  end
+end
+math.random = draw
+RES = ok and "ok" or table.concat(bad, " ; ")`,
+});
+
+// The Anniversary client is the Burning Crusade. What it has that Forever and the first Azeroth do not: a profession (Jewelcrafting),
+// a level cap of seventy, and mounts known only through the companions of the game (no mount journal, no NEW_MOUNT_ADDED).
+run('Jewelcrafting: the skill line and the names of three languages find it, each language has its lines for it, its page is written once, and it does not ask for a picture that does not exist', {
+  pre: `${SAVED('{}', 'skills = { cooking = 0 }, skillsInit = true')}
+function GetProfessions() return 1, 2 end
+function GetProfessionInfo(i) if i == 1 then return "Cooking", nil, 1, nil, nil, nil, 185 end return "Jewelcrafting", nil, 1, nil, nil, nil, 755 end`,
+  body: `local byLine = SkaldAPI.ProfessionKey(755, nil)
+local byName = SkaldAPI.ProfessionKey(nil, "Joalheria") == "jewelcrafting" and SkaldAPI.ProfessionKey(nil, "Joaillerie") == "jewelcrafting" and SkaldAPI.ProfessionKey(nil, "Jewelcrafting 150") == "jewelcrafting"
+local pools = true
+for _, loc in ipairs({ "enUS", "ptBR", "frFR" }) do local P = ns.LOCALES[loc].phrases.profession_jewelcrafting; if type(P) ~= "table" or #P < 8 then pools = false end end
+fire("SKILL_LINES_CHANGED"); runTimers()
+local page, n = nil, 0
+for _, e in ipairs(SkaldCharDB.entries) do if e.kind == "profession" and e.pf == "jewelcrafting" then page = e; n = n + 1 end end
+fire("SKILL_LINES_CHANGED"); runTimers()
+local again = 0
+for _, e in ipairs(SkaldCharDB.entries) do if e.kind == "profession" and e.pf == "jewelcrafting" then again = again + 1 end end
+local text = page and SkaldAPI.Render(page) or ""
+local icon = page and SkaldAPI.EventIconPath("profession", page) or ""
+local plain = SkaldAPI.EventIconPath("profession", { pf = "inscription" })   -- a profession with no picture of its own: the general one, never a missing file
+RES = (byLine == "jewelcrafting" and byName and pools and n == 1 and again == 1 and text:find("Jewelcrafting", 1, true) and icon:find("pf_jewelcrafting", 1, true) and plain:find("ev_profession", 1, true)) and "ok"
+  or ("line=" .. tostring(byLine) .. " names=" .. tostring(byName) .. " pools=" .. tostring(pools) .. " pages=" .. n .. "/" .. again .. " icon=" .. icon .. " text=" .. text)`,
+});
+
+run('the level cap: with the cap at seventy there is a goal for level 70, sixty is no longer the top of the world (the goal and the end of the Saga say so), and with the cap at sixty nothing changes', {
+  pre: `CAP = 60
+function GetMaxPlayerLevel() return CAP end`,
+  body: `local _, all60 = ns.GoalScore()
+local name60 = ns.GoalName("level60")
+CAP = 70
+local _, all70 = ns.GoalScore()
+local name60b = ns.GoalName("level60")
+local has70 = ns.GoalName("level70") ~= "level70"
+local function ending(level)
+  function UnitLevel() return level end
+  local text, seen = "", {}
+  for k = 0, 119 do
+    SkaldCharDB.stats.first = 1700000000 + k * 123457 + k * k * 31   -- many different first dates: the telling is picked by the first date
+    local chapters = ns.BuildSaga()
+    local last = chapters[#chapters]
+    text = text .. " " .. (last and last.text or "")
+  end
+  return text
+end
+local at65 = ending(65)
+local at70 = ending(70)
+CAP = 60
+local at60 = ending(60)
+local noTop = not at65:lower():find("top of the world", 1, true)
+local sevenNotSixty = at70:find("70", 1, true) and not at70:lower():find("sixty", 1, true)
+local oldTop = at60:lower():find("top of the world", 1, true)
+local pools = true
+for _, loc in ipairs({ "enUS", "ptBR", "frFR" }) do
+  for _, ph in ipairs(ns.SagaTexts[loc].POOLS.epilogueTop) do
+    local low = ph:lower()
+    if low:find("sixty", 1, true) or low:find("sessenta", 1, true) or low:find("soixante", 1, true) then pools = false end
+  end
+end
+RES = (all70 == all60 + 100 and name60 == "At the Top of the World" and name60b ~= name60 and has70 and noTop and sevenNotSixty and oldTop and pools) and "ok"
+  or ("all " .. all60 .. "/" .. all70 .. " name60=" .. name60 .. "/" .. name60b .. " has70=" .. tostring(has70) .. " noTop=" .. tostring(noTop) .. " seven=" .. tostring(sevenNotSixty) .. " oldTop=" .. tostring(oldTop) .. " pools=" .. tostring(pools))`,
+});
+
+run('mounts of the Burning Crusade (no mount journal): they are counted from the companions of the game, the collection goals are listed, the mounts already known write no page and a mount learned writes one, once', {
+  pre: `MOUNTS = { { 100, "Brown Horse", 458 }, { 101, "Gray Ram", 6896 } }
+function GetNumCompanions(kind) if kind == "MOUNT" then return #MOUNTS end return 0 end
+function GetCompanionInfo(kind, i) local m = kind == "MOUNT" and MOUNTS[i]; if m then return m[1], m[2], m[3], "icon", false, 1 end end`,
+  body: `local c = SkaldAPI.Collections()
+local ready = c.mountsReady and c.petsReady and c.mounts == 2
+local before = count("mount")
+MOUNTS[3] = { 102, "Black Stallion", 470 }
+fire("COMPANION_LEARNED"); runTimers(); runTimers()
+fire("COMPANION_LEARNED"); runTimers(); runTimers()
+local page
+for _, e in ipairs(SkaldCharDB.entries) do if e.kind == "mount" then page = e end end
+local text = page and SkaldAPI.Render(page) or ""
+RES = (ready and before == 0 and count("mount") == 1 and text:find("Black Stallion", 1, true) and SkaldCharDB.mountSpells and SkaldCharDB.mountSpells[470]) and "ok"
+  or ("ready=" .. tostring(ready) .. " before=" .. before .. " pages=" .. count("mount") .. " text=" .. text)`,
+});
+
+// /skald probe lore: a developer tool for the day Forever opens. The texts of the game (what a quest says, what a talk and a creature
+// say, a book) are kept with who told them and where, to write the lines of a race and a land from what the game itself says.
+const LORE_STUBS = `QT, QX, QO = "Sky Anchors", "The elders spoke of the anchors that hold the isle.", "Mend three anchors."
+function GetTitleText() return QT end
+function GetQuestText() return QX end
+function GetObjectiveText() return QO end
+function GetProgressText() return "Have you mended them yet?" end
+function GetRewardText() return "Well done, windshaper." end
+function GetGossipText() return "The wind is silent here." end
+function GetQuestID() return 5001 end
+function UnitName(u) if u == "npc" then return "Elder Zephyr" end return "Tester" end
+function GetSubZoneText() return "The Landing" end
+function ItemTextGetText() return "A page from an old log." end
+function ItemTextGetItem() return "Weathered Log" end`;
+
+const LORE_SECRET = `SECRET = {}
+function issecretvalue(v) return SECRET[v] == true end
+function errorsSaid() return #(SkaldDB.errors or {}) end`;
+
+run('/skald probe lore keeps what the game tells (a quest offered, asked about and handed in, a talk, a creature, a book) once each, with who and where, and nothing when it is off', {
+  pre: LORE_STUBS,
+  body: `SlashCmdList.SKALD("probe lore")
+fire("QUEST_DETAIL"); fire("QUEST_PROGRESS"); fire("QUEST_COMPLETE"); fire("GOSSIP_SHOW")
+fire("CHAT_MSG_MONSTER_SAY", "Hold fast, children of the wind.", "Elder Zephyr"); fire("ITEM_TEXT_READY")
+fire("QUEST_DETAIL"); fire("GOSSIP_SHOW")   -- the same again: not kept twice
+local log = SkaldDB.loreProbe
+local kinds = {}
+for _, r in ipairs(log.items) do kinds[r.k] = (kinds[r.k] or 0) + 1 end
+local f = log.items[1]
+local keptOn = #log.items
+SlashCmdList.SKALD("probe lore off")
+fire("QUEST_DETAIL"); QT = "Another"; fire("QUEST_DETAIL")
+RES = (keptOn == 6 and #log.items == 6 and SkaldDB.probeLore == nil and kinds.detail == 1 and kinds.progress == 1 and kinds.complete == 1 and kinds.gossip == 1 and kinds.say == 1 and kinds.book == 1
+  and f.title == "Sky Anchors" and f.text:find("anchors that hold", 1, true) and f.n == "Elder Zephyr" and f.obj == "Mend three anchors." and f.q == 5001 and f.z and f.sz == "The Landing"
+  and log.meta and log.meta.race) and "ok"
+  or ("kept " .. keptOn .. " then " .. #log.items .. " probeLore=" .. tostring(SkaldDB.probeLore) .. " first=" .. tostring(f and f.title))`,
+});
+
+run('/skald probe lore leaves out the text the client withholds, stops at its limit and says so once, lists what it holds, and clear erases it', {
+  pre: LORE_SECRET + '\n' + LORE_STUBS,
+  body: `SlashCmdList.SKALD("probe lore")
+SECRET["Hidden words"] = true; QT = "Hidden"; QX = "Hidden words"; fire("QUEST_DETAIL")
+local hidden = SkaldDB.loreProbe.items[1]
+for i = 1, 810 do QT = "T" .. i; QX = "X" .. i; fire("QUEST_DETAIL") end
+local n = #SkaldDB.loreProbe.items
+local said = 0
+for _, line in ipairs(print_out) do if line:find("800", 1, true) then said = said + 1 end end
+print_out = {}
+SlashCmdList.SKALD("probe lore list")
+local listed = table.concat(print_out, " ")
+SlashCmdList.SKALD("probe lore clear")
+RES = (hidden.text == nil and hidden.title == "Hidden" and n == 800 and said == 1 and listed:find("800", 1, true) and SkaldDB.loreProbe == nil and errorsSaid() == 0) and "ok"
+  or ("hidden text=" .. tostring(hidden.text) .. " n=" .. n .. " said=" .. said .. " listed=" .. listed .. " after clear=" .. tostring(SkaldDB.loreProbe))`,
+});
+
+// the tool that turns the saved variables into text to read
+{
+  let okTool = false, why = '';
+  try {
+    const { toMarkdown } = require('./lore_extract');
+    const sample = 'SkaldDB = { ["loreProbe"] = { ["meta"] = { ["race"] = "Skyborne", ["class"] = "MAGE", ["faction"] = "Alliance", ["locale"] = "enUS", ["build"] = "1.60.1.70374" }, ["items"] = { { ["k"] = "detail", ["t"] = 1, ["z"] = "Zephras Isle", ["sz"] = "The Landing", ["n"] = "Elder Zephyr", ["title"] = "Sky Anchors", ["text"] = "The anchors fail.", ["obj"] = "Mend three anchors.", ["q"] = 5001 }, { ["k"] = "say", ["t"] = 2, ["z"] = "Zephras Isle", ["n"] = "Windcaller", ["text"] = "Hold fast." } } } }';
+    const md = toMarkdown(sample);
+    okTool = ['Skyborne', 'Zephras Isle', 'Elder Zephyr', 'Sky Anchors', 'The anchors fail.', 'Mend three anchors.', 'Windcaller', 'Hold fast.'].every(w => md.includes(w));
+    if (!okTool) why = md.slice(0, 200);
+  } catch (e) { why = e.message; }
+  if (okTool) console.log('  ok    the lore tool turns the saved variables into text to read');
+  else { failed++; console.log('  FAIL  the lore tool: ' + why); }
+}
+
+run('/skatlas debug with the map shut does not fail: it arms itself and says what to do', {
+  body: `print_out = {}
+SlashCmdList.SKALDATLAS("debug")
+local said = table.concat(print_out, " ")
+RES = (said:find("armed", 1, true) and not said:find("error", 1, true) and (SkaldDB.errors == nil)) and "ok" or ("said: " .. said)`,
+});
+
+// Seen in the Anniversary client with the RestedXP Guides on the same map: the tooltip of a marker of the diary showed, the marker did
+// not. The frames of the map sit at level 2000 and over (the layers of the picture, the pins of the game); with none of the game's
+// small pins to go by the diary put its markers at 603, under the layers, where they are hit by the mouse and never seen.
+run('the markers of the diary are above the layers of the map and under its small pins', {
+  body: `local PinLevel = SkaldAPI.AtlasPure.PinLevel
+local function child(level, width, mouse) return { GetFrameLevel = function() return level end, GetWidth = function() return width end,
+  IsMouseEnabled = function() return mouse end, IsShown = function() return true end } end
+local function canvasOf(list) return { GetFrameLevel = function() return 3 end, GetChildren = function() return table.unpack(list) end } end
+local bad = {}
+local function expect(name, list, lo, hi)
+  local got = PinLevel(canvasOf(list))
+  if got < lo or got > hi then bad[#bad + 1] = name .. ": " .. got .. " (wanted " .. lo .. ".." .. hi .. ")" end
+end
+-- layers as wide as the map at 2000..2006 and no small pin: above all of them
+expect("layers only", { child(2000, 1002, false), child(2003, 1002, true), child(2006, 1002, false) }, 2007, 2200)
+-- small pins of the game at 2003 over a layer at 2000: between the layer and the pins
+expect("layer and pins", { child(2000, 1002, false), child(2003, 30, true), child(2005, 24, true) }, 2001, 2002)
+-- the pins sit on the layer's own level: just over it
+expect("pin on the layer", { child(2000, 1002, false), child(2000, 30, true) }, 2001, 2001)
+-- a long line of another addon over the pins does not lift the markers over the game's pins
+expect("a line above", { child(2000, 1002, false), child(2003, 30, true), child(2010, 400, true) }, 2001, 2002)
+-- nothing on the map: well above the base, as before
+expect("empty", {}, 600, 700)
+RES = #bad == 0 and "ok" or table.concat(bad, " ; ")`,
+});
+
+// Seen in the game: a word typed after /skald probe that no probe knew (list, lorelist...) turned the old calibration probe on and said so.
+run('/skald probe with a word no probe knows does not turn the calibration probe on: it says what the probes are; the plain command and off still work', {
+  body: `SlashCmdList.SKALD("probe list")
+local typo = SkaldDB.probe
+local said = table.concat(print_out, " ")
+SlashCmdList.SKALD("probe lorelist")
+local typo2 = SkaldDB.probe
+SlashCmdList.SKALD("probe")
+local on = SkaldDB.probe
+SlashCmdList.SKALD("probe off")
+local off = SkaldDB.probe
+RES = (not typo and not typo2 and on == true and not off and said:find("probe lore", 1, true)) and "ok"
+  or ("typo=" .. tostring(typo) .. "/" .. tostring(typo2) .. " on=" .. tostring(on) .. " off=" .. tostring(off) .. " said=" .. said)`,
+});
+
 run('a pet on loan is not a companion', {
   pre: `function UnitExists(u) return u == "pet" end
 function UnitName(u) if u == "pet" then return "Loaner" end return "Tester" end
@@ -477,7 +976,8 @@ NOW = NOW + 10
 SkaldCharDB.questStart = {}
 fire("QUEST_ACCEPTED", 1, 100); fire("QUEST_TURNED_IN", 102, 5000, 0); runTimers()
 local same; for i = #SkaldCharDB.entries, 1, -1 do if SkaldCharDB.entries[i].kind == "quest" then same = SkaldCharDB.entries[i]; break end end
-RES = (one.since == 1 and text:find("esterday", 1, true) and same.since == nil) and "ok" or ("one=" .. tostring(one.since) .. " same=" .. tostring(same.since) .. " " .. text)`,
+local fromYesterday = SkaldAPI.PoolFor(one) == ns.LOCALES.enUS.phrases.questChainYesterday   -- not every line of it says "yesterday"
+RES = (one.since == 1 and fromYesterday and same.since == nil) and "ok" or ("one=" .. tostring(one.since) .. " same=" .. tostring(same.since) .. " " .. text)`,
 });
 
 run('the days a chain took stay out of the saved file once old and numerous', {
@@ -1211,7 +1711,7 @@ run('goals that came with a later list are marked quietly in a diary that alread
 local earned, possible = ns.GoalScore()
 -- flights5 was there before (5 points); the new ones (level 10 and 20, quests50, dungeons, bosses1, kills500) came quietly
 local quiet = g.level10 and g.level10.retro and g.level20 and g.level20.retro and g.quests50 and g.quests50.retro and g.kills500 and g.kills500.retro
-RES = (count("goal") == 0 and quiet and SkaldCharDB.goalsVer == 4 and earned > 5 and possible > 800 and ns.GoalPoints("level60") == 100
+RES = (count("goal") == 0 and quiet and SkaldCharDB.goalsVer == 6 and earned > 5 and possible > 800 and ns.GoalPoints("level60") == 100
   and ns.GoalPoints("flights5") == 5) and "ok" or ("pages=" .. count("goal") .. " quiet=" .. tostring(quiet) .. " ver=" .. tostring(SkaldCharDB.goalsVer) .. " score=" .. earned .. "/" .. possible)`,
 });
 
@@ -1505,6 +2005,20 @@ local done, total = ns.ZoneCard.Quests(1438)
 RES = (done == 1 and total == 2) and "ok" or ("done " .. tostring(done) .. " of " .. tostring(total))`,
 });
 
+run('the zone card: a race newer than the quest data (Skyborne) takes the quests of its faction', {
+  pre: SAVED('{}', 'version = 99, goalsInit = true, goalsVer = 3, goals = {}, stats = { counts = {}, deathZones = {}, tiers = {}, played = 1, first = 1 }'),
+  body: ZONE_STUBS + '\n' + ZONE_ART + `
+function UnitRace() return "Skyborne", "Skyborne", 90 end
+function UnitFactionGroup() return "Alliance", "Alliance" end
+local quests = { [1] = { zoneOrSort = 10 }, [2] = { zoneOrSort = 10, requiredRaces = 77 }, [3] = { zoneOrSort = 10, requiredRaces = 178 },
+  [4] = { zoneOrSort = 10, requiredRaces = 1 } }
+local qdb = { GetQuestIds = function() return { 1, 2, 3, 4 } end, GetQuest = function(_, id) return quests[id] end, GetUiMapId = function() return 1438 end }
+_G.LibStub = function() return qdb end
+C_QuestLog = { IsQuestFlaggedCompleted = function(id) return id == 2 end }
+local done, total = ns.ZoneCard.Quests(1438)
+RES = (done == 1 and total == 2) and "ok" or ("done " .. tostring(done) .. " of " .. tostring(total))`,
+});
+
 run('the zone card builds from the tiles of the game and raises no error', {
   pre: SAVED('{}', 'version = 99, goalsInit = true, goalsVer = 3, goals = {}, stats = { counts = {}, deathZones = {}, tiers = {}, played = 1, first = 1 }'),
   body: ZONE_STUBS + '\n' + ZONE_ART + '\n' + ZONE_DB + `
@@ -1722,7 +2236,7 @@ if not (prev and nextB) then RES = "corners not found" else
 nextB._OnClick(nextB); nextB._OnClick(nextB); nextB._OnClick(nextB)   -- past the last page: it stays on it
 local last = label()
 prev._OnClick(prev)
-RES = (first == "1 of 2" and last == "2 of 2" and label() == "1 of 2") and "ok" or ("first " .. tostring(first) .. " last " .. tostring(last) .. " back " .. tostring(label()))
+RES = (first == "1 of 3" and last == "3 of 3" and label() == "2 of 3") and "ok" or ("first " .. tostring(first) .. " last " .. tostring(last) .. " back " .. tostring(label()))
 end`,
 });
 
@@ -2678,6 +3192,265 @@ end
 RES = (first and war and old and clean and #miss == 0) and "ok"
   or ("first=" .. tostring(first) .. " war=" .. tostring(war) .. " old=" .. tostring(old) .. " clean=" .. tostring(clean) .. " missing: " .. table.concat(miss, ","))`,
 });
+
+// Forever (a Mainline-family client) hides some payloads from addons as "secret values": issecretvalue says so.
+// Lua 5.3 cannot make a comparison of a secret fail as the game does, so a value the mock calls secret must
+// simply never be used: no page from it and no error in the chat.
+const SECRETS = `SECRET = {}
+function issecretvalue(v) return SECRET[v] == true end
+function errorsSaid() return #(SkaldDB.errors or {}) end`;
+
+run('Forever: a secret outcome of a boss fight is not taken as a victory, and nothing is said in the chat', {
+  pre: `${SECRETS}\nfunction IsInInstance() return true, "party" end
+function GetInstanceInfo() return "The Deadmines", "party", 1, "Normal", 5, 0, false, 36 end`,
+  body: `SECRET[1] = true
+fire("ENCOUNTER_END", 1, "Edwin VanCleef", 1, 5, 1); runTimers()
+local hidden = count("boss")
+SECRET[1] = nil
+fire("ENCOUNTER_END", 2, "Cookie", 1, 5, 1); runTimers()
+RES = (hidden == 0 and count("boss") == 1 and errorsSaid() == 0) and "ok"
+  or ("secret victory pages=" .. hidden .. " plain=" .. count("boss") .. " errors=" .. errorsSaid())`,
+});
+
+run('Forever: a secret boss id is not kept, the boss page is still written', {
+  pre: `${SECRETS}\nfunction IsInInstance() return true, "party" end
+function GetInstanceInfo() return "The Deadmines", "party", 1, "Normal", 5, 0, false, 36 end`,
+  body: `SECRET[639] = true
+fire("BOSS_KILL", 639, "Edwin VanCleef"); runTimers()
+RES = (count("boss") == 1 and errorsSaid() == 0) and "ok" or ("pages=" .. count("boss") .. " errors=" .. errorsSaid())`,
+});
+
+run('Forever: a secret loot line writes no page', {
+  pre: `${SECRETS}\nLOOT_ITEM_SELF = "You receive loot: %s."`,
+  body: `local line = "You receive loot: |cff0070dd|Hitem:555::::::::15:::::|h[Worn Hatchet]|h|r."
+SECRET[line] = true
+fire("CHAT_MSG_LOOT", line); runTimers()
+local hidden = count("loot")
+SECRET[line] = nil
+fire("CHAT_MSG_LOOT", line); runTimers()
+RES = (hidden == 0 and count("loot") == 1 and errorsSaid() == 0) and "ok" or ("secret=" .. hidden .. " plain=" .. count("loot") .. " errors=" .. errorsSaid())`,
+});
+
+const FOREVER = fs.readFileSync(path.join(__dirname, 'forever.lua'), 'utf8');
+
+run('Skyborne: a level 1 character keeps the map it was born on, the Saga names it, and the race pools are found by the start of the name', {
+  pre: `function UnitRace() return "Skyborne", "SkyborneAlliance", 90 end
+function UnitLevel() return 1 end
+C_Map.GetBestMapForUnit = function() return 2001 end
+C_Map.GetMapInfo = function(id) if id == 2001 then return { name = "Zephras Isle", parentMapID = 2000, mapType = 3 } end
+  if id == 2000 then return { name = "The Skyreach", parentMapID = 0, mapType = 2 } end end`,
+  body: `local kept = SkaldCharDB.birthMap
+function GetZoneText() return "Darkshore" end; fire("ZONE_CHANGED_NEW_AREA"); runTimers()
+local saga = ns.BuildSaga()
+local text = saga[1] and saga[1].text or ""
+local flavored = 0
+for lv = 2, 60 do function UnitLevel() return lv end; fire("PLAYER_LEVEL_UP", lv); runTimers()
+  local e = SkaldCharDB.entries[#SkaldCharDB.entries]
+  if e.kind == "level" and e.fl == "race_Skyborne_level" then flavored = flavored + 1 end end
+RES = (kept == 2001 and text:find("Zephras Isle", 1, true) and text:find("The Skyreach", 1, true) and flavored > 0) and "ok"
+  or ("birthMap=" .. tostring(kept) .. " flavored=" .. flavored .. " saga: " .. text:sub(1, 200))`,
+});
+
+run('Forever profile: a day of events, the tabs and the commands raise no error, and reputation is read with C_Reputation', {
+  pre: FOREVER + `
+LOOT_ITEM_SELF = "You receive loot: %s."
+function UnitFactionGroup() return "Alliance", "Alliance" end
+function GetInstanceInfo() return "The Deadmines", "party", 1, "Normal", 5, 0, false, 36 end`,
+  body: `local before = SkaldCharDB and #SkaldCharDB.entries or 0
+fire("QUEST_DETAIL"); fire("QUEST_ACCEPTED", 77); fire("QUEST_TURNED_IN", 77, 100, 0); runTimers()
+function UnitLevel() return 21 end; fire("PLAYER_LEVEL_UP", 21); runTimers()
+function GetZoneText() return "Darkshore" end; fire("ZONE_CHANGED_NEW_AREA"); runTimers()
+fire("UPDATE_FACTION"); runTimers()
+FOREVER_FACTIONS[3].reaction = 6
+fire("UPDATE_FACTION"); runTimers()
+fire("TAXIMAP_OPENED"); fire("SKILL_LINES_CHANGED"); fire("PLAYER_MONEY"); runTimers()
+fire("CHAT_MSG_LOOT", "You receive loot: |cff0070dd|Hitem:555::::::::15:::::|h[Worn Hatchet]|h|r."); runTimers()
+fire("ENCOUNTER_START", 1, "Edwin VanCleef", 1, 5); fire("ENCOUNTER_END", 1, "Edwin VanCleef", 1, 5, 1); runTimers()
+fire("PLAYER_DEAD"); fire("PLAYER_UNGHOST"); fire("HEARTHSTONE_BOUND"); fire("GROUP_ROSTER_UPDATE"); runTimers()
+fire("ACHIEVEMENT_EARNED", 6); fire("NEW_MOUNT_ADDED", 1); fire("CHAT_MSG_ADDON", "x", "y", "PARTY", "Someone"); runTimers()
+for _, cmd in ipairs({ "report", "reader", "backup", "help" }) do SlashCmdList.SKALD(cmd); runTimers() end
+local win = _G.SkaldFrame; win:Show(); if win._OnShow then win._OnShow(win) end
+for _, f in ipairs(frames) do if rawget(f, "_OnClick") and type(rawget(f, "top")) == "number" then pcall(f._OnClick, f); runTimers() end end
+local errs = SkaldDB.errors or {}
+RES = (#errs == 0 and count("rep") == 1 and count("boss") == 1 and count("level") >= 1 and #SkaldCharDB.entries > before) and "ok"
+  or ("errors: " .. table.concat(errs, " / ") .. " rep=" .. count("rep") .. " boss=" .. count("boss") .. " level=" .. count("level"))`,
+});
+
+run('a battleground: a won match is one page that counts for the goals, a lost one is told as a loss, nothing outside a field', {
+  pre: `function UnitFactionGroup() return "Alliance", "Alliance" end
+WINNER = nil
+function GetBattlefieldWinner() return WINNER end
+INSTANCE = { "Darkspear Islands", "pvp" }
+function GetInstanceInfo() return INSTANCE[1], INSTANCE[2], 0, "", 15 end`,
+  body: `fire("UPDATE_BATTLEFIELD_STATUS", 1); runTimers()
+local early = count("bg")
+WINNER = 1
+fire("UPDATE_BATTLEFIELD_STATUS", 1); fire("PVP_MATCH_COMPLETE", 1, 900); fire("UPDATE_BATTLEFIELD_STATUS", 1); runTimers()
+local won = count("bg")
+local e
+for _, x in ipairs(SkaldCharDB.entries) do if x.kind == "bg" then e = x end end
+local wonText = SkaldAPI.Render(e)
+NOW = NOW + 3600; WINNER = 0
+fire("PVP_MATCH_COMPLETE", 0, 900); runTimers()
+local l = SkaldCharDB.entries[#SkaldCharDB.entries]
+local lossText = SkaldAPI.Render(l)
+NOW = NOW + 3600; INSTANCE = { "Elwynn Forest", "none" }; WINNER = 1
+fire("UPDATE_BATTLEFIELD_STATUS", 1); runTimers()
+local inWorld = count("bg")
+local winLines, lossLines = 0, 0
+local P = ns.LOCALES.enUS.phrases
+for _, line in ipairs(P.bgWin) do if wonText:find(line:gsub("%%s", "Darkspear Islands"), 1, true) then winLines = winLines + 1 end end
+for _, line in ipairs(P.bgLoss) do if lossText:find(line:gsub("%%s", "Darkspear Islands"), 1, true) then lossLines = lossLines + 1 end end
+RES = (early == 0 and won == 1 and e.won == true and l.won == false and inWorld == 2 and SkaldCharDB.stats.bgWins == 1
+  and winLines == 1 and lossLines == 1 and ns.Search.GROUPS[3].kinds.bg) and "ok"
+  or ("early=" .. early .. " won=" .. won .. " world=" .. inWorld .. " wins=" .. tostring(SkaldCharDB.stats.bgWins) .. " texts: " .. wonText .. " / " .. lossText)`,
+});
+
+// Seen in the Anniversary client with a Draenei: eight seconds after the login the game still answered with the map of the
+// continent (Kalimdor), and that was kept as the birthplace for good ("born in Kalimdor, in Azeroth").
+const BIRTH_MAPS = `NOWMAP = 2000
+C_Map.GetBestMapForUnit = function() return NOWMAP end
+C_Map.GetMapInfo = function(id)
+  if id == 2001 then return { name = "Zephras Isle", parentMapID = 2000, mapType = 3 } end
+  if id == 2000 then return { name = "The Skyreach", parentMapID = 947, mapType = 2 } end
+  if id == 947 then return { name = "Azeroth", parentMapID = 0, mapType = 1 } end
+end
+function UnitRace() return "Draenei", "Draenei", 11 end
+function UnitLevel() return 1 end`;
+
+run('the birthplace is a zone, never a continent: the first answer of the game may be the continent and is not kept, a zone read later is', {
+  pre: BIRTH_MAPS,
+  body: `local first = SkaldCharDB.birthMap
+NOWMAP = 2001
+fire("ZONE_CHANGED_NEW_AREA"); runTimers()
+RES = (first == nil and SkaldCharDB.birthMap == 2001) and "ok" or ("first=" .. tostring(first) .. " later=" .. tostring(SkaldCharDB.birthMap))`,
+});
+
+run('a continent already kept as the birthplace is replaced by the zone at level 1 or 2, and past that the Saga does not tell it', {
+  pre: `${BIRTH_MAPS}
+${SAVED('{ { t = 1792000000, kind = "quest", arg = "x", q = 1, tier = 1, zone = "Y", idx = 1 } }', 'birthMap = 2000, version = 99, goalsInit = true, goalsVer = 5, goals = {}')}`,
+  body: `NOWMAP = 2001
+fire("ZONE_CHANGED_NEW_AREA"); runTimers()
+local healed = SkaldCharDB.birthMap
+function UnitLevel() return 20 end
+SkaldCharDB.birthMap = 2000
+local text = ""
+for _, c in ipairs(ns.BuildSaga()) do text = text .. c.text end
+RES = (healed == 2001 and not text:find("Azeroth", 1, true) and not text:find("The Skyreach", 1, true)) and "ok"
+  or ("healed=" .. tostring(healed) .. " saga: " .. text:sub(1, 200))`,
+});
+
+run('Forever: the Bard leaves out the music of Outland and Eversong (a later time), every piece left has its name, and elsewhere all 33 stay', {
+  pre: FOREVER,
+  body: `local forever = #ns.Bard.TRACKS
+local named, tbc = true, false
+for i, t in ipairs(ns.Bard.TRACKS) do
+  if t.era == "tbc" then tbc = true end
+  if not ns.LOCALES.enUS.BARD_TRACKS[i] then named = false end
+end
+for i = 1, ns.Bard.Pages() * ns.Bard.PER_PAGE do if ns.Bard.TRACKS[i] and not ns.Bard.TRACKS[i].len then named = false end end
+RES = (forever == 27 and not tbc and named and ns.IsForever()) and "ok" or ("tracks=" .. forever .. " tbc=" .. tostring(tbc) .. " named=" .. tostring(named))`,
+});
+
+run('outside Forever the Bard keeps every piece', {
+  body: `RES = (#ns.Bard.TRACKS == 33 and not ns.IsForever()) and "ok" or ("tracks=" .. #ns.Bard.TRACKS)`,
+});
+
+run('the voice "Of My People": a first install speaks it, an old one keeps its voice', {
+  pre: `SkaldDB = nil`,
+  body: `local fresh = SkaldDB.tone
+RES = (fresh == "kin") and "ok" or ("fresh install tone=" .. tostring(fresh))`,
+});
+
+run('an install that had Skald before keeps the voice it had (none is epic)', {
+  pre: `SkaldDB = { version = 1 }`,
+  body: `RES = (SkaldDB.tone == nil) and "ok" or ("tone=" .. tostring(SkaldDB.tone))`,
+});
+
+run('the voice "Of My People": no number of level, the race speaks, no points on a goal, and choosing it tells old level pages again', {
+  pre: `function UnitRace() return "Orc", "Orc", 2 end`,
+  body: `SkaldDB.tone = nil
+function UnitLevel() return 21 end; fire("PLAYER_LEVEL_UP", 21); runTimers()
+local old
+for _, e in ipairs(SkaldCharDB.entries) do if e.kind == "level" then old = e end end
+local before = SkaldAPI.Render(old)
+local rev = ns.layoutRev or 0
+SkaldDB.tone = "kin"
+local after = SkaldAPI.Render(old)
+local P = ns.LOCALES.enUS.phrases
+local orcish = false
+for _, line in ipairs(P.race_Orc_kinLevel) do if after:find(line, 1, true) then orcish = true end end
+local digits, generic = {}, 0
+for lv = 22, 40 do function UnitLevel() return lv end; fire("PLAYER_LEVEL_UP", lv); runTimers() end
+for _, e in ipairs(SkaldCharDB.entries) do
+  if e.kind == "level" or e.kind == "milestone" then
+    local t = SkaldAPI.Render(e):gsub("|c%x+", ""):gsub("|H.-|h", "")
+    if t:find("%d") then digits[#digits + 1] = t end
+  end
+  if e.kind == "milestone" then for _, line in ipairs(P.tone_kin_milestone) do if SkaldAPI.Render(e):find(line, 1, true) then generic = generic + 1 end end end
+end
+local zones, raceZones = 0, 0
+local draw = math.random
+math.random = function(...) if select("#", ...) > 0 then return draw(...) end return 0.1 end   -- the voice draws its race lines three times in four: made certain here
+local here = 0   -- a page of a land is written once for each map: every land gets a map of its own
+C_Map.GetBestMapForUnit = function() return 5000 + here end
+C_Map.GetMapInfo = function(id) return { name = "Land", mapType = 3, parentMapID = 12 } end
+for i = 1, 40 do here = i; NOW = NOW + 7200; function GetZoneText() return "Land " .. i end; fire("ZONE_CHANGED_NEW_AREA"); runTimers() end
+math.random = draw
+for _, e in ipairs(SkaldCharDB.entries) do if e.kind == "zone" then zones = zones + 1; if e.fl == "race_Orc_zone" then raceZones = raceZones + 1 end end end
+local goal = { kind = "goal", arg = "level10", idx = 1 }
+local goalText = SkaldAPI.Render(goal)
+RES = (before:find("21", 1, true) and orcish and #digits == 0 and generic >= 1 and zones >= 20 and raceZones >= zones - 1 and not goalText:find("points", 1, true)) and "ok"
+  or ("before=" .. before .. " after=" .. after .. " digits=" .. table.concat(digits, " / ") .. " milestones=" .. generic .. " zones " .. raceZones .. "/" .. zones .. " goal=" .. goalText)`,
+});
+
+run('Skyborne by side: the Windshapers of the Horde and the High Order of the Alliance speak with their own lines, the common ones too, and a Skyborne with no side yet only the common ones', {
+  pre: `function UnitRace() return "Skyborne", "Skyborne", 90 end
+FACTION = "Horde"
+function UnitFactionGroup() return FACTION, FACTION end`,
+  body: `local P = ns.LOCALES.enUS.phrases
+local function draw(n)
+  local seen = {}
+  for i = 1, n do NOW = NOW + 7200; function UnitLevel() return 2 + (i % 8) end; fire("PLAYER_LEVEL_UP", 2 + (i % 8)); runTimers()
+    local e = SkaldCharDB.entries[#SkaldCharDB.entries]; if e.fl then seen[e.fl] = true end end
+  return seen
+end
+local horde = draw(120)
+SkaldDB.tone = "kin"
+local e = { kind = "level", arg = "5", race = "Skyborne", idx = 1 }
+local function leads(list, base) if type(list) ~= "table" or #list ~= #base + #P.tone_kin_level then return false end for i = 1, #base do if list[i] ~= base[i] then return false end end return true end
+local hordeKin = SkaldAPI.PoolFor(e)
+FACTION = "Alliance"
+local allianceKin = SkaldAPI.PoolFor(e)
+FACTION = "Neutral"
+local neutralKin = SkaldAPI.PoolFor(e)
+RES = (horde.race_SkyborneHorde_level and horde.race_Skyborne_level and not horde.race_SkyborneAlliance_level
+  and leads(hordeKin, P.race_SkyborneHorde_kinLevel) and leads(allianceKin, P.race_SkyborneAlliance_kinLevel) and leads(neutralKin, P.race_Skyborne_kinLevel)) and "ok"
+  or ("horde pools seen: " .. table.concat((function() local t = {} for k in pairs(horde) do t[#t+1] = k end return t end)(), ","))`,
+});
+
+run('/skald probe events counts the events by name, keeps the payload of the new-looking ones, and lists them', {
+  body: `SlashCmdList.SKALD("probe events")
+fire("CAMPSITE_CONTRIBUTION", 42, "Cozy Fire"); fire("CAMPSITE_CONTRIBUTION", 43); fire("PLAYER_MONEY")
+print_out = {}
+SlashCmdList.SKALD("probe events list")
+local said = table.concat(print_out, "\\n")
+local log = SkaldDB.probeEvents
+SlashCmdList.SKALD("probe events off")
+RES = (SkaldDB.probeEvents.count.CAMPSITE_CONTRIBUTION == 2 and log.seen[1].ev == "CAMPSITE_CONTRIBUTION" and log.seen[1][2] == "Cozy Fire"
+  and said:find("CAMPSITE_CONTRIBUTION x2", 1, true) and not said:find("PLAYER_MONEY", 1, true) and SkaldDB.probeAll == nil) and "ok"
+  or ("said: " .. said)`,
+});
+
+// every profession that says it has a picture of its own has the file
+{
+  const src = fs.readFileSync(path.join(ADDONS, 'Skald', 'Skald.lua'), 'utf8');
+  const block = (src.match(/K\.PF_ICONS = \{([^}]*)\}/) || [])[1] || '';
+  const keys = [...block.matchAll(/(\w+) = true/g)].map(m => m[1]);
+  const lost = keys.filter(k => !fs.existsSync(path.join(ADDONS, 'Skald', 'Textures', 'pf_' + k + '.tga')));
+  if (keys.length >= 13 && !lost.length) console.log('  ok    every profession with a picture of its own has the file (' + keys.length + ')');
+  else { failed++; console.log('  FAIL  pictures of the professions: ' + keys.length + ' named, missing: ' + lost.join(', ')); }
+}
 
 // every picture a look can ask for is in the folder
 {
