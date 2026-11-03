@@ -8,15 +8,18 @@ local _, ns = ...
 local UI_TEXT = {
     enUS = {
         TAB = "Cartographer", TITLE = "Cartographer", CHARTED = "%d of %d lands charted", OF = "%d of %d",
-        WALKED = "You have walked here.", NOT_YET = "Not yet walked.", EMPTY = "No maps yet.",
+        WALKED = "You have walked here. Click for more.", NOT_YET = "Not yet walked.", EMPTY = "No maps yet.",
+        BACK = "< Back", HERE = "Pages written here", NONE_HERE = "No pages were written here yet.", DATE = "%m/%d/%Y",
     },
     ptBR = {
         TAB = "Cartógrafo", TITLE = "Cartógrafo", CHARTED = "%d de %d terras mapeadas", OF = "%d de %d",
-        WALKED = "Você já andou por aqui.", NOT_YET = "Ainda não percorrida.", EMPTY = "Ainda sem mapas.",
+        WALKED = "Você já andou por aqui. Clique para ver mais.", NOT_YET = "Ainda não percorrida.", EMPTY = "Ainda sem mapas.",
+        BACK = "< Voltar", HERE = "Páginas escritas aqui", NONE_HERE = "Nenhuma página foi escrita aqui ainda.", DATE = "%d/%m/%Y",
     },
     frFR = {
         TAB = "Cartographe", TITLE = "Cartographe", CHARTED = "%d terres sur %d cartographiées", OF = "%d sur %d",
-        WALKED = "Vous avez d\195\169j\195\160 march\195\169 ici.", NOT_YET = "Pas encore parcourue.", EMPTY = "Pas encore de cartes.",
+        WALKED = "Vous avez d\195\169j\195\160 march\195\169 ici. Cliquez pour en savoir plus.", NOT_YET = "Pas encore parcourue.", EMPTY = "Pas encore de cartes.",
+        BACK = "< Retour", HERE = "Pages \195\169crites ici", NONE_HERE = "Aucune page n'a encore \195\169t\195\169 \195\169crite ici.", DATE = "%d/%m/%Y",
     },
 }
 local UI = UI_TEXT[GetLocale()] or UI_TEXT.enUS
@@ -68,9 +71,35 @@ function C.Count(list)
     return n
 end
 
+-- The pages of the diary written in a land (the newest first, at most `limit`), and how many there are in all.
+function C.Pages(mapID, limit)
+    local db = SkaldCharDB
+    local entries = db and db.entries
+    local zc = ns.ZoneCard
+    local out, total, seen = {}, 0, {}
+    if not entries then return out, 0 end
+    for i = #entries, 1, -1 do
+        local e = entries[i]
+        local id = e and ((type(e.m) == "number" and e.m) or e.zm)
+        if id then
+            local zone = id
+            if id ~= mapID then
+                zone = seen[id]
+                if zone == nil then zone = (zc and zc.ZoneMap(id)) or false; seen[id] = zone end
+            end
+            if zone == mapID then
+                total = total + 1
+                if #out < (limit or 7) then out[#out + 1] = e end
+            end
+        end
+    end
+    return out, total
+end
+
 local function BuildTab(panel)
     local CW = SkaldAPI.CW or 342
     local RIGHT_X = SkaldAPI.RIGHT_X or 402
+    local body = SkaldAPI.C_BODY or { 0.24, 0.16, 0.09 }
     local head = SkaldAPI.C_HEAD or { 0.43, 0.12, 0.10 }
     local muted = SkaldAPI.C_MUTED or { 0.42, 0.29, 0.17 }
     local TEX = "Interface\\AddOns\\Skald\\Textures\\skald2\\"
@@ -115,8 +144,99 @@ local function BuildTab(panel)
         end
     end
 
-    local function Refresh()
+    -- The detail of a land you have walked: its card (the map, the quests, the creatures) on the left page, the
+    -- pages written there on the right one; the left corner of the book, or this button, goes back to the grid.
+    local detail
+    local card
+    local back = CreateFrame("Button", nil, panel)
+    back:SetSize(90, 20)
+    back:SetPoint("TOPRIGHT", panel, "TOPLEFT", CW, -14)
+    back.text = back:CreateFontString(nil, "OVERLAY", "SkaldSmall")
+    back.text:SetAllPoints()
+    back.text:SetJustifyH("RIGHT")
+    back.text:SetTextColor(head[1], head[2], head[3])
+    back.text:SetText(UI.BACK)
+    back:Hide()
+    local rows = {}
+    for i = 1, 7 do
+        local row = CreateFrame("Button", nil, panel)
+        row:SetSize(CW, 50)
+        row:SetPoint("TOPLEFT", RIGHT_X, -52 - (i - 1) * 56)
+        row.date = row:CreateFontString(nil, "OVERLAY", "SkaldSmall")
+        row.date:SetPoint("TOPLEFT", 0, -2)
+        row.date:SetTextColor(muted[1], muted[2], muted[3])
+        row.text = row:CreateFontString(nil, "OVERLAY", "SkaldBody")
+        row.text:SetPoint("TOPLEFT", 0, -18)
+        row.text:SetWidth(CW)
+        row.text:SetJustifyH("LEFT")
+        row.text:SetTextColor(body[1], body[2], body[3])
+        row.hover = row:CreateTexture(nil, "BACKGROUND")
+        row.hover:SetAllPoints()
+        row.hover:SetColorTexture(0.43, 0.12, 0.10, 0.08)
+        row.hover:Hide()
+        row:SetScript("OnEnter", function(self) self.hover:Show() end)
+        row:SetScript("OnLeave", function(self) self.hover:Hide() end)
+        row:SetScript("OnClick", function(self)
+            if self.entry and SkaldAPI.OpenEntry then SkaldAPI.OpenEntry(self.entry) end
+        end)
+        row:Hide()
+        rows[i] = row
+    end
+    local none = panel:CreateFontString(nil, "OVERLAY", "SkaldBody")
+    none:SetPoint("TOPLEFT", RIGHT_X, -70)
+    none:SetWidth(CW)
+    none:SetJustifyH("CENTER")
+    none:SetTextColor(muted[1], muted[2], muted[3])
+    none:SetText(UI.NONE_HERE)
+    none:Hide()
+
+    local Refresh
+    local function Close() detail = nil; if Refresh then Refresh() end end
+    back:SetScript("OnClick", Close)
+    for _, cell in ipairs(cells) do
+        cell:SetScript("OnClick", function(self)
+            if self.info and self.walked then detail = self.info; Refresh() end
+        end)
+    end
+
+    function Refresh()
         local list = C.List()
+        local inDetail = detail ~= nil
+        back:SetShown(inDetail)
+        if card then card:SetShown(inDetail) end
+        for _, row in ipairs(rows) do row:Hide() end
+        none:Hide()
+        if inDetail then
+            for _, cell in ipairs(cells) do cell:Hide() end
+            empty:Hide()
+            if not card and ns.ZoneCard then
+                local okCard, built = pcall(ns.ZoneCard.Build, panel, CW)
+                if okCard then card = built end
+            end
+            if card then
+                card:ClearAllPoints()
+                card:SetPoint("TOPLEFT", panel, "TOPLEFT", 0, -44)
+                pcall(card.Set, card, detail.id)
+                card:Show()
+            end
+            local pages, total = C.Pages(detail.id, #rows)
+            count:SetText(UI.HERE .. " (" .. total .. ")")
+            for i, row in ipairs(rows) do
+                local e = pages[i]
+                if e then
+                    row.entry = e
+                    row.date:SetText(e.t and date(UI.DATE, e.t) or "")
+                    local ok, text = pcall(SkaldAPI.Render, e)
+                    text = ok and tostring(text or "") or ""
+                    text = text:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""):gsub("%s+", " ")
+                    if #text > 96 then text = text:sub(1, 93) .. "..." end
+                    row.text:SetText(text)
+                    row:Show()
+                end
+            end
+            none:SetShown(#pages == 0)
+            return
+        end
         local per = C.PER_PAGE * 2
         spreads = math.max(1, math.ceil(#list / per))
         spread = math.max(1, math.min(spread, spreads))
@@ -142,11 +262,15 @@ local function BuildTab(panel)
     end
 
     local pager = {
-        Turn = function(delta) spread = math.max(1, math.min(spreads, spread + delta)) end,
-        CanPrev = function() return spread > 1 end,
-        CanNext = function() return spread < spreads end,
+        Turn = function(delta)
+            if detail then if delta < 0 then detail = nil end return end
+            spread = math.max(1, math.min(spreads, spread + delta))
+        end,
+        CanPrev = function() return detail ~= nil or spread > 1 end,
+        CanNext = function() return detail == nil and spread < spreads end,
     }
     C.refresh = Refresh
+    C.pager = pager
     return Refresh, pager
 end
 

@@ -254,13 +254,15 @@
   "GetLocale",
   "SkaldAPI",
   "SkaldCharDB",
+  "date",
   "ipairs",
   "math",
   "pairs",
   "pcall",
   "string",
   "table",
-  "tostring"
+  "tostring",
+  "type"
  ],
  "Skald/Backup.lua": [
   "CreateFrame",

@@ -1998,7 +1998,20 @@ if not tab then RES = "no Cartographer tab" else
   tab._OnClick(tab)
   local list = ns.Cartographer.List()
   local walked = ns.Cartographer.Count(list)
-  RES = (#list >= 50 and walked == 2 and ns.Cartographer.Walked(1429) and not ns.Cartographer.Walked(1411) and (SkaldDB.errors == nil)) and "ok"
+  -- a click on a walked land opens its detail, the corner goes back
+  local cell
+  for _, f in ipairs(frames) do if rawget(f, "map") and f._OnClick and f.info and not cell then cell = f end end
+  local opened, backOk = false, false
+  if cell then
+    SkaldCharDB.visitedMaps["map:" .. cell.info.id] = true
+    ns.Cartographer.refresh()
+    cell._OnClick(cell)
+    opened = ns.Cartographer.pager.CanPrev() and not ns.Cartographer.pager.CanNext()
+    ns.Cartographer.pager.Turn(-1)
+    ns.Cartographer.refresh()
+    backOk = ns.Cartographer.pager.CanNext() or ns.Cartographer.pager.CanPrev() == false
+  end
+  RES = (cell and opened and backOk and #list >= 50 and walked == 2 and ns.Cartographer.Walked(1429) and (SkaldDB.errors == nil)) and "ok"
     or ("list " .. #list .. " walked " .. walked .. " errors: " .. tostring(SkaldDB.errors and SkaldDB.errors[1]))
 end`,
 });
