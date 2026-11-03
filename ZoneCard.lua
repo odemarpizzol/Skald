@@ -29,6 +29,8 @@ ZC.ART = {
     [1411] = "map_durotar",
     [1412] = "map_mulgore",
     [1420] = "map_tirisfal",
+    [1941] = "map_eversong",
+    [1943] = "map_azuremyst",
 }
 -- How the map of the zone sits on the page: it is a drawing of the old kind, not a window. The unfound part is faint (the
 -- ink of the map, thin on the paper), the regions found are darker, and the borders fade into the paper in steps (no frame).

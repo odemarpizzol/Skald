@@ -2052,6 +2052,17 @@ local hasArt = card.tiles[1] and card.tiles[1]._tex and card.tiles[1]._tex:find(
 RES = (hasArt and #card.tiles == 1 and #card.found == 0 and #card.mapCorners == 4 and card.compass ~= nil) and "ok" or "art or ornaments missing"`,
 });
 
+run('the Burning Crusade starting zones use their own map art', {
+  pre: SAVED('{}', 'version = 99, goalsInit = true, goalsVer = 3, goals = {}, stats = { counts = {}, deathZones = {}, tiers = {}, played = 1, first = 1 }'),
+  body: ZONE_STUBS + `
+local card = ns.ZoneCard.Build(UIParent, 342)
+card:Set(1941)
+local eversong = card.tiles[1] and card.tiles[1]._tex and card.tiles[1]._tex:find("map_eversong", 1, true)
+card:Set(1943)
+local azuremyst = card.tiles[1] and card.tiles[1]._tex and card.tiles[1]._tex:find("map_azuremyst", 1, true)
+RES = (eversong and azuremyst) and "ok" or "Burning Crusade map art missing"`,
+});
+
 run('the zone card still comes out without the map art and without QuestDB', {
   pre: SAVED('{}', 'version = 99, goalsInit = true, goalsVer = 3, goals = {}, stats = { counts = {}, deathZones = {}, tiers = {}, played = 1, first = 1 }'),
   body: ZONE_STUBS + `
