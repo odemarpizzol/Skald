@@ -21,7 +21,7 @@ ns.ZoneCard = ZC
 
 local TEX = "Interface\\AddOns\\Skald\\Textures\\"
 local MAP_W = 342
--- Hand-drawn maps for the original starting zones. Other zones keep the client's explored-map tiles.
+-- Hand-drawn map art for supported zones. Other zones keep the client's explored-map tiles.
 ZC.ART = {
     [1429] = "map_elwynn",
     [1426] = "map_dunmorogh",
@@ -31,6 +31,26 @@ ZC.ART = {
     [1420] = "map_tirisfal",
     [1941] = "map_eversong",
     [1943] = "map_azuremyst",
+    [1436] = "map_westfall",
+    [1432] = "map_lochmodan",
+    [1439] = "map_darkshore",
+    [1421] = "map_silverpine",
+    [1413] = "map_barrens",
+    [1433] = "map_redridge",
+    [1431] = "map_duskwood",
+    [1437] = "map_wetlands",
+    [1440] = "map_ashenvale",
+    [1424] = "map_hillsbrad",
+    [1442] = "map_stonetalon",
+    [1441] = "map_thousandneedles",
+    [1445] = "map_dustwallow",
+    [1443] = "map_desolace",
+    [1444] = "map_feralas",
+    [1417] = "map_arathi",
+    [1416] = "map_alterac",
+    [1418] = "map_badlands",
+    [1435] = "map_swampsorrows",
+    [1425] = "map_hinterlands",
 }
 -- How the map of the zone sits on the page: it is a drawing of the old kind, not a window. The unfound part is faint (the
 -- ink of the map, thin on the paper), the regions found are darker, and the borders fade into the paper in steps (no frame).

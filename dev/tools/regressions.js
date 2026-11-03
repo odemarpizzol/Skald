@@ -2039,8 +2039,8 @@ run("the zone card uses the game's map tiles for zones without custom art", {
   pre: SAVED('{}', 'version = 99, goalsInit = true, goalsVer = 3, goals = {}, stats = { counts = {}, deathZones = {}, tiers = {}, played = 1, first = 1 }'),
   body: ZONE_STUBS + '\n' + ZONE_ART + '\n' + ZONE_DB + `
 local card = ns.ZoneCard.Build(UIParent, 342)
-card:Set(1439)
-RES = (#card.tiles == 12 and ns.ZoneCard.Regions(1439) == 3 and #card.found == 3) and "ok" or ("tiles " .. #card.tiles .. " found " .. #card.found)`,
+card:Set(99999)
+RES = (#card.tiles == 12 and ns.ZoneCard.Regions(99999) == 3 and #card.found == 3) and "ok" or ("tiles " .. #card.tiles .. " found " .. #card.found)`,
 });
 
 run('the zone card uses custom map art without overlaying explored regions', {
@@ -2063,6 +2063,27 @@ local azuremyst = card.tiles[1] and card.tiles[1]._tex and card.tiles[1]._tex:fi
 RES = (eversong and azuremyst) and "ok" or "Burning Crusade map art missing"`,
 });
 
+run('all new Classic middle-zone maps resolve to their custom art', {
+  pre: SAVED('{}', 'version = 99, goalsInit = true, goalsVer = 3, goals = {}, stats = { counts = {}, deathZones = {}, tiers = {}, played = 1, first = 1 }'),
+  body: ZONE_STUBS + '\n' + ZONE_ART + `
+local maps = {
+  [1436] = "map_westfall", [1432] = "map_lochmodan", [1439] = "map_darkshore",
+  [1421] = "map_silverpine", [1413] = "map_barrens", [1433] = "map_redridge",
+  [1431] = "map_duskwood", [1437] = "map_wetlands", [1440] = "map_ashenvale",
+  [1424] = "map_hillsbrad", [1442] = "map_stonetalon", [1441] = "map_thousandneedles",
+  [1445] = "map_dustwallow", [1443] = "map_desolace", [1444] = "map_feralas",
+  [1417] = "map_arathi", [1416] = "map_alterac", [1418] = "map_badlands",
+  [1435] = "map_swampsorrows", [1425] = "map_hinterlands",
+}
+local card = ns.ZoneCard.Build(UIParent, 342)
+local ok = true
+for id, name in pairs(maps) do
+  card:Set(id)
+  if #card.tiles ~= 1 or not card.tiles[1]._tex or not card.tiles[1]._tex:find(name, 1, true) then ok = false; break end
+end
+RES = ok and "ok" or "one or more custom maps missing"`,
+});
+
 run('the zone card still comes out without the map art and without QuestDB', {
   pre: SAVED('{}', 'version = 99, goalsInit = true, goalsVer = 3, goals = {}, stats = { counts = {}, deathZones = {}, tiers = {}, played = 1, first = 1 }'),
   body: ZONE_STUBS + `
@@ -2070,7 +2091,7 @@ C_Map.GetMapArtLayers = nil
 C_MapExplorationInfo = nil
 _G.LibStub = nil
 local card = ns.ZoneCard.Build(UIParent, 342)
-card:Set(1439)
+card:Set(99999)
 local done, total = ns.ZoneCard.Quests(1438)
 RES = (total == nil and done == 0 and ns.ZoneCard.Regions(1438) == nil) and "ok" or ("done " .. tostring(done) .. " total " .. tostring(total))`,
 });
