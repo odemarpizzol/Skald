@@ -5241,6 +5241,10 @@ Mile.Timed = function(name, fn, ...)
     local t0 = debugprofilestop and debugprofilestop()
     local ok, err = pcall(fn, ...)
     if t0 then ns.NoteStall(name, debugprofilestop() - t0) end
+    if not ok then
+        SkaldDB.errors = SkaldDB.errors or {}
+        table.insert(SkaldDB.errors, name .. ": " .. tostring(err))
+    end
     return ok, err
 end
 
