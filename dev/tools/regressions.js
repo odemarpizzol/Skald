@@ -2121,6 +2121,23 @@ end
 RES = ok and "ok" or "one or more Burning Crusade maps missing"`,
 });
 
+run('all capital maps resolve to their custom art', {
+  pre: SAVED('{}', 'version = 99, goalsInit = true, goalsVer = 3, goals = {}, stats = { counts = {}, deathZones = {}, tiers = {}, played = 1, first = 1 }'),
+  body: ZONE_STUBS + '\n' + ZONE_ART + `
+local maps = {
+  [1453] = "map_stormwind", [1455] = "map_ironforge", [1457] = "map_darnassus",
+  [1947] = "map_exodar", [1454] = "map_orgrimmar", [1456] = "map_thunderbluff",
+  [1458] = "map_undercity", [1954] = "map_silvermoon", [1955] = "map_shattrath",
+}
+local card = ns.ZoneCard.Build(UIParent, 342)
+local ok = true
+for id, name in pairs(maps) do
+  card:Set(id)
+  if #card.tiles ~= 1 or not card.tiles[1]._tex or not card.tiles[1]._tex:find(name, 1, true) then ok = false; break end
+end
+RES = ok and "ok" or "one or more capital maps missing"`,
+});
+
 run('the zone card still comes out without the map art and without QuestDB', {
   pre: SAVED('{}', 'version = 99, goalsInit = true, goalsVer = 3, goals = {}, stats = { counts = {}, deathZones = {}, tiers = {}, played = 1, first = 1 }'),
   body: ZONE_STUBS + `

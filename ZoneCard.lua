@@ -108,6 +108,15 @@ ZC.ART = {
     [1949] = "map_bladesedge",
     [1953] = "map_netherstorm",
     [1948] = "map_shadowmoon",
+    [1453] = "map_stormwind",
+    [1455] = "map_ironforge",
+    [1457] = "map_darnassus",
+    [1947] = "map_exodar",
+    [1454] = "map_orgrimmar",
+    [1456] = "map_thunderbluff",
+    [1458] = "map_undercity",
+    [1954] = "map_silvermoon",
+    [1955] = "map_shattrath",
 }
 -- How the map of the zone sits on the page: it is a drawing of the old kind, not a window. The unfound part is faint (the
 -- ink of the map, thin on the paper), the regions found are darker, and the borders fade into the paper in steps (no frame).
