@@ -47,3 +47,8 @@ Ornamento/letra capitular na Saga (arte), mais capítulos (faixas de nível, cad
 - Variedade: `node dev/tools/variety.js [raça] [classe] [voz] [idioma]` mede quantas vezes uma frase volta numa jornada longa; `checks.js` tem uma trava (3 combinações) que falha se um pool encurtar de novo. Nível na voz nova junta o pool da raça com o comum (`K.KinMix`).
 - Nada disso foi visto no jogo ainda (só simulação): testar frases de início, de classe e de chefe, e o artigo em francês.
 - Pendências: frases soltas ("sol baixo e morno" depois de "hoje de manhã"; frase de meta repetida entre metas), CI a cada push, `release.js` no layout antigo, revisão nativa do francês, nomes oficiais pt/fr pelo probe de lore (dia 04, Skyborne).
+
+## Estado em 03/11/2026 (0.45.0-beta)
+
+- Publicada a 0.45.0-beta: o mapa do Índice esmaecido no pergaminho e **52 mapas desenhados** (feitos pelo usuário com o Codex; TGAs 512x256 em `Textures/skald2/map_*.tga`, tabela `ZC.ART` em `ZoneCard.lua`, IDs conferidos no jogo com `/skald probe maps`), correção da linha de cenário que contradizia a frase. Prompts de arte: `dev/PROMPT_ARTE_mapas.md`, `dev/PROMPT_ARTE_mapas_2.md`, `dev/PROMPT_CODEX_mapas_lotes_5_6.md`.
+- Pendências: Skyborne (zona, missão, mapa da ilha) no dia 04 com os probes; nomes oficiais pt/fr; revisão nativa do francês; CI a cada push e `release.js` no layout antigo; testar no jogo as frases novas, o artigo em francês e as frases de início de raça.

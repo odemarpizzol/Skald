@@ -993,7 +993,20 @@ K.FactText = function(e)
     text = text:gsub("{nth}", function() return tostring(e.xv or "") end)
     return " " .. ns.Gendered(text)
 end
-Extras = function(e)
+-- A phrase that already names a time of the day ("this morning", "tonight", "hoje de manhã", "ce soir") does not get the line
+-- that sets the scene after it: the light of the line could be another one than the one the phrase says.
+K.TIME_WORDS = { "morning", "tonight", "evening", "afternoon", "dawn", "dusk", "night", "midday", "noon", "sunrise", "sunset",
+    "manhã", "madrugada", "tarde", "noite", "amanhecer", "entardecer", "anoitecer", "crepúsculo", "meio-dia",
+    "matin", "soir", "nuit", "après-midi", "aube", "crépuscule", "midi", "lever du", "coucher du" }
+K.NamesTimeOfDay = function(text)
+    if type(text) ~= "string" then return false end
+    local lower = text:lower()
+    for _, word in ipairs(K.TIME_WORDS) do
+        if lower:find(word, 1, true) then return true end
+    end
+    return false
+end
+Extras = function(e, base)
     local out = ""
     local idx = e.idx or 1
     if e.kind == "quest" and e.xk then out = K.FactText(e) end
@@ -1004,7 +1017,7 @@ Extras = function(e)
         if #names > 1 then joined = table.concat(names, ", ", 1, #names - 1) .. L.DAY_AND .. names[#names] end
         out = out .. " " .. string.format(L.WITH, joined)
     end
-    if type(e.hr) == "number" and idx % 2 == 1 and L.AMBIENT then
+    if type(e.hr) == "number" and idx % 2 == 1 and L.AMBIENT and not K.NamesTimeOfDay(base) then
         local list = L.AMBIENT[PartOfDay(e.hr)]
         if list then out = out .. " " .. list[idx % #list + 1] end
     end
@@ -1258,7 +1271,7 @@ local function RenderEntry(e)
         local points = ns.GoalPoints(e.arg)
         if points then gain = " " .. string.format(L.GOAL_GAIN, points) end
     end
-    return ns.Gendered(text) .. gain .. (e.noExtras and "" or Extras(e))
+    return ns.Gendered(text) .. gain .. (e.noExtras and "" or Extras(e, text))
 end
 
 -- Hooks for companion addons (e.g. Wayfarer): read the pages, and add a tab to the window.
@@ -5199,6 +5212,28 @@ Mile.NoteBirthplace = function()
     if type(map) == "number" and map > 0 and K.IsZoneMap(map) then db.birthMap = map end
 end
 
+-- /skald probe maps: the number of the map under the player's feet, and for each hand-drawn map of the Index the name the game
+-- gives that number (a wrong number of the table ZC.ART shows as another zone, or as none).
+Mile.MapArtLines = function()
+    local lines = {}
+    local here
+    if C_Map and C_Map.GetBestMapForUnit then
+        local ok, id = pcall(C_Map.GetBestMapForUnit, "player")
+        here = ok and type(id) == "number" and id or nil
+    end
+    local function Name(id)
+        local ok, info = pcall(C_Map.GetMapInfo, id)
+        return ok and type(info) == "table" and info.name or "?"
+    end
+    lines[#lines + 1] = "map under the player: " .. tostring(here or "none") .. (here and (" = " .. Name(here)) or "")
+    local art = ns.ZoneCard and ns.ZoneCard.ART or {}
+    local ids = {}
+    for id in pairs(art) do ids[#ids + 1] = id end
+    table.sort(ids)
+    for _, id in ipairs(ids) do lines[#lines + 1] = id .. " = " .. Name(id) .. "  (" .. art[id] .. ")" .. (id == here and "  <- here" or "") end
+    return lines
+end
+
 -- /skald probe events: every event the client fires is counted by name in SkaldDB.probeEvents (a developer tool
 -- for Forever, whose new systems, camps and Legacy among them, have events nobody has named yet). The ones whose
 -- name looks new keep their first few payloads (plain values only). Off unless asked for; it stays on across
@@ -8392,6 +8427,8 @@ SlashCmdList["SKALD"] = function(msg)
         Say(Settings().probeAll and L.PROBE_EVENTS_ON or L.PROBE_EVENTS_OFF)
     elseif msg == "probe events list" then
         for _, line in ipairs(Mile.ProbeEventLines()) do Say(line) end
+    elseif msg == "probe maps" then
+        for _, line in ipairs(Mile.MapArtLines()) do Say(line) end
     elseif msg == "probe lore" or msg == "probe lore off" then
         Mile.ProbeLore(msg == "probe lore")
         Say(Settings().probeLore and L.PROBE_LORE_ON or L.PROBE_LORE_OFF)

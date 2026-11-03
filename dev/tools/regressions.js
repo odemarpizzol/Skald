@@ -332,6 +332,22 @@ for _, c in ipairs(cases) do local got = say(c[1], c[2]); if got ~= c[3] then ba
 RES = #bad == 0 and "ok" or table.concat(bad, " ; ")`,
 });
 
+run('a phrase that names a time of the day ("this morning") is not followed by the line that sets the scene (the light of dusk, say)', {
+  pre: `function UnitRace() return "Orc", "Orc", 2 end`,
+  body: `SkaldDB.tone = "kin"
+local P = ns.LOCALES.enUS.phrases
+local function find(text) for i, l in ipairs(P.tone_kin_level) do if l == text then return i end end end
+local named = find("I am stronger than I was this morning.")
+local plain = find("I feel the change in my arms and in my judgement both.")
+local dusk = ns.LOCALES.enUS.AMBIENT.dusk
+local function hasScene(text) for _, l in ipairs(dusk) do if text:find(l, 1, true) then return true end end return false end
+-- an odd number draws the scene line; the Orc has its own level lines, so the page is drawn from the plain pool of the voice
+SkaldDB.tone = "kin"
+local function render(idx) return SkaldAPI.Render({ kind = "level", arg = "5", idx = idx, hr = 18, race = "NoSuchRace" }) end
+local a, b = render(named), render(plain)
+RES = (named % 2 == 1 and plain % 2 == 1 and not hasScene(a) and hasScene(b)) and "ok" or ("named " .. tostring(named) .. " plain " .. tostring(plain) .. " | " .. a .. " | " .. b)`,
+});
+
 run('the first land of a new Orc is told with the lines of its first steps (race_Orc_start), once; a later land, or a character past level two, with the common ones', {
   pre: `function UnitRace() return "Orc", "Orc", 2 end
 function UnitLevel() return 1 end
@@ -2019,12 +2035,90 @@ local done, total = ns.ZoneCard.Quests(1438)
 RES = (done == 1 and total == 2) and "ok" or ("done " .. tostring(done) .. " of " .. tostring(total))`,
 });
 
-run('the zone card builds from the tiles of the game and raises no error', {
+run("the zone card uses the game's map tiles for zones without custom art", {
   pre: SAVED('{}', 'version = 99, goalsInit = true, goalsVer = 3, goals = {}, stats = { counts = {}, deathZones = {}, tiers = {}, played = 1, first = 1 }'),
   body: ZONE_STUBS + '\n' + ZONE_ART + '\n' + ZONE_DB + `
 local card = ns.ZoneCard.Build(UIParent, 342)
+card:Set(99999)
+RES = (#card.tiles == 12 and ns.ZoneCard.Regions(99999) == 3 and #card.found == 3) and "ok" or ("tiles " .. #card.tiles .. " found " .. #card.found)`,
+});
+
+run('the zone card uses custom map art without overlaying explored regions', {
+  pre: SAVED('{}', 'version = 99, goalsInit = true, goalsVer = 3, goals = {}, stats = { counts = {}, deathZones = {}, tiers = {}, played = 1, first = 1 }'),
+  body: ZONE_STUBS + '\n' + ZONE_ART + `
+local card = ns.ZoneCard.Build(UIParent, 342)
 card:Set(1438)
-RES = (#card.tiles == 12 and ns.ZoneCard.Regions(1438) == 3 and #card.found == 3) and "ok" or ("tiles " .. #card.tiles .. " found " .. #card.found)`,
+local hasArt = card.tiles[1] and card.tiles[1]._tex and card.tiles[1]._tex:find("map_teldrassil", 1, true)
+RES = (hasArt and #card.tiles == 1 and #card.found == 0 and #card.mapCorners == 4 and card.compass ~= nil) and "ok" or "art or ornaments missing"`,
+});
+
+run('the Burning Crusade starting zones use their own map art', {
+  pre: SAVED('{}', 'version = 99, goalsInit = true, goalsVer = 3, goals = {}, stats = { counts = {}, deathZones = {}, tiers = {}, played = 1, first = 1 }'),
+  body: ZONE_STUBS + `
+local card = ns.ZoneCard.Build(UIParent, 342)
+card:Set(1941)
+local eversong = card.tiles[1] and card.tiles[1]._tex and card.tiles[1]._tex:find("map_eversong", 1, true)
+card:Set(1943)
+local azuremyst = card.tiles[1] and card.tiles[1]._tex and card.tiles[1]._tex:find("map_azuremyst", 1, true)
+RES = (eversong and azuremyst) and "ok" or "Burning Crusade map art missing"`,
+});
+
+run('all new Classic middle-zone maps resolve to their custom art', {
+  pre: SAVED('{}', 'version = 99, goalsInit = true, goalsVer = 3, goals = {}, stats = { counts = {}, deathZones = {}, tiers = {}, played = 1, first = 1 }'),
+  body: ZONE_STUBS + '\n' + ZONE_ART + `
+local maps = {
+  [1436] = "map_westfall", [1432] = "map_lochmodan", [1439] = "map_darkshore",
+  [1421] = "map_silverpine", [1413] = "map_barrens", [1433] = "map_redridge",
+  [1431] = "map_duskwood", [1437] = "map_wetlands", [1440] = "map_ashenvale",
+  [1424] = "map_hillsbrad", [1442] = "map_stonetalon", [1441] = "map_thousandneedles",
+  [1445] = "map_dustwallow", [1443] = "map_desolace", [1444] = "map_feralas",
+  [1417] = "map_arathi", [1416] = "map_alterac", [1418] = "map_badlands",
+  [1435] = "map_swampsorrows", [1425] = "map_hinterlands",
+}
+local card = ns.ZoneCard.Build(UIParent, 342)
+local ok = true
+for id, name in pairs(maps) do
+  card:Set(id)
+  if #card.tiles ~= 1 or not card.tiles[1]._tex or not card.tiles[1]._tex:find(name, 1, true) then ok = false; break end
+end
+RES = ok and "ok" or "one or more custom maps missing"`,
+});
+
+run('all Classic high-level maps resolve to their custom art', {
+  pre: SAVED('{}', 'version = 99, goalsInit = true, goalsVer = 3, goals = {}, stats = { counts = {}, deathZones = {}, tiers = {}, played = 1, first = 1 }'),
+  body: ZONE_STUBS + '\n' + ZONE_ART + `
+local maps = {
+  [1434] = "map_stranglethorn", [1446] = "map_tanaris", [1449] = "map_ungoro",
+  [1447] = "map_azshara", [1448] = "map_felwood", [1452] = "map_winterspring",
+  [1451] = "map_silithus", [1450] = "map_moonglade", [1427] = "map_searinggorge",
+  [1428] = "map_burningsteppes", [1419] = "map_blastedlands", [1430] = "map_deadwind",
+  [1422] = "map_westernplague", [1423] = "map_easternplague",
+}
+local card = ns.ZoneCard.Build(UIParent, 342)
+local ok = true
+for id, name in pairs(maps) do
+  card:Set(id)
+  if #card.tiles ~= 1 or not card.tiles[1]._tex or not card.tiles[1]._tex:find(name, 1, true) then ok = false; break end
+end
+RES = ok and "ok" or "one or more Classic high-level maps missing"`,
+});
+
+run('all Burning Crusade maps resolve to their custom art', {
+  pre: SAVED('{}', 'version = 99, goalsInit = true, goalsVer = 3, goals = {}, stats = { counts = {}, deathZones = {}, tiers = {}, played = 1, first = 1 }'),
+  body: ZONE_STUBS + '\n' + ZONE_ART + `
+local maps = {
+  [1942] = "map_ghostlands", [1950] = "map_bloodmyst", [1957] = "map_quel_danas",
+  [1944] = "map_hellfire", [1946] = "map_zangarmarsh", [1952] = "map_terokkar",
+  [1951] = "map_nagrand", [1949] = "map_bladesedge", [1953] = "map_netherstorm",
+  [1948] = "map_shadowmoon",
+}
+local card = ns.ZoneCard.Build(UIParent, 342)
+local ok = true
+for id, name in pairs(maps) do
+  card:Set(id)
+  if #card.tiles ~= 1 or not card.tiles[1]._tex or not card.tiles[1]._tex:find(name, 1, true) then ok = false; break end
+end
+RES = ok and "ok" or "one or more Burning Crusade maps missing"`,
 });
 
 run('the zone card still comes out without the map art and without QuestDB', {
@@ -2034,7 +2128,7 @@ C_Map.GetMapArtLayers = nil
 C_MapExplorationInfo = nil
 _G.LibStub = nil
 local card = ns.ZoneCard.Build(UIParent, 342)
-card:Set(1438)
+card:Set(99999)
 local done, total = ns.ZoneCard.Quests(1438)
 RES = (total == nil and done == 0 and ns.ZoneCard.Regions(1438) == nil) and "ok" or ("done " .. tostring(done) .. " total " .. tostring(total))`,
 });
@@ -3427,6 +3521,16 @@ local neutralKin = SkaldAPI.PoolFor(e)
 RES = (horde.race_SkyborneHorde_level and horde.race_Skyborne_level and not horde.race_SkyborneAlliance_level
   and leads(hordeKin, P.race_SkyborneHorde_kinLevel) and leads(allianceKin, P.race_SkyborneAlliance_kinLevel) and leads(neutralKin, P.race_Skyborne_kinLevel)) and "ok"
   or ("horde pools seen: " .. table.concat((function() local t = {} for k in pairs(horde) do t[#t+1] = k end return t end)(), ","))`,
+});
+
+run('/skald probe maps says the map under the player and the name the game gives each hand-drawn map of the Index', {
+  body: `print_out = {}
+SlashCmdList.SKALD("probe maps")
+local said = table.concat(print_out, "\\n")
+local count = 0
+for _ in pairs(ns.ZoneCard.ART) do count = count + 1 end
+RES = (count >= 8 and said:find("map under the player", 1, true) and said:find("1429", 1, true) and said:find("map_elwynn", 1, true) and (SkaldDB.errors == nil)) and "ok"
+  or ("said: " .. said)`,
 });
 
 run('/skald probe events counts the events by name, keeps the payload of the new-looking ones, and lists them', {
