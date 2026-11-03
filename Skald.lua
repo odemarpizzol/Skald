@@ -3831,7 +3831,7 @@ local function CreateWindow()
     function f:ApplyTabStyle() for _, b in pairs(tabs) do b:SetActive(b.active) end end
     local panels, panelOrder = {}, {}
     -- The tabs in the order of the book: the diary itself, what it holds, then the settings below, a little apart.
-    local TAB_RANK = { cover = 1, index = 2, search = 2.5, days = 3, bard = 3.7, goals = 4, saga = 4.5, pets = 5, map = 6, settings = 20 }
+    local TAB_RANK = { cover = 1, index = 2, search = 2.5, days = 3, bard = 3.7, goals = 4, cartographer = 4.2, saga = 4.5, pets = 5, map = 6, settings = 20 }
     local function LayoutTabs()
         local ids = {}
         for id, b in pairs(tabs) do b:Show(); ids[#ids + 1] = id end

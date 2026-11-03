@@ -247,6 +247,21 @@
   "tostring",
   "type"
  ],
+ "Skald/Cartographer.lua": [
+  "C_Map",
+  "CreateFrame",
+  "GameTooltip",
+  "GetLocale",
+  "SkaldAPI",
+  "SkaldCharDB",
+  "ipairs",
+  "math",
+  "pairs",
+  "pcall",
+  "string",
+  "table",
+  "tostring"
+ ],
  "Skald/Backup.lua": [
   "CreateFrame",
   "GameFontHighlightSmall",
