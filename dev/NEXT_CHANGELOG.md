@@ -1,2 +1,3 @@
 - **Our own maps of the capital cities** on the Index: Stormwind, Ironforge, Darnassus, Orgrimmar, Thunder Bluff and Undercity, and the Exodar, Silvermoon and Shattrath of the Anniversary client, hand-drawn in ink and wash like the lands
 - The Index no longer stops the game for a moment the first time it is opened after logging in: the count of quests of each land is read in the background a few seconds after login, and the pictures of the map a few seconds after you arrive somewhere
+- `/skald perf` (a developer tool): times opening the book and each tab, and says which step makes a long frame (over 50 ms), to find what is slow in the game

@@ -286,6 +286,13 @@ local function QuestIndex()
     return (QuestAdvance(nil))
 end
 
+-- For /skald perf: how far the quest index is.
+function ZC.QuestState()
+    if byMap then return "ready" end
+    if build then return build.pos .. " of " .. #build.ids end
+    return "not started"
+end
+
 -- Reads the quests in the background, 250 at a time, one step every tenth of a second.
 function ZC.WarmQuests()
     if not (C_Timer and C_Timer.After) then return end

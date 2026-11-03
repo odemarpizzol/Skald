@@ -3567,6 +3567,15 @@ RES = (count >= 8 and said:find("map under the player", 1, true) and said:find("
   or ("said: " .. said)`,
 });
 
+run('/skald perf starts the timing of the book, says the client, the pages and the state of the quest index, and raises no error', {
+  body: `debugprofilestop = function() return os.clock() * 1000 end
+print_out = {}
+SlashCmdList.SKALD("perf")
+local said = table.concat(print_out, "\\n")
+RES = (said:find("perf: client", 1, true) and said:find("quest index", 1, true) and (SkaldDB.errors == nil)) and "ok"
+  or ("said: " .. said .. " errors: " .. tostring(SkaldDB.errors and SkaldDB.errors[1]))`,
+});
+
 run('/skald probe maps inside an instance says what the game calls it and its id', {
   body: `function IsInInstance() return true, "party" end
 function GetInstanceInfo() return "The Deadmines", "party", 1, "Normal", 5, 0, false, 36 end

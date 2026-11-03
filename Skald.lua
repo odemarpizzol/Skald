@@ -4129,6 +4129,13 @@ local function CreateWindow()
         f:Refresh()
     end
 
+    -- /skald perf: the places the book can show (the cover, the index, the days and every tab)
+    function f:PerfSections()
+        local list = { "cover", "index", "days" }
+        for _, id in ipairs(panelOrder) do list[#list + 1] = id end
+        return list
+    end
+
     function f:ShowSection(id, quiet)
         if not quiet then TurnSound() end
         if panels[id] then
@@ -5210,6 +5217,56 @@ Mile.NoteBirthplace = function()
     if db.birthMap or (UnitLevel("player") or 99) > 2 then return end
     local map = Safe(C_Map.GetBestMapForUnit("player"))
     if type(map) == "number" and map > 0 and K.IsZoneMap(map) then db.birthMap = map end
+end
+
+-- /skald perf: times what the book does, to see what is slow in the real game. For each step it says the time the addon
+-- itself spent (Lua) and the longest of the next three frames (that one holds what the game does after: reading a
+-- picture from the disk, drawing). A frame over 50 ms is felt as a stop. The steps run one after another, a few
+-- frames apart; the book ends on the Index and is left open or shut as it was.
+Mile.Perf = function()
+    if not window or not debugprofilestop then Say("perf: the book is not ready."); return end
+    if Mile.perfRunning then Say("perf: already running."); return end
+    Mile.perfRunning = true
+    local wasShown = window:IsShown()
+    local steps = {}
+    steps[#steps + 1] = { "shut the book", function() window:Hide() end }
+    steps[#steps + 1] = { "open the book (first time cold)", function() window:Refresh(); window:Show() end }
+    steps[#steps + 1] = { "tell every page again", function() ns.layoutRev = (ns.layoutRev or 0) + 1; window:Refresh() end }
+    for _, id in ipairs(window:PerfSections()) do
+        steps[#steps + 1] = { "section " .. id, function() window:ShowSection(id, true) end }
+    end
+    steps[#steps + 1] = { "section index again", function() window:ShowSection("index", true) end }
+    local zc = ns.ZoneCard
+    Say("perf: client " .. tostring(select(2, pcall(function() return (select(4, GetBuildInfo())) end))) .. "; pages " .. tostring(#((Journal() or {}).entries or {})) ..
+        "; quest index " .. tostring(zc and zc.QuestState and zc.QuestState() or "-") .. ". Wait a few seconds...")
+    local meter = CreateFrame("Frame")
+    local i = 0
+    local function Next()
+        i = i + 1
+        local step = steps[i]
+        if not step then
+            meter:SetScript("OnUpdate", nil)
+            if not wasShown then window:Hide() end
+            Mile.perfRunning = false
+            Say("perf: done. A step with a long frame (over 50 ms) is the one felt as a stop.")
+            return
+        end
+        local t0 = debugprofilestop()
+        local ok, err = pcall(step[2])
+        local lua = debugprofilestop() - t0
+        local worst, frames = 0, 0
+        meter:SetScript("OnUpdate", function(_, elapsed)
+            frames = frames + 1
+            if elapsed * 1000 > worst then worst = elapsed * 1000 end
+            if frames >= 4 then
+                meter:SetScript("OnUpdate", nil)
+                Say(string.format("  %s%-38s lua %6.1f ms | frame %6.1f ms%s", worst > 50 and "|cffff8040" or "", step[1], lua, worst,
+                    (ok and "" or ("  ERROR " .. tostring(err))) .. (worst > 50 and "|r" or "")))
+                C_Timer.After(0.3, Next)
+            end
+        end)
+    end
+    Next()
 end
 
 -- /skald probe maps: the number of the map under the player's feet, and for each hand-drawn map of the Index the name the game
@@ -8443,6 +8500,8 @@ SlashCmdList["SKALD"] = function(msg)
         Say(Settings().probeAll and L.PROBE_EVENTS_ON or L.PROBE_EVENTS_OFF)
     elseif msg == "probe events list" then
         for _, line in ipairs(Mile.ProbeEventLines()) do Say(line) end
+    elseif msg == "perf" then
+        Mile.Perf()
     elseif msg == "probe maps" then
         for _, line in ipairs(Mile.MapArtLines()) do Say(line) end
     elseif msg == "probe lore" or msg == "probe lore off" then

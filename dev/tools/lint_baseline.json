@@ -122,6 +122,7 @@
   "WOW_PROJECT_ID",
   "_G",
   "date",
+  "debugprofilestop",
   "ipairs",
   "issecretvalue",
   "math",
