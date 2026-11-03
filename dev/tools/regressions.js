@@ -267,6 +267,46 @@ RES = (own == 30 and other == 0 and grand.fl ~= "race_Orc_quest" and fromPool an
 
 // The Anniversary client has two races the first Azeroth did not: the Draenei and the Blood Elves (the Burning Crusade). Their lines
 // exist for that client only (no one can be of these races in Forever), and name what that time knew: the Naaru, the Sunwell...
+// A long climb must not read the same: with the voice "Of My People", a race and a class, 700 quests, 100 falls, 60 levels and 150
+// bosses are written and no line may take more than its share (a fixed seed keeps the draw the same on each run; dev/tools/variety.js
+// prints the same figures for any race, class and language). The limits leave room; they fail when a pool is cut short again.
+const CLIMB = (race, cls, loc, limits) => ({
+  pre: `function UnitRace() return "${race}", "${race}", 2 end
+function UnitClass() return "Class", "${cls}" end
+function UnitLevel() return 30 end`,
+  body: `SkaldDB.tone = "kin"; __locale = "${loc}"; math.randomseed(20261102)
+local limits = ${limits}
+local function told(e) local pool = SkaldAPI.PoolFor(e); return pool and pool[e.idx] end
+local bad = {}
+local function Measure(kind, n, make)
+  local counts, pages = {}, 0
+  for i = 1, n do
+    make(i)
+    local e = SkaldCharDB.entries[#SkaldCharDB.entries]
+    local ph = e and e.kind == kind and told(e)
+    if ph then pages = pages + 1; counts[ph] = (counts[ph] or 0) + 1 end
+  end
+  local distinct, top = 0, 0
+  for _, c in pairs(counts) do distinct = distinct + 1; if c > top then top = c end end
+  local share = pages > 0 and top / pages or 1
+  local lim = limits[kind]
+  if pages < n * 0.9 or share > lim[1] or distinct < lim[2] then bad[#bad + 1] = string.format("%s: %d pages, %d distinct (min %d), top %.1f%% (max %.1f%%)", kind, pages, distinct, lim[2], 100 * share, 100 * lim[1]) end
+end
+local QT, qi, zone = { "fight", "gather", "explore", "seek", "delivery" }, 0, "Somewhere"
+Measure("quest", 700, function() qi = qi + 1; local r = math.random()
+  local tier = r < 0.78 and 1 or r < 0.9 and 2 or r < 0.96 and 3 or r < 0.99 and 4 or 5
+  SkaldAPI.AddEntry("quest", "Quest " .. qi, zone, { tier = tier, q = 90000 + qi, qtype = QT[math.random(#QT)], ql = 10, pl = 10 }) end)
+Measure("death", 100, function() SkaldAPI.AddEntry("death", zone) end)
+Measure("level", 60, function(i) SkaldAPI.AddEntry("level", i + 1) end)
+Measure("boss", 150, function(i) local r = math.random(); local tries
+  if r >= 0.85 then tries = (r < 0.95 and 1) or (r < 0.99 and 2) or 4 end
+  SkaldAPI.AddEntry("boss", "Boss " .. i, zone, { tries = tries, tier = 2 + (i % 3) }) end)
+RES = #bad == 0 and "ok" or table.concat(bad, " ; ")`,
+});
+run('a long climb in the voice "Of My People" (Orc, Warrior, English): no line takes more than its share of the pages of its kind', CLIMB('Orc', 'WARRIOR', 'enUS', '{ quest = { 0.05, 150 }, death = { 0.12, 24 }, level = { 0.20, 14 }, boss = { 0.09, 35 } }'));
+run('a long climb in the voice "Of My People" (Draenei, Mage, Portuguese): no line takes more than its share of the pages of its kind', CLIMB('Draenei', 'MAGE', 'ptBR', '{ quest = { 0.05, 150 }, death = { 0.12, 24 }, level = { 0.20, 14 }, boss = { 0.09, 35 } }'));
+run('a long climb in the voice "Of My People" (Scourge, Priest, French): no line takes more than its share of the pages of its kind', CLIMB('Scourge', 'PRIEST', 'frFR', '{ quest = { 0.05, 150 }, death = { 0.12, 24 }, level = { 0.20, 14 }, boss = { 0.09, 35 } }'));
+
 run('the first land of a new Orc is told with the lines of its first steps (race_Orc_start), once; a later land, or a character past level two, with the common ones', {
   pre: `function UnitRace() return "Orc", "Orc", 2 end
 function UnitLevel() return 1 end
