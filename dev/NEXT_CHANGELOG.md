@@ -1,0 +1,1 @@
+- **Our own maps of the capital cities** on the Index: Stormwind, Ironforge, Darnassus, Orgrimmar, Thunder Bluff and Undercity, and the Exodar, Silvermoon and Shattrath of the Anniversary client, hand-drawn in ink and wash like the lands
