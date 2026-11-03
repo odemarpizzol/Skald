@@ -229,37 +229,71 @@ local function RaceAllowed(mask, raceID)
     for _, r in ipairs(own) do if not HasBit(mask, r) then return false end end
     return true
 end
-local function QuestIndex()
-    local qdb = _G.LibStub and LibStub("LibQuestDB-1.0", true)
-    if not (qdb and qdb.GetQuestIds and qdb.GetQuest and qdb.GetUiMapId) then return nil end
-    local okR, _, _, raceID = pcall(UnitRace, "player")
-    local okC, _, _, classID = pcall(UnitClass, "player")
-    local key = tostring(okR and raceID) .. ":" .. tostring(okC and classID)
-    if byMap and builtFor == key then return byMap end
-    local index = {}
-    local ok = pcall(function()
-        for _, id in ipairs(qdb:GetQuestIds() or {}) do
-            local q = qdb:GetQuest(id)
-            local zone = q and q.zoneOrSort
-            if type(zone) == "number" and zone > 0 and not q.hidden then
-                local special = q.specialFlags or 0
-                local repeatable = special % 2 == 1 or math.floor(special / 2) % 2 == 1
-                local races, classes = q.requiredRaces or 0, q.requiredClasses or 0
-                local raceOk = races == 0 or not okR or type(raceID) ~= "number" or RaceAllowed(races, raceID)
-                local classOk = classes == 0 or not okC or type(classID) ~= "number" or HasBit(classes, classID)
-                if not repeatable and raceOk and classOk then
-                    local map = qdb:GetUiMapId(zone)
-                    if map then
-                        index[map] = index[map] or {}
-                        index[map][#index[map] + 1] = id
-                    end
+-- The index is built from every quest of QuestDB (thousands): that is the stop felt the first time the Index is opened.
+-- So it is built in steps, a few hundred quests at a time, a little after login (ZC.WarmQuests); if the book is opened
+-- before it ends, what is left is built then (QuestIndex), from where the steps stopped.
+local build   -- { key, ids, pos, index, qdb, raceID, classID, okR, okC }
+local function QuestStep(st, count)
+    local qdb = st.qdb
+    local last = math.min(#st.ids, st.pos + count - 1)
+    for i = st.pos, last do
+        local id = st.ids[i]
+        local q = qdb:GetQuest(id)
+        local zone = q and q.zoneOrSort
+        if type(zone) == "number" and zone > 0 and not q.hidden then
+            local special = q.specialFlags or 0
+            local repeatable = special % 2 == 1 or math.floor(special / 2) % 2 == 1
+            local races, classes = q.requiredRaces or 0, q.requiredClasses or 0
+            local raceOk = races == 0 or not st.okR or type(st.raceID) ~= "number" or RaceAllowed(races, st.raceID)
+            local classOk = classes == 0 or not st.okC or type(st.classID) ~= "number" or HasBit(classes, st.classID)
+            if not repeatable and raceOk and classOk then
+                local map = qdb:GetUiMapId(zone)
+                if map then
+                    st.index[map] = st.index[map] or {}
+                    st.index[map][#st.index[map] + 1] = id
                 end
             end
         end
-    end)
-    if not ok then return nil end
-    byMap, builtFor = index, key
-    return index
+    end
+    st.pos = last + 1
+    return st.pos > #st.ids
+end
+local function QuestKey()
+    local okR, _, _, raceID = pcall(UnitRace, "player")
+    local okC, _, _, classID = pcall(UnitClass, "player")
+    return tostring(okR and raceID) .. ":" .. tostring(okC and classID), okR, raceID, okC, classID
+end
+-- count = how many quests to read now (nil = all that are left)
+local function QuestAdvance(count)
+    local qdb = _G.LibStub and LibStub("LibQuestDB-1.0", true)
+    if not (qdb and qdb.GetQuestIds and qdb.GetQuest and qdb.GetUiMapId) then return nil end
+    local key, okR, raceID, okC, classID = QuestKey()
+    if byMap and builtFor == key then return byMap end
+    if not build or build.key ~= key then
+        local okI, ids = pcall(function() return qdb:GetQuestIds() or {} end)
+        if not okI then return nil end
+        build = { key = key, ids = ids, pos = 1, index = {}, qdb = qdb, raceID = raceID, classID = classID, okR = okR, okC = okC }
+    end
+    local ok, finished = pcall(QuestStep, build, count or #build.ids)
+    if not ok then build = nil; return nil end
+    if finished then
+        byMap, builtFor, build = build.index, key, nil
+        return byMap
+    end
+    return nil, true   -- not finished yet
+end
+local function QuestIndex()
+    return (QuestAdvance(nil))
+end
+
+-- Reads the quests in the background, 250 at a time, one step every tenth of a second.
+function ZC.WarmQuests()
+    if not (C_Timer and C_Timer.After) then return end
+    local function Step()
+        local index, more = QuestAdvance(250)
+        if more then C_Timer.After(0.1, Step) end
+    end
+    pcall(Step)
 end
 
 -- Quests done in the zone, out of the total QuestDB knows (nil without QuestDB or without data for the zone).

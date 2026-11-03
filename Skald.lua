@@ -6435,6 +6435,10 @@ H.PLAYER_LOGIN = function(self, event, ...)
         C_Timer.After(10, function() pcall(Mile.Relocalize) end)   -- items load a little later
         if C_Timer.NewTicker then C_Timer.NewTicker(60, function() pcall(CheckMarks); pcall(Mile.CheckPet); pcall(ns.CheckAnniversary); pcall(Mile.TrackKills); pcall(Mile.NoteBirthplace) end) end
         C_Timer.After(2, function() pcall(Mile.ShowResume) end)
+        if ns.ZoneCard then
+            C_Timer.After(3, function() pcall(ns.ZoneCard.WarmQuests) end)
+            C_Timer.After(5, function() pcall(ns.ZoneCard.Preload) end)
+        end
     end)
     if not Settings().quiet then
         Say(L.LOADED)

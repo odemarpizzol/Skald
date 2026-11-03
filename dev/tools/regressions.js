@@ -2021,6 +2021,23 @@ local done, total = ns.ZoneCard.Quests(1438)
 RES = (done == 1 and total == 2) and "ok" or ("done " .. tostring(done) .. " of " .. tostring(total))`,
 });
 
+run('the zone card reads the quests in steps in the background, and the book opened half-way through finishes the rest with none lost or counted twice', {
+  pre: SAVED('{}', 'version = 99, goalsInit = true, goalsVer = 3, goals = {}, stats = { counts = {}, deathZones = {}, tiers = {}, played = 1, first = 1 }'),
+  body: ZONE_STUBS + `
+local ids, calls = {}, 0
+for i = 1, 600 do ids[i] = i end
+local qdb = { GetQuestIds = function() return ids end, GetQuest = function(_, id) calls = calls + 1; return { zoneOrSort = 10 } end, GetUiMapId = function() return 1438 end }
+_G.LibStub = function() return qdb end
+C_QuestLog = { IsQuestFlaggedCompleted = function(id) return id <= 5 end }
+local queued = 0
+C_Timer.After = function(_, fn) queued = queued + 1 end
+ns.ZoneCard.WarmQuests()
+local afterFirst = calls
+local done, total = ns.ZoneCard.Quests(1438)
+RES = (afterFirst == 250 and queued == 1 and done == 5 and total == 600 and calls == 600) and "ok"
+  or ("first " .. afterFirst .. " queued " .. queued .. " done " .. tostring(done) .. " of " .. tostring(total) .. " calls " .. calls)`,
+});
+
 run('the zone card: a race newer than the quest data (Skyborne) takes the quests of its faction', {
   pre: SAVED('{}', 'version = 99, goalsInit = true, goalsVer = 3, goals = {}, stats = { counts = {}, deathZones = {}, tiers = {}, played = 1, first = 1 }'),
   body: ZONE_STUBS + '\n' + ZONE_ART + `
