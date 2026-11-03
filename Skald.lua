@@ -3831,7 +3831,7 @@ local function CreateWindow()
     function f:ApplyTabStyle() for _, b in pairs(tabs) do b:SetActive(b.active) end end
     local panels, panelOrder = {}, {}
     -- The tabs in the order of the book: the diary itself, what it holds, then the settings below, a little apart.
-    local TAB_RANK = { cover = 1, index = 2, search = 2.5, days = 3, bard = 3.7, goals = 4, saga = 4.5, pets = 5, map = 6, settings = 20 }
+    local TAB_RANK = { cover = 1, index = 2, search = 2.5, days = 3, bard = 3.7, goals = 4, cartographer = 4.2, saga = 4.5, pets = 5, map = 6, settings = 20 }
     local function LayoutTabs()
         local ids = {}
         for id, b in pairs(tabs) do b:Show(); ids[#ids + 1] = id end
@@ -7866,10 +7866,11 @@ local function BuildOptions(panel)
     local discard = MakeFlatButton(panel, 166, 26, L.BTN_DISCARD)
     discard:SetPoint("TOPLEFT", K.RIGHT_X + 176, -362)
     discard:SetScript("OnClick", function() StaticPopup_Show("SKALD_DISCARD") end)
-    local exportButton = MakeFlatButton(panel, 166, 28, L.EXPORT_BTN, "gold")
+    local exportButton = MakeFlatButton(panel, 166, 28, L.EXPORT_BTN)
     exportButton:SetPoint("TOPLEFT", K.RIGHT_X, -402)
     exportButton:SetScript("OnClick", function() ShowExport() end)
-    local erase = MakeFlatButton(panel, 166, 28, L.BTN_ERASE, "burn")
+    local erase = MakeFlatButton(panel, 166, 28, L.BTN_ERASE)
+    erase:SetActive(true)   -- the wine-red plate: the one that destroys
     erase:SetPoint("TOPLEFT", K.RIGHT_X + 176, -402)
     erase:SetScript("OnClick", function() StaticPopup_Show("SKALD_CLEAR") end)
 
@@ -7896,7 +7897,7 @@ local function BuildOptions(panel)
             info:SetText(L.ARCHIVE_NONE)
         end
         for _, b in ipairs({ restore, discard }) do
-            b:SetAlpha(count > 0 and 1 or 0.4)
+            b:SetAlpha(count > 0 and 1 or 0.62)
             b:EnableMouse(count > 0)
         end
     end

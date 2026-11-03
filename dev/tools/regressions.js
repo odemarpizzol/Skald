@@ -5,7 +5,7 @@ const fs = require('fs');
 const path = require('path');
 
 const ADDONS = path.resolve(__dirname, '../../..');
-const FILES = [['LOC', 'Locales.lua'], ['CUR', 'Curated.lua'], ['XPT', 'XPTiers.lua'], ['CH', 'Skald.lua'], ['AT', 'Atlas.lua'], ['GL', 'Goals.lua'], ['SG', 'Saga.lua'], ['ZC', 'ZoneCard.lua'], ['BK', 'Backup.lua'], ['SR', 'Search.lua'], ['BD', 'Bard.lua']];
+const FILES = [['LOC', 'Locales.lua'], ['CUR', 'Curated.lua'], ['XPT', 'XPTiers.lua'], ['CH', 'Skald.lua'], ['AT', 'Atlas.lua'], ['GL', 'Goals.lua'], ['SG', 'Saga.lua'], ['ZC', 'ZoneCard.lua'], ['CT', 'Cartographer.lua'], ['BK', 'Backup.lua'], ['SR', 'Search.lua'], ['BD', 'Bard.lua']];
 let failed = 0;
 
 // The game, as far as the addon can tell. `pre` runs before the addon loads (saved data, game answers);
@@ -39,7 +39,7 @@ function count(k) local n=0 for _,e in ipairs(SkaldCharDB.entries) do if e.kind=
 ${pre}
 ns={}
 assert(load(LOC,"=L"))("Skald",ns); assert(load(CUR,"=U"))("Skald",ns); assert(load(XPT,"=X"))("Skald",ns)
-assert(load(CH,"=C"))("Skald",ns); assert(load(AT,"=A"))("Skald",ns); assert(load(GL,"=G"))("Skald",ns); assert(load(SG,"=S"))("Skald",ns); assert(load(ZC,"=Z"))("Skald",ns); assert(load(BK,"=B"))("Skald",ns); assert(load(SR,"=R"))("Skald",ns); assert(load(BD,"=D"))("Skald",ns)
+assert(load(CH,"=C"))("Skald",ns); assert(load(AT,"=A"))("Skald",ns); assert(load(GL,"=G"))("Skald",ns); assert(load(SG,"=S"))("Skald",ns); assert(load(ZC,"=Z"))("Skald",ns); assert(load(CT,"=T"))("Skald",ns); assert(load(BK,"=B"))("Skald",ns); assert(load(SR,"=R"))("Skald",ns); assert(load(BD,"=D"))("Skald",ns)
 fire("ADDON_LOADED","Skald"); fire("PLAYER_LOGIN"); runTimers(); runTimers()
 RES = "no result"
 local okRun, err = pcall(function()
@@ -1989,6 +1989,38 @@ if not (prev and nextB) then RES = "corners not found" else
 end`,
 });
 
+run('the Cartographer tab opens, shows the maps in colour where the diary has seen the character and faded elsewhere, turns its pages and raises no error', {
+  pre: SAVED('{}', 'version = 99, goalsInit = true, goalsVer = 3, goals = {}, stats = { counts = {}, deathZones = {}, tiers = {}, played = 1, first = 1 }'),
+  body: `C_Map.GetMapInfo = function(id) return { name = "Land " .. id, mapType = 3, parentMapID = 0 } end
+SkaldCharDB.visitedMaps = { ["map:1429"] = true, ["map:1426"] = true, ["map:7"] = true }
+local tab = btn("Cartographer")
+if not tab then RES = "no Cartographer tab" else
+  tab._OnClick(tab)
+  local list = ns.Cartographer.List()
+  local walked = ns.Cartographer.Count(list)
+  -- a click on a walked land opens its detail, the corner goes back
+  local cell
+  for _, f in ipairs(frames) do if rawget(f, "map") and f._OnClick and f.info and not cell then cell = f end end
+  local opened, backOk = false, false
+  if cell then
+    SkaldCharDB.visitedMaps["map:" .. cell.info.id] = true
+    ns.Cartographer.refresh()
+    for i = 1, 20 do table.insert(SkaldCharDB.entries, { kind = "zone", m = cell.info.id, t = 1700000000 + i, idx = 1 }) end
+    cell._OnClick(cell)
+    local P = ns.Cartographer.pager
+    -- twenty pages written there are three pages of seven: the corner turns on twice, then there is no more
+    opened = P.CanPrev() and P.CanNext()
+    P.Turn(1); ns.Cartographer.refresh(); P.Turn(1); ns.Cartographer.refresh()
+    opened = opened and not P.CanNext()
+    P.Turn(-1); P.Turn(-1); P.Turn(-1)   -- back to page 1, then out to the grid
+    ns.Cartographer.refresh()
+    backOk = not ns.Cartographer.pager.CanPrev()   -- the grid again, on its first spread
+  end
+  RES = (cell and opened and backOk and #list >= 50 and walked == 2 and ns.Cartographer.Walked(1429) and (SkaldDB.errors == nil)) and "ok"
+    or ("list " .. #list .. " walked " .. walked .. " errors: " .. tostring(SkaldDB.errors and SkaldDB.errors[1]))
+end`,
+});
+
 run('the Saga tab opens, turns its pages and raises no error', {
   pre: SAGA_DIARY(),
   body: `local tab = btn("Saga")
@@ -3149,7 +3181,7 @@ RES = (default and scroll and stopArt and medal and round and back and named and
   else { failed++; console.log('  FAIL  pictures of the looks of the Bard notice missing: ' + lost.join(', ')); }
 }
 
-run('the column of tabs: ten for a hunter, always; Settings is one tab whose three pages (Style, Notices, Options) are turned by the corners of the book; the cover has its tab; the open tab has its own picture; the column stays above the foot of the cover', {
+run('the column of tabs: eleven for a hunter, always; Settings is one tab whose three pages (Style, Notices, Options) are turned by the corners of the book; the cover has its tab; the open tab has its own picture; the column stays above the foot of the cover', {
   pre: SAVED('{}'),
   body: `local function column()
   local n, lowest, names = 0, 0, {}
@@ -3182,7 +3214,7 @@ local days = btn("Journeys"); days._OnClick(days)
 local n2, _, names2 = column()
 settings._OnClick(settings)
 local back = lit("Settings")
-RES = (n0 == 10 and names0:find("Cover", 1, true) and coverLit and artOn and n1 == 10 and n2 == 10 and settingsLit and back
+RES = (n0 == 11 and names0:find("Cover", 1, true) and coverLit and artOn and n1 == 11 and n2 == 11 and settingsLit and back
   and not names1:find("Style", 1, true) and not names1:find("Options", 1, true)
   and page1 and page2 and page3 and goTo and low0 <= 580 - 56 and low1 <= 580 - 56) and "ok"
   or ("closed=" .. n0 .. " (" .. names0 .. ") coverLit=" .. tostring(coverLit) .. " art=" .. tostring(artOn) .. " open=" .. n1 .. " (" .. names1 .. ") settingsLit=" .. tostring(settingsLit)
