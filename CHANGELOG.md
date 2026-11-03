@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.48.0-beta
+
+- **Cartographer**, a new tab: the hand-drawn maps of the lands and cities as a collection, in colour where the diary has seen the character stand and faded where not yet (sixteen to a spread, the corners of the book turn the pages), with a footprint stamp on the lands walked, an album frame round each map and a seal at its title. A click on a land you have walked opens its map with the quests, the creatures and the pages of the diary written there
+- Settings, Options: Export and Burn are brass plates like the other buttons (the Burn one wine-red), and the buttons that cannot be used yet are easier to read
+
 ## 0.47.1-beta
 
 - Credits: the quests-per-land table that travels with Skald names QuestDB (MIT) and CMaNGOS in its header

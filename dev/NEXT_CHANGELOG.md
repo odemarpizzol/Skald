@@ -1,1 +1,0 @@
-- **Cartographer**, a new tab: the hand-drawn maps of the lands and cities as a collection, in colour where the diary has seen the character stand and faded where not yet (sixteen to a spread, the corners of the book turn the pages)
