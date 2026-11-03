@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.46.0-beta
+
+- **Maps of dungeons, raids and battlegrounds, drawn and waiting:** thirty hand-drawn maps (the four battlegrounds, nineteen dungeons and seven raids of the old world) travel in the package, listed by the number of the instance; the Index does not show them yet, that comes once the numbers are checked in the game
+- `/skald probe maps` also says, inside a dungeon, a raid, a battleground or an arena, what the game calls it (name, instance id, kind, difficulty) and the type of its map
+
 ## 0.45.0-beta
 
 - **The map on the Index** is drawn like an old map and not like a window: the part you have not found is faint, the regions found are darker, and the borders melt into the page (no dark frame, no hard blocks)

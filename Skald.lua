@@ -5226,6 +5226,17 @@ Mile.MapArtLines = function()
         return ok and type(info) == "table" and info.name or "?"
     end
     lines[#lines + 1] = "map under the player: " .. tostring(here or "none") .. (here and (" = " .. Name(here)) or "")
+    if here then
+        local okT, info = pcall(C_Map.GetMapInfo, here)
+        if okT and type(info) == "table" then lines[#lines + 1] = "  its type: " .. tostring(info.mapType) .. " (3 zone, 4 dungeon), parent " .. tostring(info.parentMapID) end
+    end
+    -- inside an instance (a dungeon, a raid, a battleground, an arena): what the game says it is; the instance id is the same in
+    -- every client and is what a map of a place of this kind would be keyed by
+    local okI, inside, kind = pcall(IsInInstance)
+    if okI and inside then
+        local okG, name, instanceType, difficulty, _, _, _, _, instanceID = pcall(GetInstanceInfo)
+        if okG then lines[#lines + 1] = "instance: " .. tostring(name) .. " | id " .. tostring(instanceID) .. " | type " .. tostring(instanceType or kind) .. " | difficulty " .. tostring(difficulty) end
+    end
     local art = ns.ZoneCard and ns.ZoneCard.ART or {}
     local ids = {}
     for id in pairs(art) do ids[#ids + 1] = id end

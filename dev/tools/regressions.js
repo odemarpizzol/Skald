@@ -3533,6 +3533,15 @@ RES = (count >= 8 and said:find("map under the player", 1, true) and said:find("
   or ("said: " .. said)`,
 });
 
+run('/skald probe maps inside an instance says what the game calls it and its id', {
+  body: `function IsInInstance() return true, "party" end
+function GetInstanceInfo() return "The Deadmines", "party", 1, "Normal", 5, 0, false, 36 end
+print_out = {}
+SlashCmdList.SKALD("probe maps")
+local said = table.concat(print_out, "\\n")
+RES = (said:find("instance: The Deadmines | id 36 | type party | difficulty 1", 1, true) and SkaldDB.errors == nil) and "ok" or ("said: " .. said)`,
+});
+
 run('/skald probe events counts the events by name, keeps the payload of the new-looking ones, and lists them', {
   body: `SlashCmdList.SKALD("probe events")
 fire("CAMPSITE_CONTRIBUTION", 42, "Cozy Fire"); fire("CAMPSITE_CONTRIBUTION", 43); fire("PLAYER_MONEY")
@@ -3567,6 +3576,16 @@ RES = (SkaldDB.probeEvents.count.CAMPSITE_CONTRIBUTION == 2 and log.seen[1].ev =
   const lost = [...names].filter(n => !fs.existsSync(path.join(ADDONS, 'Skald', 'Textures', 'skald2', n + '.tga')));
   if (names.size >= 11 && !lost.length) console.log('  ok    every picture of the looks of the tabs is in the folder (' + names.size + ')');
   else { failed++; console.log('  FAIL  pictures of the looks of the tabs: ' + names.size + ' named, missing: ' + lost.join(', ')); }
+}
+
+// every instance with custom map art has its TGA texture
+{
+  const src = fs.readFileSync(path.join(ADDONS, 'Skald', 'ZoneCard.lua'), 'utf8');
+  const block = (src.match(/ZC\.INSTANCE_ART\s*=\s*\{([\s\S]*?)\n\}/) || [])[1] || '';
+  const names = [...block.matchAll(/\[\d+\]\s*=\s*"(map_[a-z_]+)"/g)].map(m => m[1]);
+  const lost = names.filter(n => !fs.existsSync(path.join(ADDONS, 'Skald', 'Textures', 'skald2', n + '.tga')));
+  if (names.length === 30 && !lost.length) console.log('  ok    every instance map has its texture (' + names.length + ')');
+  else { failed++; console.log('  FAIL  instance map textures: ' + names.length + ' named, missing: ' + lost.join(', ')); }
 }
 
 console.log(failed ? `\n${failed} regression(s) FAILED` : '\nAll regressions passed');
