@@ -1,7 +1,6 @@
 -- Skald: the zone card of the Index. When the contents end on the left page, the right page tells about the land
--- the diary last stood in: its map drawn from the game's own tiles in the colours of old parchment, the regions
--- found, the quests of the zone done out of those QuestDB places there, and the creatures slain there since the
--- diary began to count them.
+-- the diary last stood in: Skald's hand-drawn map for the starting zones, otherwise the game's tiles in old-paper
+-- colours, along with regions found, local quests done and creatures slain there since the diary began to count them.
 --
 -- Loaded after Saga.lua: it uses the saved diary SkaldCharDB and, when it is installed, QuestDB (found through
 -- LibStub at the moment of use, never at load).
@@ -22,6 +21,15 @@ ns.ZoneCard = ZC
 
 local TEX = "Interface\\AddOns\\Skald\\Textures\\"
 local MAP_W = 342
+-- Hand-drawn maps for the original starting zones. Other zones keep the client's explored-map tiles.
+ZC.ART = {
+    [1429] = "map_elwynn",
+    [1426] = "map_dunmorogh",
+    [1438] = "map_teldrassil",
+    [1411] = "map_durotar",
+    [1412] = "map_mulgore",
+    [1420] = "map_tirisfal",
+}
 -- How the map of the zone sits on the page: it is a drawing of the old kind, not a window. The unfound part is faint (the
 -- ink of the map, thin on the paper), the regions found are darker, and the borders fade into the paper in steps (no frame).
 ZC.TILE_ALPHA, ZC.FOUND_ALPHA = 0.5, 0.92
@@ -177,6 +185,26 @@ function ZC.Build(parent, width)
     end
     card.fade = fade
 
+    -- These small ornaments frame both our own zone drawings and the game's faded map tiles.
+    local corners = {
+        { "TOPLEFT", 0 }, { "TOPRIGHT", math.pi / 2 },
+        { "BOTTOMRIGHT", math.pi }, { "BOTTOMLEFT", math.pi * 1.5 },
+    }
+    card.mapCorners = {}
+    for i, spec in ipairs(corners) do
+        local corner = mapBox:CreateTexture(nil, "OVERLAY", nil, 3)
+        corner:SetSize(32, 32)
+        corner:SetPoint(spec[1], mapBox, spec[1], 0, 0)
+        corner:SetTexture(TEX .. "skald2\\map_corner")
+        corner:SetRotation(spec[2])
+        card.mapCorners[i] = corner
+    end
+    local compass = mapBox:CreateTexture(nil, "OVERLAY", nil, 4)
+    compass:SetSize(22, 22)
+    compass:SetPoint("TOP", mapBox, "TOP", 0, -3)
+    compass:SetTexture(TEX .. "skald2\\map_compass")
+    card.compass = compass
+
     local title = card:CreateFontString(nil, "OVERLAY", "SkaldHead2")
     title:SetWidth(width)
     title:SetJustifyH("CENTER")
@@ -240,57 +268,80 @@ function ZC.Build(parent, width)
         local t = T()
         local y = 0
         local drawn = 0
-        local okL, layers = pcall(function() return C_Map.GetMapArtLayers(mapID) end)
-        local layer = okL and type(layers) == "table" and layers[1]
-        local okT, files = pcall(function() return C_Map.GetMapArtLayerTextures(mapID, 1) end)
-        if layer and layer.layerWidth and layer.layerWidth > 0 and okT and type(files) == "table" and #files > 0 then
-            local scale = width / layer.layerWidth
-            local tw, th = layer.tileWidth or 256, layer.tileHeight or 256
-            local cols = math.ceil(layer.layerWidth / tw)
-            local height = math.floor(layer.layerHeight * scale + 0.5)
+        local artName = ZC.ART[mapID]
+        if artName then
+            local height = math.floor(width / 2 + 0.5)
             mapBox:SetSize(width, height)
-            for n, file in ipairs(files) do
-                local col, rowN = (n - 1) % cols, math.floor((n - 1) / cols)
-                local tex = Tile(n)
-                tex:ClearAllPoints()
-                tex:SetPoint("TOPLEFT", mapBox, "TOPLEFT", col * tw * scale, -(rowN * th * scale))
-                tex:SetSize(tw * scale + 0.5, th * scale + 0.5)
-                tex:SetTexture(file)
-                tex:Show()
-                drawn = n
-            end
-            local used = 0
-            local okE, regions = pcall(function() return C_MapExplorationInfo.GetExploredMapTextures(mapID) end)
-            if okE and type(regions) == "table" then
-                for _, r in ipairs(regions) do
-                    if type(r) == "table" and type(r.fileDataIDs) == "table" and not r.isShownByMouseOver
-                        and r.textureWidth and r.textureHeight and r.textureWidth > 0 and r.textureHeight > 0 then
-                        local cols = math.ceil(r.textureWidth / 256)
-                        for i, file in ipairs(r.fileDataIDs) do
-                            local col, rowN = (i - 1) % cols, math.floor((i - 1) / cols)
-                            local w = math.min(256, r.textureWidth - col * 256)
-                            local h = math.min(256, r.textureHeight - rowN * 256)
-                            if w > 0 and h > 0 then
-                                used = used + 1
-                                local tex = Found(used)
-                                tex:ClearAllPoints()
-                                tex:SetPoint("TOPLEFT", mapBox, "TOPLEFT", ((r.offsetX or 0) + col * 256) * scale, -(((r.offsetY or 0) + rowN * 256) * scale))
-                                tex:SetSize(w * scale + 0.5, h * scale + 0.5)
-                                tex:SetTexCoord(0, w / 256, 0, h / 256)
-                                tex:SetTexture(file)
-                                tex:Show()
+            local tex = Tile(1)
+            tex:ClearAllPoints()
+            tex:SetPoint("TOPLEFT", mapBox, "TOPLEFT", 0, 0)
+            tex:SetSize(width, height)
+            tex:SetTexCoord(0, 1, 0, 1)
+            tex:SetTexture(TEX .. "skald2\\" .. artName)
+            tex:SetDesaturated(false)
+            tex:SetVertexColor(1, 1, 1)
+            tex:SetAlpha(0.88)
+            tex:Show()
+            drawn = 1
+            for _, tex in ipairs(card.found) do tex:Hide() end
+            mapBox:Show()
+            y = height + 22
+        else
+            local okL, layers = pcall(function() return C_Map.GetMapArtLayers(mapID) end)
+            local layer = okL and type(layers) == "table" and layers[1]
+            local okT, files = pcall(function() return C_Map.GetMapArtLayerTextures(mapID, 1) end)
+            if layer and layer.layerWidth and layer.layerWidth > 0 and okT and type(files) == "table" and #files > 0 then
+                local scale = width / layer.layerWidth
+                local tw, th = layer.tileWidth or 256, layer.tileHeight or 256
+                local cols = math.ceil(layer.layerWidth / tw)
+                local height = math.floor(layer.layerHeight * scale + 0.5)
+                mapBox:SetSize(width, height)
+                for n, file in ipairs(files) do
+                    local col, rowN = (n - 1) % cols, math.floor((n - 1) / cols)
+                    local tex = Tile(n)
+                    tex:ClearAllPoints()
+                    tex:SetPoint("TOPLEFT", mapBox, "TOPLEFT", col * tw * scale, -(rowN * th * scale))
+                    tex:SetSize(tw * scale + 0.5, th * scale + 0.5)
+                    tex:SetTexture(file)
+                    tex:SetDesaturated(true)
+                    tex:SetVertexColor(0.93, 0.80, 0.60)
+                    tex:SetAlpha(ZC.TILE_ALPHA)
+                    tex:Show()
+                    drawn = n
+                end
+                local used = 0
+                local okE, regions = pcall(function() return C_MapExplorationInfo.GetExploredMapTextures(mapID) end)
+                if okE and type(regions) == "table" then
+                    for _, r in ipairs(regions) do
+                        if type(r) == "table" and type(r.fileDataIDs) == "table" and not r.isShownByMouseOver
+                            and r.textureWidth and r.textureHeight and r.textureWidth > 0 and r.textureHeight > 0 then
+                            local cols = math.ceil(r.textureWidth / 256)
+                            for i, file in ipairs(r.fileDataIDs) do
+                                local col, rowN = (i - 1) % cols, math.floor((i - 1) / cols)
+                                local w = math.min(256, r.textureWidth - col * 256)
+                                local h = math.min(256, r.textureHeight - rowN * 256)
+                                if w > 0 and h > 0 then
+                                    used = used + 1
+                                    local tex = Found(used)
+                                    tex:ClearAllPoints()
+                                    tex:SetPoint("TOPLEFT", mapBox, "TOPLEFT", ((r.offsetX or 0) + col * 256) * scale, -(((r.offsetY or 0) + rowN * 256) * scale))
+                                    tex:SetSize(w * scale + 0.5, h * scale + 0.5)
+                                    tex:SetTexCoord(0, w / 256, 0, h / 256)
+                                    tex:SetTexture(file)
+                                    tex:Show()
+                                end
                             end
                         end
                     end
                 end
+                for n = used + 1, #card.found do card.found[n]:Hide() end
+                mapBox:Show()
+                y = height + 22
+            else
+                mapBox:Hide()
+                for _, tex in ipairs(card.found) do tex:Hide() end
+                y = 20
             end
-            for n = used + 1, #card.found do card.found[n]:Hide() end
-            mapBox:Show()
-            y = height + 22
-        else
-            mapBox:Hide()
-            for _, tex in ipairs(card.found) do tex:Hide() end
-            y = 20
         end
         for n = drawn + 1, #card.tiles do card.tiles[n]:Hide() end
         local shown = mapBox:IsShown()

@@ -2019,12 +2019,21 @@ local done, total = ns.ZoneCard.Quests(1438)
 RES = (done == 1 and total == 2) and "ok" or ("done " .. tostring(done) .. " of " .. tostring(total))`,
 });
 
-run('the zone card builds from the tiles of the game and raises no error', {
+run("the zone card uses the game's map tiles for zones without custom art", {
   pre: SAVED('{}', 'version = 99, goalsInit = true, goalsVer = 3, goals = {}, stats = { counts = {}, deathZones = {}, tiers = {}, played = 1, first = 1 }'),
   body: ZONE_STUBS + '\n' + ZONE_ART + '\n' + ZONE_DB + `
 local card = ns.ZoneCard.Build(UIParent, 342)
+card:Set(1439)
+RES = (#card.tiles == 12 and ns.ZoneCard.Regions(1439) == 3 and #card.found == 3) and "ok" or ("tiles " .. #card.tiles .. " found " .. #card.found)`,
+});
+
+run('the zone card uses custom map art without overlaying explored regions', {
+  pre: SAVED('{}', 'version = 99, goalsInit = true, goalsVer = 3, goals = {}, stats = { counts = {}, deathZones = {}, tiers = {}, played = 1, first = 1 }'),
+  body: ZONE_STUBS + '\n' + ZONE_ART + `
+local card = ns.ZoneCard.Build(UIParent, 342)
 card:Set(1438)
-RES = (#card.tiles == 12 and ns.ZoneCard.Regions(1438) == 3 and #card.found == 3) and "ok" or ("tiles " .. #card.tiles .. " found " .. #card.found)`,
+local hasArt = card.tiles[1] and card.tiles[1]._tex and card.tiles[1]._tex:find("map_teldrassil", 1, true)
+RES = (hasArt and #card.tiles == 1 and #card.found == 0 and #card.mapCorners == 4 and card.compass ~= nil) and "ok" or "art or ornaments missing"`,
 });
 
 run('the zone card still comes out without the map art and without QuestDB', {
@@ -2034,7 +2043,7 @@ C_Map.GetMapArtLayers = nil
 C_MapExplorationInfo = nil
 _G.LibStub = nil
 local card = ns.ZoneCard.Build(UIParent, 342)
-card:Set(1438)
+card:Set(1439)
 local done, total = ns.ZoneCard.Quests(1438)
 RES = (total == nil and done == 0 and ns.ZoneCard.Regions(1438) == nil) and "ok" or ("done " .. tostring(done) .. " total " .. tostring(total))`,
 });
