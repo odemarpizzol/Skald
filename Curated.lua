@@ -75,7 +75,7 @@ C[1267] = { tier = 4, text = {
 C[5944] = { tier = 4, text = {
     enUS = "I walked into dreams and came back: \"{quest}\". Not every road is paved with stone.",
     ptBR = "Entrei nos sonhos e voltei: \"{quest}\". Nem toda estrada é feita de pedra.",
-    frFR = "Je suis entré dans les rêves et j'en suis revenu\194\160: «\194\160{quest}\194\160». Toutes les routes ne sont pas pavées de pierre.",
+    frFR = "J'ai traversé le monde des rêves et retrouvé mon chemin\194\160: «\194\160{quest}\194\160». Toutes les routes ne sont pas pavées de pierre.",
 } }
 C[8729] = { tier = 4, text = {
     enUS = "The sea has a temper, and I answered it: \"{quest}\". The tide remembers those who stood before it.",
@@ -125,12 +125,12 @@ C[396] = { tier = 3, text = {
 C[3628] = { tier = 4, text = {
     enUS = "A name earned in fire: \"{quest}\". I am not the one who began this road.",
     ptBR = "Um nome conquistado no fogo: \"{quest}\". Não sou a mesma pessoa que começou esta estrada.",
-    frFR = "Un nom gagné dans le feu\194\160: «\194\160{quest}\194\160». Je ne suis plus celui qui a commencé cette route.",
+    frFR = "Un nom gagné dans le feu\194\160: «\194\160{quest}\194\160». Cette route a commencé avant moi.",
 } }
 C[5466] = { tier = 4, text = {
     enUS = "The lich had a name and a cold hall, and I took the road to both: \"{quest}\".",
     ptBR = "O lich tinha um nome e um salão gelado, e tomei a estrada para os dois: \"{quest}\".",
-    frFR = "Le liche avait un nom et une salle glacée, et j'ai pris la route vers les deux\194\160: «\194\160{quest}\194\160».",
+    frFR = "La liche avait un nom et une salle glacée. J'ai suivi la piste jusqu'à son repaire\194\160: «\194\160{quest}\194\160».",
 } }
 C[3962] = { tier = 4, text = {
     enUS = "\"{quest}\". Some warnings are worth heeding, and some gifts are worth taking. I did what the road asked.",
@@ -196,7 +196,7 @@ C[6187] = { tier = 4, text = {
 C[8587] = { tier = 3, text = {
     enUS = "Five hundred pounds of chicken, carried across Azeroth: \"{quest}\". Not every legend is grim.",
     ptBR = "Mais de duzentos quilos de frango, levados por todo Azeroth: \"{quest}\". Nem toda lenda é sombria.",
-    frFR = "Deux cent cinquante kilos de poulet, portés à travers Azeroth\194\160: «\194\160{quest}\194\160». Toutes les légendes ne sont pas sombres.",
+    frFR = "Environ deux cent vingt-sept kilos de poulet, portés à travers Azeroth\194\160: «\194\160{quest}\194\160». Toutes les légendes ne sont pas sombres.",
 } }
 C[5121] = { tier = 3, text = {
     enUS = "The Winterfall furbolg were never a warlike people, until a strange substance changed them: \"{quest}\". Their High Chief is down, and the studies can resume.",
@@ -229,8 +229,8 @@ C[667] = { tier = 3, text = {
 -- text of its own (a class milestone, rare), so a hunter never reads the same page twice.
 C[6061] = { tier = 3, text = {
     enUS = "A hunter learns the wild by taming it: \"{quest}\". The beast will not stay, but what I learned of it will.",
-    ptBR = "Um caçador aprende a natureza domando-a: \"{quest}\". A fera não vai ficar, mas o que aprendi com ela, sim.",
-    frFR = "Un chasseur apprend la nature en l'apprivoisant\194\160: «\194\160{quest}\194\160». La bête ne restera pas, mais ce que j'ai appris d'elle, si.",
+    ptBR = "Quem caça aprende sobre a natureza ao domá-la: \"{quest}\". A fera não vai ficar, mas o que aprendi com ela, sim.",
+    frFR = "Qui chasse apprend à connaître la nature en l'apprivoisant\194\160: «\194\160{quest}\194\160». La bête ne restera pas, mais ce que j'ai appris d'elle, si.",
 } }
 C[6062] = { tier = 3, text = {
     enUS = "The beast let itself be led for a little while: \"{quest}\". I learned to read the wild, and the wild learned my name.",
@@ -244,8 +244,8 @@ C[6063] = { tier = 3, text = {
 } }
 C[6064] = { tier = 3, text = {
     enUS = "\"{quest}\": my first steps as a true hunter. The leash was only a lesson; the bond is what I keep.",
-    ptBR = "\"{quest}\": meus primeiros passos como um verdadeiro caçador. A coleira era só uma lição; o laço é o que fica.",
-    frFR = "«\194\160{quest}\194\160»\194\160: mes premiers pas de vrai chasseur. La laisse n'était qu'une leçon\194\160; le lien, lui, reste.",
+    ptBR = "\"{quest}\": meus primeiros passos na arte da caça. A coleira era só uma lição; o laço é o que fica.",
+    frFR = "«\194\160{quest}\194\160»\194\160: mes premiers pas dans l'art de la chasse. La laisse n'était qu'une leçon\194\160; le lien, lui, reste.",
 } }
 C[6082] = { tier = 3, text = {
     enUS = "I did not command the beast in \"{quest}\", I asked, and it listened. That is the whole craft.",
@@ -264,8 +264,8 @@ C[6084] = { tier = 3, text = {
 } }
 C[6085] = { tier = 3, text = {
     enUS = "The wild tests every hunter once. \"{quest}\" was my test, and I was not found wanting.",
-    ptBR = "A natureza testa todo caçador uma vez. \"{quest}\" foi o meu teste, e não fui reprovado.",
-    frFR = "La nature éprouve chaque chasseur une fois. «\194\160{quest}\194\160» fut mon épreuve, et je ne fus pas jugé insuffisant.",
+    ptBR = "A natureza põe à prova quem caça. \"{quest}\" foi o meu teste, e passei.",
+    frFR = "La nature met à l'épreuve toute personne qui chasse. «\194\160{quest}\194\160» fut mon épreuve, et je l'ai réussie.",
 } }
 C[6087] = { tier = 3, text = {
     enUS = "Quiet steps, steady breath, and a beast that trusted me: \"{quest}\".",
@@ -279,12 +279,12 @@ C[6088] = { tier = 3, text = {
 } }
 C[6101] = { tier = 3, text = {
     enUS = "A hunter is made one lesson at a time. \"{quest}\" was another stone in the path.",
-    ptBR = "Um caçador se faz uma lição de cada vez. \"{quest}\" foi mais uma pedra no caminho.",
-    frFR = "On devient chasseur une leçon à la fois. «\194\160{quest}\194\160» fut une pierre de plus sur le chemin.",
+    ptBR = "A prática se constrói uma lição de cada vez. \"{quest}\" foi mais uma pedra no caminho.",
+    frFR = "La pratique se construit une leçon à la fois. «\194\160{quest}\194\160» fut une pierre de plus sur le chemin.",
 } }
 C[6102] = { tier = 3, text = {
     enUS = "\"{quest}\": the beast went back to the wild, and I went on a little wiser.",
-    ptBR = "\"{quest}\": a fera voltou à natureza, e eu segui um pouco mais sábio.",
+    ptBR = "\"{quest}\": a fera voltou à natureza, e eu segui meu caminho com um pouco mais de sabedoria.",
     frFR = "«\194\160{quest}\194\160»\194\160: la bête est retournée à la nature, et j'ai poursuivi ma route un peu plus sage.",
 } }
 
