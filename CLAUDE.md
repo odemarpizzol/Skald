@@ -13,6 +13,7 @@ node dev/tools/regressions.js         # only the regression scenarios (add one p
 node dev/tools/validate_phrases.js    # only the phrase pools
 node dev/tools/lint.js [--update-baseline]   # scope-aware lint; --update-baseline accepts a new game API global
 node dev/tools/serve_docs.js          # preview of the web Reader (docs/reader)
+node dev/tools/variety.js [race] [class] [tone] [locale]   # measures how often a phrase comes back in a long climb (700 quests, 100 falls, 60 levels, 150 bosses); not part of checks.js
 ```
 
 Run `checks.js` before saying anything is ready. It runs Lua 5.3 in fengari with `dev/tools/mock.lua` standing in for the WoW API (and runs the session again with `dev/tools/forever.lua`, the Forever client: a Mainline-family client without the Classic-only functions and with `issecretvalue`; regressions load it with `pre: FOREVER + ...`): a green run means "no obvious error", **not** "works in the game". Always tell the user the simulation is not the game.

@@ -251,11 +251,12 @@ local function PickFlavor(kind, entry)
             local key = K.RacePoolKey(entry.race, kind)
             if key and math.random() < 0.75 then return key end
         end
-        -- a quest done is told with the lines of one's people half of the time (the highest seals, chains and the
-        -- hand-written stories were left out above, and a race with no lines of its own tells the quest as usual)
+        -- a quest done is told with the lines of one's people about a third of the time (the highest seals, chains and the
+        -- hand-written stories were left out above, and a race with no lines of its own tells the quest as usual); it is the
+        -- commonest page of a long climb, so a line of a pool of sixteen must not come back too soon (dev/tools/variety.js)
         if kind == "quest" and entry.race then
             local key = K.RacePoolKey(entry.race, "quest")
-            if key and math.random() < 0.5 then return key end
+            if key and math.random() < K.RACE_QUEST_CHANCE then return key end
         end
     elseif tone and tone ~= "epic" and PHRASES["tone_" .. tone .. "_" .. kind] and math.random() < 0.75 then
         return "tone_" .. tone .. "_" .. kind
@@ -279,6 +280,7 @@ local function PickFlavor(kind, entry)
     return pick
 end
 
+K.RACE_QUEST_CHANCE = 0.35   -- how often a quest is told with the lines of the race, in the voice "Of My People"
 K.FLAVOR_FULL = 8   -- the lines a class or race pool needs to be drawn as often as the plain ones
 K.CRAFT_MERGE = 1200   -- seconds: making the same thing again within this time adds to the page of the last one
 K.QUEST_START_MAX, K.QUEST_START_DAYS = 300, 60   -- quests whose acceptance is kept, and for how long
