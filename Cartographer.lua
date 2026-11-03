@@ -9,17 +9,17 @@ local UI_TEXT = {
     enUS = {
         TAB = "Cartographer", TITLE = "Cartographer", CHARTED = "%d of %d lands charted", OF = "%d of %d",
         WALKED = "You have walked here. Click for more.", NOT_YET = "Not yet walked.", EMPTY = "No maps yet.",
-        BACK = "< Back", HERE = "Pages written here", NONE_HERE = "No pages were written here yet.", DATE = "%m/%d/%Y",
+        BACK = "Back to the maps", HERE = "Pages written here", NONE_HERE = "No pages were written here yet.", DATE = "%m/%d/%Y",
     },
     ptBR = {
         TAB = "Cartógrafo", TITLE = "Cartógrafo", CHARTED = "%d de %d terras mapeadas", OF = "%d de %d",
         WALKED = "Você já andou por aqui. Clique para ver mais.", NOT_YET = "Ainda não percorrida.", EMPTY = "Ainda sem mapas.",
-        BACK = "< Voltar", HERE = "Páginas escritas aqui", NONE_HERE = "Nenhuma página foi escrita aqui ainda.", DATE = "%d/%m/%Y",
+        BACK = "Voltar aos mapas", HERE = "Páginas escritas aqui", NONE_HERE = "Nenhuma página foi escrita aqui ainda.", DATE = "%d/%m/%Y",
     },
     frFR = {
         TAB = "Cartographe", TITLE = "Cartographe", CHARTED = "%d terres sur %d cartographiées", OF = "%d sur %d",
         WALKED = "Vous avez d\195\169j\195\160 march\195\169 ici. Cliquez pour en savoir plus.", NOT_YET = "Pas encore parcourue.", EMPTY = "Pas encore de cartes.",
-        BACK = "< Retour", HERE = "Pages \195\169crites ici", NONE_HERE = "Aucune page n'a encore \195\169t\195\169 \195\169crite ici.", DATE = "%d/%m/%Y",
+        BACK = "Retour aux cartes", HERE = "Pages \195\169crites ici", NONE_HERE = "Aucune page n'a encore \195\169t\195\169 \195\169crite ici.", DATE = "%d/%m/%Y",
     },
 }
 local UI = UI_TEXT[GetLocale()] or UI_TEXT.enUS
@@ -148,14 +148,10 @@ local function BuildTab(panel)
     -- pages written there on the right one; the left corner of the book, or this button, goes back to the grid.
     local detail
     local card
-    local back = CreateFrame("Button", nil, panel)
-    back:SetSize(90, 20)
-    back:SetPoint("TOPRIGHT", panel, "TOPLEFT", CW, -14)
-    back.text = back:CreateFontString(nil, "OVERLAY", "SkaldSmall")
-    back.text:SetAllPoints()
-    back.text:SetJustifyH("RIGHT")
-    back.text:SetTextColor(head[1], head[2], head[3])
-    back.text:SetText(UI.BACK)
+    -- the same brass plate the other tabs use, at the foot of the left page under the card
+    local back = SkaldAPI.MakeButton and SkaldAPI.MakeButton(panel, 130, 28, UI.BACK)
+        or CreateFrame("Button", nil, panel)
+    back:SetPoint("TOP", panel, "TOPLEFT", CW / 2, -488)
     back:Hide()
     local rows = {}
     for i = 1, 7 do
