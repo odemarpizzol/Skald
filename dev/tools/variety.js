@@ -27,7 +27,9 @@ SkaldDB.tone = "${tone}"; __locale = "${locale}"
 local P = ns.LOCALES.${locale}.phrases
 local function told(e) local pool = SkaldAPI.PoolFor(e); local ph = pool and pool[e.idx]; return ph end
 local report = {}
+local sizes
 local function Measure(kind, n, make)
+  sizes = nil
   local counts, last, gaps, gapN, pages, order = {}, {}, 0, 0, 0, {}
   for i = 1, n do
     make(i)
@@ -36,15 +38,28 @@ local function Measure(kind, n, make)
       local ph = told(e)
       if ph then
         pages = pages + 1
+        order[pages] = ph
+        if os.getenv and os.getenv('VARIETY_POOLS') then local pool = SkaldAPI.PoolFor(e); sizes = sizes or {}; local k = #pool; sizes[k] = (sizes[k] or 0) + 1 end
         counts[ph] = (counts[ph] or 0) + 1
         if last[ph] then gaps = gaps + (pages - last[ph]); gapN = gapN + 1 end
         last[ph] = pages
       end
     end
   end
+  -- near repeats: the share of pages whose phrase was told in one of the W pages of the kind before it
+  local function Near(W)
+    local hit, total = 0, 0
+    for i = 2, #order do
+      total = total + 1
+      for j = math.max(1, i - W), i - 1 do if order[j] == order[i] then hit = hit + 1; break end end
+    end
+    return total > 0 and 100 * hit / total or 0
+  end
+  local near10, near20 = Near(10), Near(20)
+  if sizes then local t = {}; for k, v in pairs(sizes) do t[#t + 1] = k .. 'x' .. v end; table.sort(t); report[#report + 1] = '    pool sizes: ' .. table.concat(t, ' ') end
   local distinct, top, topPh = 0, 0, nil
   for ph, c in pairs(counts) do distinct = distinct + 1; if c > top then top = c; topPh = ph end end
-  report[#report + 1] = string.format("%-8s pages %4d | distinct %3d | top line %3d times (%4.1f%%) | mean gap between repeats %5.1f pages", kind, pages, distinct, top, pages > 0 and 100 * top / pages or 0, gapN > 0 and gaps / gapN or 0)
+  report[#report + 1] = string.format("%-8s pages %4d | distinct %3d | top line %3d times (%4.1f%%) | mean gap %5.1f | back within 10 pages: %4.1f%%, within 20: %4.1f%%", kind, pages, distinct, top, pages > 0 and 100 * top / pages or 0, gapN > 0 and gaps / gapN or 0, near10, near20)
   if os.getenv and os.getenv("VARIETY_TOP") then
     local list = {}
     for ph, c in pairs(counts) do list[#list + 1] = { ph, c } end

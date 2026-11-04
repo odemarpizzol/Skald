@@ -362,6 +362,18 @@ K.Trim = function(db)
     end
 end
 
+-- A number for a phrase (to remember which were told lately without keeping their text).
+K.hashCache = {}
+function K.PhraseHash(text)
+    if type(text) ~= "string" then return 0 end
+    local h = K.hashCache[text]
+    if h then return h end
+    h = 5381
+    for i = 1, #text do h = (h * 33 + string.byte(text, i)) % 4294967296 end
+    K.hashCache[text] = h
+    return h
+end
+
 local function AddEntry(kind, arg, zone, extra)
     local db = Journal()
     if not db then return end
@@ -410,20 +422,39 @@ local function AddEntry(kind, arg, zone, extra)
     db.recentIdx = db.recentIdx or {}
     local key = table.concat({ kind, tostring(entry.qtype or entry.cat or ""), tostring(entry.src or ""),
         tostring(kind ~= "goal" and entry.tier or ""), tostring(entry.fl or ""), tostring(entry.tries and math.min(entry.tries, 4) or (entry.since and (entry.since >= 2 and "d" or "y")) or "") }, ":")
-    local recent = db.recentIdx[key] or {}
-    local keep = math.min(5, #list - 1)
-    local idx = math.random(#list)
-    for _ = 1, 30 do
-        local seen = false
-        for i = math.max(1, #recent - keep + 1), #recent do
-            if recent[i] == idx then seen = true; break end
+    -- The phrase is drawn at random from those NOT told lately of this kind: the last N, N being seven tenths of the
+    -- pool (at least ten, at most thirty, never the whole pool), so a phrase does not come back within N pages of its kind, and the order
+    -- is still not a fixed cycle. What is kept is a number made from each phrase (not its place in the pool, which
+    -- changes from one pool to another, nor its text, which is long), so a line that two pools share counts too.
+    db.recentPh = db.recentPh or {}
+    local recent = db.recentPh[kind] or {}   -- by kind, not by key: the pools of a kind share many lines
+    local function Allowed(pool, keep)
+        local told = {}
+        for i = math.max(1, #recent - keep + 1), #recent do told[recent[i]] = true end
+        local allowed = {}
+        for i = 1, #pool do
+            if not told[K.PhraseHash(pool[i])] then allowed[#allowed + 1] = i end
         end
-        if not seen then break end
-        idx = math.random(#list)
+        return allowed
     end
-    recent[#recent + 1] = idx
-    while #recent > 5 do table.remove(recent, 1) end
-    db.recentIdx[key] = recent
+    local function Want(pool) return math.min(30, math.max(10, math.floor(#pool * 0.7))) end
+    local allowed = Allowed(list, Want(list))
+    -- A small pool of a race or a class that has been used up (fewer than three lines left): the common pool of the
+    -- kind tells this page, so the special lines do not come round again too soon (not the level and milestone pages
+    -- of the voice "Of My People": the common pool tells numbers, which that voice never shows).
+    if entry.fl and #allowed < 3 and not (SkaldDB.tone == "kin" and (kind == "level" or kind == "milestone")) then
+        local own = entry.fl
+        entry.fl = nil
+        local common = PoolFor(entry) or PHRASES[kind]
+        local commonAllowed = Allowed(common, Want(common))
+        if #commonAllowed > #allowed then list, allowed = common, commonAllowed else entry.fl = own end
+    end
+    -- Nothing is free in a pool with no other to turn to: the lines not among the last ones of the pool's own size.
+    if #allowed == 0 then allowed = Allowed(list, math.max(1, #list - 1)) end
+    local idx = #allowed > 0 and allowed[math.random(#allowed)] or math.random(#list)
+    recent[#recent + 1] = K.PhraseHash(list[idx])
+    while #recent > 30 do table.remove(recent, 1) end
+    db.recentPh[kind] = recent
     entry.idx = idx
 
     table.insert(db.entries, entry)
@@ -1361,7 +1392,7 @@ end
 -- It is set aside with the pages and brought back with them, and emptied with them, so a cleared diary or a new
 -- character with an old name never inherits it.
 K.DIARY_STATE = { "pets", "petNow", "companions", "questObj", "questStart", "visitedMaps", "resume", "attempts",
-    "taxi", "marks", "goals", "goalsInit", "goalsVer", "collInit", "rep", "memoryAt", "recentIdx", "anniv", "zoneKills", "killBase",
+    "taxi", "marks", "goals", "goalsInit", "goalsVer", "collInit", "rep", "memoryAt", "recentIdx", "recentPh", "anniv", "zoneKills", "killBase",
     "birthMap", "mountSpells" }
 
 local function TakeState(db)

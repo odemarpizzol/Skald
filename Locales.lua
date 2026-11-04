@@ -9164,7 +9164,7 @@ ns.LOCALES = {
                 "J'ai fait un bout de chemin avec «\194\160%s\194\160» et elle est maintenant derrière moi. Sans bruit.",
                 "«\194\160%s\194\160»\194\160: une petite chose de plus remise en place. Je la prends.",
                 "Quelqu'un avait besoin que «\194\160%s\194\160» soit faite. J'ai été {g:content|contente} que ce soit moi.",
-                "J'ai terminé «\194\160%s\194\160» et je suis reparti{g:|e}{g:|e}. La route n'a pas besoin de le savoir.",
+                "J'ai terminé «\194\160%s\194\160» et je suis reparti{g:|e}. La route n'a pas besoin de le savoir.",
                 "«\194\160%s\194\160» a pris du temps, mais le temps était la seule chose que j'avais à donner.",
             },
             tone_humble_zone = {

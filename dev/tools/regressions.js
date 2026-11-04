@@ -279,13 +279,17 @@ local limits = ${limits}
 local function told(e) local pool = SkaldAPI.PoolFor(e); return pool and pool[e.idx] end
 local bad = {}
 local function Measure(kind, n, make)
-  local counts, pages = {}, 0
+  local counts, pages, order = {}, 0, {}
   for i = 1, n do
     make(i)
     local e = SkaldCharDB.entries[#SkaldCharDB.entries]
     local ph = e and e.kind == kind and told(e)
-    if ph then pages = pages + 1; counts[ph] = (counts[ph] or 0) + 1 end
+    if ph then pages = pages + 1; order[pages] = ph; counts[ph] = (counts[ph] or 0) + 1 end
   end
+  -- the share of pages whose line was told in one of the ten pages of the kind before (the goal: one in a hundred or less)
+  local near = 0
+  for i = 2, #order do for j = math.max(1, i - 10), i - 1 do if order[j] == order[i] then near = near + 1; break end end end
+  if pages > 1 and near / (pages - 1) > 0.01 then bad[#bad + 1] = string.format("%s: %.1f%% of the pages repeat a line of the ten before", kind, 100 * near / (pages - 1)) end
   local distinct, top = 0, 0
   for _, c in pairs(counts) do distinct = distinct + 1; if c > top then top = c end end
   local share = pages > 0 and top / pages or 1
@@ -1625,21 +1629,19 @@ local shown = table.concat(SkaldAPI.BuildExport("reader", "all"), " ")
 RES = (not leak and shown:find("Alice saved me", 1, true)) and "ok" or ("leak: " .. tostring(leak) .. " | " .. reader:sub(1, 300))`,
 });
 
-run('a phrase is not told again within five pages of the same kind', {
-  body: `for i = 1, 60 do fire("PLAYER_LEVEL_UP", 1 + (i % 9)) end
-local lastSeen, bad = {}, nil
+run('a phrase is not told again within ten pages of the same kind (when its pool has eleven or more), and never within five', {
+  body: `for i = 1, 90 do fire("PLAYER_LEVEL_UP", 1 + (i % 9)) end
+local seen, bad = {}, nil
 for _, e in ipairs(SkaldCharDB.entries) do
   if e.kind == "level" then
     local list = SkaldAPI.PoolFor(e)
-    local key = tostring(e.fl)
-    local seen = lastSeen[key] or {}
-    local keep = math.min(5, #list - 1)
-    for i = math.max(1, #seen - keep + 1), #seen do if seen[i] == e.idx then bad = "repeated " .. e.idx .. " in a pool of " .. #list end end
-    seen[#seen + 1] = e.idx
-    lastSeen[key] = seen
+    local ph = list[e.idx]
+    local keep = (#list >= 11) and 10 or math.min(5, #list - 1)
+    for i = math.max(1, #seen - keep + 1), #seen do if seen[i] == ph then bad = "repeated in a pool of " .. #list .. ": " .. tostring(ph):sub(1, 50) end end
+    seen[#seen + 1] = ph
   end
 end
-RES = (count("level") >= 50 and not bad) and "ok" or (bad or "no pages")`,
+RES = (count("level") >= 80 and not bad) and "ok" or (bad or "no pages")`,
 });
 
 run('a note, a restored diary and an erased diary make the book measure its pages again', {
@@ -3566,7 +3568,7 @@ for _, e in ipairs(SkaldCharDB.entries) do
 end
 local zones, raceZones = 0, 0
 local draw = math.random
-math.random = function(...) if select("#", ...) > 0 then return draw(...) end return 0.1 end   -- the voice draws its race lines three times in four: made certain here
+math.random = function(...) if select("#", ...) > 0 then return draw(...) end return 0.1 end   -- the voice draws its race lines three times in four: made certain here (once its eight lines are told lately, the common pool of the kind tells the page)
 local here = 0   -- a page of a land is written once for each map: every land gets a map of its own
 C_Map.GetBestMapForUnit = function() return 5000 + here end
 C_Map.GetMapInfo = function(id) return { name = "Land", mapType = 3, parentMapID = 12 } end
@@ -3575,7 +3577,7 @@ math.random = draw
 for _, e in ipairs(SkaldCharDB.entries) do if e.kind == "zone" then zones = zones + 1; if e.fl == "race_Orc_zone" then raceZones = raceZones + 1 end end end
 local goal = { kind = "goal", arg = "level10", idx = 1 }
 local goalText = SkaldAPI.Render(goal)
-RES = (before:find("21", 1, true) and orcish and #digits == 0 and generic >= 1 and zones >= 20 and raceZones >= zones - 1 and not goalText:find("points", 1, true)) and "ok"
+RES = (before:find("21", 1, true) and orcish and #digits == 0 and generic >= 1 and zones >= 20 and raceZones >= 8 and not goalText:find("points", 1, true)) and "ok"
   or ("before=" .. before .. " after=" .. after .. " digits=" .. table.concat(digits, " / ") .. " milestones=" .. generic .. " zones " .. raceZones .. "/" .. zones .. " goal=" .. goalText)`,
 });
 
