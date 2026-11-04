@@ -2555,14 +2555,18 @@ local function CreateWindow()
     end
     Cover(K.COVER_X, 0, 56, 56, 0, 56, 0, 56)
     Cover(K.COVER_X + K.COVER_W - 56, 0, 56, 56, 136, 192, 0, 56)
-    Cover(K.COVER_X, K.BOOK_H - 56, 56, 56, 0, 56, 136, 192)
-    Cover(K.COVER_X + K.COVER_W - 56, K.BOOK_H - 56, 56, 56, 136, 192, 136, 192)
+    -- The picture of the cover ends 17 px above the foot of its square (the rest is clear), so the bottom pieces read
+    -- from 119 to 175 and the leather meets the foot of the book as it meets the top; read from 136 to 192 the stitches
+    -- and the edge sat under the page, and the page looked bigger than the book.
+    local FOOT0, FOOT1 = 119, 175
+    Cover(K.COVER_X, K.BOOK_H - 56, 56, 56, 0, 56, FOOT0, FOOT1)
+    Cover(K.COVER_X + K.COVER_W - 56, K.BOOK_H - 56, 56, 56, 136, 192, FOOT0, FOOT1)
     Cover(K.COVER_X + 56, 56, K.COVER_W - 112, K.BOOK_H - 112, 56, 136, 56, 136)
     local x = K.COVER_X + 56
     while x < K.COVER_X + K.COVER_W - 56 do
         local w = math.min(80, K.COVER_X + K.COVER_W - 56 - x)
         Cover(x, 0, w, 56, 56, 56 + w, 0, 56)
-        Cover(x, K.BOOK_H - 56, w, 56, 56, 56 + w, 136, 192)
+        Cover(x, K.BOOK_H - 56, w, 56, 56, 56 + w, FOOT0, FOOT1)
         x = x + 80
     end
     local y = 56

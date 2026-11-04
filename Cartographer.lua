@@ -30,7 +30,7 @@ ns.Cartographer = C
 C.COLS, C.ROWS = 2, 4                 -- the cells on one page; two pages make a spread
 C.PER_PAGE = C.COLS * C.ROWS
 C.THUMB_W, C.THUMB_H = 150, 75   -- the frame (map_thumb_frame) leaves 88% of its width free: it is drawn 1/0.88 larger
-C.CELL_W, C.CELL_H = 170, 108
+C.CELL_W, C.CELL_H = 170, 96   -- four rows from y 46 end at 430, inside the 440 of the panel and above the page corner (the curl)
 
 -- The maps of this client with a drawing: the map must exist in the game (a Burning Crusade land does not on an
 -- older client), sorted by the name the game gives it, accents and case folded so the order is natural.
@@ -128,7 +128,7 @@ local function BuildTab(panel)
             local col, row = (i - 1) % C.COLS, math.floor((i - 1) / C.COLS)
             local cell = CreateFrame("Button", nil, panel)
             cell:SetSize(C.CELL_W, C.CELL_H)
-            cell:SetPoint("TOPLEFT", x0 + col * C.CELL_W, -52 - row * C.CELL_H)
+            cell:SetPoint("TOPLEFT", x0 + col * C.CELL_W, -46 - row * C.CELL_H)
             cell.map = cell:CreateTexture(nil, "ARTWORK")
             cell.map:SetSize(C.THUMB_W, C.THUMB_H)
             cell.map:SetPoint("TOP", 0, -2)
