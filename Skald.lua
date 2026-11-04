@@ -2544,8 +2544,8 @@ local function CreateWindow()
 
     -- Leather cover: a nine-slice of one texture (corners, edges tiled in 80 px pieces). ---
     local coverParts = {}
-    local function Cover(x, y, w, h, u0, u1, v0, v1)
-        local t = book:CreateTexture(nil, "BACKGROUND", nil, 0)
+    local function Cover(x, y, w, h, u0, u1, v0, v1, level)
+        local t = book:CreateTexture(nil, "BACKGROUND", nil, level or 0)
         coverParts[#coverParts + 1] = t
         t:SetSize(w, h)
         t:SetPoint("TOPLEFT", x, -y)
@@ -2553,14 +2553,15 @@ local function CreateWindow()
         t:SetTexCoord(u0 / 256, u1 / 256, v0 / 256, v1 / 256)
         return t
     end
-    Cover(K.COVER_X, 0, 56, 56, 0, 56, 0, 56)
-    Cover(K.COVER_X + K.COVER_W - 56, 0, 56, 56, 136, 192, 0, 56)
+    -- The four corners (the gold) are drawn a level above the dark square behind each page, which would cut into them.
+    Cover(K.COVER_X, 0, 56, 56, 0, 56, 0, 56, 2)
+    Cover(K.COVER_X + K.COVER_W - 56, 0, 56, 56, 136, 192, 0, 56, 2)
     -- The picture of the cover ends 17 px above the foot of its square (the rest is clear), so the bottom pieces read
     -- from 119 to 175 and the leather meets the foot of the book as it meets the top; read from 136 to 192 the stitches
     -- and the edge sat under the page, and the page looked bigger than the book.
     local FOOT0, FOOT1 = 119, 175
-    Cover(K.COVER_X, K.BOOK_H - 56, 56, 56, 0, 56, FOOT0, FOOT1)
-    Cover(K.COVER_X + K.COVER_W - 56, K.BOOK_H - 56, 56, 56, 136, 192, FOOT0, FOOT1)
+    Cover(K.COVER_X, K.BOOK_H - 56, 56, 56, 0, 56, FOOT0, FOOT1, 2)
+    Cover(K.COVER_X + K.COVER_W - 56, K.BOOK_H - 56, 56, 56, 136, 192, FOOT0, FOOT1, 2)
     Cover(K.COVER_X + 56, 56, K.COVER_W - 112, K.BOOK_H - 112, 56, 136, 56, 136)
     local x = K.COVER_X + 56
     while x < K.COVER_X + K.COVER_W - 56 do
