@@ -3712,15 +3712,5 @@ RES = (SkaldDB.probeEvents.count.CAMPSITE_CONTRIBUTION == 2 and log.seen[1].ev =
   else { failed++; console.log('  FAIL  instance map textures: ' + names.length + ' named, missing: ' + lost.join(', ')); }
 }
 
-// the notice sounds named in the code are in the Sounds folder
-{
-  const src = fs.readFileSync(path.join(ADDONS, 'Skald', 'Skald.lua'), 'utf8');
-  const names = [...src.matchAll(/"(skald_[a-z]+)"/g)].map(m => m[1]);
-  const uniq = [...new Set(names)];
-  const lost = uniq.filter(n => !fs.existsSync(path.join(ADDONS, 'Skald', 'Sounds', n + '.mp3')));
-  if (uniq.length >= 2 && !lost.length) console.log('  ok    every notice sound named in the code is in the Sounds folder (' + uniq.length + ')');
-  else { failed++; console.log('  FAIL  notice sounds: ' + uniq.length + ' named, missing: ' + lost.join(', ')); }
-}
-
 console.log(failed ? `\n${failed} regression(s) FAILED` : '\nAll regressions passed');
 process.exit(failed ? 1 : 0);

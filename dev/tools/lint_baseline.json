@@ -87,7 +87,6 @@
   "LibStub",
   "Minimap",
   "PlaySound",
-  "PlaySoundFile",
   "QuestFont",
   "RegisterAddonMessagePrefix",
   "SOUNDKIT",
