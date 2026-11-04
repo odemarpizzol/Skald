@@ -21,7 +21,7 @@ local UI_TEXT = {
         EMPTY = "No battleground yet. The first one will be written here.",
         EMPTY_HINT = "Each match, won or lost, will be marked here, field by field.",
         REC = "%d victories, %d defeats", WON_TAG = "won", LOST_TAG = "lost", DATE = "%m/%d/%Y",
-        WORLD = "This chronicle keeps, for now, only the battles of the battlegrounds.",
+        WORLD = "For now, I record here only the battles of the battlegrounds.",
         LINES = {
             "The banners have fallen and risen again, and I was there under each.",
             "A field is only ground until someone bleeds on it. Then it is a name.",
@@ -49,7 +49,7 @@ local UI_TEXT = {
         EMPTY = "Nenhum campo de batalha ainda. O primeiro será escrito aqui.",
         EMPTY_HINT = "Cada partida, vencida ou perdida, será marcada aqui, campo por campo.",
         REC = "%d vitórias, %d derrotas", WON_TAG = "vitória", LOST_TAG = "derrota", DATE = "%d/%m/%Y",
-        WORLD = "Esta crônica guarda, por ora, apenas as batalhas dos campos.",
+        WORLD = "Por ora, registro aqui apenas as batalhas nos campos.",
         LINES = {
             "As bandeiras caíram e se ergueram de novo, e eu estive sob cada uma delas.",
             "Um campo é só chão até que alguém sangre nele. Depois, é um nome.",
@@ -77,7 +77,7 @@ local UI_TEXT = {
         EMPTY = "Pas encore de champ de bataille. Le premier sera \195\169crit ici.",
         EMPTY_HINT = "Chaque partie, gagn\195\169e ou perdue, sera marqu\195\169e ici, champ par champ.",
         REC = "%d victoires, %d d\195\169faites", WON_TAG = "victoire", LOST_TAG = "d\195\169faite", DATE = "%d/%m/%Y",
-        WORLD = "Cette chronique ne garde, pour l'instant, que les batailles des champs.",
+        WORLD = "Pour l'instant, je ne consigne ici que les batailles des champs.",
         LINES = {
             "Les banni\195\168res sont tomb\195\169es et se sont relev\195\169es, et j'\195\169tais l\195\160 sous chacune d'elles.",
             "Un champ n'est que de la terre jusqu'\195\160 ce que quelqu'un y saigne. Ensuite, c'est un nom.",
