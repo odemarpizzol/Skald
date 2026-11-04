@@ -895,6 +895,9 @@ local function BuildSagaTab(panel)
                     art = (okF and faction == "Alliance") and "camp_alliance" or "camp_horde"
                 end
                 if art then slot.art:SetTexture("Interface\\AddOns\\Skald\\Textures\\ui_saga_" .. art) end
+                -- the sketch of the scroll and quill fills more of its square than the others: drawn a little smaller, it weighs the same
+                local scale = ({ scroll = 0.82 })[art] or 1
+                slot.art:SetSize(ART_W * scale, ART_H * scale)
                 slot.art:SetShown(art ~= nil)
                 -- the text takes the width left by the sketch, and the chapter is as tall as the taller of the two
                 if c then
