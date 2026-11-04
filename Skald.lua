@@ -1391,6 +1391,22 @@ end
 -- Everything else the diary knows about one character (pets, companions, flight paths, goals, standings...).
 -- It is set aside with the pages and brought back with them, and emptied with them, so a cleared diary or a new
 -- character with an old name never inherits it.
+-- Candidates for the sound of the notice (/skald sound <n>): a SOUNDKIT name where the client has it, else a file number.
+K.SOUND_CANDIDATES = {
+    { "IG_ABILITY_PAGE_TURN", 836 },
+    { "IG_QUEST_LIST_COMPLETE", 878 },
+    { "UI_QUEST_ROLLING_FORWARD_01", 12418 },
+    { "LEVELUP", 888 },
+    { "IG_PLAYER_INVITE", 880 },
+    { "RAID_WARNING", 8959 },
+    { "READY_CHECK", 8960 },
+    { "UI_BNET_TOAST", 18019 },
+    { "AUCTION_WINDOW_OPEN", 5274 },
+    { "IG_CHARACTER_INFO_OPEN", 839 },
+    { "MAP_PING", 3175 },
+    { "ALARM_CLOCK_WARNING_3", 12867 },
+}
+
 K.DIARY_STATE = { "pets", "petNow", "companions", "questObj", "questStart", "visitedMaps", "resume", "attempts",
     "taxi", "marks", "goals", "goalsInit", "goalsVer", "collInit", "rep", "memoryAt", "recentIdx", "recentPh", "anniv", "zoneKills", "killBase",
     "birthMap", "mountSpells" }
@@ -8574,6 +8590,18 @@ SlashCmdList["SKALD"] = function(msg)
         for _, line in ipairs(Mile.ProbeEventLines()) do Say(line) end
     elseif msg == "perf" then
         Mile.Perf()
+    elseif msg == "sound" or msg:match("^sound %d+$") then
+        -- candidates for the sound of the notice: a name of SOUNDKIT where it exists, else the number of the file
+        local list = K.SOUND_CANDIDATES
+        local n = tonumber(msg:match("%d+"))
+        if n and list[n] then
+            local c = list[n]
+            local id = (SOUNDKIT and SOUNDKIT[c[1]]) or c[2]
+            Say(string.format(L.SOUND_PLAYED, n, c[1]))
+            pcall(PlaySound, id)
+        else
+            Say(string.format(L.SOUND_TEST, "1-" .. #list))
+        end
     elseif msg == "probe maps" then
         for _, line in ipairs(Mile.MapArtLines()) do Say(line) end
     elseif msg == "probe lore" or msg == "probe lore off" then

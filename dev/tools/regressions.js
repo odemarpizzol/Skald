@@ -1320,6 +1320,38 @@ RES = (male == "Je suis tombé et content." and female == "Je suis tombée et co
   and "ok" or (male .. " / " .. female)`,
 });
 
+run('all localized gender tags expand cleanly and do not repeat adjacently', {
+  body: `local seen = {}
+local function check(value, path)
+  if type(value) == "string" then
+    local pos = 1
+    while true do
+      local first, last, tag = value:find("({g:[^}]*})", pos)
+      if not first then break end
+      local nextFirst, _, nextTag = value:find("({g:[^}]*})", last + 1)
+      if nextFirst == last + 1 and nextTag == tag then
+        error("duplicate adjacent gender tag at " .. path .. ": " .. tag)
+      end
+      pos = last + 1
+    end
+    if value:find("{g:", 1, true) then
+      for _, sex in ipairs({2, 3}) do
+        function UnitSex() return sex end
+        local expanded = ns.Gendered(value)
+        if expanded:find("{g:", 1, true) then error("unexpanded gender tag at " .. path) end
+      end
+    end
+  elseif type(value) == "table" and not seen[value] then
+    seen[value] = true
+    for key, child in pairs(value) do check(child, path .. "." .. tostring(key)) end
+  end
+end
+check(ns.LOCALES, "LOCALES")
+check(ns.CURATED, "CURATED")
+check(ns.SagaTexts, "SagaTexts")
+RES = "ok"`,
+});
+
 run('a page that carries a gender tag shows the right form, whatever the language', {
   pre: `function UnitSex() return 3 end`,
   body: `__locale = "frFR"
