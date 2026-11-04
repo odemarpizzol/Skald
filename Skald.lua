@@ -8599,6 +8599,11 @@ SlashCmdList["SKALD"] = function(msg)
         for _, line in ipairs(Mile.ProbeEventLines()) do Say(line) end
     elseif msg == "perf" then
         Mile.Perf()
+    elseif msg == "sound notice" or msg == "sound major" or msg == "sound soft" then
+        -- our own sounds: says whether the client took the file (it loads only after a full restart of the game)
+        local name = "skald_" .. msg:match("%a+$")
+        local ok, willPlay = pcall(PlaySoundFile, K.SOUND_DIR .. name .. ".mp3", "SFX")
+        Say(string.format(L.SOUND_FILE, name, (ok and willPlay) and L.SOUND_FILE_YES or L.SOUND_FILE_NO))
     elseif msg == "sound" or msg:match("^sound %d+$") then
         -- candidates for the sound of the notice: a name of SOUNDKIT where it exists, else the number of the file
         local list = K.SOUND_CANDIDATES
@@ -8609,7 +8614,7 @@ SlashCmdList["SKALD"] = function(msg)
             Say(string.format(L.SOUND_PLAYED, n, c[1]))
             pcall(PlaySound, id)
         else
-            Say(string.format(L.SOUND_TEST, "1-" .. #list))
+            Say(string.format(L.SOUND_TEST, "1-" .. #list .. ", notice, major, soft"))
         end
     elseif msg == "probe maps" then
         for _, line in ipairs(Mile.MapArtLines()) do Say(line) end
