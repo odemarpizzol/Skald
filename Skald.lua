@@ -2222,6 +2222,17 @@ local TOAST_TIER = {
     party = 2, reunion = 2, goal = 3, achievement = 5, skill = 2, profession = 2, tame = 2, mark = 4, home = 1, rep = 3, flight = 1, hearth = 1, bg = 3,
 }
 local TEXD = "Interface\\AddOns\\Skald\\Textures\\"
+-- The sound of the notice: our own (Sounds/*.mp3), a bigger one for the pages that matter, the sound of a page
+-- turning if the client has not got the file (it loads only after a full restart).
+K.MAJOR_SOUND = { level = true, milestone = true, boss = true, achievement = true, goal = true, mark = true, dungeon = true }
+K.SOUND_DIR = "Interface\\AddOns\\Skald\\Sounds\\"
+function K.NoticeSound(e)
+    local name = (e and K.MAJOR_SOUND[e.kind]) and "skald_major" or "skald_notice"
+    local ok, willPlay = pcall(PlaySoundFile, K.SOUND_DIR .. name .. ".mp3", "SFX")
+    if not (ok and willPlay) then
+        pcall(PlaySound, (SOUNDKIT and SOUNDKIT.IG_ABILITY_PAGE_TURN) or 836)
+    end
+end
 
 local function ShowToast(e, titleText, bodyText, lines, seconds)
     if not toastFrame then
@@ -2355,9 +2366,7 @@ local function ShowToast(e, titleText, bodyText, lines, seconds)
     end
     toastFrame:SetAlpha(0)
     toastFrame:Show()
-    if SkaldDB and SkaldDB.sound ~= false then
-        pcall(PlaySound, (SOUNDKIT and SOUNDKIT.IG_ABILITY_PAGE_TURN) or 836)
-    end
+    if SkaldDB and SkaldDB.sound ~= false then K.NoticeSound(e) end
 end
 
 -- Shows a sample notice that stays for half a minute: drag it where you want the notices to appear.
