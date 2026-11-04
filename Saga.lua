@@ -685,7 +685,8 @@ ns.SagaPages = function(chapters, size, width)
     for _, c in ipairs(chapters) do
         local h = ChapterHeight(c, size, width)
         local needed = used + (#page > 0 and SLOT_GAP or 0) + h
-        if #page > 0 and (needed > PAGE_HEIGHT or #page >= 3) then
+        -- the Epilogue has a page of its own (with its picture): the story closes alone on the page
+        if #page > 0 and (needed > PAGE_HEIGHT or #page >= 3 or c.key == "epilogue") then
             pages[#pages + 1] = page
             page, used, needed = {}, 0, h
         end
@@ -853,6 +854,13 @@ local function BuildSagaTab(panel)
             else slot.title:SetPoint("TOPLEFT", side.slots[n - 1].body, "BOTTOMLEFT", 0, -44) end
             side.slots[n] = slot
         end
+        -- the picture that closes the Saga, under the Epilogue (its drawing sits in the lower half of its square)
+        side.epilogue = panel:CreateTexture(nil, "BACKGROUND")
+        side.epilogue:SetSize(330, 330)
+        side.epilogue:SetPoint("BOTTOM", panel, "BOTTOMLEFT", x + CW / 2, 20)
+        side.epilogue:SetTexture("Interface\\AddOns\\Skald\\Textures\\ui_saga_epilogue")
+        side.epilogue:SetAlpha(0.92)
+        side.epilogue:Hide()
         side.number = panel:CreateFontString(nil, "OVERLAY", "SkaldSmall")
         side.number:SetPoint("BOTTOM", panel, "BOTTOMLEFT", x + CW / 2, 2)
         side.number:SetTextColor(SkaldAPI.C_MUTED[1], SkaldAPI.C_MUTED[2], SkaldAPI.C_MUTED[3])
@@ -882,6 +890,9 @@ local function BuildSagaTab(panel)
             side.number:SetText(pages[number] and tostring(number) or "")
             side.laurelL:SetShown(pages[number] ~= nil)
             side.laurelR:SetShown(pages[number] ~= nil)
+            local closing = false
+            for _, c in ipairs(page) do if c.key == "epilogue" then closing = true end end
+            side.epilogue:SetShown(closing)
             for n, slot in ipairs(side.slots) do
                 local c = page[n]
                 slot.title:SetShown(c ~= nil)

@@ -1832,6 +1832,19 @@ RES = (not stray and #all >= 200 and not text:find("Sakaldd", 1, true) and text:
   });
 }
 
+run('the Epilogue of the Saga has a page of its own, the last one, whatever the size of the letter', {
+  pre: SAGA_DIARY(),
+  body: `local chapters = ns.BuildSaga()
+local bad = {}
+for _, size in ipairs({ 11, 13, 15, 20 }) do
+  local pages = ns.SagaPages(chapters, size)
+  local last = pages[#pages]
+  if not (#last == 1 and last[1].key == "epilogue") then bad[#bad + 1] = "last at " .. size end
+  for i = 1, #pages - 1 do for _, c in ipairs(pages[i]) do if c.key == "epilogue" then bad[#bad + 1] = "early at " .. size end end end
+end
+RES = (#bad == 0 and chapters[#chapters].key == "epilogue") and "ok" or table.concat(bad, ", ")`,
+});
+
 run('the Saga goes onto pages by the size of the letter: no chapter lost, none split, never more than three to a page', {
   pre: SAGA_DIARY(),
   body: `local chapters = ns.BuildSaga()
