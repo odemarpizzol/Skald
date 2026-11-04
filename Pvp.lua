@@ -6,8 +6,9 @@
 -- whoever asks for it with /skald pvp on. The client has no call we trust to tell the type of a realm, and the name of
 -- a realm says nothing, so the tab never guesses from either (/skald probe realm lists what this client offers).
 --
--- Not here, on purpose: the open world (who struck the blow that killed you, honour, kills by land) and arenas and
--- duels. The game gives no payload we can rely on in every client, and nothing is invented without it.
+-- Not here yet: the open world (who struck the blow that killed you, honour, kills by land), arenas and duels. None of
+-- it has been tested in a client (the combat log may hold the last hit taken before a death, with the kind of its
+-- source; it is a candidate to probe, not a finding), and nothing is invented without a source that was checked.
 --
 -- Loaded after Cartographer.lua; it uses SkaldAPI (AddTab, Render, OpenEntry, MakeButton...).
 local _, ns = ...
@@ -16,12 +17,12 @@ local UI_TEXT = {
     enUS = {
         TAB = "PvP", TITLE = "War Chronicle", FIELDS = "By field", RECENT = "Last matches",
         MATCHES = "Battlegrounds fought: %d", WON = "Won: %d", LOST = "Lost: %d", RATE = "%d%% of them won",
-        HK = "Honorable kills (the game's own count): %d",
+        HK = "Honorable kills", SEP = ": ",
         EMPTY = "No battleground yet. The first one will be written here.",
         REC = "%d won, %d lost", WON_TAG = "won", LOST_TAG = "lost", DATE = "%m/%d/%Y",
         WORLD = "The open world is not told here: the game does not say, in a way I can trust, who struck the last blow.",
-        ON = "the PvP tab is always shown (type /reload to see it).", OFF = "the PvP tab is hidden (type /reload).",
-        AUTO = "the PvP tab shows itself once a battleground is written.", USAGE = "/skald pvp on | off | auto",
+        ON = "the PvP tab is always shown on this realm.", OFF = "the PvP tab is hidden on this realm (type /reload to take it away now).",
+        AUTO = "on this realm the PvP tab shows itself once a battleground is written.", USAGE = "/skald pvp on | off | auto",
         PROBE_HEAD = "Realm and PvP, as this client answers (run it on the realm you want to know):",
         PROBE_FLAG = "marked for PvP: %s", PROBE_ZONE = "this land's PvP status: %s",
         PROBE_NAMES = "calls and tables of the client with realm, pvp or ruleset in the name: %s",
@@ -30,12 +31,12 @@ local UI_TEXT = {
     ptBR = {
         TAB = "JxJ", TITLE = "Crônica de Guerra", FIELDS = "Por campo", RECENT = "Últimas partidas",
         MATCHES = "Campos de batalha disputados: %d", WON = "Vencidos: %d", LOST = "Perdidos: %d", RATE = "%d%% deles vencidos",
-        HK = "Mortes honrosas (a contagem do próprio jogo): %d",
+        HK = "Mortes honrosas", SEP = ": ",
         EMPTY = "Nenhum campo de batalha ainda. O primeiro será escrito aqui.",
         REC = "%d vencidos, %d perdidos", WON_TAG = "vitória", LOST_TAG = "derrota", DATE = "%d/%m/%Y",
         WORLD = "O mundo aberto não é contado aqui: o jogo não diz, de um jeito em que eu possa confiar, quem deu o golpe final.",
-        ON = "a aba JxJ fica sempre visível (digite /reload para vê-la).", OFF = "a aba JxJ fica escondida (digite /reload).",
-        AUTO = "a aba JxJ aparece quando um campo de batalha for escrito.", USAGE = "/skald pvp on | off | auto",
+        ON = "a aba JxJ fica sempre visível neste reino.", OFF = "a aba JxJ fica escondida neste reino (digite /reload para tirá-la agora).",
+        AUTO = "neste reino a aba JxJ aparece quando um campo de batalha for escrito.", USAGE = "/skald pvp on | off | auto",
         PROBE_HEAD = "Reino e JxJ, como este cliente responde (rode no reino que você quer conhecer):",
         PROBE_FLAG = "marcado para JxJ: %s", PROBE_ZONE = "estado de JxJ desta terra: %s",
         PROBE_NAMES = "chamadas e tabelas do cliente com realm, pvp ou ruleset no nome: %s",
@@ -44,12 +45,12 @@ local UI_TEXT = {
     frFR = {
         TAB = "JcJ", TITLE = "Chronique de guerre", FIELDS = "Par champ", RECENT = "Dernières parties",
         MATCHES = "Champs de bataille disput\195\169s\194\160: %d", WON = "Gagn\195\169s\194\160: %d", LOST = "Perdus\194\160: %d", RATE = "%d%% gagn\195\169s",
-        HK = "Victoires honorables (le compte du jeu)\194\160: %d",
+        HK = "Victoires honorables", SEP = "\194\160: ",
         EMPTY = "Pas encore de champ de bataille. Le premier sera \195\169crit ici.",
         REC = "%d gagn\195\169s, %d perdus", WON_TAG = "victoire", LOST_TAG = "d\195\169faite", DATE = "%d/%m/%Y",
         WORLD = "Le monde ouvert n'est pas racont\195\169 ici\194\160: le jeu ne dit pas, de fa\195\167on s\195\187re, qui a port\195\169 le dernier coup.",
-        ON = "l'onglet JcJ est toujours montr\195\169 (tapez /reload pour le voir).", OFF = "l'onglet JcJ est cach\195\169 (tapez /reload).",
-        AUTO = "l'onglet JcJ appara\195\174t quand un champ de bataille est \195\169crit.", USAGE = "/skald pvp on | off | auto",
+        ON = "l'onglet JcJ est toujours montr\195\169 sur ce royaume.", OFF = "l'onglet JcJ est cach\195\169 sur ce royaume (tapez /reload pour l'enlever maintenant).",
+        AUTO = "sur ce royaume l'onglet JcJ appara\195\174t quand un champ de bataille est \195\169crit.", USAGE = "/skald pvp on | off | auto",
         PROBE_HEAD = "Royaume et JcJ, comme ce client r\195\169pond (lancez-le sur le royaume que vous voulez conna\195\174tre)\194\160:",
         PROBE_FLAG = "marqu\195\169 pour le JcJ\194\160: %s", PROBE_ZONE = "\195\169tat JcJ de cette terre\194\160: %s",
         PROBE_NAMES = "appels et tables du client avec realm, pvp ou ruleset dans le nom\194\160: %s",
@@ -114,24 +115,34 @@ function P.Recent(limit)
     return out
 end
 
--- The game's own count of honorable kills, when this client keeps one: the lifetime statistics of the Classic clients,
--- or the achievement statistic. Nothing is shown when neither answers with a number.
+-- The game's own count of honorable kills, when this client keeps one (the lifetime statistics of the Classic clients).
+-- Nothing is shown when it does not answer with a number. (The achievement statistic 588 may hold it in Forever: not
+-- used until a probe in the game confirms the id.)
 function P.HonorableKills()
     if GetPVPLifetimeStats then
         local ok, hk = pcall(GetPVPLifetimeStats)
         if ok and type(hk) == "number" and hk == hk then return hk end
     end
-    if GetStatistic then
-        local ok, v = pcall(GetStatistic, 588)
-        v = ok and tonumber(v) or nil
-        if v and v == v then return v end
-    end
     return nil
 end
 
 -- Wanted: a battleground is recorded (the permanent count, or an old page of the diary), or the player asked for it.
+-- The switch is kept by realm (account-wide, so a diary cleared keeps it): "the realm where I fight" is the user's
+-- own word, and an alt on a Normal realm is not shown a tab it did not ask for.
+local function Realm()
+    local ok, name = pcall(GetRealmName)
+    return ok and type(name) == "string" and name ~= "" and name or "?"
+end
+local function Setting()
+    local all = SkaldDB and SkaldDB.pvpTab
+    return type(all) == "table" and all[Realm()] or nil
+end
+local function SetSetting(v)
+    if type(SkaldDB.pvpTab) ~= "table" then SkaldDB.pvpTab = {} end
+    SkaldDB.pvpTab[Realm()] = v
+end
 function P.Wanted()
-    local setting = SkaldDB and SkaldDB.pvpTab
+    local setting = Setting()
     if setting == false then return false end
     if setting == true then return true end
     local db = SkaldCharDB
@@ -149,11 +160,11 @@ end
 -- /skald pvp [on|off|auto]: the lines to say.
 function P.Command(arg)
     arg = tostring(arg or ""):lower()
-    if arg == "on" then SkaldDB.pvpTab = true; P.Ensure(); return { UI.ON }
-    elseif arg == "off" then SkaldDB.pvpTab = false; return { UI.OFF }
-    elseif arg == "auto" then SkaldDB.pvpTab = nil; P.Ensure(); return { UI.AUTO }
+    if arg == "on" then SetSetting(true); P.Ensure(); return { UI.ON }
+    elseif arg == "off" then SetSetting(false); return { UI.OFF }
+    elseif arg == "auto" then SetSetting(nil); P.Ensure(); return { UI.AUTO }
     end
-    local now = SkaldDB.pvpTab
+    local now = Setting()
     return { now == true and UI.ON or now == false and UI.OFF or UI.AUTO, UI.USAGE }
 end
 
@@ -277,7 +288,7 @@ local function BuildTab(panel)
             rate:SetText(string.format(UI.RATE, pct))
             barWon:SetWidth(math.max(1, (CW - 20) * data.won / data.total))
             local hk = P.HonorableKills()
-            honor:SetText(hk and string.format(UI.HK, hk) or "")
+            honor:SetText(hk and ((type(HONORABLE_KILLS) == "string" and HONORABLE_KILLS ~= "" and HONORABLE_KILLS or UI.HK) .. UI.SEP .. hk) or "")
         end
         for i, r in ipairs(fieldRows) do
             local f = data.fields[i]

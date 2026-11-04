@@ -3577,16 +3577,16 @@ RES = (none and shown and emptyOk and off and counted and auto and probe and Ska
   or ("none=" .. tostring(none) .. " shown=" .. tostring(shown) .. " empty=" .. tostring(emptyOk) .. " off=" .. tostring(off) .. " counted=" .. tostring(counted) .. " auto=" .. tostring(auto) .. " probe=" .. tostring(probe) .. " err=" .. tostring(SkaldDB.errors and SkaldDB.errors[1]))`,
 });
 
-run('the PvP tab never shows a number the game does not give: the honorable kills come only from the game, and without them the line is empty', {
+run('the PvP tab never shows a number the game does not give: the honorable kills come only from the lifetime count of the game, and without it the line is empty', {
   pre: `function GetPVPLifetimeStats() return 1234, 5, 0 end`,
   body: `local with = ns.Pvp.HonorableKills()
 GetPVPLifetimeStats = nil
-function GetStatistic(id) if id == 588 then return "--" end return "0" end
 local without = ns.Pvp.HonorableKills()
-function GetStatistic(id) if id == 588 then return "77" end end
+-- a statistic of the client is not read as honorable kills until its id is confirmed in the game
+function GetStatistic(id) return "77" end
 local stat = ns.Pvp.HonorableKills()
 GetStatistic = nil
-RES = (with == 1234 and without == nil and stat == 77 and ns.Pvp.HonorableKills() == nil) and "ok"
+RES = (with == 1234 and without == nil and stat == nil) and "ok"
   or ("with=" .. tostring(with) .. " without=" .. tostring(without) .. " stat=" .. tostring(stat))`,
 });
 
