@@ -665,7 +665,7 @@ local PAGE_HEIGHT = 415          -- the room of a page (440) less a margin
 local TITLE_HEIGHT, SLOT_GAP = 63, 44
 -- Which chapters have an ink sketch (the camp takes the banner of the character's faction). The sketch has a column
 -- of its own at the right of the text: the text never runs over it, and the chapter is at least as tall as it.
-local SKETCH = { prologue = "camp", road = "walker", stories = "scroll", marks = "seals" }
+local SKETCH = { prologue = "camp", road = "walker", stories = "scroll", war = "war", falls = "falls", company = "company", marks = "seals" }
 local ART_W, ART_H = 104, 104
 local function ChapterHeight(c, size, width)
     local minimum = 0
@@ -917,7 +917,7 @@ local function BuildSagaTab(panel)
                 end
                 if art then slot.art:SetTexture("Interface\\AddOns\\Skald\\Textures\\ui_saga_" .. art) end
                 -- the sketch of the scroll and quill fills more of its square than the others: drawn a little smaller, it weighs the same
-                local scale = ({ scroll = 0.82 })[art] or 1
+                local scale = ({ scroll = 0.82, falls = 0.9 })[art] or 1
                 if alone and art == "seals" then scale = 1.3 end
                 slot.art:SetSize(ART_W * scale, ART_H * scale)
                 slot.art:SetShown(art ~= nil)

@@ -3849,5 +3849,15 @@ RES = (SkaldDB.probeEvents.count.CAMPSITE_CONTRIBUTION == 2 and log.seen[1].ev =
   else { failed++; console.log('  FAIL  PvP tab pictures: ' + names.length + ' named, missing: ' + lost.join(', ')); }
 }
 
+// every sketch of the Saga has its picture (they are named by joining a prefix, so checks.js does not see them)
+{
+  const src = fs.readFileSync(path.join(ADDONS, 'Skald', 'Saga.lua'), 'utf8');
+  const line = (src.match(/local SKETCH = \{([^}]*)\}/) || [])[1] || '';
+  const names = [...line.matchAll(/=\s*"([a-z_]+)"/g)].map(m => m[1]).flatMap(n => n === 'camp' ? ['camp_horde', 'camp_alliance'] : [n]);
+  const lost = names.filter(n => !fs.existsSync(path.join(ADDONS, 'Skald', 'Textures', 'ui_saga_' + n + '.tga')));
+  if (names.length >= 8 && !lost.length) console.log('  ok    every sketch of the Saga has its picture (' + names.length + ')');
+  else { failed++; console.log('  FAIL  Saga sketches: ' + names.length + ' named, missing: ' + lost.join(', ')); }
+}
+
 console.log(failed ? `\n${failed} regression(s) FAILED` : '\nAll regressions passed');
 process.exit(failed ? 1 : 0);
