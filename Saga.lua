@@ -923,7 +923,7 @@ local function BuildSagaTab(panel)
                 local scale = ({ scroll = 0.82, falls = 0.9 })[art] or 1
                 slot.art:ClearAllPoints()
                 if stackedArt and art then
-                    slot.art:SetSize(230, 230)
+                    slot.art:SetSize(170, 170)
                     slot.art:SetPoint("TOP", slot.body, "BOTTOM", 0, -14)
                 else
                     slot.art:SetSize(ART_W * scale, ART_H * scale)

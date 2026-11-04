@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.49.2-beta
+
+- **Saga**: the Epilogue has a page of its own with a closing picture (a road that fades into the hills, a quill left beside it); a chapter alone on its page tells its text above and its picture below, like the Epilogue; the chapters Thrones Toppled, The Falls and Company have an ink sketch of their own, and the scroll sketch is drawn a little smaller
+- The Cartographer tab is named "Charts" in English and "Cartes" in French, so the name fits the button (the page keeps its title)
+
 ## 0.49.1-beta
 
 - Map art: Stormwind now has the sea and the harbour on its left, as in the game, and the maps of Molten Core, Onyxia, the Ruins of Ahn'Qiraj and Scholomance lost some stray transparency
