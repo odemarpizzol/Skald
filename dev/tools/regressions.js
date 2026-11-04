@@ -3593,6 +3593,20 @@ RES = (before == false and on and sample and clean and off and SkaldDB.errors ==
   or ("before=" .. tostring(before) .. " on=" .. tostring(on) .. " sample=" .. tostring(sample) .. " clean=" .. tostring(clean) .. " off=" .. tostring(off) .. " err=" .. tostring(SkaldDB.errors and SkaldDB.errors[1]))`,
 });
 
+run('the PvP tab line of the diary: ten or more lines in each language, none with a number, and it moves on with each match but holds still between them', {
+  body: `local bad = {}
+for _, loc in ipairs({ "enUS", "ptBR", "frFR" }) do
+  local ok, UI = pcall(function() return ns.Pvp.TEXTS[loc] end)
+  local list = ok and UI and UI.LINES
+  if not list or #list < 10 then bad[#bad + 1] = loc .. " pool " .. tostring(list and #list) else
+    for i, line in ipairs(list) do if line:find("%d") or line:find("%%") then bad[#bad + 1] = loc .. " " .. i end end
+  end
+end
+SkaldCharDB.stats.first = 1700000000
+local a, b, again = ns.Pvp.Line(5), ns.Pvp.Line(6), ns.Pvp.Line(5)
+RES = (#bad == 0 and a ~= "" and a == again and a ~= b) and "ok" or ("bad: " .. table.concat(bad, ", ") .. " a=" .. a .. " b=" .. b)`,
+});
+
 run('the PvP tab never shows a number the game does not give: the honorable kills come only from the lifetime count of the game, and without it the line is empty', {
   pre: `function GetPVPLifetimeStats() return 1234, 5, 0 end`,
   body: `local with = ns.Pvp.HonorableKills()

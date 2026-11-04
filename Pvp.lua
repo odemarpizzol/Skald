@@ -16,12 +16,24 @@ local _, ns = ...
 local UI_TEXT = {
     enUS = {
         TAB = "PvP", TITLE = "War Chronicle", FIELDS = "By field", RECENT = "Last matches",
-        WON_WORD = "won", LOST_WORD = "lost", MATCHES = "Battlegrounds fought: %d", WON = "Won: %d", LOST = "Lost: %d", RATE = "%d%% of them won",
+        WON_WORD = "victories", LOST_WORD = "defeats", MATCHES = "Battlegrounds fought: %d", WON = "Won: %d", LOST = "Lost: %d", RATE = "%d%% of them won",
         HK = "Honorable kills", SEP = ": ",
         EMPTY = "No battleground yet. The first one will be written here.",
         EMPTY_HINT = "Each match, won or lost, will be marked here, field by field.",
-        REC = "%d won, %d lost", WON_TAG = "won", LOST_TAG = "lost", DATE = "%m/%d/%Y",
-        WORLD = "The open world is not told here yet.",
+        REC = "%d victories, %d defeats", WON_TAG = "won", LOST_TAG = "lost", DATE = "%m/%d/%Y",
+        WORLD = "This chronicle keeps, for now, only the battles of the battlegrounds.",
+        LINES = {
+            "The banners have fallen and risen again, and I was there under each.",
+            "A field is only ground until someone bleeds on it. Then it is a name.",
+            "I carried my colours to the field, and the field kept what it wanted.",
+            "Some wars are told in years. Mine is told in afternoons of dust and steel.",
+            "The horns still ring in my ears, and the next field is already calling.",
+            "Every flag I raised was carried by someone before me. I carry it for someone after.",
+            "I do not count the fallen. I count the dawns I took up arms again.",
+            "Victory tastes of dust, and defeat of iron. I have swallowed both.",
+            "The war asks nothing of the pen, only that it remember.",
+            "Behind me, a long road of battlefields. Ahead, a banner waiting to be lifted.",
+        },
         ON = "the PvP tab is always shown on this realm.", OFF = "the PvP tab is hidden on this realm.",
         AUTO = "on this realm the PvP tab shows itself once a battleground is written.", USAGE = "/skald pvp on | off | auto | demo",
         DEMO_ON = "preview with example numbers: nothing is written in the diary. Type /skald pvp demo again to leave it.", DEMO_OFF = "preview ended.", DEMO_NOTE = "Example numbers, not yours",
@@ -32,12 +44,24 @@ local UI_TEXT = {
     },
     ptBR = {
         TAB = "JxJ", TITLE = "Crônica de Guerra", FIELDS = "Por campo", RECENT = "Últimas partidas",
-        WON_WORD = "vencidos", LOST_WORD = "perdidos", MATCHES = "Campos de batalha disputados: %d", WON = "Vencidos: %d", LOST = "Perdidos: %d", RATE = "%d%% deles vencidos",
+        WON_WORD = "vitórias", LOST_WORD = "derrotas", MATCHES = "Campos de batalha disputados: %d", WON = "Vencidos: %d", LOST = "Perdidos: %d", RATE = "%d%% deles vencidos",
         HK = "Mortes honrosas", SEP = ": ",
         EMPTY = "Nenhum campo de batalha ainda. O primeiro será escrito aqui.",
         EMPTY_HINT = "Cada partida, vencida ou perdida, será marcada aqui, campo por campo.",
-        REC = "%d vencidos, %d perdidos", WON_TAG = "vitória", LOST_TAG = "derrota", DATE = "%d/%m/%Y",
-        WORLD = "O mundo aberto ainda não é contado aqui.",
+        REC = "%d vitórias, %d derrotas", WON_TAG = "vitória", LOST_TAG = "derrota", DATE = "%d/%m/%Y",
+        WORLD = "Esta crônica guarda, por ora, apenas as batalhas dos campos.",
+        LINES = {
+            "As bandeiras caíram e se ergueram de novo, e eu estive sob cada uma delas.",
+            "Um campo é só chão até que alguém sangre nele. Depois, é um nome.",
+            "Levei minhas cores ao campo, e o campo guardou o que quis.",
+            "Algumas guerras se contam em anos. A minha se conta em tardes de poeira e aço.",
+            "As trompas ainda ecoam nos meus ouvidos, e o próximo campo já chama.",
+            "Cada bandeira que ergui foi carregada por alguém antes de mim. Eu a carrego por alguém depois.",
+            "Não conto os caídos. Conto as manhãs em que peguei em armas de novo.",
+            "A vitória tem gosto de poeira, e a derrota, de ferro. Engoli as duas.",
+            "A guerra nada pede à pena, só que ela se lembre.",
+            "Atrás de mim, uma longa estrada de campos de batalha. À frente, uma bandeira esperando para ser erguida.",
+        },
         ON = "a aba JxJ fica sempre visível neste reino.", OFF = "a aba JxJ fica escondida neste reino.",
         AUTO = "neste reino a aba JxJ aparece quando um campo de batalha for escrito.", USAGE = "/skald pvp on | off | auto | demo",
         DEMO_ON = "prévia com números de exemplo: nada é escrito no diário. Digite /skald pvp demo de novo para sair.", DEMO_OFF = "prévia encerrada.", DEMO_NOTE = "Números de exemplo, não são seus",
@@ -48,12 +72,24 @@ local UI_TEXT = {
     },
     frFR = {
         TAB = "JcJ", TITLE = "Chronique de guerre", FIELDS = "Par champ", RECENT = "Dernières parties",
-        WON_WORD = "gagn\195\169s", LOST_WORD = "perdus", MATCHES = "Champs de bataille disput\195\169s\194\160: %d", WON = "Gagn\195\169s\194\160: %d", LOST = "Perdus\194\160: %d", RATE = "%d%% gagn\195\169s",
+        WON_WORD = "victoires", LOST_WORD = "d\195\169faites", MATCHES = "Champs de bataille disput\195\169s\194\160: %d", WON = "Gagn\195\169s\194\160: %d", LOST = "Perdus\194\160: %d", RATE = "%d%% gagn\195\169s",
         HK = "Victoires honorables", SEP = "\194\160: ",
         EMPTY = "Pas encore de champ de bataille. Le premier sera \195\169crit ici.",
         EMPTY_HINT = "Chaque partie, gagn\195\169e ou perdue, sera marqu\195\169e ici, champ par champ.",
-        REC = "%d gagn\195\169s, %d perdus", WON_TAG = "victoire", LOST_TAG = "d\195\169faite", DATE = "%d/%m/%Y",
-        WORLD = "Le monde ouvert n'est pas encore racont\195\169 ici.",
+        REC = "%d victoires, %d d\195\169faites", WON_TAG = "victoire", LOST_TAG = "d\195\169faite", DATE = "%d/%m/%Y",
+        WORLD = "Cette chronique ne garde, pour l'instant, que les batailles des champs.",
+        LINES = {
+            "Les banni\195\168res sont tomb\195\169es et se sont relev\195\169es, et j'\195\169tais l\195\160 sous chacune d'elles.",
+            "Un champ n'est que de la terre jusqu'\195\160 ce que quelqu'un y saigne. Ensuite, c'est un nom.",
+            "J'ai port\195\169 mes couleurs jusqu'au champ, et le champ a gard\195\169 ce qu'il voulait.",
+            "Certaines guerres se racontent en ann\195\169es. La mienne se raconte en longs apr\195\168s-midi de poussi\195\168re et d'acier.",
+            "Les cors r\195\169sonnent encore \195\160 mes oreilles, et le prochain champ m'appelle d\195\169j\195\160.",
+            "Chaque drapeau que j'ai dress\195\169, quelqu'un l'avait port\195\169 avant moi. Je le porte pour quelqu'un apr\195\168s moi.",
+            "Je ne compte pas les tomb\195\169s. Je compte les aubes o\195\185 j'ai repris les armes.",
+            "La victoire a un go\195\187t de poussi\195\168re, la d\195\169faite un go\195\187t de fer. J'ai aval\195\169 les deux.",
+            "La guerre ne demande rien \195\160 la plume, seulement qu'elle se souvienne.",
+            "Derri\195\168re moi, une longue route de champs de bataille. Devant, une banni\195\168re qui attend d'\195\170tre lev\195\169e.",
+        },
         ON = "l'onglet JcJ est toujours montr\195\169 sur ce royaume.", OFF = "l'onglet JcJ est cach\195\169 sur ce royaume.",
         AUTO = "sur ce royaume l'onglet JcJ appara\195\174t quand un champ de bataille est \195\169crit.", USAGE = "/skald pvp on | off | auto | demo",
         DEMO_ON = "aper\195\167u avec des chiffres d'exemple\194\160: rien n'est \195\169crit dans le journal. Tapez /skald pvp demo \195\160 nouveau pour le quitter.", DEMO_OFF = "aper\195\167u termin\195\169.", DEMO_NOTE = "Chiffres d'exemple, pas les v\195\180tres",
@@ -68,6 +104,7 @@ local UI = UI_TEXT[GetLocale()] or UI_TEXT.enUS
 local P = {}
 ns.Pvp = P
 P.UI = UI
+P.TEXTS = UI_TEXT
 P.TAB_ID = "pvp"
 P.RECENT_ROWS, P.FIELD_ROWS = 5, 6
 
@@ -102,6 +139,16 @@ function P.SampleRecent()
         out[i] = { kind = "bg", t = now - i * 86400, arg = Zone(row[1], row[2]), won = row[3], sample = true }
     end
     return out
+end
+
+-- A line of the diary for the page: drawn from the list by the date of the diary's first page and the matches
+-- fought, so it holds still while the page is open and moves on with each match. None of them has a number.
+function P.Line(total)
+    local list = UI.LINES
+    if type(list) ~= "table" or #list == 0 then return "" end
+    local stats = SkaldCharDB and SkaldCharDB.stats
+    local first = tonumber(stats and stats.first) or 0
+    return list[(math.floor(first) + (total or 0)) % #list + 1]
 end
 
 function P.Data()
@@ -313,7 +360,9 @@ local function BuildTab(panel)
     local pctText = Centre(MX, -150, 90, "SkaldHead", head)
     local matches = Line(0, -226, CW, "SkaldBody", "CENTER")
     local honor = Line(0, -252, CW, "SkaldBody", "CENTER")
-    local world = Line(0, -330, CW - 20, "SkaldSmall", "LEFT", muted)
+    local story = Line(30, -300, CW - 60, "SkaldBody", "CENTER", body)
+    story:SetWordWrap(true)
+    local world = Line(0, -380, CW - 20, "SkaldSmall", "LEFT", muted)
     world:SetWordWrap(true)
     world:SetText(UI.WORLD)
     local empty = Line(0, -140, CW, "SkaldBody", "CENTER", muted)
@@ -377,6 +426,8 @@ local function BuildTab(panel)
         demoNote:SetShown(P.demo == true)
         emptySeal:SetShown(none)
         emptyHint:SetShown(none)
+        story:SetShown(not none)
+        story:SetText(none and "" or P.Line(data.total))
         for _, region in ipairs({ matches, honor, wonBanner, lostBanner, wonNum, lostNum, wonWord, lostWord, medal, pctText }) do
             region:SetShown(not none)
         end
