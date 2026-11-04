@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.48.1-beta
+
+- A line no longer comes back within ten pages of the same kind: the diary draws each page's line from those not told lately (the last ten at least, up to thirty in the big pools, kept as numbers, never the text), counting the lines that two pools share, and a race or class pool that has just been used up hands the page to the common pool of the kind. Measured on a long climb: a line coming back within ten pages went from 3 to 18 pages in a hundred to none (quests, deaths, levels and bosses)
+- Some curated quest lines no longer assume a male narrator, a French "liche" is now feminine, the 500 lb of chicken reads as about 227 kg, and a few hunter lines sound more natural
+
 ## 0.48.0-beta
 
 - **Cartographer**, a new tab: the hand-drawn maps of the lands and cities as a collection, in colour where the diary has seen the character stand and faded where not yet (sixteen to a spread, the corners of the book turn the pages), with a footprint stamp on the lands walked, an album frame round each map and a seal at its title. A click on a land you have walked opens its map with the quests, the creatures and the pages of the diary written there

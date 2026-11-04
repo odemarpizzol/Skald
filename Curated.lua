@@ -195,7 +195,7 @@ C[6187] = { tier = 4, text = {
 
 C[8587] = { tier = 3, text = {
     enUS = "Five hundred pounds of chicken, carried across Azeroth: \"{quest}\". Not every legend is grim.",
-    ptBR = "Mais de duzentos quilos de frango, levados por todo Azeroth: \"{quest}\". Nem toda lenda é sombria.",
+    ptBR = "Cerca de duzentos e vinte e sete quilos de frango, levados por todo Azeroth: \"{quest}\". Nem toda lenda é sombria.",
     frFR = "Environ deux cent vingt-sept kilos de poulet, portés à travers Azeroth\194\160: «\194\160{quest}\194\160». Toutes les légendes ne sont pas sombres.",
 } }
 C[5121] = { tier = 3, text = {
