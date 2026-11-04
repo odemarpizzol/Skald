@@ -308,7 +308,7 @@ K.RECORD_FLAG = {
 -- the text is rendered when the window is shown.
 -- Permanent progress for the goals that used to be counted from the pages left in the diary: a page that leaves
 -- at the cap no longer takes its share with it. Days are kept as a set of dates, so a date seen again counts once.
-K.STATS_SCHEMA = 1
+K.STATS_SCHEMA = 2
 K.Tally = function(stats, e)
     local kind = e.kind
     if kind == "quest" then
@@ -321,6 +321,15 @@ K.Tally = function(stats, e)
         stats.reunions = (stats.reunions or 0) + 1
     elseif kind == "guild" then
         stats.guild = 1
+    elseif kind == "bg" then
+        -- matches by field, kept for good (the pages are capped): by the id of the instance when the page has it,
+        -- else by the name it was written with; `n` is the name seen last, for a client that cannot name the id
+        local key = type(e.bgId) == "number" and ("i:" .. e.bgId) or ("n:" .. tostring(e.arg))
+        stats.bgFields = stats.bgFields or {}
+        local rec = stats.bgFields[key]
+        if type(rec) ~= "table" then rec = { w = 0, l = 0 }; stats.bgFields[key] = rec end
+        if e.won then rec.w = (rec.w or 0) + 1 else rec.l = (rec.l or 0) + 1 end
+        if type(e.arg) == "string" then rec.n = e.arg end
     end
     if type(e.t) == "number" then
         local d = date("%Y%m%d", e.t)
@@ -1376,6 +1385,13 @@ local function MigrateStats(db)
         for _, key in ipairs({ "chains", "hardBoss", "petLevel", "reunions", "guild" }) do
             s[key] = math.max(s[key] or 0, seen[key] or 0)
         end
+        -- matches by field (schema 2): the pages still there, the highest of the two for each
+        for key, rec in pairs(seen.bgFields or {}) do
+            s.bgFields = s.bgFields or {}
+            local have = s.bgFields[key]
+            if type(have) ~= "table" then s.bgFields[key] = rec
+            else have.w, have.l, have.n = math.max(have.w or 0, rec.w), math.max(have.l or 0, rec.l), have.n or rec.n end
+        end
         s.dayset = s.dayset or {}
         for d in pairs(seen.dayset or {}) do s.dayset[d] = true end
         local days = 0
@@ -1386,11 +1402,6 @@ local function MigrateStats(db)
     db.version = DB_VERSION
 end
 
--- Empties the whole diary: pages, zones seen, counters, and what was remembered
--- about guild, group and professions, so everything is detected afresh.
--- Everything else the diary knows about one character (pets, companions, flight paths, goals, standings...).
--- It is set aside with the pages and brought back with them, and emptied with them, so a cleared diary or a new
--- character with an old name never inherits it.
 -- Candidates for the sound of the notice (/skald sound <n>): a SOUNDKIT name where the client has it, else a file number.
 K.SOUND_CANDIDATES = {
     { "IG_ABILITY_PAGE_TURN", 836 },
@@ -1407,6 +1418,11 @@ K.SOUND_CANDIDATES = {
     { "ALARM_CLOCK_WARNING_3", 12867 },
 }
 
+-- Empties the whole diary: pages, zones seen, counters, and what was remembered
+-- about guild, group and professions, so everything is detected afresh.
+-- Everything else the diary knows about one character (pets, companions, flight paths, goals, standings...).
+-- It is set aside with the pages and brought back with them, and emptied with them, so a cleared diary or a new
+-- character with an old name never inherits it.
 K.DIARY_STATE = { "pets", "petNow", "companions", "questObj", "questStart", "visitedMaps", "resume", "attempts",
     "taxi", "marks", "goals", "goalsInit", "goalsVer", "collInit", "rep", "memoryAt", "recentIdx", "recentPh", "anniv", "zoneKills", "killBase",
     "birthMap", "mountSpells" }
@@ -3878,7 +3894,7 @@ local function CreateWindow()
     function f:ApplyTabStyle() for _, b in pairs(tabs) do b:SetActive(b.active) end end
     local panels, panelOrder = {}, {}
     -- The tabs in the order of the book: the diary itself, what it holds, then the settings below, a little apart.
-    local TAB_RANK = { cover = 1, index = 2, search = 2.5, days = 3, bard = 3.7, goals = 4, cartographer = 4.2, saga = 4.5, pets = 5, map = 6, settings = 20 }
+    local TAB_RANK = { cover = 1, index = 2, search = 2.5, days = 3, bard = 3.7, goals = 4, cartographer = 4.2, pvp = 4.3, saga = 4.5, pets = 5, map = 6, settings = 20 }
     local function LayoutTabs()
         local ids = {}
         for id, b in pairs(tabs) do b:Show(); ids[#ids + 1] = id end
@@ -5553,7 +5569,7 @@ K.BG_AGAIN = 600   -- seconds: the same field won again within this time is the 
 Mile.CheckBattleground = function(given)
     local db = Journal()
     if not db then return end
-    local okI, name, instanceType = pcall(GetInstanceInfo)
+    local okI, name, instanceType, _, _, _, _, _, instanceID = pcall(GetInstanceInfo)
     if not okI or instanceType ~= "pvp" then return end
     name = Safe(name)
     if type(name) ~= "string" or name == "" then return end
@@ -5571,7 +5587,9 @@ Mile.CheckBattleground = function(given)
     local won = okF and K.BG_SIDE[faction] == winner or false
     db.stats = db.stats or {}
     if won then db.stats.bgWins = (db.stats.bgWins or 0) + 1 end
-    AddEntry("bg", name, nil, { won = won, tier = won and 3 or 2 })
+    instanceID = Safe(instanceID)
+    AddEntry("bg", name, nil, { won = won, tier = won and 3 or 2, bgId = type(instanceID) == "number" and instanceID or nil })
+    if ns.Pvp then pcall(ns.Pvp.Ensure) end   -- the PvP tab shows itself with the first match
 end
 
 do
@@ -6559,6 +6577,7 @@ H.PLAYER_LOGIN = function(self, event, ...)
         local okClass, _, classFile = pcall(UnitClass, "player")
         if okClass and classFile == "HUNTER" then window:AddTab("pets", L.TAB_PETS, Mile.BuildPets) end
     end
+    if ns.Pvp then pcall(ns.Pvp.Ensure) end
     lastZone = GetZoneText()
     VisitZone(lastZone)
     C_Timer.After(8, function()
@@ -8590,6 +8609,10 @@ SlashCmdList["SKALD"] = function(msg)
         for _, line in ipairs(Mile.ProbeEventLines()) do Say(line) end
     elseif msg == "perf" then
         Mile.Perf()
+    elseif msg == "pvp" or msg:match("^pvp %a+$") then
+        if ns.Pvp then for _, line in ipairs(ns.Pvp.Command(msg:match("^pvp (%a+)$"))) do Say(line) end end
+    elseif msg == "probe realm" then
+        if ns.Pvp then for _, line in ipairs(ns.Pvp.ProbeLines()) do Say(line) end end
     elseif msg == "sound" or msg:match("^sound %d+$") then
         -- candidates for the sound of the notice: a name of SOUNDKIT where it exists, else the number of the file
         local list = K.SOUND_CANDIDATES

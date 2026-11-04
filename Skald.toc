@@ -25,6 +25,7 @@ Saga.lua
 QuestZones.lua
 ZoneCard.lua
 Cartographer.lua
+Pvp.lua
 Backup.lua
 Search.lua
 Bard.lua

@@ -5,7 +5,7 @@ const fs = require('fs');
 const path = require('path');
 
 const ADDONS = path.resolve(__dirname, '../../..');
-const FILES = [['LOC', 'Locales.lua'], ['CUR', 'Curated.lua'], ['XPT', 'XPTiers.lua'], ['CH', 'Skald.lua'], ['AT', 'Atlas.lua'], ['GL', 'Goals.lua'], ['SG', 'Saga.lua'], ['ZC', 'ZoneCard.lua'], ['CT', 'Cartographer.lua'], ['BK', 'Backup.lua'], ['SR', 'Search.lua'], ['BD', 'Bard.lua']];
+const FILES = [['LOC', 'Locales.lua'], ['CUR', 'Curated.lua'], ['XPT', 'XPTiers.lua'], ['CH', 'Skald.lua'], ['AT', 'Atlas.lua'], ['GL', 'Goals.lua'], ['SG', 'Saga.lua'], ['ZC', 'ZoneCard.lua'], ['CT', 'Cartographer.lua'], ['PV', 'Pvp.lua'], ['BK', 'Backup.lua'], ['SR', 'Search.lua'], ['BD', 'Bard.lua']];
 let failed = 0;
 
 // The game, as far as the addon can tell. `pre` runs before the addon loads (saved data, game answers);
@@ -39,7 +39,7 @@ function count(k) local n=0 for _,e in ipairs(SkaldCharDB.entries) do if e.kind=
 ${pre}
 ns={}
 assert(load(LOC,"=L"))("Skald",ns); assert(load(CUR,"=U"))("Skald",ns); assert(load(XPT,"=X"))("Skald",ns)
-assert(load(CH,"=C"))("Skald",ns); assert(load(AT,"=A"))("Skald",ns); assert(load(GL,"=G"))("Skald",ns); assert(load(SG,"=S"))("Skald",ns); assert(load(ZC,"=Z"))("Skald",ns); assert(load(CT,"=T"))("Skald",ns); assert(load(BK,"=B"))("Skald",ns); assert(load(SR,"=R"))("Skald",ns); assert(load(BD,"=D"))("Skald",ns)
+assert(load(CH,"=C"))("Skald",ns); assert(load(AT,"=A"))("Skald",ns); assert(load(GL,"=G"))("Skald",ns); assert(load(SG,"=S"))("Skald",ns); assert(load(ZC,"=Z"))("Skald",ns); assert(load(CT,"=T"))("Skald",ns); assert(load(PV,"=P"))("Skald",ns); assert(load(BK,"=B"))("Skald",ns); assert(load(SR,"=R"))("Skald",ns); assert(load(BD,"=D"))("Skald",ns)
 fire("ADDON_LOADED","Skald"); fire("PLAYER_LOGIN"); runTimers(); runTimers()
 RES = "no result"
 local okRun, err = pcall(function()
@@ -2580,7 +2580,7 @@ s.sv = nil
 ns.MigrateStats(SkaldCharDB)
 ns.MigrateStats(SkaldCharDB)
 local b = { s.chains, s.reunions, s.daysN, s.sv }
-local ok = a[1] == 1 and a[2] == 1 and a[4] == 1 and a[1] == b[1] and a[2] == b[2] and a[3] == b[3] and b[4] == 1
+local ok = a[1] == 1 and a[2] == 1 and (a[4] or 0) >= 1 and a[1] == b[1] and a[2] == b[2] and a[3] == b[3] and b[4] == a[4]
 -- a higher figure already kept is not lowered by a smaller count of the pages left
 s.sv = nil; s.chains = 50
 ns.MigrateStats(SkaldCharDB)
@@ -2596,7 +2596,7 @@ local back = ns.RestoreLatestArchive()
 local restored = ns.GoalFacts().chains
 ns.ResetJournal(SkaldCharDB)
 local f = ns.GoalFacts()
-RES = (before == 0 and back and restored == 5 and f.chains == 0 and f.days == 0 and SkaldCharDB.stats.sv == 1) and "ok"
+RES = (before == 0 and back and restored == 5 and f.chains == 0 and f.days == 0 and (SkaldCharDB.stats.sv or 0) >= 1) and "ok"
   or ("before=" .. before .. " back=" .. tostring(back) .. " restored=" .. restored .. " after=" .. f.chains .. "/" .. f.days)`,
 });
 
@@ -3513,6 +3513,91 @@ for _, line in ipairs(P.bgLoss) do if lossText:find(line:gsub("%%s", "Darkspear 
 RES = (early == 0 and won == 1 and e.won == true and l.won == false and inWorld == 2 and SkaldCharDB.stats.bgWins == 1
   and winLines == 1 and lossLines == 1 and ns.Search.GROUPS[3].kinds.bg) and "ok"
   or ("early=" .. early .. " won=" .. won .. " world=" .. inWorld .. " wins=" .. tostring(SkaldCharDB.stats.bgWins) .. " texts: " .. wonText .. " / " .. lossText)`,
+});
+
+run('the PvP tab: it appears with the first match, counts by field for good (the pages may leave), shows the totals and raises no error', {
+  pre: `function UnitFactionGroup() return "Alliance", "Alliance" end
+WINNER = nil
+function GetBattlefieldWinner() return WINNER end
+INSTANCE = { "Warsong Gulch", "pvp", 489 }
+function GetInstanceInfo() return INSTANCE[1], INSTANCE[2], 0, "", 15, 0, false, INSTANCE[3] end
+function GetRealZoneText(id) if id == 489 then return "Warsong Gulch" elseif id == 529 then return "Arathi Basin" end end`,
+  body: `local before = btn("PvP")
+WINNER = 1
+fire("PVP_MATCH_COMPLETE", 1, 900); runTimers()
+NOW = NOW + 3600; INSTANCE = { "Arathi Basin", "pvp", 529 }; WINNER = 0
+fire("PVP_MATCH_COMPLETE", 0, 900); runTimers()
+NOW = NOW + 3600; WINNER = 1
+fire("PVP_MATCH_COMPLETE", 1, 900); runTimers()
+local tab = btn("PvP")
+local f = SkaldCharDB.stats.bgFields
+local counted = f["i:489"] and f["i:489"].w == 1 and f["i:489"].l == 0 and f["i:529"] and f["i:529"].w == 1 and f["i:529"].l == 1
+-- the pages of the matches leave (the cap): the count stays
+local kept = {}
+for _, e in ipairs(SkaldCharDB.entries) do if e.kind ~= "bg" then kept[#kept + 1] = e end end
+SkaldCharDB.entries = kept
+local d = ns.Pvp.Data()
+local totals = d.total == 3 and d.won == 2 and d.lost == 1 and #d.fields == 2 and d.fields[1].label == "Arathi Basin"
+local clicked = false
+if tab then tab._OnClick(tab); ns.Pvp.refresh(); clicked = true end
+RES = (before == nil and tab and counted and totals and clicked and ns.Pvp.Wanted() and SkaldDB.errors == nil) and "ok"
+  or ("before=" .. tostring(before) .. " tab=" .. tostring(tab) .. " counted=" .. tostring(counted) .. " totals=" .. tostring(totals) .. " d=" .. d.total .. "/" .. d.won .. "/" .. d.lost .. " err=" .. tostring(SkaldDB.errors and SkaldDB.errors[1]))`,
+});
+
+run('the PvP tab: a diary with old match pages is counted by field once, the tab is there from the login, and a character with no match has none', {
+  pre: SAVED(`{ { kind = "bg", arg = "Arathi Basin", won = true, idx = 1, t = 1700000000, zone = "x" },
+  { kind = "bg", arg = "Arathi Basin", won = true, idx = 1, t = 1700003600, zone = "x" },
+  { kind = "bg", arg = "Arathi Basin", won = false, idx = 1, t = 1700007200, zone = "x" } }`, 'version = 3'),
+  body: `local f = SkaldCharDB.stats.bgFields
+local rec = f and f["n:Arathi Basin"]
+local d = ns.Pvp.Data()
+RES = (btn("PvP") and rec and rec.w == 2 and rec.l == 1 and d.total == 3 and d.fields[1].label == "Arathi Basin" and SkaldDB.errors == nil) and "ok"
+  or ("tab=" .. tostring(btn("PvP")) .. " rec=" .. tostring(rec) .. " total=" .. d.total)`,
+});
+
+run('the PvP tab: no battleground and no tab; /skald pvp on shows it, off keeps it away even after a match, auto goes back; the probe and the commands raise no error', {
+  pre: `function UnitFactionGroup() return "Alliance", "Alliance" end
+function GetBattlefieldWinner() return 1 end
+function GetInstanceInfo() return "Warsong Gulch", "pvp", 0, "", 15, 0, false, 489 end`,
+  body: `local none = btn("PvP") == nil and not ns.Pvp.Wanted()
+SlashCmdList.SKALD("pvp on")
+local shown = btn("PvP") ~= nil
+local d0 = ns.Pvp.Data()
+local emptyOk = d0.total == 0 and #d0.fields == 0
+local tab = btn("PvP"); tab._OnClick(tab); ns.Pvp.refresh()
+SlashCmdList.SKALD("pvp off")
+local off = ns.Pvp.Wanted() == false
+fire("PVP_MATCH_COMPLETE", 1, 900); runTimers()
+local counted = ns.Pvp.Data().total == 1
+SlashCmdList.SKALD("pvp auto")
+local auto = ns.Pvp.Wanted() == true
+SlashCmdList.SKALD("pvp"); SlashCmdList.SKALD("pvp nonsense"); SlashCmdList.SKALD("probe realm")
+local probe = #ns.Pvp.ProbeLines() >= 3
+RES = (none and shown and emptyOk and off and counted and auto and probe and SkaldDB.errors == nil) and "ok"
+  or ("none=" .. tostring(none) .. " shown=" .. tostring(shown) .. " empty=" .. tostring(emptyOk) .. " off=" .. tostring(off) .. " counted=" .. tostring(counted) .. " auto=" .. tostring(auto) .. " probe=" .. tostring(probe) .. " err=" .. tostring(SkaldDB.errors and SkaldDB.errors[1]))`,
+});
+
+run('the PvP tab never shows a number the game does not give: the honorable kills come only from the game, and without them the line is empty', {
+  pre: `function GetPVPLifetimeStats() return 1234, 5, 0 end`,
+  body: `local with = ns.Pvp.HonorableKills()
+GetPVPLifetimeStats = nil
+function GetStatistic(id) if id == 588 then return "--" end return "0" end
+local without = ns.Pvp.HonorableKills()
+function GetStatistic(id) if id == 588 then return "77" end end
+local stat = ns.Pvp.HonorableKills()
+GetStatistic = nil
+RES = (with == 1234 and without == nil and stat == 77 and ns.Pvp.HonorableKills() == nil) and "ok"
+  or ("with=" .. tostring(with) .. " without=" .. tostring(without) .. " stat=" .. tostring(stat))`,
+});
+
+run('a backup keeps the battlegrounds by field, key by key', {
+  pre: BK_PRE,
+  body: `${BK}
+SkaldCharDB.stats.bgFields = { ["i:489"] = { w = 2, l = 1, n = "Warsong Gulch" }, ["n:Arathi Basin"] = { w = 0, l = 3 } }
+local b = B.Build()
+local cand = B.Finish(importAll(b.parts))
+local g = cand and cand.state.stats.bgFields
+RES = (g and g["i:489"].w == 2 and g["i:489"].l == 1 and g["i:489"].n == "Warsong Gulch" and g["n:Arathi Basin"].l == 3) and "ok" or ("got " .. tostring(g))`,
 });
 
 // Seen in the Anniversary client with a Draenei: eight seconds after the login the game still answered with the map of the
