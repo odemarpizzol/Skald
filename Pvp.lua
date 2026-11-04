@@ -16,7 +16,7 @@ local _, ns = ...
 local UI_TEXT = {
     enUS = {
         TAB = "PvP", TITLE = "War Chronicle", FIELDS = "By field", RECENT = "Last matches",
-        MATCHES = "Battlegrounds fought: %d", WON = "Won: %d", LOST = "Lost: %d", RATE = "%d%% of them won",
+        WON_WORD = "won", LOST_WORD = "lost", MATCHES = "Battlegrounds fought: %d", WON = "Won: %d", LOST = "Lost: %d", RATE = "%d%% of them won",
         HK = "Honorable kills", SEP = ": ",
         EMPTY = "No battleground yet. The first one will be written here.",
         EMPTY_HINT = "Each match, won or lost, will be marked here, field by field.",
@@ -32,7 +32,7 @@ local UI_TEXT = {
     },
     ptBR = {
         TAB = "JxJ", TITLE = "Crônica de Guerra", FIELDS = "Por campo", RECENT = "Últimas partidas",
-        MATCHES = "Campos de batalha disputados: %d", WON = "Vencidos: %d", LOST = "Perdidos: %d", RATE = "%d%% deles vencidos",
+        WON_WORD = "vencidos", LOST_WORD = "perdidos", MATCHES = "Campos de batalha disputados: %d", WON = "Vencidos: %d", LOST = "Perdidos: %d", RATE = "%d%% deles vencidos",
         HK = "Mortes honrosas", SEP = ": ",
         EMPTY = "Nenhum campo de batalha ainda. O primeiro será escrito aqui.",
         EMPTY_HINT = "Cada partida, vencida ou perdida, será marcada aqui, campo por campo.",
@@ -48,7 +48,7 @@ local UI_TEXT = {
     },
     frFR = {
         TAB = "JcJ", TITLE = "Chronique de guerre", FIELDS = "Par champ", RECENT = "Dernières parties",
-        MATCHES = "Champs de bataille disput\195\169s\194\160: %d", WON = "Gagn\195\169s\194\160: %d", LOST = "Perdus\194\160: %d", RATE = "%d%% gagn\195\169s",
+        WON_WORD = "gagn\195\169s", LOST_WORD = "perdus", MATCHES = "Champs de bataille disput\195\169s\194\160: %d", WON = "Gagn\195\169s\194\160: %d", LOST = "Perdus\194\160: %d", RATE = "%d%% gagn\195\169s",
         HK = "Victoires honorables", SEP = "\194\160: ",
         EMPTY = "Pas encore de champ de bataille. Le premier sera \195\169crit ici.",
         EMPTY_HINT = "Chaque partie, gagn\195\169e ou perdue, sera marqu\195\169e ici, champ par champ.",
@@ -280,28 +280,39 @@ local function BuildTab(panel)
     local demoNote = Line(0, -44, CW, "SkaldSmall", "CENTER", head)
     demoNote:SetText(UI.DEMO_NOTE)
     demoNote:Hide()
-    local matches = Line(0, -72, CW, "SkaldBody")
-    local wonLine = Line(18, -98, CW - 18, "SkaldBody")
-    local lostLine = Line(18, -120, CW - 18, "SkaldBody")
-    -- the colours of the bar, named where the numbers are
-    local wonKey = panel:CreateTexture(nil, "OVERLAY")
-    wonKey:SetSize(11, 11)
-    wonKey:SetPoint("TOPLEFT", 0, -102)
-    wonKey:SetColorTexture(0.25, 0.42, 0.20, 0.85)
-    local lostKey = panel:CreateTexture(nil, "OVERLAY")
-    lostKey:SetSize(11, 11)
-    lostKey:SetPoint("TOPLEFT", 0, -124)
-    lostKey:SetColorTexture(0.43, 0.12, 0.10, 0.55)
-    local rate = Line(0, -146, CW, "SkaldBody", "LEFT", head)
-    local barBack = panel:CreateTexture(nil, "ARTWORK")
-    barBack:SetPoint("TOPLEFT", 0, -176)
-    barBack:SetSize(CW - 20, 10)
-    barBack:SetColorTexture(0.43, 0.12, 0.10, 0.55)
-    local barWon = panel:CreateTexture(nil, "OVERLAY")
-    barWon:SetPoint("TOPLEFT", 0, -176)
-    barWon:SetSize(1, 10)
-    barWon:SetColorTexture(0.25, 0.42, 0.20, 0.85)
-    local honor = Line(0, -204, CW, "SkaldBody")
+    -- two banners side by side, the numbers large under each and the share of wins in a faded seal between them
+    local function Centre(cx, y, width, font, color)
+        local fs = panel:CreateFontString(nil, "OVERLAY", font)
+        fs:SetPoint("TOP", panel, "TOPLEFT", cx, y)
+        fs:SetWidth(width)
+        fs:SetJustifyH("CENTER")
+        fs:SetTextColor(color[1], color[2], color[3])
+        return fs
+    end
+    local GREEN, WINE = { 0.25, 0.42, 0.20 }, { 0.43, 0.12, 0.10 }
+    local LX, MX, RX = CW * 0.2, CW * 0.5, CW * 0.8
+    local wonBanner = panel:CreateTexture(nil, "ARTWORK")
+    wonBanner:SetSize(80, 80)
+    wonBanner:SetPoint("TOP", panel, "TOPLEFT", LX, -66)
+    wonBanner:SetTexture(TEX .. "pvp_won")
+    local lostBanner = panel:CreateTexture(nil, "ARTWORK")
+    lostBanner:SetSize(80, 80)
+    lostBanner:SetPoint("TOP", panel, "TOPLEFT", RX, -66)
+    lostBanner:SetTexture(TEX .. "pvp_lost")
+    local wonNum = Centre(LX, -150, 110, "SkaldHead", GREEN)
+    local lostNum = Centre(RX, -150, 110, "SkaldHead", WINE)
+    local wonWord = Centre(LX, -184, 110, "SkaldSmall", muted)
+    wonWord:SetText(UI.WON_WORD)
+    local lostWord = Centre(RX, -184, 110, "SkaldSmall", muted)
+    lostWord:SetText(UI.LOST_WORD)
+    local medal = panel:CreateTexture(nil, "ARTWORK")
+    medal:SetSize(78, 78)
+    medal:SetPoint("TOP", panel, "TOPLEFT", MX, -76)
+    medal:SetTexture(TEX .. "pvp_title_seal")
+    medal:SetAlpha(0.3)
+    local pctText = Centre(MX, -150, 90, "SkaldHead", head)
+    local matches = Line(0, -226, CW, "SkaldBody", "CENTER")
+    local honor = Line(0, -252, CW, "SkaldBody", "CENTER")
     local world = Line(0, -330, CW - 20, "SkaldSmall", "LEFT", muted)
     world:SetWordWrap(true)
     world:SetText(UI.WORLD)
@@ -366,19 +377,15 @@ local function BuildTab(panel)
         demoNote:SetShown(P.demo == true)
         emptySeal:SetShown(none)
         emptyHint:SetShown(none)
-        for _, fs in ipairs({ matches, wonLine, lostLine, rate, honor }) do fs:SetShown(not none) end
-        wonKey:SetShown(not none)
-        lostKey:SetShown(not none)
-        barBack:SetShown(not none)
-        barWon:SetShown(not none)
+        for _, region in ipairs({ matches, honor, wonBanner, lostBanner, wonNum, lostNum, wonWord, lostWord, medal, pctText }) do
+            region:SetShown(not none)
+        end
         recentHead:SetShown(not none)
         if not none then
             matches:SetText(string.format(UI.MATCHES, data.total))
-            wonLine:SetText(string.format(UI.WON, data.won))
-            lostLine:SetText(string.format(UI.LOST, data.lost))
-            local pct = math.floor(100 * data.won / data.total + 0.5)
-            rate:SetText(string.format(UI.RATE, pct))
-            barWon:SetWidth(math.max(1, (CW - 20) * data.won / data.total))
+            wonNum:SetText(tostring(data.won))
+            lostNum:SetText(tostring(data.lost))
+            pctText:SetText(math.floor(100 * data.won / data.total + 0.5) .. "%")
             local hk = P.HonorableKills()
             honor:SetText(hk and ((type(HONORABLE_KILLS) == "string" and HONORABLE_KILLS ~= "" and HONORABLE_KILLS or UI.HK) .. UI.SEP .. hk) or "")
         end
