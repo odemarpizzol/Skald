@@ -896,8 +896,11 @@ local function BuildSagaTab(panel)
             side.epilogue:SetShown(closing)
             -- a chapter alone on its page (not the Epilogue) stands in the middle of it, and its sketch is drawn larger
             local alone = #page == 1 and page[1].key ~= "epilogue"
+            local stackedArt = alone and SKETCH[page[1].key] ~= nil   -- a chapter alone with a sketch: the text above, the picture large below it, as the Epilogue
             local top = 0
-            if alone then
+            if stackedArt then
+                top = -10
+            elseif alone then
                 local okH, h = pcall(ChapterHeight, page[1], fontSize, CW)
                 if okH and type(h) == "number" then top = -math.max(0, math.floor((PAGE_HEIGHT - h) / 2 - 10)) end
             end
@@ -918,17 +921,23 @@ local function BuildSagaTab(panel)
                 if art then slot.art:SetTexture("Interface\\AddOns\\Skald\\Textures\\ui_saga_" .. art) end
                 -- the sketch of the scroll and quill fills more of its square than the others: drawn a little smaller, it weighs the same
                 local scale = ({ scroll = 0.82, falls = 0.9 })[art] or 1
-                if alone and art == "seals" then scale = 1.3 end
-                slot.art:SetSize(ART_W * scale, ART_H * scale)
+                slot.art:ClearAllPoints()
+                if stackedArt and art then
+                    slot.art:SetSize(230, 230)
+                    slot.art:SetPoint("TOP", slot.body, "BOTTOM", 0, -14)
+                else
+                    slot.art:SetSize(ART_W * scale, ART_H * scale)
+                    slot.art:SetPoint("TOPRIGHT", slot.title, "BOTTOMRIGHT", 0, -26)
+                end
                 slot.art:SetShown(art ~= nil)
                 -- the text takes the width left by the sketch, and the chapter is as tall as the taller of the two
                 if c then
-                    local okC, total = pcall(Compose, slot, c, art and (CW - ART_W * scale - 8) or CW)
+                    local okC, total = pcall(Compose, slot, c, (art and not stackedArt) and (CW - ART_W * scale - 8) or CW)
                     if not okC then
                         SkaldDB.errors = SkaldDB.errors or {}
                         table.insert(SkaldDB.errors, "saga compose: " .. tostring(total))
                         slot.body:SetText(c.text)
-                    elseif art and type(total) == "number" and total < ART_H - 24 then
+                    elseif art and not stackedArt and type(total) == "number" and total < ART_H - 24 then
                         slot.body:SetHeight(math.max(1, slot.body:GetHeight() + (ART_H - 24 - total)))
                     end
                 end
