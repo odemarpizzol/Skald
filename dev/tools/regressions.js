@@ -3797,5 +3797,14 @@ RES = (SkaldDB.probeEvents.count.CAMPSITE_CONTRIBUTION == 2 and log.seen[1].ev =
   else { failed++; console.log('  FAIL  instance map textures: ' + names.length + ' named, missing: ' + lost.join(', ')); }
 }
 
+// the pictures the PvP tab names are in the folder
+{
+  const src = fs.readFileSync(path.join(ADDONS, 'Skald', 'Pvp.lua'), 'utf8');
+  const names = [...new Set([...src.matchAll(/"(pvp_[a-z_]+)"/g)].map(m => m[1]))];
+  const lost = names.filter(n => !fs.existsSync(path.join(ADDONS, 'Skald', 'Textures', 'skald2', n + '.tga')));
+  if (names.length === 3 && !lost.length) console.log('  ok    every picture of the PvP tab is in the folder (' + names.length + ')');
+  else { failed++; console.log('  FAIL  PvP tab pictures: ' + names.length + ' named, missing: ' + lost.join(', ')); }
+}
+
 console.log(failed ? `\n${failed} regression(s) FAILED` : '\nAll regressions passed');
 process.exit(failed ? 1 : 0);

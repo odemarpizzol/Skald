@@ -202,8 +202,13 @@ local function BuildTab(panel)
     local head = SkaldAPI.C_HEAD or { 0.43, 0.12, 0.10 }
     local muted = SkaldAPI.C_MUTED or { 0.42, 0.29, 0.17 }
 
+    local TEX = "Interface\\AddOns\\Skald\\Textures\\skald2\\"
     SkaldAPI.PageHeading(panel, UI.TITLE, 0)
     SkaldAPI.PageHeading(panel, UI.FIELDS, RIGHT_X)
+    local seal = panel:CreateTexture(nil, "ARTWORK")
+    seal:SetSize(34, 34)
+    seal:SetPoint("TOPLEFT", panel, "TOPLEFT", 44, -2)
+    seal:SetTexture(TEX .. "pvp_title_seal")
 
     local function Line(x, y, width, font, justify, color)
         local fs = panel:CreateFontString(nil, "OVERLAY", font or "SkaldBody")
@@ -249,14 +254,17 @@ local function BuildTab(panel)
         local row = CreateFrame("Button", nil, panel)
         row:SetSize(CW, 24)
         row:SetPoint("TOPLEFT", RIGHT_X, -54 - P.FIELD_ROWS * 26 - 40 - (i - 1) * 26)
+        row.mark = row:CreateTexture(nil, "ARTWORK")
+        row.mark:SetSize(22, 22)
+        row.mark:SetPoint("LEFT", 0, 0)
         row.date = row:CreateFontString(nil, "OVERLAY", "SkaldSmall")
-        row.date:SetPoint("LEFT", 0, 0)
+        row.date:SetPoint("LEFT", 28, 0)
         row.date:SetWidth(72)
         row.date:SetJustifyH("LEFT")
         row.date:SetTextColor(muted[1], muted[2], muted[3])
         row.text = row:CreateFontString(nil, "OVERLAY", "SkaldBody")
-        row.text:SetPoint("LEFT", 76, 0)
-        row.text:SetWidth(CW - 76)
+        row.text:SetPoint("LEFT", 104, 0)
+        row.text:SetWidth(CW - 104)
         row.text:SetJustifyH("LEFT")
         row.text:SetTextColor(body[1], body[2], body[3])
         row.hover = row:CreateTexture(nil, "BACKGROUND")
@@ -300,6 +308,7 @@ local function BuildTab(panel)
             local e = recent[i]
             row.entry = e
             if e then
+                row.mark:SetTexture(TEX .. (e.won and "pvp_won" or "pvp_lost"))
                 row.date:SetText(e.t and date(UI.DATE, e.t) or "")
                 row.text:SetText(tostring(e.arg or "?") .. ", " .. (e.won and UI.WON_TAG or UI.LOST_TAG))
                 row:Show()
