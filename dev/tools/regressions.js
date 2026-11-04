@@ -1832,6 +1832,19 @@ RES = (not stray and #all >= 200 and not text:find("Sakaldd", 1, true) and text:
   });
 }
 
+run('the Epilogue of the Saga has a page of its own, the last one, whatever the size of the letter', {
+  pre: SAGA_DIARY(),
+  body: `local chapters = ns.BuildSaga()
+local bad = {}
+for _, size in ipairs({ 11, 13, 15, 20 }) do
+  local pages = ns.SagaPages(chapters, size)
+  local last = pages[#pages]
+  if not (#last == 1 and last[1].key == "epilogue") then bad[#bad + 1] = "last at " .. size end
+  for i = 1, #pages - 1 do for _, c in ipairs(pages[i]) do if c.key == "epilogue" then bad[#bad + 1] = "early at " .. size end end end
+end
+RES = (#bad == 0 and chapters[#chapters].key == "epilogue") and "ok" or table.concat(bad, ", ")`,
+});
+
 run('the Saga goes onto pages by the size of the letter: no chapter lost, none split, never more than three to a page', {
   pre: SAGA_DIARY(),
   body: `local chapters = ns.BuildSaga()
@@ -2027,7 +2040,7 @@ run('the Cartographer tab opens, shows the maps in colour where the diary has se
   pre: SAVED('{}', 'version = 99, goalsInit = true, goalsVer = 3, goals = {}, stats = { counts = {}, deathZones = {}, tiers = {}, played = 1, first = 1 }'),
   body: `C_Map.GetMapInfo = function(id) return { name = "Land " .. id, mapType = 3, parentMapID = 0 } end
 SkaldCharDB.visitedMaps = { ["map:1429"] = true, ["map:1426"] = true, ["map:7"] = true }
-local tab = btn("Cartographer")
+local tab = btn("Charts")
 if not tab then RES = "no Cartographer tab" else
   tab._OnClick(tab)
   local list = ns.Cartographer.List()
@@ -3834,6 +3847,16 @@ RES = (SkaldDB.probeEvents.count.CAMPSITE_CONTRIBUTION == 2 and log.seen[1].ev =
   const lost = names.filter(n => !fs.existsSync(path.join(ADDONS, 'Skald', 'Textures', 'skald2', n + '.tga')));
   if (names.length === 3 && !lost.length) console.log('  ok    every picture of the PvP tab is in the folder (' + names.length + ')');
   else { failed++; console.log('  FAIL  PvP tab pictures: ' + names.length + ' named, missing: ' + lost.join(', ')); }
+}
+
+// every sketch of the Saga has its picture (they are named by joining a prefix, so checks.js does not see them)
+{
+  const src = fs.readFileSync(path.join(ADDONS, 'Skald', 'Saga.lua'), 'utf8');
+  const line = (src.match(/local SKETCH = \{([^}]*)\}/) || [])[1] || '';
+  const names = [...line.matchAll(/=\s*"([a-z_]+)"/g)].map(m => m[1]).flatMap(n => n === 'camp' ? ['camp_horde', 'camp_alliance'] : [n]);
+  const lost = names.filter(n => !fs.existsSync(path.join(ADDONS, 'Skald', 'Textures', 'ui_saga_' + n + '.tga')));
+  if (names.length >= 8 && !lost.length) console.log('  ok    every sketch of the Saga has its picture (' + names.length + ')');
+  else { failed++; console.log('  FAIL  Saga sketches: ' + names.length + ' named, missing: ' + lost.join(', ')); }
 }
 
 console.log(failed ? `\n${failed} regression(s) FAILED` : '\nAll regressions passed');

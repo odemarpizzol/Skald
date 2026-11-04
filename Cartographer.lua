@@ -7,7 +7,7 @@ local _, ns = ...
 
 local UI_TEXT = {
     enUS = {
-        TAB = "Cartographer", TITLE = "Cartographer", CHARTED = "%d of %d lands charted", OF = "%d of %d",
+        TAB = "Charts", TITLE = "Cartographer", CHARTED = "%d of %d lands charted", OF = "%d of %d",
         WALKED = "You have walked here. Click for more.", NOT_YET = "Not yet walked.", EMPTY = "No maps yet.",
         BACK = "Back to the maps", HERE = "Pages written here", NONE_HERE = "No pages were written here yet.", DATE = "%m/%d/%Y",
     },
@@ -17,7 +17,7 @@ local UI_TEXT = {
         BACK = "Voltar aos mapas", HERE = "Páginas escritas aqui", NONE_HERE = "Nenhuma página foi escrita aqui ainda.", DATE = "%d/%m/%Y",
     },
     frFR = {
-        TAB = "Cartographe", TITLE = "Cartographe", CHARTED = "%d terres sur %d cartographiées", OF = "%d sur %d",
+        TAB = "Cartes", TITLE = "Cartographe", CHARTED = "%d terres sur %d cartographiées", OF = "%d sur %d",
         WALKED = "Vous avez d\195\169j\195\160 march\195\169 ici. Cliquez pour en savoir plus.", NOT_YET = "Pas encore parcourue.", EMPTY = "Pas encore de cartes.",
         BACK = "Retour aux cartes", HERE = "Pages \195\169crites ici", NONE_HERE = "Aucune page n'a encore \195\169t\195\169 \195\169crite ici.", DATE = "%d/%m/%Y",
     },
