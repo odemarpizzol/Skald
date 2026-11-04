@@ -308,7 +308,7 @@ K.RECORD_FLAG = {
 -- the text is rendered when the window is shown.
 -- Permanent progress for the goals that used to be counted from the pages left in the diary: a page that leaves
 -- at the cap no longer takes its share with it. Days are kept as a set of dates, so a date seen again counts once.
-K.STATS_SCHEMA = 1
+K.STATS_SCHEMA = 2
 K.Tally = function(stats, e)
     local kind = e.kind
     if kind == "quest" then
@@ -321,6 +321,15 @@ K.Tally = function(stats, e)
         stats.reunions = (stats.reunions or 0) + 1
     elseif kind == "guild" then
         stats.guild = 1
+    elseif kind == "bg" then
+        -- matches by field, kept for good (the pages are capped): by the id of the instance when the page has it,
+        -- else by the name it was written with; `n` is the name seen last, for a client that cannot name the id
+        local key = type(e.bgId) == "number" and ("i:" .. e.bgId) or ("n:" .. tostring(e.arg))
+        stats.bgFields = stats.bgFields or {}
+        local rec = stats.bgFields[key]
+        if type(rec) ~= "table" then rec = { w = 0, l = 0 }; stats.bgFields[key] = rec end
+        if e.won then rec.w = (rec.w or 0) + 1 else rec.l = (rec.l or 0) + 1 end
+        if type(e.arg) == "string" then rec.n = e.arg end
     end
     if type(e.t) == "number" then
         local d = date("%Y%m%d", e.t)
@@ -1324,6 +1333,8 @@ SkaldAPI = {
             pendingTabs[#pendingTabs + 1] = { id, label, build }
         end
     end,
+    -- SetTabShown(id, shown): puts a tab away or brings it back at once (no /reload)
+    SetTabShown = function(id, shown) if window then window:SetTabShown(id, shown) end end,
 }
 
 -- Fills in stats for characters that already had pages before counters existed.
@@ -1376,6 +1387,13 @@ local function MigrateStats(db)
         for _, key in ipairs({ "chains", "hardBoss", "petLevel", "reunions", "guild" }) do
             s[key] = math.max(s[key] or 0, seen[key] or 0)
         end
+        -- matches by field (schema 2): the pages still there, the highest of the two for each
+        for key, rec in pairs(seen.bgFields or {}) do
+            s.bgFields = s.bgFields or {}
+            local have = s.bgFields[key]
+            if type(have) ~= "table" then s.bgFields[key] = rec
+            else have.w, have.l, have.n = math.max(have.w or 0, rec.w), math.max(have.l or 0, rec.l), have.n or rec.n end
+        end
         s.dayset = s.dayset or {}
         for d in pairs(seen.dayset or {}) do s.dayset[d] = true end
         local days = 0
@@ -1385,6 +1403,22 @@ local function MigrateStats(db)
     end
     db.version = DB_VERSION
 end
+
+-- Candidates for the sound of the notice (/skald sound <n>): a SOUNDKIT name where the client has it, else a file number.
+K.SOUND_CANDIDATES = {
+    { "IG_ABILITY_PAGE_TURN", 836 },
+    { "IG_QUEST_LIST_COMPLETE", 878 },
+    { "UI_QUEST_ROLLING_FORWARD_01", 12418 },
+    { "LEVELUP", 888 },
+    { "IG_PLAYER_INVITE", 880 },
+    { "RAID_WARNING", 8959 },
+    { "READY_CHECK", 8960 },
+    { "UI_BNET_TOAST", 18019 },
+    { "AUCTION_WINDOW_OPEN", 5274 },
+    { "IG_CHARACTER_INFO_OPEN", 839 },
+    { "MAP_PING", 3175 },
+    { "ALARM_CLOCK_WARNING_3", 12867 },
+}
 
 -- Empties the whole diary: pages, zones seen, counters, and what was remembered
 -- about guild, group and professions, so everything is detected afresh.
@@ -2510,8 +2544,8 @@ local function CreateWindow()
 
     -- Leather cover: a nine-slice of one texture (corners, edges tiled in 80 px pieces). ---
     local coverParts = {}
-    local function Cover(x, y, w, h, u0, u1, v0, v1)
-        local t = book:CreateTexture(nil, "BACKGROUND", nil, 0)
+    local function Cover(x, y, w, h, u0, u1, v0, v1, level)
+        local t = book:CreateTexture(nil, "BACKGROUND", nil, level or 0)
         coverParts[#coverParts + 1] = t
         t:SetSize(w, h)
         t:SetPoint("TOPLEFT", x, -y)
@@ -2519,16 +2553,21 @@ local function CreateWindow()
         t:SetTexCoord(u0 / 256, u1 / 256, v0 / 256, v1 / 256)
         return t
     end
-    Cover(K.COVER_X, 0, 56, 56, 0, 56, 0, 56)
-    Cover(K.COVER_X + K.COVER_W - 56, 0, 56, 56, 136, 192, 0, 56)
-    Cover(K.COVER_X, K.BOOK_H - 56, 56, 56, 0, 56, 136, 192)
-    Cover(K.COVER_X + K.COVER_W - 56, K.BOOK_H - 56, 56, 56, 136, 192, 136, 192)
+    -- The four corners (the gold) are drawn a level above the dark square behind each page, which would cut into them.
+    Cover(K.COVER_X, 0, 56, 56, 0, 56, 0, 56, 2)
+    Cover(K.COVER_X + K.COVER_W - 56, 0, 56, 56, 136, 192, 0, 56, 2)
+    -- The picture of the cover ends 17 px above the foot of its square (the rest is clear), so the bottom pieces read
+    -- from 119 to 175 and the leather meets the foot of the book as it meets the top; read from 136 to 192 the stitches
+    -- and the edge sat under the page, and the page looked bigger than the book.
+    local FOOT0, FOOT1 = 119, 175
+    Cover(K.COVER_X, K.BOOK_H - 56, 56, 56, 0, 56, FOOT0, FOOT1, 2)
+    Cover(K.COVER_X + K.COVER_W - 56, K.BOOK_H - 56, 56, 56, 136, 192, FOOT0, FOOT1, 2)
     Cover(K.COVER_X + 56, 56, K.COVER_W - 112, K.BOOK_H - 112, 56, 136, 56, 136)
     local x = K.COVER_X + 56
     while x < K.COVER_X + K.COVER_W - 56 do
         local w = math.min(80, K.COVER_X + K.COVER_W - 56 - x)
         Cover(x, 0, w, 56, 56, 56 + w, 0, 56)
-        Cover(x, K.BOOK_H - 56, w, 56, 56, 56 + w, 136, 192)
+        Cover(x, K.BOOK_H - 56, w, 56, 56, 56 + w, FOOT0, FOOT1)
         x = x + 80
     end
     local y = 56
@@ -3862,10 +3901,13 @@ local function CreateWindow()
     function f:ApplyTabStyle() for _, b in pairs(tabs) do b:SetActive(b.active) end end
     local panels, panelOrder = {}, {}
     -- The tabs in the order of the book: the diary itself, what it holds, then the settings below, a little apart.
-    local TAB_RANK = { cover = 1, index = 2, search = 2.5, days = 3, bard = 3.7, goals = 4, cartographer = 4.2, saga = 4.5, pets = 5, map = 6, settings = 20 }
+    local TAB_RANK = { cover = 1, index = 2, search = 2.5, days = 3, bard = 3.7, goals = 4, cartographer = 4.2, pvp = 4.3, saga = 4.5, pets = 5, map = 6, settings = 20 }
+    local hiddenTabs = {}   -- a tab the player put away (the PvP one): its button and its place are gone, its panel stays built
     local function LayoutTabs()
         local ids = {}
-        for id, b in pairs(tabs) do b:Show(); ids[#ids + 1] = id end
+        for id, b in pairs(tabs) do
+            if hiddenTabs[id] then b:Hide() else b:Show(); ids[#ids + 1] = id end
+        end
         table.sort(ids, function(a, b)
             local ra, rb = TAB_RANK[a] or 10, TAB_RANK[b] or 10
             if ra ~= rb then return ra < rb end
@@ -3882,6 +3924,14 @@ local function CreateWindow()
             b:SetActive(b.active)
             y = y + step
         end
+    end
+    function f:SetTabShown(id, shown)
+        if not tabs[id] then return end
+        local away = not shown
+        if (hiddenTabs[id] or false) == away then return end
+        hiddenTabs[id] = away or nil
+        if away and view == id then f:ShowSection("index", true) end
+        LayoutTabs()
     end
     function f:AddTab(id, label, build)
         if panels[id] then return panels[id].frame end
@@ -5537,7 +5587,7 @@ K.BG_AGAIN = 600   -- seconds: the same field won again within this time is the 
 Mile.CheckBattleground = function(given)
     local db = Journal()
     if not db then return end
-    local okI, name, instanceType = pcall(GetInstanceInfo)
+    local okI, name, instanceType, _, _, _, _, _, instanceID = pcall(GetInstanceInfo)
     if not okI or instanceType ~= "pvp" then return end
     name = Safe(name)
     if type(name) ~= "string" or name == "" then return end
@@ -5555,7 +5605,9 @@ Mile.CheckBattleground = function(given)
     local won = okF and K.BG_SIDE[faction] == winner or false
     db.stats = db.stats or {}
     if won then db.stats.bgWins = (db.stats.bgWins or 0) + 1 end
-    AddEntry("bg", name, nil, { won = won, tier = won and 3 or 2 })
+    instanceID = Safe(instanceID)
+    AddEntry("bg", name, nil, { won = won, tier = won and 3 or 2, bgId = type(instanceID) == "number" and instanceID or nil })
+    if ns.Pvp then pcall(ns.Pvp.Ensure) end   -- the PvP tab shows itself with the first match
 end
 
 do
@@ -6543,6 +6595,7 @@ H.PLAYER_LOGIN = function(self, event, ...)
         local okClass, _, classFile = pcall(UnitClass, "player")
         if okClass and classFile == "HUNTER" then window:AddTab("pets", L.TAB_PETS, Mile.BuildPets) end
     end
+    if ns.Pvp then pcall(ns.Pvp.Ensure) end
     lastZone = GetZoneText()
     VisitZone(lastZone)
     C_Timer.After(8, function()
@@ -8574,6 +8627,22 @@ SlashCmdList["SKALD"] = function(msg)
         for _, line in ipairs(Mile.ProbeEventLines()) do Say(line) end
     elseif msg == "perf" then
         Mile.Perf()
+    elseif msg == "pvp" or msg:match("^pvp %a+$") then
+        if ns.Pvp then for _, line in ipairs(ns.Pvp.Command(msg:match("^pvp (%a+)$"))) do Say(line) end end
+    elseif msg == "probe realm" then
+        if ns.Pvp then for _, line in ipairs(ns.Pvp.ProbeLines()) do Say(line) end end
+    elseif msg == "sound" or msg:match("^sound %d+$") then
+        -- candidates for the sound of the notice: a name of SOUNDKIT where it exists, else the number of the file
+        local list = K.SOUND_CANDIDATES
+        local n = tonumber(msg:match("%d+"))
+        if n and list[n] then
+            local c = list[n]
+            local id = (SOUNDKIT and SOUNDKIT[c[1]]) or c[2]
+            Say(string.format(L.SOUND_PLAYED, n, c[1]))
+            pcall(PlaySound, id)
+        else
+            Say(string.format(L.SOUND_TEST, "1-" .. #list))
+        end
     elseif msg == "probe maps" then
         for _, line in ipairs(Mile.MapArtLines()) do Say(line) end
     elseif msg == "probe lore" or msg == "probe lore off" then

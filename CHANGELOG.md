@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.49.0-beta
+
+- **PvP** tab (JxJ in Portuguese, JcJ in French): a war chronicle of your battlegrounds, with the victories and defeats in all and by field, the newest matches (a click opens the page in the book), a line of the diary that moves on with each match and the game's own count of honorable kills when the client keeps one. It shows itself once a battleground is written, on any type of realm; `/skald pvp on|off|auto` decides it for the realm you are on, at once. `/skald pvp demo` draws it with example numbers, to see it before a match. The open world and arenas are not told yet; `/skald probe realm` lists what the client says about the realm, for the next step
+- The book: the foot of the leather cover now meets the foot of the book (the page no longer looks larger than the book at the bottom), and the gold corners are no longer cut by the dark square behind each page
+- Cartographer: the fourth row of maps ends above the page corner instead of under it
+
 ## 0.48.1-beta
 
 - A line no longer comes back within ten pages of the same kind: the diary draws each page's line from those not told lately (the last ten at least, up to thirty in the big pools, kept as numbers, never the text), counting the lines that two pools share, and a race or class pool that has just been used up hands the page to the common pool of the kind. Measured on a long climb: a line coming back within ten pages went from 3 to 18 pages in a hundred to none (quests, deaths, levels and bosses)
