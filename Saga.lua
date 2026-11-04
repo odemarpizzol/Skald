@@ -812,7 +812,7 @@ local function BuildSagaTab(panel)
     local CW, RX = SkaldAPI.CW, SkaldAPI.RIGHT_X
     local sides = {}
     for i, x in ipairs({ 0, RX }) do
-        local side = { slots = {} }
+        local side = { slots = {}, x = x }
         for n = 1, 3 do
             local slot = {}
             slot.title = panel:CreateFontString(nil, "OVERLAY", "SkaldHead2")
@@ -856,8 +856,8 @@ local function BuildSagaTab(panel)
         end
         -- the picture that closes the Saga, under the Epilogue (its drawing sits in the lower half of its square)
         side.epilogue = panel:CreateTexture(nil, "BACKGROUND")
-        side.epilogue:SetSize(330, 330)
-        side.epilogue:SetPoint("BOTTOM", panel, "BOTTOMLEFT", x + CW / 2, 20)
+        side.epilogue:SetSize(400, 400)
+        side.epilogue:SetPoint("BOTTOM", panel, "BOTTOMLEFT", x + CW / 2, 20)   -- moved under the text of the Epilogue when it is shown
         side.epilogue:SetTexture("Interface\\AddOns\\Skald\\Textures\\ui_saga_epilogue")
         side.epilogue:SetAlpha(0.92)
         side.epilogue:Hide()
@@ -881,6 +881,7 @@ local function BuildSagaTab(panel)
     empty:SetJustifyH("LEFT")
     empty:SetTextColor(SkaldAPI.C_BODY[1], SkaldAPI.C_BODY[2], SkaldAPI.C_BODY[3])
     local pages, spread = {}, 1
+    local fontSize = 16
     local function Spreads() return math.max(1, math.ceil(#pages / 2)) end
     local function Show()
         empty:SetText(#pages == 0 and UI.EMPTY or "")
@@ -893,6 +894,15 @@ local function BuildSagaTab(panel)
             local closing = false
             for _, c in ipairs(page) do if c.key == "epilogue" then closing = true end end
             side.epilogue:SetShown(closing)
+            -- a chapter alone on its page (not the Epilogue) stands in the middle of it, and its sketch is drawn larger
+            local alone = #page == 1 and page[1].key ~= "epilogue"
+            local top = 0
+            if alone then
+                local okH, h = pcall(ChapterHeight, page[1], fontSize, CW)
+                if okH and type(h) == "number" then top = -math.max(0, math.floor((PAGE_HEIGHT - h) / 2 - 10)) end
+            end
+            side.slots[1].title:ClearAllPoints()
+            side.slots[1].title:SetPoint("TOPLEFT", side.x, top)
             for n, slot in ipairs(side.slots) do
                 local c = page[n]
                 slot.title:SetShown(c ~= nil)
@@ -908,11 +918,12 @@ local function BuildSagaTab(panel)
                 if art then slot.art:SetTexture("Interface\\AddOns\\Skald\\Textures\\ui_saga_" .. art) end
                 -- the sketch of the scroll and quill fills more of its square than the others: drawn a little smaller, it weighs the same
                 local scale = ({ scroll = 0.82 })[art] or 1
+                if alone and art == "seals" then scale = 1.3 end
                 slot.art:SetSize(ART_W * scale, ART_H * scale)
                 slot.art:SetShown(art ~= nil)
                 -- the text takes the width left by the sketch, and the chapter is as tall as the taller of the two
                 if c then
-                    local okC, total = pcall(Compose, slot, c, art and (CW - ART_W - 8) or CW)
+                    local okC, total = pcall(Compose, slot, c, art and (CW - ART_W * scale - 8) or CW)
                     if not okC then
                         SkaldDB.errors = SkaldDB.errors or {}
                         table.insert(SkaldDB.errors, "saga compose: " .. tostring(total))
@@ -920,6 +931,11 @@ local function BuildSagaTab(panel)
                     elseif art and type(total) == "number" and total < ART_H - 24 then
                         slot.body:SetHeight(math.max(1, slot.body:GetHeight() + (ART_H - 24 - total)))
                     end
+                end
+                -- the closing picture starts just under the text of the Epilogue (its drawing is in the lower half of its square)
+                if c and c.key == "epilogue" then
+                    side.epilogue:ClearAllPoints()
+                    side.epilogue:SetPoint("TOP", slot.body, "BOTTOM", 0, 130)
                 end
             end
         end
@@ -934,6 +950,7 @@ local function BuildSagaTab(panel)
         end
         local size
         pcall(function() size = select(2, SkaldSaga:GetFont()) end)
+        fontSize = (type(size) == "number" and size > 0) and size or 16
         pages = ns.SagaPages(built, size)
         if spread > Spreads() then spread = Spreads() end
         Show()
