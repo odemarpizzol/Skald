@@ -3566,11 +3566,11 @@ local d0 = ns.Pvp.Data()
 local emptyOk = d0.total == 0 and #d0.fields == 0
 local tab = btn("PvP"); tab._OnClick(tab); ns.Pvp.refresh()
 SlashCmdList.SKALD("pvp off")
-local off = ns.Pvp.Wanted() == false
+local off = ns.Pvp.Wanted() == false and not tab:IsShown()   -- the button goes away at once, no /reload
 fire("PVP_MATCH_COMPLETE", 1, 900); runTimers()
 local counted = ns.Pvp.Data().total == 1
 SlashCmdList.SKALD("pvp auto")
-local auto = ns.Pvp.Wanted() == true
+local auto = ns.Pvp.Wanted() == true and tab:IsShown()
 SlashCmdList.SKALD("pvp"); SlashCmdList.SKALD("pvp nonsense"); SlashCmdList.SKALD("probe realm")
 local probe = #ns.Pvp.ProbeLines() >= 3
 RES = (none and shown and emptyOk and off and counted and auto and probe and SkaldDB.errors == nil) and "ok"

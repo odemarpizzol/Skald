@@ -1333,6 +1333,8 @@ SkaldAPI = {
             pendingTabs[#pendingTabs + 1] = { id, label, build }
         end
     end,
+    -- SetTabShown(id, shown): puts a tab away or brings it back at once (no /reload)
+    SetTabShown = function(id, shown) if window then window:SetTabShown(id, shown) end end,
 }
 
 -- Fills in stats for characters that already had pages before counters existed.
@@ -3895,9 +3897,12 @@ local function CreateWindow()
     local panels, panelOrder = {}, {}
     -- The tabs in the order of the book: the diary itself, what it holds, then the settings below, a little apart.
     local TAB_RANK = { cover = 1, index = 2, search = 2.5, days = 3, bard = 3.7, goals = 4, cartographer = 4.2, pvp = 4.3, saga = 4.5, pets = 5, map = 6, settings = 20 }
+    local hiddenTabs = {}   -- a tab the player put away (the PvP one): its button and its place are gone, its panel stays built
     local function LayoutTabs()
         local ids = {}
-        for id, b in pairs(tabs) do b:Show(); ids[#ids + 1] = id end
+        for id, b in pairs(tabs) do
+            if hiddenTabs[id] then b:Hide() else b:Show(); ids[#ids + 1] = id end
+        end
         table.sort(ids, function(a, b)
             local ra, rb = TAB_RANK[a] or 10, TAB_RANK[b] or 10
             if ra ~= rb then return ra < rb end
@@ -3914,6 +3919,14 @@ local function CreateWindow()
             b:SetActive(b.active)
             y = y + step
         end
+    end
+    function f:SetTabShown(id, shown)
+        if not tabs[id] then return end
+        local away = not shown
+        if (hiddenTabs[id] or false) == away then return end
+        hiddenTabs[id] = away or nil
+        if away and view == id then f:ShowSection("index", true) end
+        LayoutTabs()
     end
     function f:AddTab(id, label, build)
         if panels[id] then return panels[id].frame end

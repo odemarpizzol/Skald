@@ -19,9 +19,10 @@ local UI_TEXT = {
         MATCHES = "Battlegrounds fought: %d", WON = "Won: %d", LOST = "Lost: %d", RATE = "%d%% of them won",
         HK = "Honorable kills", SEP = ": ",
         EMPTY = "No battleground yet. The first one will be written here.",
+        EMPTY_HINT = "Each match, won or lost, will be marked here, field by field.",
         REC = "%d won, %d lost", WON_TAG = "won", LOST_TAG = "lost", DATE = "%m/%d/%Y",
         WORLD = "The open world is not told here: the game does not say, in a way I can trust, who struck the last blow.",
-        ON = "the PvP tab is always shown on this realm.", OFF = "the PvP tab is hidden on this realm (type /reload to take it away now).",
+        ON = "the PvP tab is always shown on this realm.", OFF = "the PvP tab is hidden on this realm.",
         AUTO = "on this realm the PvP tab shows itself once a battleground is written.", USAGE = "/skald pvp on | off | auto",
         PROBE_HEAD = "Realm and PvP, as this client answers (run it on the realm you want to know):",
         PROBE_FLAG = "marked for PvP: %s", PROBE_ZONE = "this land's PvP status: %s",
@@ -33,9 +34,10 @@ local UI_TEXT = {
         MATCHES = "Campos de batalha disputados: %d", WON = "Vencidos: %d", LOST = "Perdidos: %d", RATE = "%d%% deles vencidos",
         HK = "Mortes honrosas", SEP = ": ",
         EMPTY = "Nenhum campo de batalha ainda. O primeiro será escrito aqui.",
+        EMPTY_HINT = "Cada partida, vencida ou perdida, será marcada aqui, campo por campo.",
         REC = "%d vencidos, %d perdidos", WON_TAG = "vitória", LOST_TAG = "derrota", DATE = "%d/%m/%Y",
         WORLD = "O mundo aberto não é contado aqui: o jogo não diz, de um jeito em que eu possa confiar, quem deu o golpe final.",
-        ON = "a aba JxJ fica sempre visível neste reino.", OFF = "a aba JxJ fica escondida neste reino (digite /reload para tirá-la agora).",
+        ON = "a aba JxJ fica sempre visível neste reino.", OFF = "a aba JxJ fica escondida neste reino.",
         AUTO = "neste reino a aba JxJ aparece quando um campo de batalha for escrito.", USAGE = "/skald pvp on | off | auto",
         PROBE_HEAD = "Reino e JxJ, como este cliente responde (rode no reino que você quer conhecer):",
         PROBE_FLAG = "marcado para JxJ: %s", PROBE_ZONE = "estado de JxJ desta terra: %s",
@@ -47,9 +49,10 @@ local UI_TEXT = {
         MATCHES = "Champs de bataille disput\195\169s\194\160: %d", WON = "Gagn\195\169s\194\160: %d", LOST = "Perdus\194\160: %d", RATE = "%d%% gagn\195\169s",
         HK = "Victoires honorables", SEP = "\194\160: ",
         EMPTY = "Pas encore de champ de bataille. Le premier sera \195\169crit ici.",
+        EMPTY_HINT = "Chaque partie, gagn\195\169e ou perdue, sera marqu\195\169e ici, champ par champ.",
         REC = "%d gagn\195\169s, %d perdus", WON_TAG = "victoire", LOST_TAG = "d\195\169faite", DATE = "%d/%m/%Y",
         WORLD = "Le monde ouvert n'est pas racont\195\169 ici\194\160: le jeu ne dit pas, de fa\195\167on s\195\187re, qui a port\195\169 le dernier coup.",
-        ON = "l'onglet JcJ est toujours montr\195\169 sur ce royaume.", OFF = "l'onglet JcJ est cach\195\169 sur ce royaume (tapez /reload pour l'enlever maintenant).",
+        ON = "l'onglet JcJ est toujours montr\195\169 sur ce royaume.", OFF = "l'onglet JcJ est cach\195\169 sur ce royaume.",
         AUTO = "sur ce royaume l'onglet JcJ appara\195\174t quand un champ de bataille est \195\169crit.", USAGE = "/skald pvp on | off | auto",
         PROBE_HEAD = "Royaume et JcJ, comme ce client r\195\169pond (lancez-le sur le royaume que vous voulez conna\195\174tre)\194\160:",
         PROBE_FLAG = "marqu\195\169 pour le JcJ\194\160: %s", PROBE_ZONE = "\195\169tat JcJ de cette terre\194\160: %s",
@@ -154,14 +157,20 @@ end
 
 -- The tab is added when it is wanted: at the login, when the first match is written and when /skald pvp on is typed.
 function P.Ensure()
-    if P.Wanted() and SkaldAPI and SkaldAPI.AddTab then SkaldAPI.AddTab(P.TAB_ID, UI.TAB, P.Build) end
+    if not (SkaldAPI and SkaldAPI.AddTab) then return end
+    if P.Wanted() then
+        SkaldAPI.AddTab(P.TAB_ID, UI.TAB, P.Build)
+        if SkaldAPI.SetTabShown then SkaldAPI.SetTabShown(P.TAB_ID, true) end
+    elseif SkaldAPI.SetTabShown then
+        SkaldAPI.SetTabShown(P.TAB_ID, false)
+    end
 end
 
 -- /skald pvp [on|off|auto]: the lines to say.
 function P.Command(arg)
     arg = tostring(arg or ""):lower()
     if arg == "on" then SetSetting(true); P.Ensure(); return { UI.ON }
-    elseif arg == "off" then SetSetting(false); return { UI.OFF }
+    elseif arg == "off" then SetSetting(false); P.Ensure(); return { UI.OFF }
     elseif arg == "auto" then SetSetting(nil); P.Ensure(); return { UI.AUTO }
     end
     local now = Setting()
@@ -203,11 +212,14 @@ local function BuildTab(panel)
     local muted = SkaldAPI.C_MUTED or { 0.42, 0.29, 0.17 }
 
     local TEX = "Interface\\AddOns\\Skald\\Textures\\skald2\\"
-    SkaldAPI.PageHeading(panel, UI.TITLE, 0)
     SkaldAPI.PageHeading(panel, UI.FIELDS, RIGHT_X)
+    -- the seal stands to the left of the title's own letters, whatever the language makes of their width
+    local title = SkaldAPI.PageHeading(panel, UI.TITLE, 0)
     local seal = panel:CreateTexture(nil, "ARTWORK")
-    seal:SetSize(34, 34)
-    seal:SetPoint("TOPLEFT", panel, "TOPLEFT", 44, -2)
+    seal:SetSize(40, 40)
+    local okW, titleW = pcall(function() return title:GetStringWidth() end)
+    titleW = (okW and type(titleW) == "number") and titleW or 200
+    seal:SetPoint("TOPRIGHT", panel, "TOPLEFT", CW / 2 - titleW / 2 - 6, 2)
     seal:SetTexture(TEX .. "pvp_title_seal")
 
     local function Line(x, y, width, font, justify, color)
@@ -240,6 +252,17 @@ local function BuildTab(panel)
     local empty = Line(0, -140, CW, "SkaldBody", "CENTER", muted)
     empty:SetText(UI.EMPTY)
     empty:Hide()
+    -- the right page of a diary with no battleground yet: the seal large and faded, and a line under it
+    local emptySeal = panel:CreateTexture(nil, "ARTWORK")
+    emptySeal:SetSize(110, 110)
+    emptySeal:SetPoint("TOP", panel, "TOPLEFT", RIGHT_X + CW / 2, -120)
+    emptySeal:SetTexture(TEX .. "pvp_title_seal")
+    emptySeal:SetAlpha(0.4)
+    emptySeal:Hide()
+    local emptyHint = Line(RIGHT_X + 20, -250, CW - 40, "SkaldBody", "CENTER", muted)
+    emptyHint:SetWordWrap(true)
+    emptyHint:SetText(UI.EMPTY_HINT)
+    emptyHint:Hide()
 
     -- the right page: one row per field, then the newest matches (a click opens the page in the book)
     local fieldRows = {}
@@ -284,6 +307,8 @@ local function BuildTab(panel)
         local data = P.Data()
         local none = data.total == 0
         empty:SetShown(none)
+        emptySeal:SetShown(none)
+        emptyHint:SetShown(none)
         for _, fs in ipairs({ matches, wonLine, lostLine, rate, honor }) do fs:SetShown(not none) end
         barBack:SetShown(not none)
         barWon:SetShown(not none)
