@@ -3577,6 +3577,22 @@ RES = (none and shown and emptyOk and off and counted and auto and probe and Ska
   or ("none=" .. tostring(none) .. " shown=" .. tostring(shown) .. " empty=" .. tostring(emptyOk) .. " off=" .. tostring(off) .. " counted=" .. tostring(counted) .. " auto=" .. tostring(auto) .. " probe=" .. tostring(probe) .. " err=" .. tostring(SkaldDB.errors and SkaldDB.errors[1]))`,
 });
 
+run('/skald pvp demo draws the tab with example numbers, writes nothing in the diary, and leaving it puts the tab as it was', {
+  body: `local before = ns.Pvp.Wanted()
+local entriesBefore, statsBefore = #SkaldCharDB.entries, SkaldCharDB.stats.bgFields
+SlashCmdList.SKALD("pvp demo")
+local tab = btn("PvP")
+local on = ns.Pvp.demo == true and tab ~= nil and tab:IsShown()
+local d = ns.Pvp.Data()
+local sample = d.total > 10 and #d.fields >= 3 and #ns.Pvp.Recent() == 5 and ns.Pvp.HonorableKills() == 1234
+tab._OnClick(tab); ns.Pvp.refresh()
+local clean = #SkaldCharDB.entries == entriesBefore and SkaldCharDB.stats.bgFields == statsBefore
+SlashCmdList.SKALD("pvp demo")
+local off = ns.Pvp.demo == nil and ns.Pvp.Wanted() == before and not tab:IsShown() and ns.Pvp.Data().total == 0
+RES = (before == false and on and sample and clean and off and SkaldDB.errors == nil) and "ok"
+  or ("before=" .. tostring(before) .. " on=" .. tostring(on) .. " sample=" .. tostring(sample) .. " clean=" .. tostring(clean) .. " off=" .. tostring(off) .. " err=" .. tostring(SkaldDB.errors and SkaldDB.errors[1]))`,
+});
+
 run('the PvP tab never shows a number the game does not give: the honorable kills come only from the lifetime count of the game, and without it the line is empty', {
   pre: `function GetPVPLifetimeStats() return 1234, 5, 0 end`,
   body: `local with = ns.Pvp.HonorableKills()

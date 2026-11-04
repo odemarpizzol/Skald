@@ -23,7 +23,8 @@ local UI_TEXT = {
         REC = "%d won, %d lost", WON_TAG = "won", LOST_TAG = "lost", DATE = "%m/%d/%Y",
         WORLD = "The open world is not told here: the game does not say, in a way I can trust, who struck the last blow.",
         ON = "the PvP tab is always shown on this realm.", OFF = "the PvP tab is hidden on this realm.",
-        AUTO = "on this realm the PvP tab shows itself once a battleground is written.", USAGE = "/skald pvp on | off | auto",
+        AUTO = "on this realm the PvP tab shows itself once a battleground is written.", USAGE = "/skald pvp on | off | auto | demo",
+        DEMO_ON = "preview with example numbers: nothing is written in the diary. Type /skald pvp demo again to leave it.", DEMO_OFF = "preview ended.", DEMO_NOTE = "Example numbers, not yours",
         PROBE_HEAD = "Realm and PvP, as this client answers (run it on the realm you want to know):",
         PROBE_FLAG = "marked for PvP: %s", PROBE_ZONE = "this land's PvP status: %s",
         PROBE_NAMES = "calls and tables of the client with realm, pvp or ruleset in the name: %s",
@@ -38,7 +39,8 @@ local UI_TEXT = {
         REC = "%d vencidos, %d perdidos", WON_TAG = "vitória", LOST_TAG = "derrota", DATE = "%d/%m/%Y",
         WORLD = "O mundo aberto não é contado aqui: o jogo não diz, de um jeito em que eu possa confiar, quem deu o golpe final.",
         ON = "a aba JxJ fica sempre visível neste reino.", OFF = "a aba JxJ fica escondida neste reino.",
-        AUTO = "neste reino a aba JxJ aparece quando um campo de batalha for escrito.", USAGE = "/skald pvp on | off | auto",
+        AUTO = "neste reino a aba JxJ aparece quando um campo de batalha for escrito.", USAGE = "/skald pvp on | off | auto | demo",
+        DEMO_ON = "prévia com números de exemplo: nada é escrito no diário. Digite /skald pvp demo de novo para sair.", DEMO_OFF = "prévia encerrada.", DEMO_NOTE = "Números de exemplo, não são seus",
         PROBE_HEAD = "Reino e JxJ, como este cliente responde (rode no reino que você quer conhecer):",
         PROBE_FLAG = "marcado para JxJ: %s", PROBE_ZONE = "estado de JxJ desta terra: %s",
         PROBE_NAMES = "chamadas e tabelas do cliente com realm, pvp ou ruleset no nome: %s",
@@ -53,7 +55,8 @@ local UI_TEXT = {
         REC = "%d gagn\195\169s, %d perdus", WON_TAG = "victoire", LOST_TAG = "d\195\169faite", DATE = "%d/%m/%Y",
         WORLD = "Le monde ouvert n'est pas racont\195\169 ici\194\160: le jeu ne dit pas, de fa\195\167on s\195\187re, qui a port\195\169 le dernier coup.",
         ON = "l'onglet JcJ est toujours montr\195\169 sur ce royaume.", OFF = "l'onglet JcJ est cach\195\169 sur ce royaume.",
-        AUTO = "sur ce royaume l'onglet JcJ appara\195\174t quand un champ de bataille est \195\169crit.", USAGE = "/skald pvp on | off | auto",
+        AUTO = "sur ce royaume l'onglet JcJ appara\195\174t quand un champ de bataille est \195\169crit.", USAGE = "/skald pvp on | off | auto | demo",
+        DEMO_ON = "aper\195\167u avec des chiffres d'exemple\194\160: rien n'est \195\169crit dans le journal. Tapez /skald pvp demo \195\160 nouveau pour le quitter.", DEMO_OFF = "aper\195\167u termin\195\169.", DEMO_NOTE = "Chiffres d'exemple, pas les v\195\180tres",
         PROBE_HEAD = "Royaume et JcJ, comme ce client r\195\169pond (lancez-le sur le royaume que vous voulez conna\195\174tre)\194\160:",
         PROBE_FLAG = "marqu\195\169 pour le JcJ\194\160: %s", PROBE_ZONE = "\195\169tat JcJ de cette terre\194\160: %s",
         PROBE_NAMES = "appels et tables du client avec realm, pvp ou ruleset dans le nom\194\160: %s",
@@ -71,7 +74,38 @@ P.RECENT_ROWS, P.FIELD_ROWS = 5, 6
 -- The battlegrounds of the diary, by field: { label, won, lost } for each, the busiest first, and the totals. The count
 -- is the permanent one (stats.bgFields); a field told before its id was kept is listed by the name it was written with,
 -- and two keys that end up with the same name in this language become one row.
+-- /skald pvp demo: the tab drawn with example numbers, to see how it looks before a battleground is fought. The
+-- numbers are made here and shown only; nothing is written in the diary, and it ends with the session.
+local function Zone(id, fallback)
+    if GetRealZoneText then
+        local ok, name = pcall(GetRealZoneText, id)
+        if ok and type(name) == "string" and name ~= "" then return name end
+    end
+    return fallback
+end
+function P.Sample()
+    local fields = {
+        { label = Zone(489, "Warsong Gulch"), won = 9, lost = 5 },
+        { label = Zone(529, "Arathi Basin"), won = 6, lost = 4 },
+        { label = Zone(30, "Alterac Valley"), won = 3, lost = 2 },
+        { label = Zone(566, "Eye of the Storm"), won = 2, lost = 3 },
+    }
+    local won, lost = 0, 0
+    for _, f in ipairs(fields) do won, lost = won + f.won, lost + f.lost end
+    return { fields = fields, won = won, lost = lost, total = won + lost }
+end
+function P.SampleRecent()
+    local now = time()
+    local out = {}
+    for i, row in ipairs({ { 489, "Warsong Gulch", true }, { 529, "Arathi Basin", false }, { 489, "Warsong Gulch", true },
+        { 30, "Alterac Valley", true }, { 566, "Eye of the Storm", false } }) do
+        out[i] = { kind = "bg", t = now - i * 86400, arg = Zone(row[1], row[2]), won = row[3], sample = true }
+    end
+    return out
+end
+
 function P.Data()
+    if P.demo then return P.Sample() end
     local db = SkaldCharDB
     local fields = db and db.stats and db.stats.bgFields
     local byLabel, order = {}, {}
@@ -106,6 +140,7 @@ end
 
 -- The newest matches (pages of kind "bg"), at most `limit`.
 function P.Recent(limit)
+    if P.demo then return P.SampleRecent() end
     local entries = SkaldCharDB and SkaldCharDB.entries
     local out = {}
     if not entries then return out end
@@ -122,6 +157,7 @@ end
 -- Nothing is shown when it does not answer with a number. (The achievement statistic 588 may hold it in Forever: not
 -- used until a probe in the game confirms the id.)
 function P.HonorableKills()
+    if P.demo then return 1234 end
     if GetPVPLifetimeStats then
         local ok, hk = pcall(GetPVPLifetimeStats)
         if ok and type(hk) == "number" and hk == hk then return hk end
@@ -145,6 +181,7 @@ local function SetSetting(v)
     SkaldDB.pvpTab[Realm()] = v
 end
 function P.Wanted()
+    if P.demo then return true end
     local setting = Setting()
     if setting == false then return false end
     if setting == true then return true end
@@ -169,6 +206,13 @@ end
 -- /skald pvp [on|off|auto]: the lines to say.
 function P.Command(arg)
     arg = tostring(arg or ""):lower()
+    if arg == "demo" then
+        P.demo = not P.demo or nil
+        P.Ensure()
+        if P.demo and SkaldAPI.OpenSection then SkaldAPI.OpenSection(P.TAB_ID) end
+        if P.refresh then pcall(P.refresh) end
+        return { P.demo and UI.DEMO_ON or UI.DEMO_OFF }
+    end
     if arg == "on" then SetSetting(true); P.Ensure(); return { UI.ON }
     elseif arg == "off" then SetSetting(false); P.Ensure(); return { UI.OFF }
     elseif arg == "auto" then SetSetting(nil); P.Ensure(); return { UI.AUTO }
@@ -233,6 +277,9 @@ local function BuildTab(panel)
     end
 
     -- the left page: the totals, a bar of won against lost, the game's own count and the word about the open world
+    local demoNote = Line(0, -44, CW, "SkaldSmall", "CENTER", head)
+    demoNote:SetText(UI.DEMO_NOTE)
+    demoNote:Hide()
     local matches = Line(0, -60, CW, "SkaldBody")
     local wonLine = Line(0, -86, CW, "SkaldBody")
     local lostLine = Line(0, -108, CW, "SkaldBody")
@@ -307,6 +354,7 @@ local function BuildTab(panel)
         local data = P.Data()
         local none = data.total == 0
         empty:SetShown(none)
+        demoNote:SetShown(P.demo == true)
         emptySeal:SetShown(none)
         emptyHint:SetShown(none)
         for _, fs in ipairs({ matches, wonLine, lostLine, rate, honor }) do fs:SetShown(not none) end
@@ -331,7 +379,7 @@ local function BuildTab(panel)
         local recent = P.Recent()
         for i, row in ipairs(recentRows) do
             local e = recent[i]
-            row.entry = e
+            row.entry = e and not e.sample and e or nil   -- an example page is not in the book
             if e then
                 row.mark:SetTexture(TEX .. (e.won and "pvp_won" or "pvp_lost"))
                 row.date:SetText(e.t and date(UI.DATE, e.t) or "")

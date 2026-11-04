@@ -285,6 +285,7 @@
   "pcall",
   "string",
   "table",
+  "time",
   "tonumber",
   "tostring",
   "type"
