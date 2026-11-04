@@ -21,7 +21,7 @@ local UI_TEXT = {
         EMPTY = "No battleground yet. The first one will be written here.",
         EMPTY_HINT = "Each match, won or lost, will be marked here, field by field.",
         REC = "%d won, %d lost", WON_TAG = "won", LOST_TAG = "lost", DATE = "%m/%d/%Y",
-        WORLD = "The open world is not told here: the game does not say, in a way I can trust, who struck the last blow.",
+        WORLD = "The open world is not told here yet.",
         ON = "the PvP tab is always shown on this realm.", OFF = "the PvP tab is hidden on this realm.",
         AUTO = "on this realm the PvP tab shows itself once a battleground is written.", USAGE = "/skald pvp on | off | auto | demo",
         DEMO_ON = "preview with example numbers: nothing is written in the diary. Type /skald pvp demo again to leave it.", DEMO_OFF = "preview ended.", DEMO_NOTE = "Example numbers, not yours",
@@ -37,7 +37,7 @@ local UI_TEXT = {
         EMPTY = "Nenhum campo de batalha ainda. O primeiro será escrito aqui.",
         EMPTY_HINT = "Cada partida, vencida ou perdida, será marcada aqui, campo por campo.",
         REC = "%d vencidos, %d perdidos", WON_TAG = "vitória", LOST_TAG = "derrota", DATE = "%d/%m/%Y",
-        WORLD = "O mundo aberto não é contado aqui: o jogo não diz, de um jeito em que eu possa confiar, quem deu o golpe final.",
+        WORLD = "O mundo aberto ainda não é contado aqui.",
         ON = "a aba JxJ fica sempre visível neste reino.", OFF = "a aba JxJ fica escondida neste reino.",
         AUTO = "neste reino a aba JxJ aparece quando um campo de batalha for escrito.", USAGE = "/skald pvp on | off | auto | demo",
         DEMO_ON = "prévia com números de exemplo: nada é escrito no diário. Digite /skald pvp demo de novo para sair.", DEMO_OFF = "prévia encerrada.", DEMO_NOTE = "Números de exemplo, não são seus",
@@ -53,7 +53,7 @@ local UI_TEXT = {
         EMPTY = "Pas encore de champ de bataille. Le premier sera \195\169crit ici.",
         EMPTY_HINT = "Chaque partie, gagn\195\169e ou perdue, sera marqu\195\169e ici, champ par champ.",
         REC = "%d gagn\195\169s, %d perdus", WON_TAG = "victoire", LOST_TAG = "d\195\169faite", DATE = "%d/%m/%Y",
-        WORLD = "Le monde ouvert n'est pas racont\195\169 ici\194\160: le jeu ne dit pas, de fa\195\167on s\195\187re, qui a port\195\169 le dernier coup.",
+        WORLD = "Le monde ouvert n'est pas encore racont\195\169 ici.",
         ON = "l'onglet JcJ est toujours montr\195\169 sur ce royaume.", OFF = "l'onglet JcJ est cach\195\169 sur ce royaume.",
         AUTO = "sur ce royaume l'onglet JcJ appara\195\174t quand un champ de bataille est \195\169crit.", USAGE = "/skald pvp on | off | auto | demo",
         DEMO_ON = "aper\195\167u avec des chiffres d'exemple\194\160: rien n'est \195\169crit dans le journal. Tapez /skald pvp demo \195\160 nouveau pour le quitter.", DEMO_OFF = "aper\195\167u termin\195\169.", DEMO_NOTE = "Chiffres d'exemple, pas les v\195\180tres",
@@ -281,8 +281,17 @@ local function BuildTab(panel)
     demoNote:SetText(UI.DEMO_NOTE)
     demoNote:Hide()
     local matches = Line(0, -72, CW, "SkaldBody")
-    local wonLine = Line(0, -98, CW, "SkaldBody")
-    local lostLine = Line(0, -120, CW, "SkaldBody")
+    local wonLine = Line(18, -98, CW - 18, "SkaldBody")
+    local lostLine = Line(18, -120, CW - 18, "SkaldBody")
+    -- the colours of the bar, named where the numbers are
+    local wonKey = panel:CreateTexture(nil, "OVERLAY")
+    wonKey:SetSize(11, 11)
+    wonKey:SetPoint("TOPLEFT", 0, -102)
+    wonKey:SetColorTexture(0.25, 0.42, 0.20, 0.85)
+    local lostKey = panel:CreateTexture(nil, "OVERLAY")
+    lostKey:SetSize(11, 11)
+    lostKey:SetPoint("TOPLEFT", 0, -124)
+    lostKey:SetColorTexture(0.43, 0.12, 0.10, 0.55)
     local rate = Line(0, -146, CW, "SkaldBody", "LEFT", head)
     local barBack = panel:CreateTexture(nil, "ARTWORK")
     barBack:SetPoint("TOPLEFT", 0, -176)
@@ -358,6 +367,8 @@ local function BuildTab(panel)
         emptySeal:SetShown(none)
         emptyHint:SetShown(none)
         for _, fs in ipairs({ matches, wonLine, lostLine, rate, honor }) do fs:SetShown(not none) end
+        wonKey:SetShown(not none)
+        lostKey:SetShown(not none)
         barBack:SetShown(not none)
         barWon:SetShown(not none)
         recentHead:SetShown(not none)
