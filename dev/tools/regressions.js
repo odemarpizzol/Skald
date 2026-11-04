@@ -2027,7 +2027,7 @@ run('the Cartographer tab opens, shows the maps in colour where the diary has se
   pre: SAVED('{}', 'version = 99, goalsInit = true, goalsVer = 3, goals = {}, stats = { counts = {}, deathZones = {}, tiers = {}, played = 1, first = 1 }'),
   body: `C_Map.GetMapInfo = function(id) return { name = "Land " .. id, mapType = 3, parentMapID = 0 } end
 SkaldCharDB.visitedMaps = { ["map:1429"] = true, ["map:1426"] = true, ["map:7"] = true }
-local tab = btn("Cartographer")
+local tab = btn("Charts")
 if not tab then RES = "no Cartographer tab" else
   tab._OnClick(tab)
   local list = ns.Cartographer.List()
