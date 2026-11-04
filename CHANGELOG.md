@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.49.1-beta
+
+- Map art: Stormwind now has the sea and the harbour on its left, as in the game, and the maps of Molten Core, Onyxia, the Ruins of Ahn'Qiraj and Scholomance lost some stray transparency
+
 ## 0.49.0-beta
 
 - **PvP** tab (JxJ in Portuguese, JcJ in French): a war chronicle of your battlegrounds, with the victories and defeats in all and by field, the newest matches (a click opens the page in the book), a line of the diary that moves on with each match and the game's own count of honorable kills when the client keeps one. It shows itself once a battleground is written, on any type of realm; `/skald pvp on|off|auto` decides it for the realm you are on, at once. `/skald pvp demo` draws it with example numbers, to see it before a match. The open world and arenas are not told yet; `/skald probe realm` lists what the client says about the realm, for the next step
