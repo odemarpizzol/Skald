@@ -4001,6 +4001,34 @@ RES = (freshOk and first == "level:2 level:3 level:4 quest:A quest level:5" and 
   and SkaldCharDB.stats.counts.level == 4) and "ok" or ("freshOk=" .. tostring(freshOk) .. " seq=" .. first .. " | " .. table.concat(again, " ") .. " counts=" .. tostring(SkaldCharDB.stats.counts.level))`,
 });
 
+run('the line that sets the scene is not the same for two pages of one evening (same phrase index, other minute)', {
+  body: `SkaldDB.tone = "kin"
+local seen, n = {}, 0
+for i = 0, 9 do
+  local text = SkaldAPI.Render({ kind = "level", arg = "5", idx = 5, hr = 18, t = 1793000000 + i * 600, race = "NoSuchRace" })
+  local scene
+  for _, l in ipairs(ns.LOCALES.enUS.AMBIENT.dusk) do if text:find(l, 1, true) then scene = l end end
+  if scene and not seen[scene] then seen[scene] = true; n = n + 1 end
+end
+RES = (#ns.LOCALES.enUS.AMBIENT.dusk >= 8 and n >= 4) and "ok" or ("pool " .. #ns.LOCALES.enUS.AMBIENT.dusk .. ", distinct lines in ten pages: " .. n)`,
+});
+
+run('a standing or a pet already there in the first minutes of a diary is marked quietly; one earned later is written', {
+  body: `local db = SkaldCharDB
+function UnitLevel(u) return u == "player" and 2 or nil end
+local before = count("goal")
+db.stats.first = NOW - 300
+db.rep = { Darnassus = 5 }
+ns.CheckGoals()
+local quiet = db.goals.repFriendly and db.goals.repFriendly.retro == true and count("goal") == before
+NOW = NOW + 3600
+db.rep.Darnassus = 6
+ns.CheckGoals()
+function UnitLevel(u) return u == "player" and 12 or nil end
+local later = db.goals.repHonored and not db.goals.repHonored.retro and count("goal") == before + 1
+RES = (quiet and later) and "ok" or ("quiet=" .. tostring(quiet) .. " later=" .. tostring(later) .. " goals=" .. (count("goal") - before))`,
+});
+
 run('/skald probe maps inside an instance says what the game calls it and its id', {
   body: `function IsInInstance() return true, "party" end
 function GetInstanceInfo() return "The Deadmines", "party", 1, "Normal", 5, 0, false, 36 end

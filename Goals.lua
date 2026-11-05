@@ -389,6 +389,13 @@ local function Check()
             -- a goal that came with a later version of the list is marked quietly the first time it is looked at;
             -- so is a collection the first time the journal is read (what was owned before the diary is no feat of today)
             local quiet = silent or seenVersion < (g.since or 1) or (g.coll and not db.collInit)
+            -- a standing or a pet the game gave at the start (a night elf is Friendly with Darnassus from the first day)
+            -- is read a few minutes after the first page: it is no feat of the diary
+            if not quiet and (g.cat == "collection" or g.cat == "renown") and db.stats and db.stats.first
+                and time() - db.stats.first < 900 then
+                local okLevel, level = pcall(UnitLevel, "player")   -- only a new character: not one that began the diary at level 40
+                if okLevel and type(level) == "number" and level <= 5 then quiet = true end
+            end
             db.goals[g.id] = { t = time(), retro = quiet or nil }
             if not quiet then
                 SkaldAPI.AddEntry("goal", g.id, nil, { tier = g.tier, m = false, x = false, y = false })

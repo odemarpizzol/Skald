@@ -6,3 +6,5 @@
 - Keep kill deltas across zone/loading boundaries unassigned instead of attributing them to the arrival zone; start a fresh sampling baseline each session.
 - Record character identity and language on each new lore capture, preserve separate captures across characters, and identify legacy captures with unknown ownership in lore exports.
 - Split the work after login into small steps (one task per turn, paused in combat, never blocking the recording of events) so the game does not stall when the diary starts.
+- Tell the light of the hour with eight lines instead of three, drawn by the minute as well as by the phrase, so one evening does not repeat the same scene.
+- A standing or a companion a new character already has in its first minutes (a night elf Friendly with its capital) no longer writes a page for a goal.

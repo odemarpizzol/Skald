@@ -1094,7 +1094,10 @@ Extras = function(e, base)
     end
     if type(e.hr) == "number" and idx % 2 == 1 and L.AMBIENT and not K.NamesTimeOfDay(base) then
         local list = L.AMBIENT[PartOfDay(e.hr)]
-        if list then out = out .. " " .. list[idx % #list + 1] end
+        if list then
+            -- by the minute as well as the phrase: two pages with the same index do not tell the same light
+            out = out .. " " .. list[(idx * 7 + math.floor((e.t or 0) / 60)) % #list + 1]
+        end
     end
     if e.kind == "tame" and L.PET_FAMILY then
         -- the family as the record of the pet has it now (it is read again in the client's language)
