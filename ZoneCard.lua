@@ -117,6 +117,10 @@ ZC.ART = {
     [1458] = "map_undercity",
     [1954] = "map_silvermoon",
     [1955] = "map_shattrath",
+    -- lands the Forever client has and the Classic ones do not (the ids and names come from the client itself)
+    [2482] = "map_hyjal",
+    [2652] = "map_shendralas",
+    [2548] = "map_riverpaths",
 }
 -- How the map of the zone sits on the page: it is a drawing of the old kind, not a window. The unfound part is faint (the
 -- ink of the map, thin on the paper), the regions found are darker, and the borders fade into the paper in steps (no frame).

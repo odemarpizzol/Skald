@@ -2232,6 +2232,19 @@ end
 RES = ok and "ok" or "one or more Burning Crusade maps missing"`,
 });
 
+run('the lands of the Forever client resolve to their custom art', {
+  pre: SAVED('{}', 'version = 99, goalsInit = true, goalsVer = 3, goals = {}, stats = { counts = {}, deathZones = {}, tiers = {}, played = 1, first = 1 }'),
+  body: ZONE_STUBS + '\n' + ZONE_ART + `
+local maps = { [2482] = "map_hyjal", [2652] = "map_shendralas", [2548] = "map_riverpaths" }
+local card = ns.ZoneCard.Build(UIParent, 342)
+local ok = true
+for id, name in pairs(maps) do
+  card:Set(id)
+  if #card.tiles ~= 1 or not card.tiles[1]._tex or not card.tiles[1]._tex:find(name, 1, true) then ok = false; break end
+end
+RES = ok and "ok" or "one or more Forever lands missing"`,
+});
+
 run('all capital maps resolve to their custom art', {
   pre: SAVED('{}', 'version = 99, goalsInit = true, goalsVer = 3, goals = {}, stats = { counts = {}, deathZones = {}, tiers = {}, played = 1, first = 1 }'),
   body: ZONE_STUBS + '\n' + ZONE_ART + `
