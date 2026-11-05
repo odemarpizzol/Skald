@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.49.3-beta
+
+- Maps of the lands that only the Forever client has, hand-drawn in ink and wash like the others: Mount Hyjal, Shen'dralas and River Paths (the card of the Index and the Cartographer show them there; other clients do not have these lands and leave them out)
+
 ## 0.49.2-beta
 
 - **Saga**: the Epilogue has a page of its own with a closing picture (a road that fades into the hills, a quill left beside it); a chapter alone on its page tells its text above and its picture below, like the Epilogue; the chapters Thrones Toppled, The Falls and Company have an ink sketch of their own, and the scroll sketch is drawn a little smaller
