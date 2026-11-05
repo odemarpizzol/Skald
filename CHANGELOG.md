@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.49.4-beta
+
+- **Levels the game never announced** (a level gained while a quest was handed in, or while the book was not ready) are written afterwards, in their place among the pages, dated to their day and without a notice
+- Four Teldrassil quests (healing, rescue, seed delivery and the hippogryph journey) have stories of their own in English, Portuguese and French; Portuguese grammar: crafting, Eluna's name, the night elf guardian's gender, "ao Terraço"
+- The light of the hour is told with eight lines instead of three and drawn by the minute, so one evening does not repeat the same scene
+- A standing or a companion a new character already has in its first minutes no longer writes a page for a goal
+- The work after login is split into small steps (one task per turn, paused in combat, never delaying the recording of events), so the game stalls less when the diary starts
+- Goals prefer the game's own kill counter over XP estimates; daily kill totals that are estimates say so; kills across zone or loading boundaries are no longer given to the zone of arrival; lore captures keep the character and the language
+
 ## 0.49.3-beta
 
 - Maps of the lands that only the Forever client has, hand-drawn in ink and wash like the others: Mount Hyjal, Shen'dralas and River Paths (the card of the Index and the Cartographer show them there; other clients do not have these lands and leave them out)
