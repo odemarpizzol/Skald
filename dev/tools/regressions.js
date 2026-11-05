@@ -57,6 +57,45 @@ const SAVED = (entries, extra = '') => `SkaldCharDB = { entries = ${entries}, vi
 
 console.log('Regressions');
 
+// Real diary findings: Aelyndra, Forever, 2026-11-05. No private saved data in fixtures.
+for (const loc of ['ptBR', 'enUS', 'frFR']) {
+  run('Aelyndra quest stories override old misleading types and racial flavours: ' + loc, {
+    pre: `__locale="${loc}"; function UnitSex() return 3 end`,
+    body: `local expected = {
+      ptBR = { [5621]="curei", [99053]="resgate", [922]="semente", [6342]="hipogrifo" },
+      enUS = { [5621]="healed", [99053]="rescue", [922]="seed", [6342]="hippogryph" },
+      frFR = { [5621]="soigné", [99053]="secours", [922]="graine", [6342]="hippogriffe" }
+    }
+    for id, word in pairs(expected[GetLocale()]) do
+      for _, flavour in ipairs({false, "race_NightElf_quest"}) do
+        local e = {kind="quest", q=id, arg="Saved quest title", npc="Saved NPC", qtype="fight", idx=38, fl=flavour or nil, tier=1}
+        local t = SkaldAPI.Render(e)
+        assert(t:find(word, 1, true), id .. ": " .. t)
+        assert(t:find("Saved quest title", 1, true) and not t:find("{", 1, true), t)
+        assert(e.qtype == "fight" and e.idx == 38 and e.tier == 1, "saved event changed")
+        assert(not ns.CURATED[id].tier, "story must not promote quest rarity")
+      end
+    end
+    RES="ok"`,
+  });
+}
+run('Aelyndra Portuguese grammar, female guardian, Eluna and terrace article', {
+  pre: `__locale="ptBR"; function UnitSex() return 3 end`,
+  body: `local skill=SkaldAPI.Render({kind="skill",arg="Esfolamento 75",idx=1})
+    assert(skill:find("como eu o moldo",1,true),skill)
+    local quest={kind="quest",arg="Carrancarvalho",fl="race_NightElf_quest",idx=11}
+    local female=SkaldAPI.Render(quest)
+    assert(female:find("Uma guardiã",1,true),female)
+    function UnitSex() return 2 end
+    local male=SkaldAPI.Render(quest)
+    assert(male:find("Um guardião",1,true),male)
+    local death=SkaldAPI.Render({kind="death",arg="Teldrassil",fl="race_NightElf_death",idx=1})
+    assert(death:find("Eluna",1,true) and not death:find("Elune",1,true),death)
+    local hearth=SkaldAPI.Render({kind="hearth",arg="Terraço dos Artesãos",fl="race_NightElf_hearth",idx=6})
+    assert(hearth:find("ao Terraço dos Artesãos",1,true),hearth)
+    RES="ok"`,
+});
+
 run('changing the language does not write the professions again', {
   pre: `${SAVED('{}', 'skills = { ["Culinária"] = 0, ["Pesca"] = 0 }, skillsInit = true')}
 function GetProfessions() return 1, 2 end
@@ -836,7 +875,8 @@ run('the summary of a region counts what the diary holds there', {
   { t = 1792000400, kind = "level", zone = "Darkshore", zm = 1439, idx = 1, arg = 12 },
   { t = 1792000500, kind = "loot", zone = "Darkshore", zm = 1439, idx = 1, arg = "z", fav = true },
   { t = 1792000600, kind = "quest", zone = "Elsewhere", zm = 999, idx = 1, tier = 1, arg = "c" },
-}`),
+}`) + `
+function UnitLevel() return 12 end   -- the character is at the level of its last level page: nothing is caught up`,
   body: `local z = SkaldAPI.RegionStats(SkaldAPI.ZoneIdOfMap(1439))
 RES = (z and z.quest == 2 and z.death == 1 and z.boss == 1 and z.level == 1 and z.loot == 1 and z.fav == 1 and z.first == 1792000000)
   and "ok" or "counts are wrong"`,
@@ -3809,6 +3849,26 @@ SlashCmdList.SKALD("perf")
 local said = table.concat(print_out, "\\n")
 RES = (said:find("perf: client", 1, true) and said:find("quest index", 1, true) and (SkaldDB.errors == nil)) and "ok"
   or ("said: " .. said .. " errors: " .. tostring(SkaldDB.errors and SkaldDB.errors[1]))`,
+});
+
+run('a level the game never told (levels 3 and 4 missed) is written afterwards, in its place, once, with no notice', {
+  body: `local E = SkaldCharDB.entries
+local fresh = #E
+function UnitLevel() return 5 end; pcall(ns.CatchUpLevels)
+local freshOk = (#E == fresh)   -- a diary with no level page yet writes nothing back
+function UnitLevel() return 2 end; fire("PLAYER_LEVEL_UP", 2); runTimers()
+table.insert(E, { t = NOW + 10, zone = "Teldrassil", kind = "quest", arg = "A quest", pl = 4, tier = 1, idx = 1 })
+local toasts = 0
+local before = SkaldAPI.entryHook
+function UnitLevel() return 5 end; fire("PLAYER_LEVEL_UP", 5); runTimers()
+local seq = {}
+for _, e in ipairs(E) do if e.kind == "level" or e.kind == "quest" then seq[#seq + 1] = e.kind .. ":" .. tostring(e.arg) end end
+local first = table.concat(seq, " ")
+ns.CatchUpLevels(); ns.CatchUpLevels()
+local again = {}
+for _, e in ipairs(E) do if e.kind == "level" or e.kind == "quest" then again[#again + 1] = e.kind .. ":" .. tostring(e.arg) end end
+RES = (freshOk and first == "level:2 level:3 level:4 quest:A quest level:5" and table.concat(again, " ") == first
+  and SkaldCharDB.stats.counts.level == 4) and "ok" or ("freshOk=" .. tostring(freshOk) .. " seq=" .. first .. " | " .. table.concat(again, " ") .. " counts=" .. tostring(SkaldCharDB.stats.counts.level))`,
 });
 
 run('/skald probe maps inside an instance says what the game calls it and its id', {

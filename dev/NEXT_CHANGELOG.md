@@ -1,0 +1,3 @@
+- Tell the healing, rescue, seed delivery and hippogryph journey in four Teldrassil quests with dedicated stories in English, Portuguese and French, including existing diary pages.
+- Fix Portuguese crafting grammar, Eluna's name, the night elf guardian's gender and the article for Terraço place names.
+- Write the level pages the game never announced (a level gained while a quest was handed in, or while the book was not ready) afterwards, in their place among the pages and without a notice.

@@ -3623,7 +3623,7 @@ ns.LOCALES = {
                 "Os antigos chamariam \"%s\" de um instante; eu conto como um passo.",
                 "\"%s\" está feita. A floresta anotou, e a floresta anota pouco.",
                 "Terminei \"%s\" como a lua termina uma noite: sem pressa.",
-                "Um guardião responde ao que lhe pedem. \"%s\" foi pedida.",
+                "{g:Um guardião|Uma guardiã} responde ao que lhe pedem. Cumpri minha parte em \"%s\".",
                 "Eluna viu \"%s\" acabar e não desviou o olhar.",
                 "As árvores antigas chamariam \"%s\" de um batimento. Eu chamo de tarefa bem feita.",
                 "Fiz \"%s\" em silêncio, como as Sentinelas, e a relva esqueceu meus passos.",
@@ -4626,7 +4626,7 @@ ns.LOCALES = {
                 "\"%s\": mais uma linha numa saga muito longa.",
             },
             skill = {
-                "Minha maestria cresce: %s. O ofício me molda como eu o molda.",
+                "Minha maestria cresce: %s. O ofício me molda como eu o moldo.",
                 "%s. Mãos que antes tropeçavam agora conhecem o trabalho.",
                 "Paciência e prática: %s. Até o ofício é uma forma de heroísmo.",
                 "Meu ofício deu mais um passo: %s.",
@@ -5290,7 +5290,7 @@ ns.LOCALES = {
                 "Em %s de novo. A noite será gentil.",
             },
             race_NightElf_death = {
-                "Em %s caí. Elune logo vai me ter de volta.",
+                "Em %s caí. Eluna logo vai me ter de volta.",
                 "Até um elfo da noite perde o caminho em %s. Não duas vezes.",
                 "Caí em %s. A lua não tem pressa, e eu também não tive.",
                 "Em %s as sombras não eram minhas, para variar.",

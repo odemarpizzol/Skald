@@ -489,7 +489,7 @@ local function AddEntry(kind, arg, zone, extra)
     stats.first = stats.first or db.entries[1].t
     if kind ~= "day" then BumpDay(kind, where) end
 
-    if Notify then Notify(entry) end
+    if Notify and not K.quietAdd then Notify(entry) end
     if SkaldAPI.entryHook then SkaldAPI.entryHook(kind) end
     if window and window:IsShown() then
         window:Refresh()
@@ -1148,7 +1148,7 @@ end
 -- and number when it is a noun of a place; any other name (Durotar, Orgrimmar, Ventobravo, "As Minas Mortas") is left as it is.
 K.PLACE_NOUNS = {
     f = "Ilha Floresta Costa Planície Península Baía Ponte Cidade Fortaleza Aldeia Vila Torre Caverna Gruta Cratera Praia Região Passagem Garganta Bacia Clareira Estrada Colina Montanha Serra Cordilheira Terra Mina Cripta Ruína Selva Fonte Nascente Ravina Abadia Praça Câmara Ponta Enseada Represa Savana Tundra Pradaria Baixada Encosta Escarpa Lagoa Geleira Caldeira",
-    m = "Vale Lago Pântano Deserto Monte Bosque Porto Forte Ponto Campo Rio Mar Passo Covil Acampamento Posto Santuário Templo Palácio Castelo Reduto Entreposto Mirante Barranco Desfiladeiro Abismo Altiplano Planalto Cânion Poço Jardim Cemitério Mosteiro Salão Pico Bastião Cume Istmo Rochedo Penhasco Túnel Orfanato Vulcão Lamaçal",
+    m = "Terraço Vale Lago Pântano Deserto Monte Bosque Porto Forte Ponto Campo Rio Mar Passo Covil Acampamento Posto Santuário Templo Palácio Castelo Reduto Entreposto Mirante Barranco Desfiladeiro Abismo Altiplano Planalto Cânion Poço Jardim Cemitério Mosteiro Salão Pico Bastião Cume Istmo Rochedo Penhasco Túnel Orfanato Vulcão Lamaçal",
     fp = "Planícies Colinas Montanhas Terras Ruínas Cavernas Minas Catacumbas Profundezas Cataratas Ilhas Florestas Costas Cordilheiras Pradarias Gargantas Fontes Torres Passagens Savanas Geleiras",
     mp = "Pântanos Montes Campos Picos Bosques Vales Lagos Desertos Salões Túneis Penhascos Bastiões Desfiladeiros",
 }
@@ -6617,6 +6617,7 @@ H.PLAYER_LOGIN = function(self, event, ...)
         Mile.Timed("CheckReputation", CheckReputation)
         Mile.Timed("CheckMarks", CheckMarks)
         Mile.Timed("CheckPet", Mile.CheckPet)
+        Mile.Timed("CatchUpLevels", Mile.CatchUpLevels)
         Mile.Timed("NoteBirthplace", Mile.NoteBirthplace)
         Mile.Timed("CheckMounts", Mile.CheckMounts)
         C_Timer.After(25, function() pcall(Mile.NoteBirthplace) end)   -- the game may still answer with the continent
@@ -6807,12 +6808,75 @@ H.QUEST_TURNED_IN = function(self, event, ...)
     else
         CountOnly("quest", tier)
     end
+    -- a level gained with this quest whose event never came is written a few seconds later
+    if C_Timer and C_Timer.After then C_Timer.After(4, function() pcall(Mile.CatchUpLevels) end) end
     pendingQuestTitle, pendingNPC, pendingQuestLevel = nil, nil, nil
     ns.pendingObjective = nil
     if Journal() and Journal().questObj then Journal().questObj[questID] = nil end
     pendingObjectiveTypes = nil
     Mile.npcId = nil
 end
+
+-- A level the game never told us about (the event did not come, or came while the book was not ready) is written
+-- afterwards, in its place among the pages and without a notice. Only holes between the lowest level page the diary
+-- has and the level now: a diary that began at level 40 does not write thirty-nine pages. Once the diary has
+-- reached the cap, older pages may have gone, so only what is above the highest level page is looked at.
+Mile.CatchUpLevels = function()
+    local db = Journal()
+    if not (db and db.entries and UnitLevel) then return end
+    local cur = UnitLevel()
+    if type(cur) ~= "number" or cur < 2 then return end
+    local have, lo, hi = {}, nil, nil
+    for _, e in ipairs(db.entries) do
+        if (e.kind == "level" or e.kind == "milestone") and type(e.arg) == "number" then
+            have[e.arg] = true
+            if not lo or e.arg < lo then lo = e.arg end
+            if not hi or e.arg > hi then hi = e.arg end
+        end
+    end
+    if not lo then return end
+    if #db.entries >= MAX_ENTRIES then lo = hi end
+    local added = 0
+    for level = lo + 1, cur do
+        if not have[level] and added < 20 then
+            local entries = db.entries
+            local n0 = #entries
+            K.quietAdd = true
+            pcall(AddEntry, (level % 10 == 0) and "milestone" or "level", level)
+            K.quietAdd = false
+            if #entries == n0 + 1 then
+                added = added + 1
+                local entry = table.remove(entries)
+                -- after the highest lower level page, before the first page that was told at this level or above
+                local from, lower = 0, -1
+                for i, e in ipairs(entries) do
+                    if (e.kind == "level" or e.kind == "milestone") and type(e.arg) == "number"
+                        and e.arg < level and e.arg >= lower then from, lower = i, e.arg end
+                end
+                local at
+                for i = from + 1, #entries do
+                    local e = entries[i]
+                    if ((e.kind == "level" or e.kind == "milestone") and type(e.arg) == "number" and e.arg > level)
+                        or (type(e.pl) == "number" and e.pl >= level) then at = i; break end
+                end
+                if at then
+                    local nb = entries[at]
+                    entry.t = math.max((entries[from] and entries[from].t) or 0, (nb.t or entry.t) - 1)
+                    entry.zone, entry.zm, entry.m, entry.ses = nb.zone, nb.zm, nb.m, nb.ses
+                    entry.x, entry.y, entry.hr = false, false, nil
+                    table.insert(entries, at, entry)
+                else
+                    table.insert(entries, entry)
+                end
+            end
+        end
+    end
+    if added > 0 then
+        ns.layoutRev = (ns.layoutRev or 0) + 1
+        if window and window:IsShown() then window:Refresh() end
+    end
+end
+ns.CatchUpLevels = function() return Mile.CatchUpLevels() end
 
 H.PLAYER_LEVEL_UP = function(self, event, ...)
     local level = tonumber((...))
@@ -6821,6 +6885,7 @@ H.PLAYER_LEVEL_UP = function(self, event, ...)
     else
         AddEntry("level", level)
     end
+    pcall(Mile.CatchUpLevels)
     if ready then C_Timer.After(3, function() pcall(Mile.CheckPet) end) end
 end
 
