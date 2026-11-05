@@ -487,7 +487,7 @@ local function AddEntry(kind, arg, zone, extra)
         stats.deathZones[where] = (stats.deathZones[where] or 0) + 1
     end
     stats.first = stats.first or db.entries[1].t
-    if kind ~= "day" then BumpDay(kind, where) end
+    if kind ~= "day" then BumpDay(kind, where, entry.recovered and entry.t) end
 
     if Notify and not K.quietAdd then Notify(entry) end
     if SkaldAPI.entryHook then SkaldAPI.entryHook(kind) end
@@ -610,10 +610,11 @@ local function CloseDay(key)
         -- Creatures: the game's own count over the day when it was read at both ends,
         -- the estimate from XP otherwise.
         local kills = d.k or 0
-        if d.k0 and d.kEnd and d.kEnd >= d.k0 then kills = d.kEnd - d.k0 end
+        local measured = type(d.k0) == "number" and type(d.kEnd) == "number" and d.kEnd >= d.k0
+        if measured then kills = d.kEnd - d.k0 end
         AddEntry("day", key, d.zone or "?", {
             t = d.last or time(), m = false, x = false, y = false,
-            day = { q = d.q, l = d.l, d = d.d, z = d.z, u = d.u, b = d.b, a = d.a, k = kills, s = d.s or 0 },
+            day = { q = d.q, l = d.l, d = d.d, z = d.z, u = d.u, b = d.b, a = d.a, k = kills, kEstimated = not measured, s = d.s or 0 },
         })
     end
 end
@@ -646,9 +647,27 @@ RollDay = function()
     if db.days[today].k0 == nil then db.days[today].k0 = KillStat() or false end
 end
 
-BumpDay = function(kind, where)
+BumpDay = function(kind, where, recoveredAt)
     local db = Journal()
     if not db or not db.days then return end
+    -- A recovered level belongs to its inferred historical date, including an already closed page.
+    if recoveredAt then
+        local key = DayKey(recoveredAt)
+        local d = db.days[key]
+        local closed = false
+        for _, e in ipairs(db.entries) do
+            if e.kind == "day" and e.arg == key and e.day then
+                e.day.l = (e.day.l or 0) + 1
+                closed = true
+            end
+        end
+        -- Do not recreate old day buckets outside the retention window.
+        if d then
+            d.l = (d.l or 0) + 1
+            if closed then d.done = true end
+        end
+        return
+    end
     local d = db.days[db.today or DayKey()]
     if not d then return end
     local field = K.DAY_FIELD[kind]
@@ -897,6 +916,16 @@ local function DayText(e)
     local parts = {}
     for _, item in ipairs(items) do
         local words, n = L.DAY_PARTS[item[1]], item[2]
+        if item[1] == "kills" then
+            local estimated = d.kEstimated
+            if estimated == nil then
+                local log = Journal()
+                local source = log and log.days and log.days[e.arg]
+                estimated = not (source and type(source.k0) == "number" and type(source.kEnd) == "number"
+                    and source.kEnd >= source.k0 and d.k == source.kEnd - source.k0)
+            end
+            if estimated then words = L.DAY_PARTS.killsEstimated end
+        end
         if words and n and n > 0 then
             parts[#parts + 1] = string.format(n == 1 and words[1] or words[2], n)
         end
@@ -1432,7 +1461,7 @@ K.SOUND_CANDIDATES = {
 -- It is set aside with the pages and brought back with them, and emptied with them, so a cleared diary or a new
 -- character with an old name never inherits it.
 K.DIARY_STATE = { "pets", "petNow", "companions", "questObj", "questStart", "visitedMaps", "resume", "attempts",
-    "taxi", "marks", "goals", "goalsInit", "goalsVer", "collInit", "rep", "memoryAt", "recentIdx", "recentPh", "anniv", "zoneKills", "killBase",
+    "taxi", "marks", "goals", "goalsInit", "goalsVer", "collInit", "rep", "memoryAt", "recentIdx", "recentPh", "anniv", "zoneKills", "killBase", "zoneKillsUnassigned",
     "birthMap", "mountSpells" }
 
 local function TakeState(db)
@@ -5520,7 +5549,12 @@ Mile.LoreKeep = function(kind, title, text, extra)
     title, text = LoreText(title), LoreText(text)
     if not title and not text then return end
     local who = LoreText(extra and extra.who)
-    local key = kind .. "|" .. tostring(who) .. "|" .. tostring(title) .. "|" .. tostring(text):sub(1, 100)
+    local guid = LoreText(UnitGUID and UnitGUID("player"))
+    local character = LoreText(UnitName and UnitName("player"))
+    local realm = LoreText(GetRealmName and GetRealmName())
+    local locale = GetLocale()
+    local identity = guid or ((character or "?") .. "-" .. (realm or "?"))
+    local key = identity .. "|" .. tostring(locale) .. "|" .. tostring(extra and extra.q) .. "|" .. kind .. "|" .. tostring(who) .. "|" .. tostring(title) .. "|" .. tostring(text):sub(1, 100)
     if log.seen[key] then return end
     if #log.items >= K.LORE_MAX then
         if not log.full then log.full = true; Say(string.format(L.PROBE_LORE_FULL, K.LORE_MAX)) end
@@ -5529,7 +5563,8 @@ Mile.LoreKeep = function(kind, title, text, extra)
     log.seen[key] = true
     local okR, _, raceFile = pcall(UnitRace, "player")
     local rec = { k = kind, t = time(), z = Safe(GetZoneText and GetZoneText()), sz = Safe(GetSubZoneText and GetSubZoneText()),
-        n = who, title = title, text = text, r = okR and Safe(raceFile) or nil }
+        n = who, title = title, text = text, r = okR and Safe(raceFile) or nil,
+        guid = guid, character = character, realm = realm, locale = locale }
     if extra then
         rec.obj = LoreText(extra.obj)
         rec.q = type(extra.q) == "number" and extra.q > 0 and extra.q or nil
@@ -6662,7 +6697,7 @@ H.DISPLAY_SIZE_CHANGED = H.UI_SCALE_CHANGED
 
 H.ZONE_CHANGED_NEW_AREA = function(self, event, ...)
     if window then CheckZone() end
-    if ready then pcall(Mile.NoteBirthplace) end
+    if ready then pcall(Mile.NoteBirthplace); pcall(Mile.TrackKills, true) end
     if ns.ZoneCard and ns.ZoneCard.Preload then C_Timer.After(4, function() pcall(ns.ZoneCard.Preload) end) end
 end
 H.PLAYER_ENTERING_WORLD = H.ZONE_CHANGED_NEW_AREA
@@ -6743,9 +6778,9 @@ H.QUEST_ACCEPTED = function(self, event, a, b)
     end
 end
 
--- Creatures slain in each zone: the game counts the total, so the difference since the last look goes to the zone
--- underfoot (the first look only sets the baseline, and kills inside an instance count for no zone).
-Mile.TrackKills = function()
+-- A delta belongs to a zone only when both samples are from that same zone in this session.
+-- Loading screens, zone crossings and gaps are ambiguous: keep their delta separately.
+Mile.TrackKills = function(boundary)
     local db = Journal()
     if not ready or not db or not (ns.ZoneCard and C_Map and C_Map.GetBestMapForUnit) then return end
     local total = KillStat()
@@ -6753,15 +6788,21 @@ Mile.TrackKills = function()
         local byId = GameStat(107)
         if byId and byId > 0 then total = byId end
     end
-    if not total then return end
-    local base = db.killBase
-    db.killBase = total
-    if not base or total <= base then return end
+    local sample = K.killSample
+    if not total then K.killSample = nil; return end
     local ok, here = pcall(C_Map.GetBestMapForUnit, "player")
     local zone = ok and here and ns.ZoneCard.ZoneMap(here)
-    if not zone then return end
+    if IsInInstance and IsInInstance() then zone = nil end
+    K.killSample = { db = db, total = total, zone = zone }
+    db.killBase = total
+    if not sample or sample.db ~= db or total <= sample.total then return end
+    local delta = total - sample.total
+    if boundary or not zone or zone ~= sample.zone then
+        db.zoneKillsUnassigned = (db.zoneKillsUnassigned or 0) + delta
+        return
+    end
     db.zoneKills = db.zoneKills or {}
-    db.zoneKills[zone] = (db.zoneKills[zone] or 0) + (total - base)
+    db.zoneKills[zone] = (db.zoneKills[zone] or 0) + delta
 end
 
 ns.TrackKills = Mile.TrackKills
@@ -6824,8 +6865,8 @@ end
 Mile.CatchUpLevels = function()
     local db = Journal()
     if not (db and db.entries and UnitLevel) then return end
-    local cur = UnitLevel()
-    if type(cur) ~= "number" or cur < 2 then return end
+    local okLevel, cur = pcall(UnitLevel, "player")   -- the game wants the unit: UnitLevel() alone answers nothing
+    if not okLevel or type(cur) ~= "number" or cur < 2 then return end
     local have, lo, hi = {}, nil, nil
     for _, e in ipairs(db.entries) do
         if (e.kind == "level" or e.kind == "milestone") and type(e.arg) == "number" then
@@ -6840,34 +6881,33 @@ Mile.CatchUpLevels = function()
     for level = lo + 1, cur do
         if not have[level] and added < 20 then
             local entries = db.entries
+            local from, lower = 0, -1
+            for i, e in ipairs(entries) do
+                if (e.kind == "level" or e.kind == "milestone") and type(e.arg) == "number"
+                    and e.arg < level and e.arg >= lower then from, lower = i, e.arg end
+            end
+            local at
+            for i = from + 1, #entries do
+                local e = entries[i]
+                if ((e.kind == "level" or e.kind == "milestone") and type(e.arg) == "number" and e.arg > level)
+                    or (type(e.pl) == "number" and e.pl >= level) then at = i; break end
+            end
+            local extra = { recovered = true, x = false, y = false, m = false }
+            local zone
+            if at then
+                local nb = entries[at]
+                extra.t = math.max((entries[from] and entries[from].t) or 0, (nb.t or time()) - 1)
+                zone, extra.zm, extra.m, extra.ses = nb.zone, nb.zm, nb.m or false, nb.ses
+            end
             local n0 = #entries
             K.quietAdd = true
-            pcall(AddEntry, (level % 10 == 0) and "milestone" or "level", level)
+            pcall(AddEntry, (level % 10 == 0) and "milestone" or "level", level, zone, extra)
             K.quietAdd = false
             if #entries == n0 + 1 then
                 added = added + 1
                 local entry = table.remove(entries)
-                -- after the highest lower level page, before the first page that was told at this level or above
-                local from, lower = 0, -1
-                for i, e in ipairs(entries) do
-                    if (e.kind == "level" or e.kind == "milestone") and type(e.arg) == "number"
-                        and e.arg < level and e.arg >= lower then from, lower = i, e.arg end
-                end
-                local at
-                for i = from + 1, #entries do
-                    local e = entries[i]
-                    if ((e.kind == "level" or e.kind == "milestone") and type(e.arg) == "number" and e.arg > level)
-                        or (type(e.pl) == "number" and e.pl >= level) then at = i; break end
-                end
-                if at then
-                    local nb = entries[at]
-                    entry.t = math.max((entries[from] and entries[from].t) or 0, (nb.t or entry.t) - 1)
-                    entry.zone, entry.zm, entry.m, entry.ses = nb.zone, nb.zm, nb.m, nb.ses
-                    entry.x, entry.y, entry.hr = false, false, nil
-                    table.insert(entries, at, entry)
-                else
-                    table.insert(entries, entry)
-                end
+                entry.hr = nil   -- the recovery time is not the time the level was gained
+                if at then table.insert(entries, at, entry) else table.insert(entries, entry) end
             end
         end
     end

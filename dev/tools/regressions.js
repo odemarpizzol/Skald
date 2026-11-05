@@ -57,6 +57,85 @@ const SAVED = (entries, extra = '') => `SkaldCharDB = { entries = ${entries}, vi
 
 console.log('Regressions');
 
+run('recovered levels update their historical day and closed summary, once', {
+  body: `local db=SkaldCharDB
+local old=NOW-86400
+local key=date("%Y-%m-%d",old)
+db.entries={{kind="level",arg=2,t=old,zone="Darkshore",idx=1}, {kind="level",arg=5,t=old+200,zone="Darkshore",idx=1}, {kind="day",arg=key,t=old+300,day={l=2},idx=1}}
+db.days[key]={l=2,done=true,last=old+300}
+local today=db.today
+local before=db.days[today].l
+function UnitLevel(u) return u=="player" and 5 end
+ns.CatchUpLevels(); ns.CatchUpLevels()
+assert(db.days[today].l==before,"recovered levels counted today")
+assert(db.days[key].l==4,"historical counter not updated")
+local summary
+for _,e in ipairs(db.entries) do if e.kind=="day" then summary=e end end
+assert(summary.day.l==4,"closed summary not updated")
+assert(db.days[key].last==old+300,"historical last activity moved")
+RES="ok"`,
+});
+run('available kill counter wins over XP estimate, including zero; missing counter falls back', {
+  body: `SkaldCharDB.stats.counts.kill=113
+SkaldAPI.GameFacts=function() return {kills=65} end
+assert(ns.GoalFacts().kills==65,"estimate overrides game")
+SkaldAPI.GameFacts=function() return {kills=0} end
+assert(ns.GoalFacts().kills==0,"zero is an available counter")
+SkaldAPI.GameFacts=function() return {} end
+assert(ns.GoalFacts().kills==113,"missing fallback")
+RES="ok"`,
+});
+for (const [loc,word] of [['ptBR','estimativa'],['enUS','estimate'],['frFR','estimation']]) {
+  run('daily kill estimates are identified, including legacy pages: '+loc, {
+    pre: `__locale="${loc}"`,
+    body: `local e={kind="day",arg="2020-01-01",idx=1,day={k=113}}
+assert(SkaldAPI.Render(e):find("${word}",1,true),"legacy estimate unlabelled")
+e.day.kEstimated=true
+assert(SkaldAPI.Render(e):find("${word}",1,true),"estimate unlabelled")
+e.day.kEstimated=false
+assert(not SkaldAPI.Render(e):find("${word}",1,true),"measured count labelled estimated")
+RES="ok"`,
+  });
+}
+run('zone kills discard ambiguous crossings, loading gaps, and old saved baselines', {
+  body: `local total,here=100,1438
+function GetStatistic(id) if id==107 then return tostring(total) end return "--" end
+C_Map.GetBestMapForUnit=function() return here end
+ns.ZoneCard.ZoneMap=function(id) return id end
+SkaldCharDB.killBase=5; SkaldCharDB.zoneKills=nil
+ns.TrackKills()
+assert(not SkaldCharDB.zoneKills,"old session delta attributed")
+total=110; ns.TrackKills()
+assert(SkaldCharDB.zoneKills[1438]==10,"same zone delta lost")
+here=1457; total=120; ns.TrackKills()
+assert(not SkaldCharDB.zoneKills[1457],"crossing delta attributed to city")
+total=123; ns.TrackKills()
+assert(SkaldCharDB.zoneKills[1457]==3,"new zone delta lost")
+here=nil; total=125; ns.TrackKills()
+here=1438; total=130; ns.TrackKills()
+assert(SkaldCharDB.zoneKills[1438]==10,"loading gap attributed")
+assert(SkaldCharDB.zoneKillsUnassigned==17,"ambiguous delta not retained separately")
+RES="ok"`,
+});
+run('lore keeps identical dialogue from different characters and languages separately', {
+  body: `SlashCmdList.SKALD("probe lore")
+function GetGossipText() return "The same greeting." end
+function UnitGUID() return "character-A" end
+function UnitName(u) return u=="player" and "Aelyndra" or "Speaker" end
+fire("GOSSIP_SHOW"); fire("GOSSIP_SHOW")
+function UnitGUID() return "character-B" end
+fire("GOSSIP_SHOW")
+__locale="frFR"; fire("GOSSIP_SHOW")
+local items=SkaldDB.loreProbe.items
+assert(#items==3,"captures merged")
+assert(items[1].guid=="character-A" and items[2].guid=="character-B","missing identity")
+assert(items[1].character=="Aelyndra" and items[1].realm,"missing character/realm")
+assert(items[3].locale=="frFR","missing locale")
+RES="ok"`,
+});
+
+
+
 // Real diary findings: Aelyndra, Forever, 2026-11-05. No private saved data in fixtures.
 for (const loc of ['ptBR', 'enUS', 'frFR']) {
   run('Aelyndra quest stories override old misleading types and racial flavours: ' + loc, {
@@ -876,7 +955,7 @@ run('the summary of a region counts what the diary holds there', {
   { t = 1792000500, kind = "loot", zone = "Darkshore", zm = 1439, idx = 1, arg = "z", fav = true },
   { t = 1792000600, kind = "quest", zone = "Elsewhere", zm = 999, idx = 1, tier = 1, arg = "c" },
 }`) + `
-function UnitLevel() return 12 end   -- the character is at the level of its last level page: nothing is caught up`,
+function UnitLevel(u) return u == "player" and 12 or nil end   -- the character is at the level of its last level page: nothing is caught up`,
   body: `local z = SkaldAPI.RegionStats(SkaldAPI.ZoneIdOfMap(1439))
 RES = (z and z.quest == 2 and z.death == 1 and z.boss == 1 and z.level == 1 and z.loot == 1 and z.fav == 1 and z.first == 1792000000)
   and "ok" or "counts are wrong"`,
@@ -3854,13 +3933,13 @@ RES = (said:find("perf: client", 1, true) and said:find("quest index", 1, true) 
 run('a level the game never told (levels 3 and 4 missed) is written afterwards, in its place, once, with no notice', {
   body: `local E = SkaldCharDB.entries
 local fresh = #E
-function UnitLevel() return 5 end; pcall(ns.CatchUpLevels)
+function UnitLevel(u) if u ~= "player" then return nil end return 5 end; pcall(ns.CatchUpLevels)
 local freshOk = (#E == fresh)   -- a diary with no level page yet writes nothing back
-function UnitLevel() return 2 end; fire("PLAYER_LEVEL_UP", 2); runTimers()
+function UnitLevel(u) if u ~= "player" then return nil end return 2 end; fire("PLAYER_LEVEL_UP", 2); runTimers()
 table.insert(E, { t = NOW + 10, zone = "Teldrassil", kind = "quest", arg = "A quest", pl = 4, tier = 1, idx = 1 })
 local toasts = 0
 local before = SkaldAPI.entryHook
-function UnitLevel() return 5 end; fire("PLAYER_LEVEL_UP", 5); runTimers()
+function UnitLevel(u) if u ~= "player" then return nil end return 5 end; fire("PLAYER_LEVEL_UP", 5); runTimers()
 local seq = {}
 for _, e in ipairs(E) do if e.kind == "level" or e.kind == "quest" then seq[#seq + 1] = e.kind .. ":" .. tostring(e.arg) end end
 local first = table.concat(seq, " ")
