@@ -16,7 +16,7 @@ if type(log) ~= "table" or type(log.items) ~= "table" or #log.items == 0 then RE
 local out, m = {}, log.meta or {}
 out[#out + 1] = "# Lore kept by the Skald probe"
 out[#out + 1] = ""
-out[#out + 1] = "Race: " .. tostring(m.race) .. " | Class: " .. tostring(m.class) .. " | Faction: " .. tostring(m.faction) .. " | Client: " .. tostring(m.locale) .. " " .. tostring(m.build)
+out[#out + 1] = "Latest session only (captures may be from other characters): Race: " .. tostring(m.race) .. " | Class: " .. tostring(m.class) .. " | Faction: " .. tostring(m.faction) .. " | Client: " .. tostring(m.locale) .. " " .. tostring(m.build)
 out[#out + 1] = "Texts: " .. #log.items
 out[#out + 1] = ""
 local zones, order = {}, {}
@@ -37,6 +37,12 @@ for _, z in ipairs(order) do
         if r.sz and r.sz ~= "" then where[#where + 1] = r.sz end
         if r.q then where[#where + 1] = "quest " .. r.q end
         if r.r then where[#where + 1] = r.r end
+        if r.guid or r.character then
+            where[#where + 1] = "Character: " .. tostring(r.character or "?") .. "-" .. tostring(r.realm or "?") .. " [" .. tostring(r.guid or "unknown GUID") .. "]"
+        else
+            where[#where + 1] = "Character: unknown (legacy capture)"
+        end
+        if r.locale then where[#where + 1] = r.locale end
         if #where > 0 then head = head .. " (" .. table.concat(where, ", ") .. ")" end
         out[#out + 1] = head
         if r.text then out[#out + 1] = "> " .. r.text:gsub(nl, nl .. "> ") end

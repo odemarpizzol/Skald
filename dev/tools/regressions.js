@@ -10,7 +10,7 @@ let failed = 0;
 
 // The game, as far as the addon can tell. `pre` runs before the addon loads (saved data, game answers);
 // `body` runs after the login and must leave "ok" or a message in RES.
-function run(name, { pre = '', body }) {
+function run(name, { pre = '', body, settle = true }) {
   const L = lauxlib.luaL_newstate(); lualib.luaL_openlibs(L);
   const exec = c => { if (lauxlib.luaL_dostring(L, to_luastring(c))) throw new Error(to_jsstring(lua.lua_tolstring(L, -1))); };
   const set = (k, v) => { lua.lua_pushstring(L, to_luastring(v)); lua.lua_setglobal(L, to_luastring(k)); };
@@ -40,7 +40,15 @@ ${pre}
 ns={}
 assert(load(LOC,"=L"))("Skald",ns); assert(load(CUR,"=U"))("Skald",ns); assert(load(XPT,"=X"))("Skald",ns)
 assert(load(CH,"=C"))("Skald",ns); assert(load(AT,"=A"))("Skald",ns); assert(load(GL,"=G"))("Skald",ns); assert(load(SG,"=S"))("Skald",ns); assert(load(ZC,"=Z"))("Skald",ns); assert(load(CT,"=T"))("Skald",ns); assert(load(PV,"=P"))("Skald",ns); assert(load(BK,"=B"))("Skald",ns); assert(load(SR,"=R"))("Skald",ns); assert(load(BD,"=D"))("Skald",ns)
+function finishStartup()
+  for i=1,100 do
+    if not ns.MaintenanceState or ns.MaintenanceState().pending==0 then return end
+    runTimers()
+  end
+  error("maintenance failed to settle")
+end
 fire("ADDON_LOADED","Skald"); fire("PLAYER_LOGIN"); runTimers(); runTimers()
+${settle ? 'finishStartup()' : ''}
 RES = "no result"
 local okRun, err = pcall(function()
 ${body}
@@ -56,6 +64,48 @@ if not okRun then RES = "error: " .. tostring(err) end`);
 const SAVED = (entries, extra = '') => `SkaldCharDB = { entries = ${entries}, visited = {}, flags = {}, guid = "P1", ${extra} }`;
 
 console.log('Regressions');
+
+run('maintenance runs one job per timer turn, coalesces duplicates and survives a failed job', {
+  body: `local calls={}
+local n=0
+ns.QueueMaintenance("test-one",function() n=n+1; calls[#calls+1]="one" end)
+ns.QueueMaintenance("test-one",function() error("duplicate ran") end)
+ns.QueueMaintenance("test-error",function() error("expected maintenance failure") end)
+ns.QueueMaintenance("test-last",function() calls[#calls+1]="last" end)
+assert(#calls==0,"work ran synchronously")
+runTimers(); assert(#calls==1 and n==1,"jobs shared a turn")
+runTimers(); assert(#calls==1,"job after failure ran in same turn")
+runTimers(); assert(calls[2]=="last","queue stopped on failure")
+assert(ns.MaintenanceState().pending==0,"queue not drained")
+assert(SkaldDB.errors[#SkaldDB.errors]:find("test-error",1,true),"failure not reported")
+RES="ok"`,
+});
+run('combat pauses login maintenance but recording is active, and work resumes once', {
+  settle: false,
+  pre: `function InCombatLockdown() return true end`,
+  body: `assert(ns.MaintenanceState().pending>0,"no deferred work")
+local before=ns.MaintenanceState().completed
+local homes=count("home")
+fire("HEARTHSTONE_BOUND","Test Inn")
+assert(count("home")==homes+1,"recording blocked by startup")
+runTimers(); runTimers()
+assert(ns.MaintenanceState().completed==before,"maintenance ran in combat")
+function InCombatLockdown() return false end
+finishStartup()
+assert(ns.MaintenanceState().pending==0 and ns.MaintenanceState().completed>before,"queue never resumed")
+local done=ns.MaintenanceState().completed
+runTimers(); assert(ns.MaintenanceState().completed==done,"completed work repeated")
+RES="ok"`,
+});
+run('logout invalidates pending maintenance callbacks', {
+  body: `local ran=false
+ns.QueueMaintenance("should-not-run",function() ran=true end)
+fire("PLAYER_LOGOUT"); runTimers(); runTimers()
+assert(not ran and ns.MaintenanceState().pending==0,"work survived logout")
+RES="ok"`,
+});
+
+
 
 run('recovered levels update their historical day and closed summary, once', {
   body: `local db=SkaldCharDB
@@ -120,6 +170,7 @@ RES="ok"`,
 run('lore keeps identical dialogue from different characters and languages separately', {
   body: `SlashCmdList.SKALD("probe lore")
 function GetGossipText() return "The same greeting." end
+function GetRealmName() return "Moonshade" end
 function UnitGUID() return "character-A" end
 function UnitName(u) return u=="player" and "Aelyndra" or "Speaker" end
 fire("GOSSIP_SHOW"); fire("GOSSIP_SHOW")
@@ -794,7 +845,7 @@ run('the reminder on returning shows where the last visit ended', {
   pre: SAVED('{}', 'resume = { t = 1, zone = "Darkshore", level = 12, quests = { "A Lost Boot" }, next = "Skin the wolves" }'),
   body: `NOW = NOW + 7200
 SkaldCharDB.resume.t = NOW - 7200
-fire("PLAYER_LOGIN"); runTimers(); runTimers()
+fire("PLAYER_LOGIN"); runTimers(); runTimers(); finishStartup()
 local card = _G.SkaldResume
 local text = {}
 if card then for _, p in ipairs(card.parts) do text[#text+1] = tostring(rawget(p, "_text")) end end
@@ -809,7 +860,7 @@ pb._OnClick(pb)
 local before = SkaldFrame:GetView()
 NOW = NOW + 7200
 SkaldCharDB.resume.t = NOW - 7200
-fire("PLAYER_LOGIN"); runTimers(); runTimers()
+fire("PLAYER_LOGIN"); runTimers(); runTimers(); finishStartup()
 local card = _G.SkaldResume
 card._OnMouseUp(card, "LeftButton")
 RES = (before ~= "book" and SkaldFrame:GetView() == "book" and SkaldFrame:IsShown()) and "ok" or ("view before: " .. tostring(before) .. ", after: " .. tostring(SkaldFrame:GetView()))`,

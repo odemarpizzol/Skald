@@ -155,6 +155,7 @@ function ZC.Preload()
     end
     local i = 0
     local function Step()
+        if InCombatLockdown and InCombatLockdown() then C_Timer.After(0.5, Step); return end
         i = i + 1
         local n = todo[i]
         if not n then
@@ -343,6 +344,7 @@ function ZC.WarmQuests()
     -- each step is held to about 2 ms (a frame is 16), so the game never feels it
     local clock = debugprofilestop
     local function Step()
+        if InCombatLockdown and InCombatLockdown() then C_Timer.After(0.5, Step); return end
         local started = clock and clock()
         local more = true
         repeat

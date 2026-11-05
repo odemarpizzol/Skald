@@ -103,6 +103,12 @@ assert(load(LOC,"=L"))("Skald",ns); assert(load(CUR,"=U"))("Skald",ns); assert(l
 assert(load(CH,"=C"))("Skald",ns); assert(load(AT,"=A"))("Skald",ns); assert(load(GL,"=G"))("Skald",ns); assert(load(SG,"=S"))("Skald",ns); assert(load(ZC,"=Z"))("Skald",ns); assert(load(CT,"=T"))("Skald",ns); assert(load(PV,"=P"))("Skald",ns); assert(load(BK,"=B"))("Skald",ns); assert(load(SR,"=R"))("Skald",ns); assert(load(BD,"=D"))("Skald",ns)
 local function fire(ev,...) for _,f in ipairs(frames) do if f._OnEvent then f._OnEvent(f,ev,...) end end end
 fire("ADDON_LOADED","Skald"); fire("PLAYER_LOGIN"); runTimers()
+-- Timers yield between maintenance jobs; simulate subsequent frames before steady-state assertions.
+for i=1,100 do
+    if not ns.MaintenanceState or ns.MaintenanceState().pending==0 then break end
+    runTimers()
+end
+assert(not ns.MaintenanceState or ns.MaintenanceState().pending==0, "startup did not settle")
 local out={}
 local function btn(label) for i=#frames,1,-1 do local f=frames[i]; local tx=rawget(f,"text"); if tx and rawget(tx,"_text")==label and f._OnClick then return f end end end
 local win=_G.SkaldFrame; win:Show(); if win._OnShow then win._OnShow(win) end

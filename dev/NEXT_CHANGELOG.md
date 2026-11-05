@@ -1,3 +1,8 @@
 - Tell the healing, rescue, seed delivery and hippogryph journey in four Teldrassil quests with dedicated stories in English, Portuguese and French, including existing diary pages.
 - Fix Portuguese crafting grammar, Eluna's name, the night elf guardian's gender and the article for Terraço place names.
 - Write the level pages the game never announced (a level gained while a quest was handed in, or while the book was not ready) afterwards, in their place among the pages and without a notice.
+- Attribute recovered levels to their inferred historical day and update closed daily summaries without inflating today's progress.
+- Prefer the available game kill counter over XP estimates for goals; label estimated daily kill totals in all three languages.
+- Keep kill deltas across zone/loading boundaries unassigned instead of attributing them to the arrival zone; start a fresh sampling baseline each session.
+- Record character identity and language on each new lore capture, preserve separate captures across characters, and identify legacy captures with unknown ownership in lore exports.
+- Split the work after login into small steps (one task per turn, paused in combat, never blocking the recording of events) so the game does not stall when the diary starts.

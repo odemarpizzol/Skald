@@ -331,7 +331,7 @@ local function Facts()
     f.kills = counts.kill or 0
     -- the game's own numbers, when it gives them (the diary's are an estimate for creatures)
     local exact = SkaldAPI.GameFacts and SkaldAPI.GameFacts() or {}
-    if type(exact.kills) == "number" then f.kills = math.max(f.kills, exact.kills) end
+    if type(exact.kills) == "number" then f.kills = exact.kills end
     if type(exact.bosses) == "number" then f.bosses = math.max(f.bosses, exact.bosses) end
     if type(exact.dungeons) == "number" then f.dungeons = math.max(f.dungeons, exact.dungeons) end
     if type(exact.quests) == "number" then f.quests = math.max(f.quests, exact.quests) end
@@ -772,5 +772,4 @@ end
 
 SkaldAPI.AddTab("goals", UI.TAB, BuildGoalsTab)
 
--- A first look a little after the game has settled (marks what is already done, without pages).
-if C_Timer and C_Timer.After then C_Timer.After(8, function() pcall(Check) end) end
+-- The first look is scheduled by the login maintenance queue (marks existing goals without pages).

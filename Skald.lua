@@ -5369,6 +5369,51 @@ Mile.Timed = function(name, fn, ...)
     return ok, err
 end
 
+-- Maintenance yields between jobs instead of running the whole login batch in one frame.
+-- Each function remains atomic: /skald perf identifies jobs that need finer-grained batching.
+Mile.ResetMaintenance = function(closed)
+    K.maintenance = { jobs = {}, keys = {}, completed = 0, timings = {}, closed = closed, delay = 8 }
+end
+ns.MaintenanceState = function()
+    local work = K.maintenance
+    return { pending = work and #work.jobs or 0, completed = work and work.completed or 0,
+        timings = work and work.timings or {}, paused = not not (InCombatLockdown and InCombatLockdown()) }
+end
+Mile.ScheduleMaintenance = function()
+    local work = K.maintenance
+    if not work or work.closed or work.scheduled or #work.jobs == 0 then return end
+    work.scheduled = true
+    local delay = work.delay or 0.05
+    work.delay = nil
+    C_Timer.After(delay, function()
+        if K.maintenance ~= work or work.closed then return end
+        work.scheduled = false
+        if InCombatLockdown and InCombatLockdown() then
+            work.delay = 0.5
+            Mile.ScheduleMaintenance()
+            return
+        end
+        local job = table.remove(work.jobs, 1)
+        if not job then return end
+        local started = debugprofilestop and debugprofilestop()
+        Mile.Timed(job.name, job.fn)
+        local elapsed = started and (debugprofilestop() - started) or 0
+        local timing = work.timings[job.name] or { n = 0, total = 0, max = 0 }
+        timing.n, timing.total, timing.max = timing.n + 1, timing.total + elapsed, math.max(timing.max, elapsed)
+        work.timings[job.name] = timing
+        work.completed = work.completed + 1
+        work.keys[job.name] = nil
+        Mile.ScheduleMaintenance()
+    end)
+end
+ns.QueueMaintenance = function(name, fn)
+    local work = K.maintenance
+    if not work or work.closed or work.keys[name] or type(fn) ~= "function" then return end
+    work.keys[name] = true
+    work.jobs[#work.jobs + 1] = { name = name, fn = fn }
+    Mile.ScheduleMaintenance()
+end
+
 -- /skald perf: times what the book does, to see what is slow in the real game. For each step it says the time the addon
 -- itself spent (Lua) and the longest of the next three frames (that one holds what the game does after: reading a
 -- picture from the disk, drawing). A frame over 50 ms is felt as a stop. The steps run one after another, a few
@@ -5389,6 +5434,15 @@ Mile.Perf = function()
     local zc = ns.ZoneCard
     Say("perf: client " .. tostring(select(2, pcall(function() return (select(4, GetBuildInfo())) end))) .. "; pages " .. tostring(#((Journal() or {}).entries or {})) ..
         "; quest index " .. tostring(zc and zc.QuestState and zc.QuestState() or "-") .. ". Wait a few seconds...")
+    local work = ns.MaintenanceState()
+    Say("  maintenance: " .. work.pending .. " pending; " .. work.completed .. " completed" .. (work.paused and "; paused for combat" or ""))
+    local names = {}
+    for name in pairs(work.timings) do names[#names + 1] = name end
+    table.sort(names)
+    for _, name in ipairs(names) do
+        local timing = work.timings[name]
+        Say(string.format("    %-20s runs %d | max %.1f ms | total %.1f ms", name, timing.n, timing.max, timing.total))
+    end
     if #ns.stalls == 0 then
         Say("  since login nothing over 6 ms in the background work, no frame over 40 ms (first 90 s)")
     else
@@ -6614,6 +6668,7 @@ end
 
 H.PLAYER_LOGIN = function(self, event, ...)
     loginTime = time()
+    Mile.ResetMaintenance()
     if EnsureOwnDiary() then Say(L.NEW_CHARACTER) end
     ConvertOldNotes()
     -- Positions saved before were kept with fifteen decimals: shortened once.
@@ -6644,36 +6699,52 @@ H.PLAYER_LOGIN = function(self, event, ...)
     if ns.Pvp then pcall(ns.Pvp.Ensure) end
     lastZone = GetZoneText()
     VisitZone(lastZone)
-    C_Timer.After(8, function()
-        lastXP, lastXPLevel = ReadXP()
-        ready = true
-        Mile.Timed("CheckGuild", CheckGuild)
-        Mile.Timed("CheckSkills", CheckSkills)
-        Mile.Timed("CheckReputation", CheckReputation)
-        Mile.Timed("CheckMarks", CheckMarks)
-        Mile.Timed("CheckPet", Mile.CheckPet)
-        Mile.Timed("CatchUpLevels", Mile.CatchUpLevels)
-        Mile.Timed("NoteBirthplace", Mile.NoteBirthplace)
-        Mile.Timed("CheckMounts", Mile.CheckMounts)
-        C_Timer.After(25, function() pcall(Mile.NoteBirthplace) end)   -- the game may still answer with the continent
-        if Settings().probeAll then pcall(Mile.ProbeAllEvents, true) end
-        if Settings().probeLore then pcall(Mile.ProbeLore, true) end
-        Mile.Timed("MergeCrafts", Mile.MergeCrafts)
-        Mile.Timed("Relocalize", Mile.Relocalize)
-        C_Timer.After(10, function() Mile.Timed("Relocalize 2", Mile.Relocalize) end)   -- items load a little later
-        if C_Timer.NewTicker then C_Timer.NewTicker(60, function() pcall(CheckMarks); pcall(Mile.CheckPet); pcall(ns.CheckAnniversary); pcall(Mile.TrackKills); pcall(Mile.NoteBirthplace) end) end
-        C_Timer.After(2, function() pcall(Mile.ShowResume) end)
-        if ns.ZoneCard then
-            C_Timer.After(3, function() pcall(ns.ZoneCard.WarmQuests) end)
-            C_Timer.After(5, function() pcall(ns.ZoneCard.Preload) end)
-        end
-    end)
+    -- Event capture must not wait for optional maintenance (or for combat to end).
+    lastXP, lastXPLevel = ReadXP()
+    ready = true
+    if Settings().probeAll then pcall(Mile.ProbeAllEvents, true) end
+    if Settings().probeLore then pcall(Mile.ProbeLore, true) end
+    local jobs = {
+        { "CheckGuild", CheckGuild }, { "CheckSkills", CheckSkills },
+        { "CheckReputation", CheckReputation }, { "CheckMarks", CheckMarks },
+        { "CheckPet", Mile.CheckPet }, { "CatchUpLevels", Mile.CatchUpLevels },
+        { "NoteBirthplace", Mile.NoteBirthplace }, { "CheckMounts", Mile.CheckMounts },
+        { "CheckGoals", ns.CheckGoals }, { "MergeCrafts", Mile.MergeCrafts },
+        { "Relocalize", Mile.Relocalize },
+    }
+    for _, job in ipairs(jobs) do ns.QueueMaintenance(job[1], job[2]) end
+    local work = K.maintenance
+    local function Later(delay, name, fn)
+        C_Timer.After(delay, function()
+            if K.maintenance == work then ns.QueueMaintenance(name, fn) end
+        end)
+    end
+    Later(33, "NoteBirthplace", Mile.NoteBirthplace)
+    Later(18, "Relocalize 2", Mile.Relocalize)   -- retry names after the client's item cache warms
+    Later(10, "ShowResume", Mile.ShowResume)
+    if ns.ZoneCard then
+        Later(11, "WarmQuests", ns.ZoneCard.WarmQuests)
+        Later(13, "Preload", ns.ZoneCard.Preload)
+    end
+    if C_Timer.NewTicker then
+        if K.maintenanceTicker then K.maintenanceTicker:Cancel() end
+        K.maintenanceTicker = C_Timer.NewTicker(60, function()
+            if K.maintenance ~= work or work.closed then return end
+            ns.QueueMaintenance("CheckMarks", CheckMarks)
+            ns.QueueMaintenance("CheckPet", Mile.CheckPet)
+            ns.QueueMaintenance("CheckAnniversary", ns.CheckAnniversary)
+            ns.QueueMaintenance("TrackKills", Mile.TrackKills)
+            ns.QueueMaintenance("NoteBirthplace", Mile.NoteBirthplace)
+        end)
+    end
     if not Settings().quiet then
         Say(L.LOADED)
     end
 end
 
 H.PLAYER_LOGOUT = function(self, event, ...)
+    Mile.ResetMaintenance(true)
+    if K.maintenanceTicker then K.maintenanceTicker:Cancel(); K.maintenanceTicker = nil end
     -- Bank this session's time on the road, and where the creature count stands.
     pcall(Mile.SaveResume)
     BankPlayed()
@@ -6698,7 +6769,7 @@ H.DISPLAY_SIZE_CHANGED = H.UI_SCALE_CHANGED
 H.ZONE_CHANGED_NEW_AREA = function(self, event, ...)
     if window then CheckZone() end
     if ready then pcall(Mile.NoteBirthplace); pcall(Mile.TrackKills, true) end
-    if ns.ZoneCard and ns.ZoneCard.Preload then C_Timer.After(4, function() pcall(ns.ZoneCard.Preload) end) end
+    if ns.ZoneCard and ns.ZoneCard.Preload then C_Timer.After(4, function() ns.QueueMaintenance("Preload", ns.ZoneCard.Preload) end) end
 end
 H.PLAYER_ENTERING_WORLD = H.ZONE_CHANGED_NEW_AREA
 
