@@ -289,9 +289,15 @@ K.MODEL_REUSE, K.MODEL_RETRY = 20, { 1.5, 4 }   -- seconds: the cover model is n
 -- further away so head and hands stay inside the frame.
 K.COVER_ZOOM, K.COVER_ZOOM_BY_RACE = 0.8, { Tauren = 1.0 }
 K.COVER_UNDRESS = { 16, 17, 18 }   -- inventory slots of the weapons
+K.COVER_ZOOM_FOREVER = 1.15   -- the Forever client draws the models larger in the same frame: the camera stands further back
 function ns.CoverZoom()
+    local own = SkaldDB and tonumber(SkaldDB.coverZoom)   -- /skald zoom: the player's own distance wins
+    if own and own >= 0.4 and own <= 2 then return own end
     local _, raceFile = UnitRace("player")
-    return K.COVER_ZOOM_BY_RACE[raceFile or ""] or K.COVER_ZOOM
+    local zoom = K.COVER_ZOOM_BY_RACE[raceFile or ""] or K.COVER_ZOOM
+    local okB, _, _, _, toc = pcall(GetBuildInfo)
+    if okB and type(toc) == "number" and toc >= 16000 and toc < 20000 then zoom = zoom * K.COVER_ZOOM_FOREVER end
+    return zoom
 end
 K.GHOST_ART = { epic = "ghost_candle", humble = "ghost_wisp", humor = "ghost_rip" }   -- the picture of the cover for a spirit, by voice
 K.FALLS_FORGOTTEN = 7200   -- seconds after the last fall in a dungeon, when it no longer counts for a boss
@@ -3129,6 +3135,11 @@ local function CreateWindow()
         portrait:SetShown(not works and not ghost)
         for _, t in ipairs(medal) do t:SetShown(not works and not ghost) end
         if not works and not ghost then pcall(SetPortraitTexture, portrait, "player") end
+    end
+    -- /skald zoom asks for the model again with the new distance
+    ns.ReloadCoverModel = function()
+        if model then model.skaldLoadedAt = nil end
+        ShowModel()
     end
     local coverTitle = cover1:CreateFontString(nil, "OVERLAY", "SkaldHead")
     coverTitle:SetPoint("TOP", 0, -428)
@@ -8724,6 +8735,15 @@ SlashCmdList["SKALD"] = function(msg)
         if ns.Backup then ns.Backup.ShowRestore() end
     elseif msg == "restore undo" then
         if ns.Backup then ns.Backup.ConfirmUndo() end
+    elseif msg:match("^zoom") then
+        -- /skald zoom auto|40..200: how far the camera stands from the figure on the cover (more is a smaller figure)
+        local arg = strtrim(raw:sub(5)):lower()
+        local value = tonumber(arg)
+        if arg == "auto" then SkaldDB.coverZoom = nil
+        elseif value and value >= 40 and value <= 200 then SkaldDB.coverZoom = value / 100
+        else Say(string.format("/skald zoom auto | 40-200  (%.2f)", ns.CoverZoom())); return end
+        if ns.ReloadCoverModel then pcall(ns.ReloadCoverModel) end
+        Say(string.format("zoom %.2f", ns.CoverZoom()))
     elseif msg:match("^size") then
         -- /skald size auto|80|100|125|150
         local arg = strtrim(raw:sub(5)):lower():gsub("%%", "")

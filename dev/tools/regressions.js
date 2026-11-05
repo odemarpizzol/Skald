@@ -2232,6 +2232,19 @@ end
 RES = ok and "ok" or "one or more Burning Crusade maps missing"`,
 });
 
+run('the cover zoom: /skald zoom sets the distance of the camera, a wrong value changes nothing and auto gives the default back', {
+  pre: `function UnitRace() return "Human", "Human", 1 end`,
+  body: `local base = ns.CoverZoom()
+local mine = nil
+SlashCmdList.SKALD("zoom 90")
+mine = ns.CoverZoom()
+SlashCmdList.SKALD("zoom nonsense")
+local kept = ns.CoverZoom() == 0.9
+SlashCmdList.SKALD("zoom auto")
+RES = (mine == 0.9 and kept and ns.CoverZoom() == base and SkaldDB.coverZoom == nil and base > 0 and SkaldDB.errors == nil) and "ok"
+  or ("base=" .. tostring(base) .. " mine=" .. tostring(mine) .. " kept=" .. tostring(kept))`,
+});
+
 run('the lands of the Forever client resolve to their custom art', {
   pre: SAVED('{}', 'version = 99, goalsInit = true, goalsVer = 3, goals = {}, stats = { counts = {}, deathZones = {}, tiers = {}, played = 1, first = 1 }'),
   body: ZONE_STUBS + '\n' + ZONE_ART + `
