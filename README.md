@@ -27,6 +27,8 @@ Made for **World of Warcraft: Forever** (1.60.1, from 4 November 2026) and **TBC
 - **Saga.** The diary told again as chapters, in the first person.
 - **Bard.** A jukebox of 33 pieces of the game's own music (27 in Forever, which is set before the time of Outland), with shuffle, skip and the volume of the game's music. With the book shut, a notice on the screen (four looks) shows the song that plays; the game cannot pause or seek a piece.
 - **Backup and restore.** `/skald backup` writes the whole diary as text, in parts; `/skald restore` takes it back, only on the character it came from, and keeps one copy to undo. Favourites and notes are never dropped, whatever the size of the book.
+- **Cartographer (Charts).** A collection of hand-drawn maps: the lands, the cities and 44 dungeons, raids and battlegrounds, in colour where the character has stood and faded elsewhere. The Index page draws the map of the dungeon or battleground you stand in.
+- **Weather.** Rain, snow or a sandstorm strong enough becomes a page of its own (at most one every 45 minutes).
 - **Battlegrounds.** A match won or lost becomes a page (Darkspear Islands and the older fields), and wins count for three goals.
 - **Skyborne.** Forever's new race has lines of its own for new lands, levels and falls, and the Saga names the isle where the character was born.
 - **Crafts counted.** Making the same thing again and again is one page that says how many.

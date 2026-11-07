@@ -1,7 +1,8 @@
 # Changelog
 
-## 1.0.0
+## 1.0.1
 
+- First stable version. A file labelled 1.0.0 went out by mistake with the old 0.49.3 contents and was withdrawn; this version replaces it
 - **Maps of 44 instances in the Cartographer** (dungeons, raids and battlegrounds), including every new Forever dungeon (Ruins of Lordaeron, Excavation Site: Wetlands, City of Dalaran, The Drowned City, Krol'dok Stronghold, Alcaz Prison, Blackmaw Hold, The Shaper's Terrace) and the new battlegrounds (Battle for Gilneas, Darkspear Islands); the Index draws the map of the instance you stand in
 - **Weather pages**: rain, snow or a sandstorm strong enough is written (at most one every 45 minutes), with an icon and lines of their own
 - The diary warns near **5,000 pages** and keeps every page until you accept the limit (`/skald retention`); favourites and notes are never removed
