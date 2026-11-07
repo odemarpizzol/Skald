@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.50.0-beta
+
+- **Dungeons, raids and battlegrounds in the Cartographer**: three groups of their own, in colour for those the character has entered (the Hall of Thanes included); groups of up to four maps are shown large, two to a page
+- The Index page draws the map of the dungeon, raid or battleground when you stand in it
+- **Weather pages**: rain, snow or a sandstorm strong enough is written in the diary (read from the game, at most one every 45 minutes), with lines of their own and a new icon, in English, Portuguese and French
+- The Bard has new hand-inked art: lute, hearth, staff, floating notes and equaliser
+
 ## 0.49.4-beta
 
 - **Levels the game never announced** (a level gained while a quest was handed in, or while the book was not ready) are written afterwards, in their place among the pages, dated to their day and without a notice
