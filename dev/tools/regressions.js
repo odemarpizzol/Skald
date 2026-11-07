@@ -2221,6 +2221,11 @@ local total = #groups[1].items + #groups[2].items + #groups[3].items
 local inRaid, inBg = false, false
 for _, m in ipairs(groups[2].items) do if m.id == 533 then inRaid = true end end
 for _, m in ipairs(groups[3].items) do if m.id == 489 then inBg = true end end
+local category = {}
+for _, g in ipairs(groups) do for _, m in ipairs(g.items) do category[m.id] = g.key end end
+local classified = #groups[1].items == 30 and #groups[2].items == 8 and #groups[3].items == 6
+  and category[2856] == "raids" and category[2784] == "dungeons" and category[2875] == "dungeons"
+  and category[3005] == "bgs" and category[2997] == "bgs"
 local tab = btn("Charts")
 tab._OnClick(tab)
 local P = ns.Cartographer.pager
@@ -2228,7 +2233,7 @@ local guard = 0
 while P.CanNext() and guard < 20 do P.Turn(1); ns.Cartographer.refresh(); guard = guard + 1 end
 local named = true
 for _, g in ipairs(groups) do for _, m in ipairs(g.items) do if not m.name or m.name == "" or m.name:find("^map_") then named = false end end end
-RES = (not before and after and total == 44 and inRaid and inBg and groups[1].items[1] and named and guard >= 2 and SkaldDB.errors == nil) and "ok"
+RES = (not before and after and total == 44 and inRaid and inBg and classified and groups[1].items[1] and named and guard >= 2 and SkaldDB.errors == nil) and "ok"
   or ("before " .. tostring(before) .. " after " .. tostring(after) .. " total " .. total .. " guard " .. guard .. " err " .. tostring(SkaldDB.errors and SkaldDB.errors[1]))`,
 });
 
@@ -2237,6 +2242,8 @@ run('the Cartographer shows a group of four maps two to a page, big and centred,
   body: `C_Map.GetMapInfo = function(id) return { name = "Land " .. id, mapType = 3, parentMapID = 0 } end
 -- the two newer fields (Gilneas, Darkspear) are taken out so the group of battlegrounds has the four of the first game: this scenario is about a group of four
 ns.ZoneCard.INSTANCE_ART[3005] = nil; ns.ZoneCard.INSTANCE_ART[2997] = nil
+-- Keep seven raids here to also cover balancing an odd-sized group; the full catalogue is checked separately.
+ns.ZoneCard.INSTANCE_ART[2856] = nil
 SkaldCharDB.visitedInstances = { [489] = true }
 local tab = btn("Charts")
 tab._OnClick(tab)
@@ -2271,6 +2278,42 @@ end
 RES = (seenBig and seenGrid and bigCount == 1 and bgOk and last.n == 4 and last.slots[1] == 1 and last.slots[2] == 2 and last.slots[3] == 1 and last.slots[4] == 2
   and last.pages[1] == 0 and last.pages[2] == 1 and raidSplit == "4/3" and not unbalanced and SkaldDB.errors == nil) and "ok"
   or ("split " .. tostring(raidSplit) .. " unbalanced " .. tostring(unbalanced) .. " big " .. tostring(seenBig) .. " grid " .. tostring(seenGrid) .. " bigCount " .. bigCount .. " last " .. tostring(last and last.n) .. " err " .. tostring(SkaldDB.errors and SkaldDB.errors[1]))`,
+});
+
+run('the full Cartographer catalogue shows six battlegrounds and eight raids in balanced normal grids', {
+  pre: SAVED('{}', 'version = 99, goalsInit = true, goalsVer = 3, goals = {}, stats = { counts = {}, deathZones = {}, tiers = {}, played = 1, first = 1 }'),
+  body: `C_Map.GetMapInfo = function(id) return { name = "Land " .. id, mapType = 3, parentMapID = 0 } end
+local tab = btn("Charts")
+tab._OnClick(tab)
+local P = ns.Cartographer.pager
+local cells = {}
+for _, f in ipairs(frames) do if rawget(f, "map") and rawget(f, "slotX") then cells[#cells + 1] = f end end
+local seenBg, seenRaid, guard = false, false, 0
+while guard < 30 do
+  ns.Cartographer.refresh()
+  local visible, left, right, hasGilneas, hasDarkspear, hasScarlet, normal = 0, 0, 0, false, false, false, true
+  for _, c in ipairs(cells) do
+    if c._shown ~= false and c.info then
+      visible = visible + 1
+      if c.page == 0 then left = left + 1 else right = right + 1 end
+      if c.big then normal = false end
+      if c.info.id == 3005 then hasGilneas = true end
+      if c.info.id == 2997 then hasDarkspear = true end
+      if c.info.id == 2856 then hasScarlet = true end
+    end
+  end
+  if hasGilneas or hasDarkspear then
+    assert(hasGilneas and hasDarkspear and normal and visible == 6 and left == 3 and right == 3, "six battlegrounds must share a balanced normal grid")
+    seenBg = true
+  end
+  if hasScarlet then
+    assert(normal and visible == 8 and left == 4 and right == 4, "Scarlet Enclave must share the eight-raid grid")
+    seenRaid = true
+  end
+  if not P.CanNext() then break end
+  P.Turn(1); guard = guard + 1
+end
+RES = (seenBg and seenRaid and SkaldDB.errors == nil) and "ok" or "missing full-catalogue grid"`,
 });
 
 run('the Cartographer tab opens, shows the maps in colour where the diary has seen the character and faded elsewhere, turns its pages and raises no error', {

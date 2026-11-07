@@ -2,6 +2,17 @@
 
 Comparação de `ZC.INSTANCE_ART` em `ZoneCard.lua`, `C.INSTANCE_NAMES`/grupos do Cartógrafo, arquivos em `Textures/skald2/` e o lote planejado em `dev/PROMPT_CODEX_mapas_instancias_classic.md`.
 
+## Estado após a integração dos dez PNGs — 07/11/2026
+
+- Catálogo atual: **44 artes**, distribuídas em **30 masmorras, 8 raides e 6 campos de batalha**. Os dez TGAs novos existem em 512×256, 32 bits, com alfa visível.
+- As nove masmorras anunciadas do Forever têm arte e cadastro. Gilneas e Darkspear estão no grupo de campos de batalha. Demon Fall Canyon e Karazhan Crypts estão em masmorras; **Scarlet Enclave está em raides**, conforme sua [classificação publicada pela Blizzard](https://worldofwarcraft.blizzard.com/en-us/news/24188044).
+- Darkspear usa **Ilhas Lançanegra** em português e **Îles des Sombrelances** em francês, conforme os artigos oficiais em [pt-BR](https://worldofwarcraft.blizzard.com/pt-br/news/24307308/combatti-per-le-darkspear-islands-in-world-of-warcraft-forever) e [fr-FR](https://worldofwarcraft.blizzard.com/fr-fr/news/24307308). Os demais nomes novos em francês ainda precisam de revisão; Blackmaw Hold mantém o nome inglês como alternativa provisória.
+- Os IDs da tabela `Map` ainda precisam de conferência dentro das instâncias com `/skald probe maps`, exceto o Salão dos Thanes, já lido no jogo. Cadastro no cliente não comprova disponibilidade para entrar ou enfrentar chefes no Forever.
+- Pendências de arte: Demon Fall representa apenas o cânion e a entrada da gruta; falta referência do subsolo. Karazhan e Scarlet Enclave usam plantas de SoD para os interiores e precisam de conferência no Forever. Darkspear foi girada 90° como um todo para o formato horizontal; sua posição não deve ser usada como orientação norte/sul.
+- Hyjal Summit, Barrow Deeps e a coleção de instâncias de TBC continuam pendentes.
+
+O levantamento abaixo registra a situação **anterior à integração**; os números e ausências históricos não descrevem o catálogo atual.
+
 ## O que já existe
 
 - 19 masmorras clássicas, 7 raides clássicas e 4 campos de batalha do lote original.

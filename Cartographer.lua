@@ -102,8 +102,8 @@ C.INSTANCE_NAMES = {
     [2994] = { "Alcaz Prison", "Pris\195\163o de Alcaz", "Prison d'Alcaz" },
     [2974] = { "Blackmaw Hold", "Gruta Bocanera", "Blackmaw Hold" },
     [3001] = { "The Shaper's Terrace", "O Terra\195\167o do Moldador", "La terrasse du Fa\195\167onneur" },
-    [3005] = { "Battle for Gilneas", "Batalha por Guiln\195\169as", "Bataille pour Giln\195\169as" },
-    [2997] = { "Darkspear Islands", "Ilhas Lan\195\167a Negra", "\195\142les Sombrelance" },
+    [3005] = { "Battle for Gilneas", "Batalha por Guiln\195\169as", "Bataille de Giln\195\169as" },
+    [2997] = { "Darkspear Islands", "Ilhas Lan\195\167anegra", "\195\142les des Sombrelances" },
     [2784] = { "Demon Fall Canyon", "C\195\162nion do Dem\195\180nio Ca\195\173do", "Canyon de la Malechute" },
     [2875] = { "Karazhan Crypts", "Criptas de Karazhan", "Cryptes de Karazhan" },
     [2856] = { "Scarlet Enclave", "Enclave Escarlate", "L\226\128\153enclave \195\137carlate" },
@@ -112,7 +112,7 @@ C.INSTANCE_NAMES = {
     [30] = { "Alterac Valley", "Vale de Alterac", "Vall\195\169e d'Alterac" },
     [566] = { "Eye of the Storm", "Olho da Tormenta", "\197\146il du cyclone" },
 }
-C.RAIDS = { [409] = true, [249] = true, [469] = true, [309] = true, [509] = true, [531] = true, [533] = true }
+C.RAIDS = { [409] = true, [249] = true, [469] = true, [309] = true, [509] = true, [531] = true, [533] = true, [2856] = true }
 C.BGS = { [489] = true, [529] = true, [30] = true, [566] = true, [3005] = true, [2997] = true }
 
 -- The instances with a drawing, in the three groups of the tab, each sorted by name: { key, label, items }.
