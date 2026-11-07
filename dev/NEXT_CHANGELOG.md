@@ -7,3 +7,4 @@
 - Remove the equaliser picture from the Bard tab (the rising notes and the tab note stay).
 - Raise the page limit from 3,000 to 5,000 pages per character (still asks before removing any).
 - Draw the maps of three more of Forever's new dungeons: Ruins of Lordaeron, Excavation Site: Wetlands and City of Dalaran.
+- Draw the maps of the other new Forever dungeons (The Drowned City, Krol'dok Stronghold, Alcaz Prison, Blackmaw Hold, The Shaper's Terrace), of the new battlegrounds (Battle for Gilneas, Darkspear Islands) and of Demon Fall Canyon, Karazhan Crypts and the Scarlet Enclave; the Cartographer lists them (French names of some are not reviewed).
