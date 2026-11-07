@@ -10,7 +10,7 @@ let failed = 0;
 
 // The game, as far as the addon can tell. `pre` runs before the addon loads (saved data, game answers);
 // `body` runs after the login and must leave "ok" or a message in RES.
-function run(name, { pre = '', body }) {
+function run(name, { pre = '', body, settle = true }) {
   const L = lauxlib.luaL_newstate(); lualib.luaL_openlibs(L);
   const exec = c => { if (lauxlib.luaL_dostring(L, to_luastring(c))) throw new Error(to_jsstring(lua.lua_tolstring(L, -1))); };
   const set = (k, v) => { lua.lua_pushstring(L, to_luastring(v)); lua.lua_setglobal(L, to_luastring(k)); };
@@ -40,7 +40,15 @@ ${pre}
 ns={}
 assert(load(LOC,"=L"))("Skald",ns); assert(load(CUR,"=U"))("Skald",ns); assert(load(XPT,"=X"))("Skald",ns)
 assert(load(CH,"=C"))("Skald",ns); assert(load(AT,"=A"))("Skald",ns); assert(load(GL,"=G"))("Skald",ns); assert(load(SG,"=S"))("Skald",ns); assert(load(ZC,"=Z"))("Skald",ns); assert(load(CT,"=T"))("Skald",ns); assert(load(PV,"=P"))("Skald",ns); assert(load(BK,"=B"))("Skald",ns); assert(load(SR,"=R"))("Skald",ns); assert(load(BD,"=D"))("Skald",ns)
+function finishStartup()
+  for i=1,100 do
+    if not ns.MaintenanceState or ns.MaintenanceState().pending==0 then return end
+    runTimers()
+  end
+  error("maintenance failed to settle")
+end
 fire("ADDON_LOADED","Skald"); fire("PLAYER_LOGIN"); runTimers(); runTimers()
+${settle ? 'finishStartup()' : ''}
 RES = "no result"
 local okRun, err = pcall(function()
 ${body}
@@ -56,6 +64,167 @@ if not okRun then RES = "error: " .. tostring(err) end`);
 const SAVED = (entries, extra = '') => `SkaldCharDB = { entries = ${entries}, visited = {}, flags = {}, guid = "P1", ${extra} }`;
 
 console.log('Regressions');
+
+run('maintenance runs one job per timer turn, coalesces duplicates and survives a failed job', {
+  body: `local calls={}
+local n=0
+ns.QueueMaintenance("test-one",function() n=n+1; calls[#calls+1]="one" end)
+ns.QueueMaintenance("test-one",function() error("duplicate ran") end)
+ns.QueueMaintenance("test-error",function() error("expected maintenance failure") end)
+ns.QueueMaintenance("test-last",function() calls[#calls+1]="last" end)
+assert(#calls==0,"work ran synchronously")
+runTimers(); assert(#calls==1 and n==1,"jobs shared a turn")
+runTimers(); assert(#calls==1,"job after failure ran in same turn")
+runTimers(); assert(calls[2]=="last","queue stopped on failure")
+assert(ns.MaintenanceState().pending==0,"queue not drained")
+assert(SkaldDB.errors[#SkaldDB.errors]:find("test-error",1,true),"failure not reported")
+RES="ok"`,
+});
+run('combat pauses login maintenance but recording is active, and work resumes once', {
+  settle: false,
+  pre: `function InCombatLockdown() return true end`,
+  body: `assert(ns.MaintenanceState().pending>0,"no deferred work")
+local before=ns.MaintenanceState().completed
+local homes=count("home")
+fire("HEARTHSTONE_BOUND","Test Inn")
+assert(count("home")==homes+1,"recording blocked by startup")
+runTimers(); runTimers()
+assert(ns.MaintenanceState().completed==before,"maintenance ran in combat")
+function InCombatLockdown() return false end
+finishStartup()
+assert(ns.MaintenanceState().pending==0 and ns.MaintenanceState().completed>before,"queue never resumed")
+local done=ns.MaintenanceState().completed
+runTimers(); assert(ns.MaintenanceState().completed==done,"completed work repeated")
+RES="ok"`,
+});
+run('logout invalidates pending maintenance callbacks', {
+  body: `local ran=false
+ns.QueueMaintenance("should-not-run",function() ran=true end)
+fire("PLAYER_LOGOUT"); runTimers(); runTimers()
+assert(not ran and ns.MaintenanceState().pending==0,"work survived logout")
+RES="ok"`,
+});
+
+
+
+run('recovered levels update their historical day and closed summary, once', {
+  body: `local db=SkaldCharDB
+local old=NOW-86400
+local key=date("%Y-%m-%d",old)
+db.entries={{kind="level",arg=2,t=old,zone="Darkshore",idx=1}, {kind="level",arg=5,t=old+200,zone="Darkshore",idx=1}, {kind="day",arg=key,t=old+300,day={l=2},idx=1}}
+db.days[key]={l=2,done=true,last=old+300}
+local today=db.today
+local before=db.days[today].l
+function UnitLevel(u) return u=="player" and 5 end
+ns.CatchUpLevels(); ns.CatchUpLevels()
+assert(db.days[today].l==before,"recovered levels counted today")
+assert(db.days[key].l==4,"historical counter not updated")
+local summary
+for _,e in ipairs(db.entries) do if e.kind=="day" then summary=e end end
+assert(summary.day.l==4,"closed summary not updated")
+assert(db.days[key].last==old+300,"historical last activity moved")
+RES="ok"`,
+});
+run('available kill counter wins over XP estimate, including zero; missing counter falls back', {
+  body: `SkaldCharDB.stats.counts.kill=113
+SkaldAPI.GameFacts=function() return {kills=65} end
+assert(ns.GoalFacts().kills==65,"estimate overrides game")
+SkaldAPI.GameFacts=function() return {kills=0} end
+assert(ns.GoalFacts().kills==0,"zero is an available counter")
+SkaldAPI.GameFacts=function() return {} end
+assert(ns.GoalFacts().kills==113,"missing fallback")
+RES="ok"`,
+});
+for (const [loc,word] of [['ptBR','estimativa'],['enUS','estimate'],['frFR','estimation']]) {
+  run('daily kill estimates are identified, including legacy pages: '+loc, {
+    pre: `__locale="${loc}"`,
+    body: `local e={kind="day",arg="2020-01-01",idx=1,day={k=113}}
+assert(SkaldAPI.Render(e):find("${word}",1,true),"legacy estimate unlabelled")
+e.day.kEstimated=true
+assert(SkaldAPI.Render(e):find("${word}",1,true),"estimate unlabelled")
+e.day.kEstimated=false
+assert(not SkaldAPI.Render(e):find("${word}",1,true),"measured count labelled estimated")
+RES="ok"`,
+  });
+}
+run('zone kills discard ambiguous crossings, loading gaps, and old saved baselines', {
+  body: `local total,here=100,1438
+function GetStatistic(id) if id==107 then return tostring(total) end return "--" end
+C_Map.GetBestMapForUnit=function() return here end
+ns.ZoneCard.ZoneMap=function(id) return id end
+SkaldCharDB.killBase=5; SkaldCharDB.zoneKills=nil
+ns.TrackKills()
+assert(not SkaldCharDB.zoneKills,"old session delta attributed")
+total=110; ns.TrackKills()
+assert(SkaldCharDB.zoneKills[1438]==10,"same zone delta lost")
+here=1457; total=120; ns.TrackKills()
+assert(not SkaldCharDB.zoneKills[1457],"crossing delta attributed to city")
+total=123; ns.TrackKills()
+assert(SkaldCharDB.zoneKills[1457]==3,"new zone delta lost")
+here=nil; total=125; ns.TrackKills()
+here=1438; total=130; ns.TrackKills()
+assert(SkaldCharDB.zoneKills[1438]==10,"loading gap attributed")
+assert(SkaldCharDB.zoneKillsUnassigned==17,"ambiguous delta not retained separately")
+RES="ok"`,
+});
+run('lore keeps identical dialogue from different characters and languages separately', {
+  body: `SlashCmdList.SKALD("probe lore")
+function GetGossipText() return "The same greeting." end
+function GetRealmName() return "Moonshade" end
+function UnitGUID() return "character-A" end
+function UnitName(u) return u=="player" and "Aelyndra" or "Speaker" end
+fire("GOSSIP_SHOW"); fire("GOSSIP_SHOW")
+function UnitGUID() return "character-B" end
+fire("GOSSIP_SHOW")
+__locale="frFR"; fire("GOSSIP_SHOW")
+local items=SkaldDB.loreProbe.items
+assert(#items==3,"captures merged")
+assert(items[1].guid=="character-A" and items[2].guid=="character-B","missing identity")
+assert(items[1].character=="Aelyndra" and items[1].realm,"missing character/realm")
+assert(items[3].locale=="frFR","missing locale")
+RES="ok"`,
+});
+
+
+
+// Real diary findings: Aelyndra, Forever, 2026-11-05. No private saved data in fixtures.
+for (const loc of ['ptBR', 'enUS', 'frFR']) {
+  run('Aelyndra quest stories override old misleading types and racial flavours: ' + loc, {
+    pre: `__locale="${loc}"; function UnitSex() return 3 end`,
+    body: `local expected = {
+      ptBR = { [5621]="curei", [99053]="resgate", [922]="semente", [6342]="hipogrifo" },
+      enUS = { [5621]="healed", [99053]="rescue", [922]="seed", [6342]="hippogryph" },
+      frFR = { [5621]="soigné", [99053]="secours", [922]="graine", [6342]="hippogriffe" }
+    }
+    for id, word in pairs(expected[GetLocale()]) do
+      for _, flavour in ipairs({false, "race_NightElf_quest"}) do
+        local e = {kind="quest", q=id, arg="Saved quest title", npc="Saved NPC", qtype="fight", idx=38, fl=flavour or nil, tier=1}
+        local t = SkaldAPI.Render(e)
+        assert(t:find(word, 1, true), id .. ": " .. t)
+        assert(t:find("Saved quest title", 1, true) and not t:find("{", 1, true), t)
+        assert(e.qtype == "fight" and e.idx == 38 and e.tier == 1, "saved event changed")
+        assert(not ns.CURATED[id].tier, "story must not promote quest rarity")
+      end
+    end
+    RES="ok"`,
+  });
+}
+run('Aelyndra Portuguese grammar, female guardian, Eluna and terrace article', {
+  pre: `__locale="ptBR"; function UnitSex() return 3 end`,
+  body: `local skill=SkaldAPI.Render({kind="skill",arg="Esfolamento 75",idx=1})
+    assert(skill:find("como eu o moldo",1,true),skill)
+    local quest={kind="quest",arg="Carrancarvalho",fl="race_NightElf_quest",idx=11}
+    local female=SkaldAPI.Render(quest)
+    assert(female:find("Uma guardiã",1,true),female)
+    function UnitSex() return 2 end
+    local male=SkaldAPI.Render(quest)
+    assert(male:find("Um guardião",1,true),male)
+    local death=SkaldAPI.Render({kind="death",arg="Teldrassil",fl="race_NightElf_death",idx=1})
+    assert(death:find("Eluna",1,true) and not death:find("Elune",1,true),death)
+    local hearth=SkaldAPI.Render({kind="hearth",arg="Terraço dos Artesãos",fl="race_NightElf_hearth",idx=6})
+    assert(hearth:find("ao Terraço dos Artesãos",1,true),hearth)
+    RES="ok"`,
+});
 
 run('changing the language does not write the professions again', {
   pre: `${SAVED('{}', 'skills = { ["Culinária"] = 0, ["Pesca"] = 0 }, skillsInit = true')}
@@ -676,7 +845,7 @@ run('the reminder on returning shows where the last visit ended', {
   pre: SAVED('{}', 'resume = { t = 1, zone = "Darkshore", level = 12, quests = { "A Lost Boot" }, next = "Skin the wolves" }'),
   body: `NOW = NOW + 7200
 SkaldCharDB.resume.t = NOW - 7200
-fire("PLAYER_LOGIN"); runTimers(); runTimers()
+fire("PLAYER_LOGIN"); runTimers(); runTimers(); finishStartup()
 local card = _G.SkaldResume
 local text = {}
 if card then for _, p in ipairs(card.parts) do text[#text+1] = tostring(rawget(p, "_text")) end end
@@ -691,7 +860,7 @@ pb._OnClick(pb)
 local before = SkaldFrame:GetView()
 NOW = NOW + 7200
 SkaldCharDB.resume.t = NOW - 7200
-fire("PLAYER_LOGIN"); runTimers(); runTimers()
+fire("PLAYER_LOGIN"); runTimers(); runTimers(); finishStartup()
 local card = _G.SkaldResume
 card._OnMouseUp(card, "LeftButton")
 RES = (before ~= "book" and SkaldFrame:GetView() == "book" and SkaldFrame:IsShown()) and "ok" or ("view before: " .. tostring(before) .. ", after: " .. tostring(SkaldFrame:GetView()))`,
@@ -836,7 +1005,8 @@ run('the summary of a region counts what the diary holds there', {
   { t = 1792000400, kind = "level", zone = "Darkshore", zm = 1439, idx = 1, arg = 12 },
   { t = 1792000500, kind = "loot", zone = "Darkshore", zm = 1439, idx = 1, arg = "z", fav = true },
   { t = 1792000600, kind = "quest", zone = "Elsewhere", zm = 999, idx = 1, tier = 1, arg = "c" },
-}`),
+}`) + `
+function UnitLevel(u) return u == "player" and 12 or nil end   -- the character is at the level of its last level page: nothing is caught up`,
   body: `local z = SkaldAPI.RegionStats(SkaldAPI.ZoneIdOfMap(1439))
 RES = (z and z.quest == 2 and z.death == 1 and z.boss == 1 and z.level == 1 and z.loot == 1 and z.fav == 1 and z.first == 1792000000)
   and "ok" or "counts are wrong"`,
@@ -2036,6 +2206,116 @@ if not (prev and nextB) then RES = "corners not found" else
 end`,
 });
 
+run('the Cartographer lists dungeons, raids and battlegrounds after the lands, marks the ones the character entered, and the diary keeps the visit', {
+  pre: SAVED('{}', 'version = 99, goalsInit = true, goalsVer = 3, goals = {}, stats = { counts = {}, deathZones = {}, tiers = {}, played = 1, first = 1 }'),
+  body: `C_Map.GetMapInfo = function(id) return { name = "Land " .. id, mapType = 3, parentMapID = 0 } end
+local inside, zoneName = true, "Salao dos Thanes"
+function IsInInstance() return inside, "party" end
+function GetInstanceInfo() return zoneName, "party", 1, "Normal", 5, 0, false, 3065, 5 end
+function GetZoneText() return zoneName end
+local before = ns.Cartographer.WalkedInstance(3065)
+ns.NoteInstanceForTest()
+local after = ns.Cartographer.WalkedInstance(3065)
+local groups = ns.Cartographer.Places()
+local total = #groups[1].items + #groups[2].items + #groups[3].items
+local inRaid, inBg = false, false
+for _, m in ipairs(groups[2].items) do if m.id == 533 then inRaid = true end end
+for _, m in ipairs(groups[3].items) do if m.id == 489 then inBg = true end end
+local category = {}
+for _, g in ipairs(groups) do for _, m in ipairs(g.items) do category[m.id] = g.key end end
+local classified = #groups[1].items == 30 and #groups[2].items == 8 and #groups[3].items == 6
+  and category[2856] == "raids" and category[2784] == "dungeons" and category[2875] == "dungeons"
+  and category[3005] == "bgs" and category[2997] == "bgs"
+local tab = btn("Charts")
+tab._OnClick(tab)
+local P = ns.Cartographer.pager
+local guard = 0
+while P.CanNext() and guard < 20 do P.Turn(1); ns.Cartographer.refresh(); guard = guard + 1 end
+local named = true
+for _, g in ipairs(groups) do for _, m in ipairs(g.items) do if not m.name or m.name == "" or m.name:find("^map_") then named = false end end end
+RES = (not before and after and total == 44 and inRaid and inBg and classified and groups[1].items[1] and named and guard >= 2 and SkaldDB.errors == nil) and "ok"
+  or ("before " .. tostring(before) .. " after " .. tostring(after) .. " total " .. total .. " guard " .. guard .. " err " .. tostring(SkaldDB.errors and SkaldDB.errors[1]))`,
+});
+
+run('the Cartographer shows a group of four maps two to a page, big and centred, and keeps the grid for the larger groups', {
+  pre: SAVED('{}', 'version = 99, goalsInit = true, goalsVer = 3, goals = {}, stats = { counts = {}, deathZones = {}, tiers = {}, played = 1, first = 1 }'),
+  body: `C_Map.GetMapInfo = function(id) return { name = "Land " .. id, mapType = 3, parentMapID = 0 } end
+-- the two newer fields (Gilneas, Darkspear) are taken out so the group of battlegrounds has the four of the first game: this scenario is about a group of four
+ns.ZoneCard.INSTANCE_ART[3005] = nil; ns.ZoneCard.INSTANCE_ART[2997] = nil
+-- Keep seven raids here to also cover balancing an odd-sized group; the full catalogue is checked separately.
+ns.ZoneCard.INSTANCE_ART[2856] = nil
+SkaldCharDB.visitedInstances = { [489] = true }
+local tab = btn("Charts")
+tab._OnClick(tab)
+local P = ns.Cartographer.pager
+local cells = {}
+for _, f in ipairs(frames) do if rawget(f, "map") and rawget(f, "slotX") then cells[#cells + 1] = f end end
+local function shown() local n = {} for _, c in ipairs(cells) do if c._shown ~= false and c.info then n[#n + 1] = c end end return n end
+local guard, seenBig, seenGrid, bgOk, bigCount = 0, false, false, false, 0
+local raidSplit, unbalanced = nil, false
+local last
+while guard < 30 do
+  ns.Cartographer.refresh()
+  local s = shown()
+  local big = s[1] and s[1].big
+  if big then
+    seenBig = true
+    local names = {}
+    for _, c in ipairs(s) do names[#names + 1] = c.info.id end
+    last = { n = #s, names = names, slots = { s[1] and s[1].slot, s[2] and s[2].slot, s[3] and s[3].slot, s[4] and s[4].slot }, pages = { s[1] and s[1].page, s[3] and s[3].page } }
+    if #s == 4 then bigCount = bigCount + 1 end
+    for _, c in ipairs(s) do if c.info.id == 489 and c.walked then bgOk = true end end
+  elseif #s > 0 then
+    seenGrid = true
+    local left, right, hasNaxx = 0, 0, false
+    for _, c in ipairs(s) do if c.page == 0 then left = left + 1 else right = right + 1 end if c.info.id == 533 then hasNaxx = true end end
+    if hasNaxx then raidSplit = left .. "/" .. right end
+    if left < right or left > right + 1 or left + right < 2 then unbalanced = true end
+  end
+  if not P.CanNext() then break end
+  P.Turn(1); guard = guard + 1
+end
+RES = (seenBig and seenGrid and bigCount == 1 and bgOk and last.n == 4 and last.slots[1] == 1 and last.slots[2] == 2 and last.slots[3] == 1 and last.slots[4] == 2
+  and last.pages[1] == 0 and last.pages[2] == 1 and raidSplit == "4/3" and not unbalanced and SkaldDB.errors == nil) and "ok"
+  or ("split " .. tostring(raidSplit) .. " unbalanced " .. tostring(unbalanced) .. " big " .. tostring(seenBig) .. " grid " .. tostring(seenGrid) .. " bigCount " .. bigCount .. " last " .. tostring(last and last.n) .. " err " .. tostring(SkaldDB.errors and SkaldDB.errors[1]))`,
+});
+
+run('the full Cartographer catalogue shows six battlegrounds and eight raids in balanced normal grids', {
+  pre: SAVED('{}', 'version = 99, goalsInit = true, goalsVer = 3, goals = {}, stats = { counts = {}, deathZones = {}, tiers = {}, played = 1, first = 1 }'),
+  body: `C_Map.GetMapInfo = function(id) return { name = "Land " .. id, mapType = 3, parentMapID = 0 } end
+local tab = btn("Charts")
+tab._OnClick(tab)
+local P = ns.Cartographer.pager
+local cells = {}
+for _, f in ipairs(frames) do if rawget(f, "map") and rawget(f, "slotX") then cells[#cells + 1] = f end end
+local seenBg, seenRaid, guard = false, false, 0
+while guard < 30 do
+  ns.Cartographer.refresh()
+  local visible, left, right, hasGilneas, hasDarkspear, hasScarlet, normal = 0, 0, 0, false, false, false, true
+  for _, c in ipairs(cells) do
+    if c._shown ~= false and c.info then
+      visible = visible + 1
+      if c.page == 0 then left = left + 1 else right = right + 1 end
+      if c.big then normal = false end
+      if c.info.id == 3005 then hasGilneas = true end
+      if c.info.id == 2997 then hasDarkspear = true end
+      if c.info.id == 2856 then hasScarlet = true end
+    end
+  end
+  if hasGilneas or hasDarkspear then
+    assert(hasGilneas and hasDarkspear and normal and visible == 6 and left == 3 and right == 3, "six battlegrounds must share a balanced normal grid")
+    seenBg = true
+  end
+  if hasScarlet then
+    assert(normal and visible == 8 and left == 4 and right == 4, "Scarlet Enclave must share the eight-raid grid")
+    seenRaid = true
+  end
+  if not P.CanNext() then break end
+  P.Turn(1); guard = guard + 1
+end
+RES = (seenBg and seenRaid and SkaldDB.errors == nil) and "ok" or "missing full-catalogue grid"`,
+});
+
 run('the Cartographer tab opens, shows the maps in colour where the diary has seen the character and faded elsewhere, turns its pages and raises no error', {
   pre: SAVED('{}', 'version = 99, goalsInit = true, goalsVer = 3, goals = {}, stats = { counts = {}, deathZones = {}, tiers = {}, played = 1, first = 1 }'),
   body: `C_Map.GetMapInfo = function(id) return { name = "Land " .. id, mapType = 3, parentMapID = 0 } end
@@ -2163,6 +2443,25 @@ local hasArt = card.tiles[1] and card.tiles[1]._tex and card.tiles[1]._tex:find(
 RES = (hasArt and #card.tiles == 1 and #card.found == 0 and #card.mapCorners == 4 and card.compass ~= nil) and "ok" or "art or ornaments missing"`,
 });
 
+run('the zone card draws the map of the dungeon the character stands in, with no zone rows', {
+  pre: SAVED('{}', 'version = 99, goalsInit = true, goalsVer = 3, goals = {}, stats = { counts = {}, deathZones = {}, tiers = {}, played = 1, first = 1 }'),
+  body: ZONE_STUBS + `
+local inside = true
+function IsInInstance() return inside, "party" end
+function GetInstanceInfo() return "Hall of Thanes", "party", 1, "Normal", 5, 0, false, 3065, 5 end
+local inst = ns.ZoneCard.CurrentInstance()
+local card = ns.ZoneCard.Build(UIParent, 342)
+card:Set(0, inst)
+local art = card.tiles[1] and card.tiles[1]._tex and card.tiles[1]._tex:find("map_hall_of_thanes", 1, true)
+local rowsHidden = not card.rows[1].label:IsShown()
+card:Set(1438)
+local rowsBack = card.rows[1].label:IsShown()
+function GetInstanceInfo() return "Somewhere", "party", 1, "Normal", 5, 0, false, 99999, 5 end
+local none = ns.ZoneCard.CurrentInstance() == nil
+inside = false
+RES = (inst and inst.name == "Hall of Thanes" and art and rowsHidden and rowsBack and none and ns.ZoneCard.CurrentInstance() == nil) and "ok" or "instance card wrong"`,
+});
+
 run('the Burning Crusade starting zones use their own map art', {
   pre: SAVED('{}', 'version = 99, goalsInit = true, goalsVer = 3, goals = {}, stats = { counts = {}, deathZones = {}, tiers = {}, played = 1, first = 1 }'),
   body: ZONE_STUBS + `
@@ -2230,6 +2529,19 @@ for id, name in pairs(maps) do
   if #card.tiles ~= 1 or not card.tiles[1]._tex or not card.tiles[1]._tex:find(name, 1, true) then ok = false; break end
 end
 RES = ok and "ok" or "one or more Burning Crusade maps missing"`,
+});
+
+run('the cover zoom: /skald zoom sets the distance of the camera, a wrong value changes nothing and auto gives the default back', {
+  pre: `function UnitRace() return "Human", "Human", 1 end`,
+  body: `local base = ns.CoverZoom()
+local mine = nil
+SlashCmdList.SKALD("zoom 90")
+mine = ns.CoverZoom()
+SlashCmdList.SKALD("zoom nonsense")
+local kept = ns.CoverZoom() == 0.9
+SlashCmdList.SKALD("zoom auto")
+RES = (mine == 0.9 and kept and ns.CoverZoom() == base and SkaldDB.coverZoom == nil and base > 0 and SkaldDB.errors == nil) and "ok"
+  or ("base=" .. tostring(base) .. " mine=" .. tostring(mine) .. " kept=" .. tostring(kept))`,
 });
 
 run('the lands of the Forever client resolve to their custom art', {
@@ -2531,29 +2843,29 @@ local told = 0; for _, k in ipairs(keys) do if k ~= "-" then told = told + 1 end
 RES = (not bad and told >= 15) and "ok" or (bad or ("only " .. told .. " told: " .. table.concat(keys, ",")))`,
 });
 
-// The cap on pages (3000) lets the oldest go, but never a favourite or a note, and never the progress the goals read.
+// The cap on pages (5000) lets the oldest go, but never a favourite or a note, and never the progress the goals read.
 const CAP_PRE = (mark) => `local es = {}
-for i = 1, 3000 do es[i] = { t = NOW - (3001 - i) * 60, zone = "Z", kind = "zone", arg = "e" .. i, idx = 1 } end
+for i = 1, 5000 do es[i] = { t = NOW - (5001 - i) * 60, zone = "Z", kind = "zone", arg = "e" .. i, idx = 1 } end
 ${mark}
-${SAVED('es')}`;
+${SAVED('es', 'retentionAccepted = true,')}`;
 const has = `local function has(arg) for _, e in ipairs(SkaldCharDB.entries) do if e.arg == arg then return true end end return false end`;
 
 run('at the cap a favourite and a note stay while the plain pages go, oldest first', {
   pre: CAP_PRE('es[1].fav = true; es[2].kind = "note"'),
   body: `${has}
 SkaldAPI.AddEntry("zone", "new")
-RES = (#SkaldCharDB.entries == 3000 and has("e1") and has("e2") and not has("e3") and has("new")) and "ok"
+RES = (#SkaldCharDB.entries == 5000 and has("e1") and has("e2") and not has("e3") and has("new")) and "ok"
   or ("n=" .. #SkaldCharDB.entries .. " e1=" .. tostring(has("e1")) .. " e2=" .. tostring(has("e2")) .. " e3=" .. tostring(has("e3")))`,
 });
 
 run('when only favourites and notes are left the diary grows past the cap and loses nothing', {
-  pre: CAP_PRE('for i = 1, 3000 do if i % 2 == 0 then es[i].fav = true else es[i].kind = "note" end end'),
+  pre: CAP_PRE('for i = 1, 5000 do if i % 2 == 0 then es[i].fav = true else es[i].kind = "note" end end'),
   body: `${has}
 SkaldAPI.AddEntry("zone", "new")
 SkaldAPI.AddEntry("zone", "newer")
 local all = true
-for i = 1, 3000 do if not has("e" .. i) then all = false end end
-RES = (all and #SkaldCharDB.entries >= 3000) and "ok" or ("lost some, n=" .. #SkaldCharDB.entries)`,
+for i = 1, 5000 do if not has("e" .. i) then all = false end end
+RES = (all and #SkaldCharDB.entries >= 5000) and "ok" or ("lost some, n=" .. #SkaldCharDB.entries)`,
 });
 
 run('a note written at the cap lets an older plain page go and the book redraws', {
@@ -2563,7 +2875,7 @@ local rev = ns.layoutRev or 0
 ns.InsertNote(NOW - 30, "Z", "hello")
 local note = false
 for _, e in ipairs(SkaldCharDB.entries) do if e.kind == "note" and e.arg == "hello" then note = true end end
-RES = (#SkaldCharDB.entries == 3000 and note and has("e1") and not has("e2") and (ns.layoutRev or 0) > rev) and "ok"
+RES = (#SkaldCharDB.entries == 5000 and note and has("e1") and not has("e2") and (ns.layoutRev or 0) > rev) and "ok"
   or ("n=" .. #SkaldCharDB.entries .. " note=" .. tostring(note) .. " e2=" .. tostring(has("e2")))`,
 });
 
@@ -2813,7 +3125,9 @@ run('undo brings the earlier diary back and sets the one replaced in its place; 
 local parts = B.Build().parts
 local function fresh() return B.Finish(importAll(parts)) end
 SkaldAPI.AddEntry("zone", "after the backup")
-local moved = B.Serialize(B.Capture(SkaldCharDB))
+local expectedMoved = B.Capture(SkaldCharDB)
+ns.ReadAfresh(expectedMoved)
+local moved = B.Serialize(expectedMoved)
 B.Apply(fresh())
 local restored = B.Serialize(B.Capture(SkaldCharDB))
 local ok1 = B.Undo()
@@ -3034,7 +3348,7 @@ local B = ns.Bard
 B.Stop()
 p.rows[3]._OnClick(p.rows[3])
 local playsRow = B.playing == 3 and rawget(p.song, "_text") == ns.LOCALES.enUS.BARD_TRACKS[3] and rawget(p.state, "_text") == ns.LOCALES.enUS.BARD_PLAYING
-  and tostring(rawget(p.rows[3].disc, "_tex")):find("bard_pause", 1, true) and tostring(rawget(p.rows[2].disc, "_tex")):find("bard_play", 1, true)
+  and tostring(rawget(p.rows[3].disc, "_tex")):find("hud_medal_stop", 1, true) and tostring(rawget(p.rows[2].disc, "_tex")):find("bard_play", 1, true)
 p.nextButton._OnClick(p.nextButton)
 local nextOk = B.playing == 4
 p.prevButton._OnClick(p.prevButton)
@@ -3047,10 +3361,10 @@ local mainPlays = B.playing == 2   -- after a stop the big button plays the piec
 p.mainButton._OnClick(p.mainButton)
 local mainStops = B.playing == nil
 p.rows[4]._OnClick(p.rows[4]); p.Animate()
-local pictureOn = rawget(p.rise, "_shown") == true and rawget(p.bars, "_shown") == true and rawget(p.tabNote, "_shown") == true
-  and tostring(rawget(p.rise, "_tex")):find("bard_notes_", 1, true) and tostring(rawget(p.bars, "_tex")):find("bard_eq_", 1, true)
+local pictureOn = rawget(p.rise, "_shown") == true and rawget(p.tabNote, "_shown") == true
+  and tostring(rawget(p.rise, "_tex")):find("bard_notes_", 1, true)
 p.rows[4]._OnClick(p.rows[4]); p.Animate()
-local pictureOff = rawget(p.rise, "_shown") ~= true and rawget(p.bars, "_shown") ~= true and rawget(p.tabNote, "_shown") ~= true
+local pictureOff = rawget(p.rise, "_shown") ~= true and rawget(p.tabNote, "_shown") ~= true
 local ticks = 1000
 GetTime = function() ticks = ticks + 1; return ticks end   -- each song begins at its own moment
 local open = false
@@ -3798,6 +4112,85 @@ RES = (said:find("perf: client", 1, true) and said:find("quest index", 1, true) 
   or ("said: " .. said .. " errors: " .. tostring(SkaldDB.errors and SkaldDB.errors[1]))`,
 });
 
+run('rain, snow or sand strong enough writes one weather page of its kind, then not again for a while; a clear sky, a weak storm and an instance write none', {
+  body: `local E = SkaldCharDB.entries
+local function count() local n = 0 for _, e in ipairs(E) do if e.kind == "weather" then n = n + 1 end end return n end
+local now = NOW or time()
+local weather = {}
+C_Weather = { GetCurrentWeather = function() return weather end }
+function GetZoneText() return "Teldrassil" end
+weather = {}; ns.CheckWeather()
+local clear = count()
+weather = { { type = 0, intensity = 1 } }; ns.CheckWeather()
+weather = { { type = 1, intensity = 0.2 } }; ns.CheckWeather()
+weather = { { type = 4, intensity = 1 } }; ns.CheckWeather()
+local quiet = count() == 0 and clear == 0
+local inside = true
+function IsInInstance() return inside, "party" end
+weather = { { type = 1, intensity = 0.99 } }; ns.CheckWeather()
+local indoors = count() == 0
+inside = false
+ns.CheckWeather()
+local one = count() == 1
+ns.CheckWeather(); weather = { { type = 2, intensity = 0.9 } }; ns.CheckWeather()
+local gap = count() == 1
+SkaldCharDB.wxAt = SkaldCharDB.wxAt - 3000
+ns.CheckWeather()
+local last
+for _, e in ipairs(E) do if e.kind == "weather" then last = e end end
+local text = last and SkaldAPI.Render(last) or ""
+RES = (quiet and indoors and one and gap and count() == 2 and last.wk == "snow" and last.arg == "Teldrassil" and text:find("Teldrassil", 1, true) and (SkaldDB.errors == nil)) and "ok"
+  or ("quiet " .. tostring(quiet) .. " indoors " .. tostring(indoors) .. " one " .. tostring(one) .. " gap " .. tostring(gap) .. " n " .. count() .. " text " .. text)`,
+});
+
+run('a level the game never told (levels 3 and 4 missed) is written afterwards, in its place, once, with no notice', {
+  body: `local E = SkaldCharDB.entries
+local fresh = #E
+function UnitLevel(u) if u ~= "player" then return nil end return 5 end; pcall(ns.CatchUpLevels)
+local freshOk = (#E == fresh)   -- a diary with no level page yet writes nothing back
+function UnitLevel(u) if u ~= "player" then return nil end return 2 end; fire("PLAYER_LEVEL_UP", 2); runTimers()
+table.insert(E, { t = NOW + 10, zone = "Teldrassil", kind = "quest", arg = "A quest", pl = 4, tier = 1, idx = 1 })
+local toasts = 0
+local before = SkaldAPI.entryHook
+function UnitLevel(u) if u ~= "player" then return nil end return 5 end; fire("PLAYER_LEVEL_UP", 5); runTimers()
+local seq = {}
+for _, e in ipairs(E) do if e.kind == "level" or e.kind == "quest" then seq[#seq + 1] = e.kind .. ":" .. tostring(e.arg) end end
+local first = table.concat(seq, " ")
+ns.CatchUpLevels(); ns.CatchUpLevels()
+local again = {}
+for _, e in ipairs(E) do if e.kind == "level" or e.kind == "quest" then again[#again + 1] = e.kind .. ":" .. tostring(e.arg) end end
+RES = (freshOk and first == "level:2 level:3 level:4 quest:A quest level:5" and table.concat(again, " ") == first
+  and SkaldCharDB.stats.counts.level == 4) and "ok" or ("freshOk=" .. tostring(freshOk) .. " seq=" .. first .. " | " .. table.concat(again, " ") .. " counts=" .. tostring(SkaldCharDB.stats.counts.level))`,
+});
+
+run('the line that sets the scene is not the same for two pages of one evening (same phrase index, other minute)', {
+  body: `SkaldDB.tone = "kin"
+local seen, n = {}, 0
+for i = 0, 9 do
+  local text = SkaldAPI.Render({ kind = "level", arg = "5", idx = 5, hr = 18, t = 1793000000 + i * 600, race = "NoSuchRace" })
+  local scene
+  for _, l in ipairs(ns.LOCALES.enUS.AMBIENT.dusk) do if text:find(l, 1, true) then scene = l end end
+  if scene and not seen[scene] then seen[scene] = true; n = n + 1 end
+end
+RES = (#ns.LOCALES.enUS.AMBIENT.dusk >= 8 and n >= 4) and "ok" or ("pool " .. #ns.LOCALES.enUS.AMBIENT.dusk .. ", distinct lines in ten pages: " .. n)`,
+});
+
+run('a standing or a pet already there in the first minutes of a diary is marked quietly; one earned later is written', {
+  body: `local db = SkaldCharDB
+function UnitLevel(u) return u == "player" and 2 or nil end
+local before = count("goal")
+db.stats.first = NOW - 300
+db.rep = { Darnassus = 5 }
+ns.CheckGoals()
+local quiet = db.goals.repFriendly and db.goals.repFriendly.retro == true and count("goal") == before
+NOW = NOW + 3600
+db.rep.Darnassus = 6
+ns.CheckGoals()
+function UnitLevel(u) return u == "player" and 12 or nil end
+local later = db.goals.repHonored and not db.goals.repHonored.retro and count("goal") == before + 1
+RES = (quiet and later) and "ok" or ("quiet=" .. tostring(quiet) .. " later=" .. tostring(later) .. " goals=" .. (count("goal") - before))`,
+});
+
 run('/skald probe maps inside an instance says what the game calls it and its id', {
   body: `function IsInInstance() return true, "party" end
 function GetInstanceInfo() return "The Deadmines", "party", 1, "Normal", 5, 0, false, 36 end
@@ -3849,7 +4242,7 @@ RES = (SkaldDB.probeEvents.count.CAMPSITE_CONTRIBUTION == 2 and log.seen[1].ev =
   const block = (src.match(/ZC\.INSTANCE_ART\s*=\s*\{([\s\S]*?)\n\}/) || [])[1] || '';
   const names = [...block.matchAll(/\[\d+\]\s*=\s*"(map_[a-z_]+)"/g)].map(m => m[1]);
   const lost = names.filter(n => !fs.existsSync(path.join(ADDONS, 'Skald', 'Textures', 'skald2', n + '.tga')));
-  if (names.length === 30 && !lost.length) console.log('  ok    every instance map has its texture (' + names.length + ')');
+  if (names.length === 44 && !lost.length) console.log('  ok    every instance map has its texture (' + names.length + ')');
   else { failed++; console.log('  FAIL  instance map textures: ' + names.length + ' named, missing: ' + lost.join(', ')); }
 }
 
@@ -3871,6 +4264,67 @@ RES = (SkaldDB.probeEvents.count.CAMPSITE_CONTRIBUTION == 2 and log.seen[1].ev =
   if (names.length >= 8 && !lost.length) console.log('  ok    every sketch of the Saga has its picture (' + names.length + ')');
   else { failed++; console.log('  FAIL  Saga sketches: ' + names.length + ' named, missing: ' + lost.join(', ')); }
 }
+
+run('retention keeps every page until the owner explicitly accepts, then preserves personal pages', {
+  body: `local db=SkaldCharDB
+db.entries={}; db.retentionAccepted=nil; db.retentionWarned=nil
+for i=1,5000 do db.entries[i]={t=NOW-4000+i,kind="zone",arg="e"..i,idx=1} end
+db.entries[1].fav=true; db.entries[2].kind="note"
+local prompt={journal=db,entries=db.entries}
+SkaldAPI.AddEntry("zone","new")
+assert(#db.entries==5001 and __popup=="SKALD_RETENTION","pages removed before confirmation")
+assert(db.retentionWarned,"no advance warning")
+-- Closing/declining keeps the pages and does not accept deletion.
+StaticPopupDialogs.SKALD_RETENTION.OnCancel(nil,prompt)
+assert(not db.retentionAccepted and #db.entries==5001,"cancel changed data: "..#db.entries)
+StaticPopupDialogs.SKALD_RETENTION.OnAccept(nil,prompt)
+assert(db.retentionAccepted and #db.entries==5000,"accepted cap not applied")
+assert(db.entries[1].arg=="e1" and db.entries[2].arg=="e2" and db.entries[3].arg=="e4","wrong pages retained")
+-- Reviewing the choice and choosing Keep pages pauses future automatic removal too.
+StaticPopupDialogs.SKALD_RETENTION.OnCancel(nil,prompt)
+SkaldAPI.AddEntry("zone","held")
+assert(#db.entries==5001 and not db.retentionAccepted,"keep choice ignored: "..#db.entries)
+local replacement={}; for i=1,5001 do replacement[i]={kind="zone",arg="restored",t=NOW,idx=1} end
+db.entries=replacement
+StaticPopupDialogs.SKALD_RETENTION.OnAccept(nil,prompt)
+assert(not db.retentionAccepted and #db.entries==5001,"stale prompt removed restored pages")
+ns.ResetJournal(db)
+assert(db.retentionAccepted==nil and db.retentionWarned==nil,"consent leaked to a fresh diary")
+RES="ok"`,
+});
+run('undo restores live context afresh and rolls back both copies if refreshing fails', {
+  pre: BK_PRE,
+  body: `${BK}
+local parts=B.Build().parts
+SkaldAPI.AddEntry("zone","later")
+B.Apply(B.Finish(importAll(parts)))
+local before=snap()
+local refresh=ns.RefreshDiary
+ns.RefreshDiary=function() error("undo refresh failed") end
+local ok,why=B.Undo()
+ns.RefreshDiary=refresh
+assert(not ok and tostring(why):find("undo refresh failed",1,true))
+assert(snap()==before,"undo failure changed either diary")
+SkaldCharDB.restoreUndo.state.flags={stale=true}
+SkaldCharDB.restoreUndo.state.days={old={}}
+assert(B.Undo())
+assert(next(SkaldCharDB.flags)==nil and SkaldCharDB.days==nil and SkaldCharDB.skills==nil)
+RES="ok"`,
+});
+for (const locale of ['enUS','ptBR','frFR']) run('old pages follow the current voice and restore original wording: '+locale, {
+  pre: `__locale="${locale}"`,
+  body: `local P=ns.LOCALES[GetLocale()].phrases
+local e={kind="weather",wk="rain",arg="Teldrassil",zone="Teldrassil",idx=1,fl="tone_humor_weather",voice="humor"}
+SkaldDB.tone="humor"; local original=SkaldAPI.Render(e)
+SkaldDB.tone="humble"; assert(SkaldAPI.PoolFor(e)==P.tone_humble_weather)
+assert(SkaldAPI.Render(e)~=original)
+SkaldDB.tone="epic"; assert(SkaldAPI.PoolFor(e)==P.weather_rain)
+SkaldDB.tone="humor"; assert(SkaldAPI.Render(e)==original)
+local legacy={kind="weather",wk="snow",arg="Dun Morogh",idx=1,fl="tone_humor_weather"}
+SkaldDB.tone="humble"; assert(SkaldAPI.PoolFor(legacy)==P.tone_humble_weather)
+assert(e.voice=="humor" and e.fl=="tone_humor_weather" and e.idx==1,"render mutated saved page")
+RES="ok"`,
+});
 
 console.log(failed ? `\n${failed} regression(s) FAILED` : '\nAll regressions passed');
 process.exit(failed ? 1 : 0);

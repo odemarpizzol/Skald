@@ -57,7 +57,7 @@ local function CheckUI(base, translated, path)
 end
 CheckUI(ns.LOCALES.enUS, ns.LOCALES["${loc}"], "${loc}")
 local NO_NAME = { party = true, day = true, anniv7 = true, anniv30 = true, anniv100 = true, anniv365 = true }
-local KNOWN = { ["{diff}"] = true, ["{gold}"] = true, ["{nth}"] = true, ["{npc}"] = true, ["{steps}"] = true, ["{standing}"] = true, ["{tries}"] = true, ["{days}"] = true, ["{place}"] = true, ["{count}"] = true }
+local KNOWN = { ["{diff}"] = true, ["{gold}"] = true, ["{nth}"] = true, ["{npc}"] = true, ["{steps}"] = true, ["{standing}"] = true, ["{tries}"] = true, ["{days}"] = true, ["{place}"] = true, ["{count}"] = true, ["{weather}"] = true }
 for kind, list in pairs(P) do
   for i, ph in ipairs(list) do
     if (kind:find("kinLevel$") or kind:find("^tone_kin_")) and ph:find("%d") then problems[#problems+1] = "KIN NUMBER " .. kind .. "#" .. i end
@@ -195,7 +195,8 @@ POOLTEXT = table.concat(dump, string.char(10))`);
       if (open) pool = open[1]; else if (/^ {12}\},?\s*$/.test(line)) pool = null;
       const low = line.toLowerCase();
       for (const w of AFTER) if (low.includes(w)) found.push(`${f}:${i + 1} "${w}"`);
-      const tbcOk = (pool && /^race_(Draenei|BloodElf)_/.test(pool)) || /BARD_TRACKS/.test(line);
+      const tbcOk = (pool && /^race_(Draenei|BloodElf)_/.test(pool)) || /BARD_TRACKS/.test(line)
+        || /^ {12}.*\b(Draenei|BloodElf) = "/.test(line);   // the memory of a race that exists only then
       if (!tbcOk) for (const w of TBC) if (low.includes(w)) found.push(`${f}:${i + 1} "${w}" (a name of the Burning Crusade outside its own lines)`);
     });
   }

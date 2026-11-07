@@ -19,7 +19,7 @@ K.TextPrefix = function(text, limit)
     return text:sub(1, nextByte - 1)
 end
 
-local MAX_ENTRIES = 3000
+local MAX_ENTRIES = 5000
 
 -- Localization: texts live in Locales.lua.
 local LOCALES = ns.LOCALES
@@ -145,7 +145,7 @@ local Notify, PulseMinimap   -- the toast and the glow of the minimap button (de
 
 -- Who is writing, and how it went, flavour some pages: a class's own words, a race's, a quest that
 -- was hard or easy for your level. The pool chosen is stored with the page, so it reads the same later.
-K.FLAVOR_KINDS = { quest = true, level = true, death = true, boss = true, zone = true, dungeon = true, hearth = true }
+K.FLAVOR_KINDS = { quest = true, level = true, death = true, boss = true, zone = true, dungeon = true, hearth = true, weather = true }
 local AddContext
 do
 local CONTEXT_KINDS = { dungeon = true, boss = true, death = true, zone = true, level = true,
@@ -247,10 +247,11 @@ local function PickFlavor(kind, entry)
         -- "Of My People": a level is told by PoolFor with no number at all (K.KinPool), whatever was drawn; a new land
         -- or a fall is told in the voice of the race three times in four.
         if kind == "level" or kind == "milestone" then return nil end
-        if entry.race and (kind == "zone" or kind == "death") then
+        if entry.race and (kind == "zone" or kind == "death" or kind == "weather") then
             local key = K.RacePoolKey(entry.race, kind)
             if key and math.random() < 0.75 then return key end
         end
+        if kind == "weather" and PHRASES.tone_kin_weather then return "tone_kin_weather" end
         -- a quest done is told with the lines of one's people about a third of the time (the highest seals, chains and the
         -- hand-written stories were left out above, and a race with no lines of its own tells the quest as usual); it is the
         -- commonest page of a long climb, so a line of a pool of sixteen must not come back too soon (dev/tools/variety.js)
@@ -289,9 +290,15 @@ K.MODEL_REUSE, K.MODEL_RETRY = 20, { 1.5, 4 }   -- seconds: the cover model is n
 -- further away so head and hands stay inside the frame.
 K.COVER_ZOOM, K.COVER_ZOOM_BY_RACE = 0.8, { Tauren = 1.0 }
 K.COVER_UNDRESS = { 16, 17, 18 }   -- inventory slots of the weapons
+K.COVER_ZOOM_FOREVER = 1.15   -- the Forever client draws the models larger in the same frame: the camera stands further back
 function ns.CoverZoom()
+    local own = SkaldDB and tonumber(SkaldDB.coverZoom)   -- /skald zoom: the player's own distance wins
+    if own and own >= 0.4 and own <= 2 then return own end
     local _, raceFile = UnitRace("player")
-    return K.COVER_ZOOM_BY_RACE[raceFile or ""] or K.COVER_ZOOM
+    local zoom = K.COVER_ZOOM_BY_RACE[raceFile or ""] or K.COVER_ZOOM
+    local okB, _, _, _, toc = pcall(GetBuildInfo)
+    if okB and type(toc) == "number" and toc >= 16000 and toc < 20000 then zoom = zoom * K.COVER_ZOOM_FOREVER end
+    return zoom
 end
 K.GHOST_ART = { epic = "ghost_candle", humble = "ghost_wisp", humor = "ghost_rip" }   -- the picture of the cover for a spirit, by voice
 K.FALLS_FORGOTTEN = 7200   -- seconds after the last fall in a dungeon, when it no longer counts for a boss
@@ -300,7 +307,7 @@ K.FALLS_FORGOTTEN = 7200   -- seconds after the last fall in a dungeon, when it 
 K.RECORD_FLAG = {
     quest = "quest", level = "level", milestone = "level", death = "death",
     boss = "boss", dungeon = "boss", zone = "zone", skill = "profession", profession = "profession",
-    loot = "loot", mark = "mark", home = "mark", rep = "mark", flight = "zone", tame = "mark", revive = "death", hearth = "mark",
+    loot = "loot", mark = "mark", home = "mark", rep = "mark", flight = "zone", tame = "mark", revive = "death", hearth = "mark", weather = "zone",
     bg = "boss",
 }
 
@@ -349,6 +356,20 @@ K.IsPersonal = function(e) return e.fav or e.kind == "note" end
 K.Trim = function(db)
     local entries = db.entries
     local n = #entries
+    if not db.retentionAccepted then
+        if n >= MAX_ENTRIES - 100 and not db.retentionWarned then
+            db.retentionWarned = true
+            Say(string.format(L.RETENTION_SOON, MAX_ENTRIES))
+        end
+        if n > MAX_ENTRIES then
+            -- Keep the diary intact until the owner explicitly accepts removing old, non-personal pages.
+            if not K.retentionPrompted then
+                K.retentionPrompted = true
+                StaticPopup_Show("SKALD_RETENTION", MAX_ENTRIES, nil, { journal = db, entries = entries })
+            end
+            return
+        end
+    end
     local drop = n - MAX_ENTRIES
     if drop > 0 then
         local w = 0
@@ -419,6 +440,7 @@ local function AddEntry(kind, arg, zone, extra)
     AddContext(kind, entry)
     if kind == "dungeon" or kind == "boss" then NoteCompanions(entry) end
     if K.FLAVOR_KINDS[kind] then
+        entry.voice = (SkaldDB and SkaldDB.tone) or "epic"
         local okClass, _, classFile = pcall(UnitClass, "player")
         local okRace, _, raceFile = pcall(UnitRace, "player")
         entry.cls = okClass and type(classFile) == "string" and classFile or nil
@@ -481,9 +503,9 @@ local function AddEntry(kind, arg, zone, extra)
         stats.deathZones[where] = (stats.deathZones[where] or 0) + 1
     end
     stats.first = stats.first or db.entries[1].t
-    if kind ~= "day" then BumpDay(kind, where) end
+    if kind ~= "day" then BumpDay(kind, where, entry.recovered and entry.t) end
 
-    if Notify then Notify(entry) end
+    if Notify and not K.quietAdd then Notify(entry) end
     if SkaldAPI.entryHook then SkaldAPI.entryHook(kind) end
     if window and window:IsShown() then
         window:Refresh()
@@ -604,10 +626,11 @@ local function CloseDay(key)
         -- Creatures: the game's own count over the day when it was read at both ends,
         -- the estimate from XP otherwise.
         local kills = d.k or 0
-        if d.k0 and d.kEnd and d.kEnd >= d.k0 then kills = d.kEnd - d.k0 end
+        local measured = type(d.k0) == "number" and type(d.kEnd) == "number" and d.kEnd >= d.k0
+        if measured then kills = d.kEnd - d.k0 end
         AddEntry("day", key, d.zone or "?", {
             t = d.last or time(), m = false, x = false, y = false,
-            day = { q = d.q, l = d.l, d = d.d, z = d.z, u = d.u, b = d.b, a = d.a, k = kills, s = d.s or 0 },
+            day = { q = d.q, l = d.l, d = d.d, z = d.z, u = d.u, b = d.b, a = d.a, k = kills, kEstimated = not measured, s = d.s or 0 },
         })
     end
 end
@@ -640,9 +663,27 @@ RollDay = function()
     if db.days[today].k0 == nil then db.days[today].k0 = KillStat() or false end
 end
 
-BumpDay = function(kind, where)
+BumpDay = function(kind, where, recoveredAt)
     local db = Journal()
     if not db or not db.days then return end
+    -- A recovered level belongs to its inferred historical date, including an already closed page.
+    if recoveredAt then
+        local key = DayKey(recoveredAt)
+        local d = db.days[key]
+        local closed = false
+        for _, e in ipairs(db.entries) do
+            if e.kind == "day" and e.arg == key and e.day then
+                e.day.l = (e.day.l or 0) + 1
+                closed = true
+            end
+        end
+        -- Do not recreate old day buckets outside the retention window.
+        if d then
+            d.l = (d.l or 0) + 1
+            if closed then d.done = true end
+        end
+        return
+    end
     local d = db.days[db.today or DayKey()]
     if not d then return end
     local field = K.DAY_FIELD[kind]
@@ -772,7 +813,23 @@ end
 function PoolFor(e)
     local kin = K.KinPool(e)
     if kin then return kin end
-    if e.fl and PHRASES[e.fl] then return PHRASES[e.fl] end
+    local tone = (SkaldDB and SkaldDB.tone) or "epic"
+    local storedTone = type(e.fl) == "string" and e.fl:match("^tone_([^_]+)_")
+    local original = e.voice or storedTone or "epic"
+    -- Retell a page in the chosen voice without changing its saved pool or phrase index.
+    -- Returning to its original voice restores the original wording and variety choices.
+    if tone ~= original and K.FLAVOR_KINDS[e.kind] then
+        local specialQuest = e.kind == "quest" and (e.cend or (e.tier or 1) >= 4 or (ns.CURATED and e.q and ns.CURATED[e.q]))
+        if not specialQuest then
+            local own = PHRASES["tone_" .. tone .. "_" .. e.kind]
+            if own then return own end
+            if tone == "kin" and e.race then
+                local key = K.RacePoolKey(e.race, e.kind, true)
+                if key then return PHRASES[key] end
+            end
+        end
+    end
+    if e.fl and PHRASES[e.fl] and (not storedTone or storedTone == tone) then return PHRASES[e.fl] end
     -- Learning a profession has lines of its own for each of the twelve.
     if e.kind == "profession" then
         local key = e.pf or (SkaldAPI.ProfessionKey and SkaldAPI.ProfessionKey(nil, e.arg))
@@ -787,6 +844,7 @@ function PoolFor(e)
         return PHRASES.revive
     end
     if e.kind == "bg" then return (e.won and PHRASES.bgWin) or PHRASES.bgLoss end
+    if e.kind == "weather" then return PHRASES["weather_" .. tostring(e.wk)] or PHRASES.weather end
     if e.kind == "tame" then
         if e.sub == "first" and PHRASES.tameFirst then return PHRASES.tameFirst end
         if e.sub == "level" and PHRASES.tameLevel then return PHRASES.tameLevel end
@@ -891,6 +949,16 @@ local function DayText(e)
     local parts = {}
     for _, item in ipairs(items) do
         local words, n = L.DAY_PARTS[item[1]], item[2]
+        if item[1] == "kills" then
+            local estimated = d.kEstimated
+            if estimated == nil then
+                local log = Journal()
+                local source = log and log.days and log.days[e.arg]
+                estimated = not (source and type(source.k0) == "number" and type(source.kEnd) == "number"
+                    and source.kEnd >= source.k0 and d.k == source.kEnd - source.k0)
+            end
+            if estimated then words = L.DAY_PARTS.killsEstimated end
+        end
         if words and n and n > 0 then
             parts[#parts + 1] = string.format(n == 1 and words[1] or words[2], n)
         end
@@ -1059,7 +1127,10 @@ Extras = function(e, base)
     end
     if type(e.hr) == "number" and idx % 2 == 1 and L.AMBIENT and not K.NamesTimeOfDay(base) then
         local list = L.AMBIENT[PartOfDay(e.hr)]
-        if list then out = out .. " " .. list[idx % #list + 1] end
+        if list then
+            -- by the minute as well as the phrase: two pages with the same index do not tell the same light
+            out = out .. " " .. list[(idx * 7 + math.floor((e.t or 0) / 60)) % #list + 1]
+        end
     end
     if e.kind == "tame" and L.PET_FAMILY then
         -- the family as the record of the pet has it now (it is read again in the client's language)
@@ -1142,7 +1213,7 @@ end
 -- and number when it is a noun of a place; any other name (Durotar, Orgrimmar, Ventobravo, "As Minas Mortas") is left as it is.
 K.PLACE_NOUNS = {
     f = "Ilha Floresta Costa Planície Península Baía Ponte Cidade Fortaleza Aldeia Vila Torre Caverna Gruta Cratera Praia Região Passagem Garganta Bacia Clareira Estrada Colina Montanha Serra Cordilheira Terra Mina Cripta Ruína Selva Fonte Nascente Ravina Abadia Praça Câmara Ponta Enseada Represa Savana Tundra Pradaria Baixada Encosta Escarpa Lagoa Geleira Caldeira",
-    m = "Vale Lago Pântano Deserto Monte Bosque Porto Forte Ponto Campo Rio Mar Passo Covil Acampamento Posto Santuário Templo Palácio Castelo Reduto Entreposto Mirante Barranco Desfiladeiro Abismo Altiplano Planalto Cânion Poço Jardim Cemitério Mosteiro Salão Pico Bastião Cume Istmo Rochedo Penhasco Túnel Orfanato Vulcão Lamaçal",
+    m = "Terraço Vale Lago Pântano Deserto Monte Bosque Porto Forte Ponto Campo Rio Mar Passo Covil Acampamento Posto Santuário Templo Palácio Castelo Reduto Entreposto Mirante Barranco Desfiladeiro Abismo Altiplano Planalto Cânion Poço Jardim Cemitério Mosteiro Salão Pico Bastião Cume Istmo Rochedo Penhasco Túnel Orfanato Vulcão Lamaçal",
     fp = "Planícies Colinas Montanhas Terras Ruínas Cavernas Minas Catacumbas Profundezas Cataratas Ilhas Florestas Costas Cordilheiras Pradarias Gargantas Fontes Torres Passagens Savanas Geleiras",
     mp = "Pântanos Montes Campos Picos Bosques Vales Lagos Desertos Salões Túneis Penhascos Bastiões Desfiladeiros",
 }
@@ -1156,7 +1227,7 @@ K.PLACE_FORMS = {   -- the article, and its contractions with em, de, a and por
     fp = { art = "as", em = "nas", de = "das", a = "às", por = "pelas" },
     mp = { art = "os", em = "nos", de = "dos", a = "aos", por = "pelos" },
 }
-K.PLACE_KINDS = { zone = true, death = true, revive = true, hearth = true, home = true, dungeon = true }   -- the pages whose %s is a place
+K.PLACE_KINDS = { weather = true, zone = true, death = true, revive = true, hearth = true, home = true, dungeon = true }   -- the pages whose %s is a place
 -- `phrase` with the article put where `token` (the %s, or a {tag} of the Saga) stands for `name`: em, de, a and por become
 -- na/no, da/do, à/ao and pela/pelo; after any other word, or at the start, the article comes before the name.
 -- French: the same, for à and de (au, à la, aux, à l'; du, de la, des, de l', and d' before a bare name that starts with a
@@ -1296,6 +1367,9 @@ local function RenderEntry(e)
     local phrase = list[((e.idx or 1) - 1) % #list + 1]
     if K.PLACE_KINDS[e.kind] then phrase = K.PlaceArticles(phrase, shown, "%s") end
     local text = string.format(phrase, shown)
+    text = text:gsub("{weather}", function()
+        return tostring((L.WEATHER_WORDS and L.WEATHER_WORDS[e.wk]) or "")
+    end)
     text = text:gsub("{steps}", function() return tostring(e.cend or "") end)
     text = text:gsub("{tries}", function() return tostring(e.tries or "") end)
     text = text:gsub("{days}", function() return tostring(e.since or "") end)
@@ -1305,6 +1379,24 @@ local function RenderEntry(e)
     end)
     text = text:gsub("{standing}", function() return tostring(e.st or "") end)
     text = text:gsub("{npc}", function() return npc end)
+    -- Weather pages keep race and class as data, so their personal aside can be retold in the current language too.
+    -- The main weather line still carries the rain/snow/sand and the zone; these short lines add the character's own lens.
+    if e.kind == "weather" then
+        local voice, idx = {}, math.max(1, tonumber(e.idx) or 1)
+        local race = e.race and K.RacePool(e.race)
+        local memory = e.race and L.WEATHER_RACE_MEMORY and L.WEATHER_RACE_MEMORY[e.race]
+            or (race and L.WEATHER_RACE_MEMORY and L.WEATHER_RACE_MEMORY[race])
+        local classPath = e.cls and L.WEATHER_CLASS_PATH and L.WEATHER_CLASS_PATH[e.cls]
+        local raceLines = memory and L.WEATHER_RACE_LINES
+        local classLines = classPath and L.WEATHER_CLASS_LINES
+        if type(raceLines) == "table" and #raceLines > 0 then
+            voice[#voice + 1] = string.format(raceLines[(idx - 1) % #raceLines + 1], memory)
+        end
+        if type(classLines) == "table" and #classLines > 0 then
+            voice[#voice + 1] = string.format(classLines[(idx - 1) % #classLines + 1], classPath)
+        end
+        if #voice > 0 then text = text .. " " .. table.concat(voice, " ") end
+    end
     -- what a goal reached is worth belongs to the page itself, so the notice tells it too
     local gain = ""
     if e.kind == "goal" and ns.GoalPoints and L.GOAL_GAIN and not (SkaldDB and SkaldDB.tone == "kin") then
@@ -1425,9 +1517,9 @@ K.SOUND_CANDIDATES = {
 -- Everything else the diary knows about one character (pets, companions, flight paths, goals, standings...).
 -- It is set aside with the pages and brought back with them, and emptied with them, so a cleared diary or a new
 -- character with an old name never inherits it.
-K.DIARY_STATE = { "pets", "petNow", "companions", "questObj", "questStart", "visitedMaps", "resume", "attempts",
-    "taxi", "marks", "goals", "goalsInit", "goalsVer", "collInit", "rep", "memoryAt", "recentIdx", "recentPh", "anniv", "zoneKills", "killBase",
-    "birthMap", "mountSpells" }
+K.DIARY_STATE = { "retentionAccepted", "retentionWarned", "pets", "petNow", "companions", "questObj", "questStart", "visitedMaps", "resume", "attempts",
+    "taxi", "marks", "goals", "goalsInit", "goalsVer", "collInit", "rep", "memoryAt", "recentIdx", "recentPh", "anniv", "zoneKills", "killBase", "zoneKillsUnassigned",
+    "birthMap", "mountSpells", "visitedInstances", "wxAt" }
 
 local function TakeState(db)
     local state = {}
@@ -1436,6 +1528,7 @@ local function TakeState(db)
 end
 
 local function ResetJournal(db)
+    K.retentionPrompted = nil
     for _, key in ipairs(K.DIARY_STATE) do db[key] = nil end
     db.entries, db.visited, db.flags = {}, {}, {}
     db.days, db.today = nil, nil
@@ -1569,7 +1662,8 @@ K.EVENT_ICON = {
     skill = "profession", profession = "profession",
     day = "milestone",   -- until a sun or moon icon of its own is drawn
     reunion = "party", goal = "goal",
-    mark = "milestone", home = "st_hearth", rep = "achievement", flight = "st_flight",
+    mark = "milestone", home = "st_hearth", rep = "achievement", flight = "st_flight", weather = "weather",
+
     tame = "pet",
     revive = "revive", hearth = "st_hearth",
     bg = "bg",
@@ -1775,6 +1869,26 @@ StaticPopupDialogs["SKALD_FAVNOTE"] = {
     whileDead = true,
     hideOnEscape = true,
     preferredIndex = 3,
+}
+
+StaticPopupDialogs["SKALD_RETENTION"] = {
+    text = L.RETENTION_CONFIRM,
+    button1 = L.RETENTION_APPLY,
+    button2 = L.RETENTION_KEEP,
+    OnAccept = function(self, data)
+        data = type(data) == "table" and data or (self and self.data)
+        local db = Journal()
+        if not db or not data or data.journal ~= db or data.entries ~= db.entries then return end
+        db.retentionAccepted = true
+        K.Trim(db)
+        ns.RefreshDiary()
+    end,
+    OnCancel = function(self, data)
+        data = type(data) == "table" and data or (self and self.data)
+        local db = Journal()
+        if db and data and data.journal == db and data.entries == db.entries then db.retentionAccepted = nil end
+    end,
+    timeout = 0, whileDead = true, hideOnEscape = true, preferredIndex = 3,
 }
 
 StaticPopupDialogs["SKALD_CLEAR"] = {
@@ -3130,6 +3244,11 @@ local function CreateWindow()
         for _, t in ipairs(medal) do t:SetShown(not works and not ghost) end
         if not works and not ghost then pcall(SetPortraitTexture, portrait, "player") end
     end
+    -- /skald zoom asks for the model again with the new distance
+    ns.ReloadCoverModel = function()
+        if model then model.skaldLoadedAt = nil end
+        ShowModel()
+    end
     local coverTitle = cover1:CreateFontString(nil, "OVERLAY", "SkaldHead")
     coverTitle:SetPoint("TOP", 0, -428)
     coverTitle:SetWidth(K.PAGE_SW - 20)
@@ -3589,7 +3708,8 @@ local function CreateWindow()
             local y = K.TOP_Y + 4
             if not page.first and #page.rows == 0 and ns.ZoneCard then
                 -- the contents ended on the left page: the right one tells about the land the diary last stood in
-                local mapID = ns.ZoneCard.CurrentMap()
+                local inst = ns.ZoneCard.CurrentInstance and ns.ZoneCard.CurrentInstance()
+                local mapID = inst and 0 or ns.ZoneCard.CurrentMap()
                 if mapID then
                     if not s.zoneCard then
                         local okCard, card = pcall(ns.ZoneCard.Build, s.frame, K.CW)
@@ -3598,7 +3718,7 @@ local function CreateWindow()
                     if s.zoneCard then
                         s.zoneCard:ClearAllPoints()
                         s.zoneCard:SetPoint("TOPLEFT", s.frame, "TOPLEFT", px, -(K.TOP_Y - 4))
-                        local okSet, err = pcall(s.zoneCard.Set, s.zoneCard, mapID)
+                        local okSet, err = pcall(s.zoneCard.Set, s.zoneCard, mapID, inst)
                         if okSet then s.zoneCard:Show() else SkaldDB.errors = SkaldDB.errors or {}; table.insert(SkaldDB.errors, tostring(err)) end
                     end
                 end
@@ -5267,10 +5387,62 @@ local function VisitZone(zone)
     AddEntry(kind, zone, zone)
 end
 
+-- The weather: C_Weather.GetCurrentWeather answers a list of { type, intensity } (type: Enum.WeatherType, 0 clear, 1 rain,
+-- 2 snow, 3 sandstorm, 4 miscellaneous; intensity 0 to 1). It tells no event, so the minute asks; a page is written when rain,
+-- snow or sand is strong and the last weather page is not recent (seen in the Forever client: rain 1, intensity 0.996).
+K.WEATHER_KEYS = { [1] = "rain", [2] = "snow", [3] = "sand" }
+K.WEATHER_MIN, K.WEATHER_GAP = 0.5, 2700
+K.CheckWeather = function()
+    local db = Journal()
+    if not db or not ready or not (C_Weather and C_Weather.GetCurrentWeather) then return end
+    if UnitAffectingCombat and UnitAffectingCombat("player") then return end
+    local okI, inside = pcall(IsInInstance)
+    if okI and inside then return end
+    local ok, list = pcall(C_Weather.GetCurrentWeather)
+    if not ok or type(list) ~= "table" then return end
+    local key, power = nil, 0
+    for _, w in ipairs(list) do
+        if type(w) == "table" then
+            local kind, intensity = Safe(w.type), Safe(w.intensity)
+            if type(kind) == "number" and type(intensity) == "number" and K.WEATHER_KEYS[kind]
+                and intensity >= K.WEATHER_MIN and intensity > power then
+                key, power = K.WEATHER_KEYS[kind], intensity
+            end
+        end
+    end
+    if not key then return end
+    local zone = GetZoneText()
+    if type(zone) ~= "string" or zone == "" then return end
+    local now = time()
+    if db.wxAt and now - db.wxAt < K.WEATHER_GAP and now >= db.wxAt then return end
+    db.wxAt = now
+    AddEntry("weather", zone, zone, { wk = key })
+end
+ns.CheckWeather = function() return K.CheckWeather() end
+
+-- An instance with a map of its own (ZC.INSTANCE_ART) is kept as visited by its instance id; the Cartographer reads it.
+-- (An instance has no map id of the game, so it cannot be told by visitedMaps.)
+K.NoteInstance = function()
+    local zc = ns.ZoneCard
+    local db = Journal()
+    if not (zc and zc.INSTANCE_ART and db and IsInInstance and GetInstanceInfo) then return end
+    local okI, inside = pcall(IsInInstance)
+    if not (okI and inside) then return end
+    local okG, _, _, _, _, _, _, _, id = pcall(GetInstanceInfo)
+    id = okG and Safe(id)
+    if type(id) == "number" and zc.INSTANCE_ART[id] then
+        db.visitedInstances = db.visitedInstances or {}
+        db.visitedInstances[id] = true
+    end
+end
+
+ns.NoteInstanceForTest = function() return K.NoteInstance() end
+
 local function CheckZone()
     local zone = GetZoneText()
     if zone and zone ~= "" and zone ~= lastZone then
         lastZone = zone
+        pcall(K.NoteInstance)
         VisitZone(zone)
         if ns.CheckMemory then pcall(ns.CheckMemory) end
         if ns.CheckAnniversary then pcall(ns.CheckAnniversary) end
@@ -5329,6 +5501,51 @@ Mile.Timed = function(name, fn, ...)
     return ok, err
 end
 
+-- Maintenance yields between jobs instead of running the whole login batch in one frame.
+-- Each function remains atomic: /skald perf identifies jobs that need finer-grained batching.
+Mile.ResetMaintenance = function(closed)
+    K.maintenance = { jobs = {}, keys = {}, completed = 0, timings = {}, closed = closed, delay = 8 }
+end
+ns.MaintenanceState = function()
+    local work = K.maintenance
+    return { pending = work and #work.jobs or 0, completed = work and work.completed or 0,
+        timings = work and work.timings or {}, paused = not not (InCombatLockdown and InCombatLockdown()) }
+end
+Mile.ScheduleMaintenance = function()
+    local work = K.maintenance
+    if not work or work.closed or work.scheduled or #work.jobs == 0 then return end
+    work.scheduled = true
+    local delay = work.delay or 0.05
+    work.delay = nil
+    C_Timer.After(delay, function()
+        if K.maintenance ~= work or work.closed then return end
+        work.scheduled = false
+        if InCombatLockdown and InCombatLockdown() then
+            work.delay = 0.5
+            Mile.ScheduleMaintenance()
+            return
+        end
+        local job = table.remove(work.jobs, 1)
+        if not job then return end
+        local started = debugprofilestop and debugprofilestop()
+        Mile.Timed(job.name, job.fn)
+        local elapsed = started and (debugprofilestop() - started) or 0
+        local timing = work.timings[job.name] or { n = 0, total = 0, max = 0 }
+        timing.n, timing.total, timing.max = timing.n + 1, timing.total + elapsed, math.max(timing.max, elapsed)
+        work.timings[job.name] = timing
+        work.completed = work.completed + 1
+        work.keys[job.name] = nil
+        Mile.ScheduleMaintenance()
+    end)
+end
+ns.QueueMaintenance = function(name, fn)
+    local work = K.maintenance
+    if not work or work.closed or work.keys[name] or type(fn) ~= "function" then return end
+    work.keys[name] = true
+    work.jobs[#work.jobs + 1] = { name = name, fn = fn }
+    Mile.ScheduleMaintenance()
+end
+
 -- /skald perf: times what the book does, to see what is slow in the real game. For each step it says the time the addon
 -- itself spent (Lua) and the longest of the next three frames (that one holds what the game does after: reading a
 -- picture from the disk, drawing). A frame over 50 ms is felt as a stop. The steps run one after another, a few
@@ -5349,6 +5566,15 @@ Mile.Perf = function()
     local zc = ns.ZoneCard
     Say("perf: client " .. tostring(select(2, pcall(function() return (select(4, GetBuildInfo())) end))) .. "; pages " .. tostring(#((Journal() or {}).entries or {})) ..
         "; quest index " .. tostring(zc and zc.QuestState and zc.QuestState() or "-") .. ". Wait a few seconds...")
+    local work = ns.MaintenanceState()
+    Say("  maintenance: " .. work.pending .. " pending; " .. work.completed .. " completed" .. (work.paused and "; paused for combat" or ""))
+    local names = {}
+    for name in pairs(work.timings) do names[#names + 1] = name end
+    table.sort(names)
+    for _, name in ipairs(names) do
+        local timing = work.timings[name]
+        Say(string.format("    %-20s runs %d | max %.1f ms | total %.1f ms", name, timing.n, timing.max, timing.total))
+    end
     if #ns.stalls == 0 then
         Say("  since login nothing over 6 ms in the background work, no frame over 40 ms (first 90 s)")
     else
@@ -5509,7 +5735,12 @@ Mile.LoreKeep = function(kind, title, text, extra)
     title, text = LoreText(title), LoreText(text)
     if not title and not text then return end
     local who = LoreText(extra and extra.who)
-    local key = kind .. "|" .. tostring(who) .. "|" .. tostring(title) .. "|" .. tostring(text):sub(1, 100)
+    local guid = LoreText(UnitGUID and UnitGUID("player"))
+    local character = LoreText(UnitName and UnitName("player"))
+    local realm = LoreText(GetRealmName and GetRealmName())
+    local locale = GetLocale()
+    local identity = guid or ((character or "?") .. "-" .. (realm or "?"))
+    local key = identity .. "|" .. tostring(locale) .. "|" .. tostring(extra and extra.q) .. "|" .. kind .. "|" .. tostring(who) .. "|" .. tostring(title) .. "|" .. tostring(text):sub(1, 100)
     if log.seen[key] then return end
     if #log.items >= K.LORE_MAX then
         if not log.full then log.full = true; Say(string.format(L.PROBE_LORE_FULL, K.LORE_MAX)) end
@@ -5518,7 +5749,8 @@ Mile.LoreKeep = function(kind, title, text, extra)
     log.seen[key] = true
     local okR, _, raceFile = pcall(UnitRace, "player")
     local rec = { k = kind, t = time(), z = Safe(GetZoneText and GetZoneText()), sz = Safe(GetSubZoneText and GetSubZoneText()),
-        n = who, title = title, text = text, r = okR and Safe(raceFile) or nil }
+        n = who, title = title, text = text, r = okR and Safe(raceFile) or nil,
+        guid = guid, character = character, realm = realm, locale = locale }
     if extra then
         rec.obj = LoreText(extra.obj)
         rec.q = type(extra.q) == "number" and extra.q > 0 and extra.q or nil
@@ -6568,6 +6800,7 @@ end
 
 H.PLAYER_LOGIN = function(self, event, ...)
     loginTime = time()
+    Mile.ResetMaintenance()
     if EnsureOwnDiary() then Say(L.NEW_CHARACTER) end
     ConvertOldNotes()
     -- Positions saved before were kept with fifteen decimals: shortened once.
@@ -6598,35 +6831,53 @@ H.PLAYER_LOGIN = function(self, event, ...)
     if ns.Pvp then pcall(ns.Pvp.Ensure) end
     lastZone = GetZoneText()
     VisitZone(lastZone)
-    C_Timer.After(8, function()
-        lastXP, lastXPLevel = ReadXP()
-        ready = true
-        Mile.Timed("CheckGuild", CheckGuild)
-        Mile.Timed("CheckSkills", CheckSkills)
-        Mile.Timed("CheckReputation", CheckReputation)
-        Mile.Timed("CheckMarks", CheckMarks)
-        Mile.Timed("CheckPet", Mile.CheckPet)
-        Mile.Timed("NoteBirthplace", Mile.NoteBirthplace)
-        Mile.Timed("CheckMounts", Mile.CheckMounts)
-        C_Timer.After(25, function() pcall(Mile.NoteBirthplace) end)   -- the game may still answer with the continent
-        if Settings().probeAll then pcall(Mile.ProbeAllEvents, true) end
-        if Settings().probeLore then pcall(Mile.ProbeLore, true) end
-        Mile.Timed("MergeCrafts", Mile.MergeCrafts)
-        Mile.Timed("Relocalize", Mile.Relocalize)
-        C_Timer.After(10, function() Mile.Timed("Relocalize 2", Mile.Relocalize) end)   -- items load a little later
-        if C_Timer.NewTicker then C_Timer.NewTicker(60, function() pcall(CheckMarks); pcall(Mile.CheckPet); pcall(ns.CheckAnniversary); pcall(Mile.TrackKills); pcall(Mile.NoteBirthplace) end) end
-        C_Timer.After(2, function() pcall(Mile.ShowResume) end)
-        if ns.ZoneCard then
-            C_Timer.After(3, function() pcall(ns.ZoneCard.WarmQuests) end)
-            C_Timer.After(5, function() pcall(ns.ZoneCard.Preload) end)
-        end
-    end)
+    -- Event capture must not wait for optional maintenance (or for combat to end).
+    lastXP, lastXPLevel = ReadXP()
+    ready = true
+    if Settings().probeAll then pcall(Mile.ProbeAllEvents, true) end
+    if Settings().probeLore then pcall(Mile.ProbeLore, true) end
+    local jobs = {
+        { "CheckGuild", CheckGuild }, { "CheckSkills", CheckSkills },
+        { "CheckReputation", CheckReputation }, { "CheckMarks", CheckMarks },
+        { "CheckPet", Mile.CheckPet }, { "CatchUpLevels", Mile.CatchUpLevels },
+        { "NoteBirthplace", Mile.NoteBirthplace }, { "CheckMounts", Mile.CheckMounts },
+        { "CheckGoals", ns.CheckGoals }, { "MergeCrafts", Mile.MergeCrafts },
+        { "Relocalize", Mile.Relocalize },
+    }
+    for _, job in ipairs(jobs) do ns.QueueMaintenance(job[1], job[2]) end
+    local work = K.maintenance
+    local function Later(delay, name, fn)
+        C_Timer.After(delay, function()
+            if K.maintenance == work then ns.QueueMaintenance(name, fn) end
+        end)
+    end
+    Later(33, "NoteBirthplace", Mile.NoteBirthplace)
+    Later(18, "Relocalize 2", Mile.Relocalize)   -- retry names after the client's item cache warms
+    Later(10, "ShowResume", Mile.ShowResume)
+    if ns.ZoneCard then
+        Later(11, "WarmQuests", ns.ZoneCard.WarmQuests)
+        Later(13, "Preload", ns.ZoneCard.Preload)
+    end
+    if C_Timer.NewTicker then
+        if K.maintenanceTicker then K.maintenanceTicker:Cancel() end
+        K.maintenanceTicker = C_Timer.NewTicker(60, function()
+            if K.maintenance ~= work or work.closed then return end
+            ns.QueueMaintenance("CheckMarks", CheckMarks)
+            ns.QueueMaintenance("CheckPet", Mile.CheckPet)
+            ns.QueueMaintenance("CheckAnniversary", ns.CheckAnniversary)
+            ns.QueueMaintenance("TrackKills", Mile.TrackKills)
+            ns.QueueMaintenance("NoteBirthplace", Mile.NoteBirthplace)
+            ns.QueueMaintenance("CheckWeather", K.CheckWeather)
+        end)
+    end
     if not Settings().quiet then
         Say(L.LOADED)
     end
 end
 
 H.PLAYER_LOGOUT = function(self, event, ...)
+    Mile.ResetMaintenance(true)
+    if K.maintenanceTicker then K.maintenanceTicker:Cancel(); K.maintenanceTicker = nil end
     -- Bank this session's time on the road, and where the creature count stands.
     pcall(Mile.SaveResume)
     BankPlayed()
@@ -6650,8 +6901,8 @@ H.DISPLAY_SIZE_CHANGED = H.UI_SCALE_CHANGED
 
 H.ZONE_CHANGED_NEW_AREA = function(self, event, ...)
     if window then CheckZone() end
-    if ready then pcall(Mile.NoteBirthplace) end
-    if ns.ZoneCard and ns.ZoneCard.Preload then C_Timer.After(4, function() pcall(ns.ZoneCard.Preload) end) end
+    if ready then pcall(Mile.NoteBirthplace); pcall(Mile.TrackKills, true) end
+    if ns.ZoneCard and ns.ZoneCard.Preload then C_Timer.After(4, function() ns.QueueMaintenance("Preload", ns.ZoneCard.Preload) end) end
 end
 H.PLAYER_ENTERING_WORLD = H.ZONE_CHANGED_NEW_AREA
 
@@ -6731,9 +6982,9 @@ H.QUEST_ACCEPTED = function(self, event, a, b)
     end
 end
 
--- Creatures slain in each zone: the game counts the total, so the difference since the last look goes to the zone
--- underfoot (the first look only sets the baseline, and kills inside an instance count for no zone).
-Mile.TrackKills = function()
+-- A delta belongs to a zone only when both samples are from that same zone in this session.
+-- Loading screens, zone crossings and gaps are ambiguous: keep their delta separately.
+Mile.TrackKills = function(boundary)
     local db = Journal()
     if not ready or not db or not (ns.ZoneCard and C_Map and C_Map.GetBestMapForUnit) then return end
     local total = KillStat()
@@ -6741,15 +6992,21 @@ Mile.TrackKills = function()
         local byId = GameStat(107)
         if byId and byId > 0 then total = byId end
     end
-    if not total then return end
-    local base = db.killBase
-    db.killBase = total
-    if not base or total <= base then return end
+    local sample = K.killSample
+    if not total then K.killSample = nil; return end
     local ok, here = pcall(C_Map.GetBestMapForUnit, "player")
     local zone = ok and here and ns.ZoneCard.ZoneMap(here)
-    if not zone then return end
+    if IsInInstance and IsInInstance() then zone = nil end
+    K.killSample = { db = db, total = total, zone = zone }
+    db.killBase = total
+    if not sample or sample.db ~= db or total <= sample.total then return end
+    local delta = total - sample.total
+    if boundary or not zone or zone ~= sample.zone then
+        db.zoneKillsUnassigned = (db.zoneKillsUnassigned or 0) + delta
+        return
+    end
     db.zoneKills = db.zoneKills or {}
-    db.zoneKills[zone] = (db.zoneKills[zone] or 0) + (total - base)
+    db.zoneKills[zone] = (db.zoneKills[zone] or 0) + delta
 end
 
 ns.TrackKills = Mile.TrackKills
@@ -6796,12 +7053,74 @@ H.QUEST_TURNED_IN = function(self, event, ...)
     else
         CountOnly("quest", tier)
     end
+    -- a level gained with this quest whose event never came is written a few seconds later
+    if C_Timer and C_Timer.After then C_Timer.After(4, function() pcall(Mile.CatchUpLevels) end) end
     pendingQuestTitle, pendingNPC, pendingQuestLevel = nil, nil, nil
     ns.pendingObjective = nil
     if Journal() and Journal().questObj then Journal().questObj[questID] = nil end
     pendingObjectiveTypes = nil
     Mile.npcId = nil
 end
+
+-- A level the game never told us about (the event did not come, or came while the book was not ready) is written
+-- afterwards, in its place among the pages and without a notice. Only holes between the lowest level page the diary
+-- has and the level now: a diary that began at level 40 does not write thirty-nine pages. Once the diary has
+-- reached the cap, older pages may have gone, so only what is above the highest level page is looked at.
+Mile.CatchUpLevels = function()
+    local db = Journal()
+    if not (db and db.entries and UnitLevel) then return end
+    local okLevel, cur = pcall(UnitLevel, "player")   -- the game wants the unit: UnitLevel() alone answers nothing
+    if not okLevel or type(cur) ~= "number" or cur < 2 then return end
+    local have, lo, hi = {}, nil, nil
+    for _, e in ipairs(db.entries) do
+        if (e.kind == "level" or e.kind == "milestone") and type(e.arg) == "number" then
+            have[e.arg] = true
+            if not lo or e.arg < lo then lo = e.arg end
+            if not hi or e.arg > hi then hi = e.arg end
+        end
+    end
+    if not lo then return end
+    if #db.entries >= MAX_ENTRIES then lo = hi end
+    local added = 0
+    for level = lo + 1, cur do
+        if not have[level] and added < 20 then
+            local entries = db.entries
+            local from, lower = 0, -1
+            for i, e in ipairs(entries) do
+                if (e.kind == "level" or e.kind == "milestone") and type(e.arg) == "number"
+                    and e.arg < level and e.arg >= lower then from, lower = i, e.arg end
+            end
+            local at
+            for i = from + 1, #entries do
+                local e = entries[i]
+                if ((e.kind == "level" or e.kind == "milestone") and type(e.arg) == "number" and e.arg > level)
+                    or (type(e.pl) == "number" and e.pl >= level) then at = i; break end
+            end
+            local extra = { recovered = true, x = false, y = false, m = false }
+            local zone
+            if at then
+                local nb = entries[at]
+                extra.t = math.max((entries[from] and entries[from].t) or 0, (nb.t or time()) - 1)
+                zone, extra.zm, extra.m, extra.ses = nb.zone, nb.zm, nb.m or false, nb.ses
+            end
+            local n0 = #entries
+            K.quietAdd = true
+            pcall(AddEntry, (level % 10 == 0) and "milestone" or "level", level, zone, extra)
+            K.quietAdd = false
+            if #entries == n0 + 1 then
+                added = added + 1
+                local entry = table.remove(entries)
+                entry.hr = nil   -- the recovery time is not the time the level was gained
+                if at then table.insert(entries, at, entry) else table.insert(entries, entry) end
+            end
+        end
+    end
+    if added > 0 then
+        ns.layoutRev = (ns.layoutRev or 0) + 1
+        if window and window:IsShown() then window:Refresh() end
+    end
+end
+ns.CatchUpLevels = function() return Mile.CatchUpLevels() end
 
 H.PLAYER_LEVEL_UP = function(self, event, ...)
     local level = tonumber((...))
@@ -6810,6 +7129,7 @@ H.PLAYER_LEVEL_UP = function(self, event, ...)
     else
         AddEntry("level", level)
     end
+    pcall(Mile.CatchUpLevels)
     if ready then C_Timer.After(3, function() pcall(Mile.CheckPet) end) end
 end
 
@@ -6958,6 +7278,7 @@ Mile.reunionTold = {}
 -- After the whole diary is swapped (a backup restored or put back): what the session held about the old one goes,
 -- and the book is drawn again.
 ns.RefreshDiary = function()
+    K.retentionPrompted = nil
     K.nameSet = nil
     K.overWarned = nil
     Mile.reunionTold = {}
@@ -8653,6 +8974,9 @@ SlashCmdList["SKALD"] = function(msg)
     elseif msg == "probe lore clear" then
         Settings().loreProbe = nil
         Say(L.PROBE_LORE_CLEARED)
+    elseif msg == "retention" then
+        local db = Journal()
+        if db then StaticPopup_Show("SKALD_RETENTION", MAX_ENTRIES, nil, { journal = db, entries = db.entries }) end
     elseif msg == "clear" then
         StaticPopup_Show("SKALD_CLEAR")
     elseif msg == "quiet" then
@@ -8724,6 +9048,15 @@ SlashCmdList["SKALD"] = function(msg)
         if ns.Backup then ns.Backup.ShowRestore() end
     elseif msg == "restore undo" then
         if ns.Backup then ns.Backup.ConfirmUndo() end
+    elseif msg:match("^zoom") then
+        -- /skald zoom auto|40..200: how far the camera stands from the figure on the cover (more is a smaller figure)
+        local arg = strtrim(raw:sub(5)):lower()
+        local value = tonumber(arg)
+        if arg == "auto" then SkaldDB.coverZoom = nil
+        elseif value and value >= 40 and value <= 200 then SkaldDB.coverZoom = value / 100
+        else Say(string.format("/skald zoom auto | 40-200  (%.2f)", ns.CoverZoom())); return end
+        if ns.ReloadCoverModel then pcall(ns.ReloadCoverModel) end
+        Say(string.format("zoom %.2f", ns.CoverZoom()))
     elseif msg:match("^size") then
         -- /skald size auto|80|100|125|150
         local arg = strtrim(raw:sub(5)):lower():gsub("%%", "")

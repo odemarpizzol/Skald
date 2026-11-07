@@ -9,17 +9,20 @@ local UI_TEXT = {
     enUS = {
         TAB = "Charts", TITLE = "Cartographer", CHARTED = "%d of %d lands charted", OF = "%d of %d",
         WALKED = "You have walked here. Click for more.", NOT_YET = "Not yet walked.", EMPTY = "No maps yet.",
-        BACK = "Back to the maps", HERE = "Pages written here", NONE_HERE = "No pages were written here yet.", DATE = "%m/%d/%Y",
+        BACK = "Back to the maps", PLACES = "%s: %d of %d visited", DUNGEONS = "Dungeons", RAIDS = "Raids", BGS = "Battlegrounds",
+        BEEN = "You have been here.", HERE = "Pages written here", NONE_HERE = "No pages were written here yet.", DATE = "%m/%d/%Y",
     },
     ptBR = {
         TAB = "Cartógrafo", TITLE = "Cartógrafo", CHARTED = "%d de %d terras mapeadas", OF = "%d de %d",
         WALKED = "Você já andou por aqui. Clique para ver mais.", NOT_YET = "Ainda não percorrida.", EMPTY = "Ainda sem mapas.",
-        BACK = "Voltar aos mapas", HERE = "Páginas escritas aqui", NONE_HERE = "Nenhuma página foi escrita aqui ainda.", DATE = "%d/%m/%Y",
+        BACK = "Voltar aos mapas", PLACES = "%s: %d de %d visitados", DUNGEONS = "Masmorras", RAIDS = "Raides", BGS = "Campos de batalha",
+        BEEN = "Voc\195\170 j\195\161 esteve aqui.", HERE = "Páginas escritas aqui", NONE_HERE = "Nenhuma página foi escrita aqui ainda.", DATE = "%d/%m/%Y",
     },
     frFR = {
         TAB = "Cartes", TITLE = "Cartographe", CHARTED = "%d terres sur %d cartographiées", OF = "%d sur %d",
         WALKED = "Vous avez d\195\169j\195\160 march\195\169 ici. Cliquez pour en savoir plus.", NOT_YET = "Pas encore parcourue.", EMPTY = "Pas encore de cartes.",
-        BACK = "Retour aux cartes", HERE = "Pages \195\169crites ici", NONE_HERE = "Aucune page n'a encore \195\169t\195\169 \195\169crite ici.", DATE = "%d/%m/%Y",
+        BACK = "Retour aux cartes", PLACES = "%s\194\160: %d sur %d visit\195\169s", DUNGEONS = "Donjons", RAIDS = "Raids", BGS = "Champs de bataille",
+        BEEN = "Vous \195\170tes d\195\169j\195\160 venu ici.", HERE = "Pages \195\169crites ici", NONE_HERE = "Aucune page n'a encore \195\169t\195\169 \195\169crite ici.", DATE = "%d/%m/%Y",
     },
 }
 local UI = UI_TEXT[GetLocale()] or UI_TEXT.enUS
@@ -30,6 +33,9 @@ ns.Cartographer = C
 C.COLS, C.ROWS = 2, 4                 -- the cells on one page; two pages make a spread
 C.PER_PAGE = C.COLS * C.ROWS
 C.THUMB_W, C.THUMB_H = 150, 75   -- the frame (map_thumb_frame) leaves 88% of its width free: it is drawn 1/0.88 larger
+C.BIG_W = 300                   -- a map shown big, in a group of four or fewer
+C.MAX_PITCH = 150                -- how far apart the rows of a short page are put
+C.GRID_H = 384                  -- from the heading (y 46) to the foot of the page (430)
 C.CELL_W, C.CELL_H = 170, 96   -- four rows from y 46 end at 430, inside the 440 of the panel and above the page corner (the curl)
 
 -- The maps of this client with a drawing: the map must exist in the game (a Burning Crusade land does not on an
@@ -58,6 +64,82 @@ function C.List()
     return list
 end
 
+-- Places with a map of their own that are not lands: dungeons, raids and battlegrounds, told by the id of the instance
+-- (they have no map id in the game). { English, Portuguese, French }
+C.INSTANCE_NAMES = {
+    [389] = { "Ragefire Chasm", "Cavernas \195\141gneas", "Gouffre de Ragefeu" },
+    [36] = { "Deadmines", "Minas Mortas", "Mortemines" },
+    [43] = { "Wailing Caverns", "Caverna Ululante", "Cavernes des Lamentations" },
+    [33] = { "Shadowfang Keep", "Bastilha da Presa Negra", "Donjon d'Ombrecroc" },
+    [48] = { "Blackfathom Deeps", "Profundezas Negras", "Profondeurs de Brassenoire" },
+    [34] = { "Stormwind Stockade", "C\195\161rcere de Ventobravo", "Prison de Stormwind" },
+    [90] = { "Gnomeregan", "Gnomeregan", "Gnomeregan" },
+    [47] = { "Razorfen Kraul", "Urzal dos Tuscos", "Kraal de Tranchebauge" },
+    [189] = { "Scarlet Monastery", "Monast\195\169rio Escarlate", "Monast\195\168re \195\169carlate" },
+    [129] = { "Razorfen Downs", "Urzal dos Mortos", "Souilles de Tranchebauge" },
+    [70] = { "Uldaman", "Uldaman", "Uldaman" },
+    [209] = { "Zul'Farrak", "Zul'Farrak", "Zul'Farrak" },
+    [349] = { "Maraudon", "Maraudon", "Maraudon" },
+    [109] = { "Sunken Temple", "Templo Submerso", "Temple englouti" },
+    [230] = { "Blackrock Depths", "Abismo Rocha Negra", "Profondeurs de Rochenoire" },
+    [229] = { "Blackrock Spire", "Pico da Rocha Negra", "Pic Rochenoire" },
+    [329] = { "Stratholme", "Stratholme", "Stratholme" },
+    [289] = { "Scholomance", "Scolom\195\162ntia", "Scholomance" },
+    [429] = { "Dire Maul", "Gl\195\161dio Cruel", "Hache-tripes" },
+    [409] = { "Molten Core", "N\195\186cleo Derretido", "C\197\147ur du Magma" },
+    [249] = { "Onyxia's Lair", "Covil de Onyxia", "Repaire d'Onyxia" },
+    [469] = { "Blackwing Lair", "Covil Asa Negra", "Repaire de l'Aile noire" },
+    [309] = { "Zul'Gurub", "Zul'Gurub", "Zul'Gurub" },
+    [509] = { "Ruins of Ahn'Qiraj", "Ru\195\173nas de Ahn'Qiraj", "Ruines d'Ahn'Qiraj" },
+    [531] = { "Ahn'Qiraj Temple", "Templo de Ahn'Qiraj", "Temple d'Ahn'Qiraj" },
+    [533] = { "Naxxramas", "Naxxramas", "Naxxramas" },
+    [3065] = { "The Hall of Thanes", "Sal\195\163o dos Thanes", "La salle des Thanes" },
+    [2999] = { "Ruins of Lordaeron", "Ru\195\173nas de Lordaeron", "Ruines de Lordaeron" },
+    [2998] = { "Excavation Site: Wetlands", "S\195\173tio de Escava\195\167\195\163o: Pantanal", "Excavations\194\160: les Paluns" },
+    [2959] = { "City of Dalaran", "Dalaran", "Cit\195\169 de Dalaran" },
+    [2970] = { "The Drowned City", "A Cidade Afogada", "La cit\195\169 engloutie" },
+    [3039] = { "Krol'dok Stronghold", "Fortaleza de Krol'Dok", "Forteresse de Krol'dok" },
+    [2994] = { "Alcaz Prison", "Pris\195\163o de Alcaz", "Prison d'Alcaz" },
+    [2974] = { "Blackmaw Hold", "Gruta Bocanera", "Blackmaw Hold" },
+    [3001] = { "The Shaper's Terrace", "O Terra\195\167o do Moldador", "La terrasse du Fa\195\167onneur" },
+    [3005] = { "Battle for Gilneas", "Batalha por Guiln\195\169as", "Bataille de Giln\195\169as" },
+    [2997] = { "Darkspear Islands", "Ilhas Lan\195\167anegra", "\195\142les des Sombrelances" },
+    [2784] = { "Demon Fall Canyon", "C\195\162nion do Dem\195\180nio Ca\195\173do", "Canyon de la Malechute" },
+    [2875] = { "Karazhan Crypts", "Criptas de Karazhan", "Cryptes de Karazhan" },
+    [2856] = { "Scarlet Enclave", "Enclave Escarlate", "L\226\128\153enclave \195\137carlate" },
+    [489] = { "Warsong Gulch", "Garganta Brado-Guerreiro", "Goulet des Chanteguerres" },
+    [529] = { "Arathi Basin", "Bacia Arathi", "Bassin d'Arathi" },
+    [30] = { "Alterac Valley", "Vale de Alterac", "Vall\195\169e d'Alterac" },
+    [566] = { "Eye of the Storm", "Olho da Tormenta", "\197\146il du cyclone" },
+}
+C.RAIDS = { [409] = true, [249] = true, [469] = true, [309] = true, [509] = true, [531] = true, [533] = true, [2856] = true }
+C.BGS = { [489] = true, [529] = true, [30] = true, [566] = true, [3005] = true, [2997] = true }
+
+-- The instances with a drawing, in the three groups of the tab, each sorted by name: { key, label, items }.
+function C.Places()
+    local zc = ns.ZoneCard
+    local art = zc and zc.INSTANCE_ART or {}
+    local idx = ({ ptBR = 2, frFR = 3 })[GetLocale and GetLocale() or "enUS"] or 1
+    local groups = { { key = "dungeons", label = UI.DUNGEONS, items = {} }, { key = "raids", label = UI.RAIDS, items = {} },
+        { key = "bgs", label = UI.BGS, items = {} } }
+    for id, picture in pairs(art) do
+        local names = C.INSTANCE_NAMES[id]
+        local name = names and names[idx] or picture
+        local g = C.BGS[id] and 3 or (C.RAIDS[id] and 2 or 1)
+        table.insert(groups[g].items, { id = id, art = picture, name = name, key = Fold(name), instance = true })
+    end
+    for _, g in ipairs(groups) do
+        table.sort(g.items, function(a, b) if a.key ~= b.key then return a.key < b.key end return a.id < b.id end)
+    end
+    return groups
+end
+
+function C.WalkedInstance(id)
+    local db = SkaldCharDB
+    local seen = db and db.visitedInstances
+    return seen and seen[id] and true or false
+end
+
 function C.Walked(id)
     local db = SkaldCharDB
     local maps = db and db.visitedMaps
@@ -67,7 +149,7 @@ end
 -- How many of the list the diary has seen the character in.
 function C.Count(list)
     local n = 0
-    for _, m in ipairs(list) do if C.Walked(m.id) then n = n + 1 end end
+    for _, m in ipairs(list) do if (m.instance and C.WalkedInstance(m.id)) or (not m.instance and C.Walked(m.id)) then n = n + 1 end end
     return n
 end
 
@@ -129,6 +211,7 @@ local function BuildTab(panel)
             local cell = CreateFrame("Button", nil, panel)
             cell:SetSize(C.CELL_W, C.CELL_H)
             cell:SetPoint("TOPLEFT", x0 + col * C.CELL_W, -46 - row * C.CELL_H)
+            cell.slotX, cell.slotY, cell.page = x0 + col * C.CELL_W, 46 + row * C.CELL_H, side
             cell.map = cell:CreateTexture(nil, "ARTWORK")
             cell.map:SetSize(C.THUMB_W, C.THUMB_H)
             cell.map:SetPoint("TOP", 0, -2)
@@ -150,11 +233,55 @@ local function BuildTab(panel)
                 if not self.info then return end
                 GameTooltip:SetOwner(self, "ANCHOR_TOP")
                 GameTooltip:AddLine(self.info.name, 1, 0.82, 0)
-                GameTooltip:AddLine(self.walked and UI.WALKED or UI.NOT_YET, 0.8, 0.8, 0.8, true)
+                GameTooltip:AddLine(self.walked and (self.info.instance and UI.BEEN or UI.WALKED) or UI.NOT_YET, 0.8, 0.8, 0.8, true)
                 GameTooltip:Show()
             end)
             cell:SetScript("OnLeave", function() GameTooltip:Hide() end)
             cells[#cells + 1] = cell
+        end
+    end
+
+    -- A cell is drawn in one of two ways: in the grid of eight to a page, or "big" (a group of up to four maps, two to a page, one
+    -- column each, centred on the page, the drawing twice as wide as high as it always is).
+    local function PlaceCell(cell, big, slot, rows)
+        cell:ClearAllPoints()
+        cell.map:ClearAllPoints(); cell.stamp:ClearAllPoints(); cell.name:ClearAllPoints(); cell.frame:ClearAllPoints()
+        cell.big = big and true or false
+        if not big then
+            cell:SetSize(C.CELL_W, C.CELL_H)
+            -- the rows of a page with fewer than four are spread out and centred between the heading and the foot
+            local row = (cell.slotY - 46) / C.CELL_H
+            rows = math.max(1, math.min(4, rows or 4))
+            local pitch = math.min(C.MAX_PITCH, C.GRID_H / rows)
+            local top = 46 + (C.GRID_H - rows * pitch) / 2 + (pitch - C.CELL_H) / 2
+            cell:SetPoint("TOPLEFT", panel, "TOPLEFT", cell.slotX, -(top + row * pitch))
+            cell.map:SetSize(C.THUMB_W, C.THUMB_H)
+            cell.map:SetPoint("TOP", cell, "TOP", 0, -2)
+            cell.frame:SetSize(C.THUMB_W / 0.88, C.THUMB_H / 0.88)
+            cell.frame:SetPoint("CENTER", cell.map, "CENTER", 0, 0)
+            cell.stamp:SetSize(32, 32)
+            cell.stamp:SetPoint("CENTER", cell.map, "BOTTOMRIGHT", -8, 8)
+            cell.name:SetPoint("TOP", cell.map, "BOTTOM", 0, -2)
+            cell.name:SetWidth(C.CELL_W - 6)
+            cell.slot = nil
+        else
+            local mw = C.BIG_W
+            local mh = mw / 2                                   -- the proportion of the drawings, 2 to 1
+            local fh = mh / 0.88                                -- the frame is drawn larger than the drawing
+            local cellH = fh + 28                               -- the frame and the name under it
+            local gap = 14
+            local top = 46 + math.max(0, (C.GRID_H - (2 * cellH + gap)) / 2)   -- centred between the heading and the foot
+            cell:SetSize(CW, cellH)
+            cell:SetPoint("TOPLEFT", panel, "TOPLEFT", (cell.page == 0 and 0 or RIGHT_X), -(top + (slot - 1) * (cellH + gap)))
+            cell.map:SetSize(mw, mh)
+            cell.map:SetPoint("TOP", cell, "TOP", 0, -((fh - mh) / 2))
+            cell.frame:SetSize(mw / 0.88, fh)
+            cell.frame:SetPoint("CENTER", cell.map, "CENTER", 0, 0)
+            cell.stamp:SetSize(44, 44)
+            cell.stamp:SetPoint("CENTER", cell.map, "BOTTOMRIGHT", -12, 12)
+            cell.name:SetPoint("TOP", cell, "TOP", 0, -(fh + 1))
+            cell.name:SetWidth(CW - 6)
+            cell.slot = slot
         end
     end
 
@@ -205,7 +332,7 @@ local function BuildTab(panel)
     back:SetScript("OnClick", Close)
     for _, cell in ipairs(cells) do
         cell:SetScript("OnClick", function(self)
-            if self.info and self.walked then detail = self.info; detail.list, detail.total = C.Pages(self.info.id); detailPage = 1; Refresh() end
+            if self.info and self.walked and not self.info.instance then detail = self.info; detail.list, detail.total = C.Pages(self.info.id); detailPage = 1; Refresh() end
         end)
     end
 
@@ -252,17 +379,57 @@ local function BuildTab(panel)
             return
         end
         local per = C.PER_PAGE * 2
-        spreads = math.max(1, math.ceil(#list / per))
+        -- the spreads: the lands first, then each group of places on a spread of its own (a group starts a new one)
+        -- a group is shared out evenly among its spreads (never a last spread with one map), and on a spread the maps are
+        -- shared between the two pages, the left one first
+        local function Split(items, group)
+            local out, n = {}, #items
+            local count = math.max(1, math.ceil(n / per))
+            local at = 1
+            for k = 1, count do
+                local size = math.floor(n / count) + (k <= n % count and 1 or 0)
+                local part = {}
+                for i = at, at + size - 1 do part[#part + 1] = items[i] end
+                at = at + size
+                out[#out + 1] = { items = part, group = group }
+            end
+            return out
+        end
+        local chunks = Split(list, nil)
+        for _, g in ipairs(C.Places()) do
+            for _, c in ipairs(Split(g.items, g)) do chunks[#chunks + 1] = c end
+        end
+        spreads = #chunks
         spread = math.max(1, math.min(spread, spreads))
-        count:SetText(string.format(UI.CHARTED, C.Count(list), #list))
-        empty:SetShown(#list == 0)
+        local chunk = chunks[spread]
+        -- a group of four or fewer maps takes the whole spread: two big maps on the left page, two on the right
+        local bigOf, isBig = {}, chunk.group and #chunk.group.items <= 4
+        local itemAt = {}   -- cell number -> item of the spread
+        if isBig then
+            bigOf = { [1] = { 1, 1 }, [2] = { 2, 2 }, [9] = { 3, 1 }, [10] = { 4, 2 } }   -- cell number = { item, slot of the page }
+            for cellNo, spec in pairs(bigOf) do itemAt[cellNo] = chunk.items[spec[1]] end
+        else
+            local left = math.min(C.PER_PAGE, math.ceil(#chunk.items / 2))
+            for k, item in ipairs(chunk.items) do itemAt[k <= left and k or (C.PER_PAGE + k - left)] = item end
+        end
+        if chunk.group then
+            count:SetText(string.format(UI.PLACES, chunk.group.label, C.Count(chunk.group.items), #chunk.group.items))
+        else
+            count:SetText(string.format(UI.CHARTED, C.Count(list), #list))
+        end
+        empty:SetShown(#list == 0 and not chunk.group)
+        local onPage = { [0] = 0, [1] = 0 }
+        for cellNo in pairs(itemAt) do onPage[cellNo <= C.PER_PAGE and 0 or 1] = onPage[cellNo <= C.PER_PAGE and 0 or 1] + 1 end
+        local pageRows = { [0] = math.ceil(onPage[0] / C.COLS), [1] = math.ceil(onPage[1] / C.COLS) }
         for i, cell in ipairs(cells) do
-            local info = list[(spread - 1) * per + i]
+            local big = bigOf[i]
+            local info = itemAt[i]
+            PlaceCell(cell, big ~= nil, big and big[2], pageRows[cell.page])
             cell.info = info
             if not info then
                 cell:Hide()
             else
-                local walked = C.Walked(info.id)
+                local walked = info.instance and C.WalkedInstance(info.id) or (not info.instance and C.Walked(info.id))
                 cell.walked = walked
                 cell:Show()
                 cell.map:SetTexture(TEX .. info.art)

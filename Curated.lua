@@ -18,6 +18,30 @@ local _, ns = ...
 
 local C = {}
 
+-- Teldrassil: objectives and turn-in dialogue captured in the Forever lore probe
+-- (2026-11-05). NPC/spell/event objectives can be mistaken for fights or sightseeing.
+-- Text-only overrides also repair old pages without changing their saved type or rarity.
+C[5621] = { text = {
+    enUS = "In \"{quest}\", I healed a wounded sentinel and strengthened her with a blessing. My first lessons became help someone could feel.",
+    ptBR = "Em \"{quest}\", curei uma sentinela ferida e a fortaleci com uma bênção. Minhas primeiras lições se tornaram ajuda que alguém pôde sentir.",
+    frFR = "Pour «\194\160{quest}\194\160», j'ai soigné une sentinelle blessée et l'ai fortifiée par une bénédiction. Mes premières leçons ont servi à soulager quelqu'un.",
+} }
+C[99053] = { text = {
+    enUS = "\"{quest}\" ended with a rescue. A sentinel escaped danger, and I returned to tell someone who had feared for her.",
+    ptBR = "\"{quest}\" terminou com um resgate. Uma sentinela escapou do perigo, e voltei para contar a quem temia por ela.",
+    frFR = "Avec «\194\160{quest}\194\160», j'ai porté secours à une sentinelle. Elle a échappé au danger, et je suis de retour auprès de ceux qui craignaient pour elle.",
+} }
+C[922] = { text = {
+    enUS = "I delivered a seed in \"{quest}\", hoping it would help the research. It carried the corruption too; the search for a cure goes on.",
+    ptBR = "Entreguei uma semente em \"{quest}\", na esperança de ajudar nos estudos. Ela também carregava a corrupção; a busca por uma cura continua.",
+    frFR = "J'ai livré une graine pour «\194\160{quest}\194\160», dans l'espoir d'aider les recherches. Elle portait aussi la corruption\194\160; la recherche d'un remède continue.",
+} }
+C[6342] = { text = {
+    enUS = "A hippogryph carried me to my delivery in \"{quest}\". The fish samples reached their destination, and I learned a new route above the sea.",
+    ptBR = "Um hipogrifo me levou à entrega de \"{quest}\". As amostras de peixe chegaram ao destino, e aprendi uma nova rota sobre o mar.",
+    frFR = "Un hippogriffe m'a conduit{g:|e} vers ma livraison pour «\194\160{quest}\194\160». Les échantillons de poissons sont arrivés à destination, et j'ai découvert une route au-dessus de la mer.",
+} }
+
 -- Thunderfury (Legendary) ---------------------------------------------------
 C[7785] = { tier = 5, text = {
     enUS = "A vessel, a whisper of wind, and the beginning of a legend: \"{quest}\". {npc} set me on a road few ever walk.",

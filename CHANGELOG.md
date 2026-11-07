@@ -1,5 +1,32 @@
 # Changelog
 
+## 1.0.1
+
+- First stable version. A file labelled 1.0.0 went out by mistake with the old 0.49.3 contents and was withdrawn; this version replaces it
+- **Maps of 44 instances in the Cartographer** (dungeons, raids and battlegrounds), including every new Forever dungeon (Ruins of Lordaeron, Excavation Site: Wetlands, City of Dalaran, The Drowned City, Krol'dok Stronghold, Alcaz Prison, Blackmaw Hold, The Shaper's Terrace) and the new battlegrounds (Battle for Gilneas, Darkspear Islands); the Index draws the map of the instance you stand in
+- **Weather pages**: rain, snow or a sandstorm strong enough is written (at most one every 45 minutes), with an icon and lines of their own
+- The diary warns near **5,000 pages** and keeps every page until you accept the limit (`/skald retention`); favourites and notes are never removed
+- Restoring and undoing a backup are safe: a failure puts both diaries back as they were
+- Old pages follow the voice you choose; going back to the first voice brings the first wording back
+- The Bard has new hand-inked art (lute, hearth, staff, rising notes); the equaliser picture is gone; the stop button shows Stop
+- Stricter checks of the pictures and of the tools; checks also run on every push
+
+## 0.50.0-beta
+
+- **Dungeons, raids and battlegrounds in the Cartographer**: three groups of their own, in colour for those the character has entered (the Hall of Thanes included); groups of up to four maps are shown large, two to a page
+- The Index page draws the map of the dungeon, raid or battleground when you stand in it
+- **Weather pages**: rain, snow or a sandstorm strong enough is written in the diary (read from the game, at most one every 45 minutes), with lines of their own and a new icon, in English, Portuguese and French
+- The Bard has new hand-inked art: lute, hearth, staff, floating notes and equaliser
+
+## 0.49.4-beta
+
+- **Levels the game never announced** (a level gained while a quest was handed in, or while the book was not ready) are written afterwards, in their place among the pages, dated to their day and without a notice
+- Four Teldrassil quests (healing, rescue, seed delivery and the hippogryph journey) have stories of their own in English, Portuguese and French; Portuguese grammar: crafting, Eluna's name, the night elf guardian's gender, "ao Terraço"
+- The light of the hour is told with eight lines instead of three and drawn by the minute, so one evening does not repeat the same scene
+- A standing or a companion a new character already has in its first minutes no longer writes a page for a goal
+- The work after login is split into small steps (one task per turn, paused in combat, never delaying the recording of events), so the game stalls less when the diary starts
+- Goals prefer the game's own kill counter over XP estimates; daily kill totals that are estimates say so; kills across zone or loading boundaries are no longer given to the zone of arrival; lore captures keep the character and the language
+
 ## 0.49.3-beta
 
 - Maps of the lands that only the Forever client has, hand-drawn in ink and wash like the others: Mount Hyjal, Shen'dralas and River Paths (the card of the Index and the Cartographer show them there; other clients do not have these lands and leave them out)

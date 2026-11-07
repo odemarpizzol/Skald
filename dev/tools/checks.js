@@ -8,11 +8,24 @@ const { lua, lauxlib, lualib, to_luastring, to_jsstring } = require('fengari');
 const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
+const { toolFailure, inspectTga } = require('./check_helpers');
 
 const ADDONS = path.resolve(__dirname, '../../..');
 let failed = 0;
 const fail = msg => { failed++; console.log('  FAIL  ' + msg); };
 const ok = msg => console.log('  ok    ' + msg);
+function runTool(file, expected) {
+  const r = spawnSync(process.execPath, [path.join(__dirname, file)], { encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 });
+  const why = toolFailure(r, expected);
+  if (why) {
+    fail(file + ': ' + why);
+    console.log(((r.stderr || '') + '\n' + (r.stdout || '')).slice(-6000));
+  }
+  r.valid = !why;
+  return r;
+}
+console.log('Tooling');
+if (runTool('tooling_test.js', /All tooling checks passed/).valid) ok('subprocess and texture validation');
 
 // 1. syntax
 console.log('Syntax');
@@ -37,6 +50,17 @@ for (const f of fs.readdirSync(path.join(ADDONS, 'Skald')).filter(n => n.endsWit
 // every texture the .toc-listed files name must exist
 console.log('Textures');
 {
+  let count = 0;
+  const root = path.join(ADDONS, 'Skald');
+  const files = ['icon.tga'].concat(['Textures', 'Textures/skald2'].flatMap(d =>
+    fs.readdirSync(path.join(root, d)).filter(n => n.endsWith('.tga')).map(n => d + '/' + n)));
+  for (const file of files) {
+    try { inspectTga(fs.readFileSync(path.join(root, file))); count++; }
+    catch (e) { fail(file + ': ' + e.message); }
+  }
+  if (count === files.length) ok(count + ' textures: valid dimensions, format and visible alpha');
+}
+{
   const tex = new Set(['Textures', 'Textures/skald2'].flatMap(d => fs.readdirSync(path.join(ADDONS, 'Skald', d)).filter(f => f.endsWith('.tga')).map(f => f.replace(/\.tga$/, ''))));
   const src = fs.readFileSync(path.join(ADDONS, 'Skald/Skald.lua'), 'utf8') + fs.readFileSync(path.join(ADDONS, 'Skald/Atlas.lua'), 'utf8') + fs.readFileSync(path.join(ADDONS, 'Skald/Goals.lua'), 'utf8') + fs.readFileSync(path.join(ADDONS, 'Skald/Saga.lua'), 'utf8') + fs.readFileSync(path.join(ADDONS, 'Skald/ZoneCard.lua'), 'utf8');
   const wanted = new Set();
@@ -54,16 +78,16 @@ console.log('Textures');
 // 1b. lint: leaks, the 200-local limit, new global names
 console.log('Lint');
 {
-  const r = spawnSync(process.execPath, [path.join(__dirname, 'lint.js')], { encoding: 'utf8' });
-  if (r.status === 0) ok('no global leaks, no new global names, locals under the limit'); else { fail('lint'); console.log(r.stdout); }
+  const r = runTool('lint.js', /No leaks, no limit breaches/);
+  if (r.valid) ok('no global leaks, no new global names, locals under the limit');
 }
 
 // 2. phrases
 console.log('Phrases');
 {
-  const r = spawnSync(process.execPath, [path.join(__dirname, 'validate_phrases.js')], { encoding: 'utf8' });
+  const r = runTool('validate_phrases.js', /names of a later time \(lore\): none/);
   const lines = (r.stdout || '').split('\n').filter(l => /phrase problems|combat words/.test(l));
-  if (r.status === 0) ok('all languages: ' + lines.length + ' checks clean'); else { fail('phrase validation'); console.log(r.stdout); }
+  if (r.valid) ok('all languages: ' + lines.length + ' checks clean');
 }
 
 // 3. simulated session
@@ -103,6 +127,12 @@ assert(load(LOC,"=L"))("Skald",ns); assert(load(CUR,"=U"))("Skald",ns); assert(l
 assert(load(CH,"=C"))("Skald",ns); assert(load(AT,"=A"))("Skald",ns); assert(load(GL,"=G"))("Skald",ns); assert(load(SG,"=S"))("Skald",ns); assert(load(ZC,"=Z"))("Skald",ns); assert(load(CT,"=T"))("Skald",ns); assert(load(PV,"=P"))("Skald",ns); assert(load(BK,"=B"))("Skald",ns); assert(load(SR,"=R"))("Skald",ns); assert(load(BD,"=D"))("Skald",ns)
 local function fire(ev,...) for _,f in ipairs(frames) do if f._OnEvent then f._OnEvent(f,ev,...) end end end
 fire("ADDON_LOADED","Skald"); fire("PLAYER_LOGIN"); runTimers()
+-- Timers yield between maintenance jobs; simulate subsequent frames before steady-state assertions.
+for i=1,100 do
+    if not ns.MaintenanceState or ns.MaintenanceState().pending==0 then break end
+    runTimers()
+end
+assert(not ns.MaintenanceState or ns.MaintenanceState().pending==0, "startup did not settle")
 local out={}
 local function btn(label) for i=#frames,1,-1 do local f=frames[i]; local tx=rawget(f,"text"); if tx and rawget(tx,"_text")==label and f._OnClick then return f end end end
 local win=_G.SkaldFrame; win:Show(); if win._OnShow then win._OnShow(win) end
@@ -162,25 +192,24 @@ for (const [loc, profile, label] of [['enUS', '', 'enUS'], ['ptBR', '', 'ptBR'],
 // 3b. regressions: things that went wrong once
 console.log('Regressions');
 {
-  const r = spawnSync(process.execPath, [path.join(__dirname, 'regressions.js')], { encoding: 'utf8' });
+  const r = runTool('regressions.js', /All regressions passed/);
   const lines = (r.stdout || '').split(/\r?\n/).filter(l => /^ {2}(ok|FAIL)/.test(l));
   for (const l of lines) console.log(l);
-  if (r.status !== 0) failed++;
 }
 
 // the web Reader reads back what the game writes for it
 console.log('Reader');
 {
-  const r = spawnSync(process.execPath, [path.join(__dirname, 'reader_test.js')], { encoding: 'utf8' });
+  const r = runTool('reader_test.js', /All reader checks passed/);
   const lines = (r.stdout || '').split(/\r?\n/).filter(l => /^ {2}(ok|FAIL)/.test(l));
   for (const l of lines) console.log(l);
-  if (r.status !== 0) failed++;
 }
 
 // 4. speed: a diary of 3000 pages must still turn pages quickly (numbers are fengari's, slower than the game)
 console.log('Speed');
 {
-  const r = spawnSync(process.execPath, [path.join(__dirname, 'perf.js')], { encoding: 'utf8' });
+  const r = runTool('perf.js', /saved file \(3000\) \d+ KB/);
+  if (r.valid) {
   const ms = label => {
     const line = (r.stdout || '').split('\n').find(l => l.startsWith(label));
     const m = line && line.match(/([0-9.]+) ms/);
@@ -196,6 +225,7 @@ console.log('Speed');
   else if (!(ms('text for the Reader (3000 pages)') < 5000)) fail('the text for the Reader takes ' + ms('text for the Reader (3000 pages)') + ' ms (limit 5000)');
   else if (!((m => m && Number(m[1]) < 4096)((r.stdout || '').match(/saved file \(3000\) (\d+) KB/)))) fail('the saved file of 3000 pages is over 4 MB: ' + ((r.stdout || '').match(/saved file \(3000\) (\d+) KB/) || [])[1] + ' KB')
   else ok('3000 pages: open ' + first.toFixed(0) + ' ms, turn a page ' + turn.toFixed(1) + ' ms, map markers ' + ms('map markers (3000 pages, one map)').toFixed(0) + ' ms, goals ' + ms('goals check, nothing new (3000)').toFixed(0) + ' ms, Saga ' + ms('saga (3000 pages)').toFixed(0) + ' ms, export ' + ms('export plain, names hidden (3000)').toFixed(0) + ' ms, Reader text ' + ms('text for the Reader (3000 pages)').toFixed(0) + ' ms');
+  }
 }
 
 console.log(failed ? `\n${failed} check(s) FAILED` : '\nAll checks passed');
