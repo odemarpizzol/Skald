@@ -2802,7 +2802,7 @@ RES = (not bad and told >= 15) and "ok" or (bad or ("only " .. told .. " told: "
 const CAP_PRE = (mark) => `local es = {}
 for i = 1, 3000 do es[i] = { t = NOW - (3001 - i) * 60, zone = "Z", kind = "zone", arg = "e" .. i, idx = 1 } end
 ${mark}
-${SAVED('es')}`;
+${SAVED('es', 'retentionAccepted = true,')}`;
 const has = `local function has(arg) for _, e in ipairs(SkaldCharDB.entries) do if e.arg == arg then return true end end return false end`;
 
 run('at the cap a favourite and a note stay while the plain pages go, oldest first', {
@@ -3080,7 +3080,9 @@ run('undo brings the earlier diary back and sets the one replaced in its place; 
 local parts = B.Build().parts
 local function fresh() return B.Finish(importAll(parts)) end
 SkaldAPI.AddEntry("zone", "after the backup")
-local moved = B.Serialize(B.Capture(SkaldCharDB))
+local expectedMoved = B.Capture(SkaldCharDB)
+ns.ReadAfresh(expectedMoved)
+local moved = B.Serialize(expectedMoved)
 B.Apply(fresh())
 local restored = B.Serialize(B.Capture(SkaldCharDB))
 local ok1 = B.Undo()
@@ -3301,7 +3303,7 @@ local B = ns.Bard
 B.Stop()
 p.rows[3]._OnClick(p.rows[3])
 local playsRow = B.playing == 3 and rawget(p.song, "_text") == ns.LOCALES.enUS.BARD_TRACKS[3] and rawget(p.state, "_text") == ns.LOCALES.enUS.BARD_PLAYING
-  and tostring(rawget(p.rows[3].disc, "_tex")):find("bard_pause", 1, true) and tostring(rawget(p.rows[2].disc, "_tex")):find("bard_play", 1, true)
+  and tostring(rawget(p.rows[3].disc, "_tex")):find("hud_medal_stop", 1, true) and tostring(rawget(p.rows[2].disc, "_tex")):find("bard_play", 1, true)
 p.nextButton._OnClick(p.nextButton)
 local nextOk = B.playing == 4
 p.prevButton._OnClick(p.prevButton)
@@ -4217,6 +4219,67 @@ RES = (SkaldDB.probeEvents.count.CAMPSITE_CONTRIBUTION == 2 and log.seen[1].ev =
   if (names.length >= 8 && !lost.length) console.log('  ok    every sketch of the Saga has its picture (' + names.length + ')');
   else { failed++; console.log('  FAIL  Saga sketches: ' + names.length + ' named, missing: ' + lost.join(', ')); }
 }
+
+run('retention keeps every page until the owner explicitly accepts, then preserves personal pages', {
+  body: `local db=SkaldCharDB
+db.entries={}; db.retentionAccepted=nil; db.retentionWarned=nil
+for i=1,3000 do db.entries[i]={t=NOW-4000+i,kind="zone",arg="e"..i,idx=1} end
+db.entries[1].fav=true; db.entries[2].kind="note"
+local prompt={journal=db,entries=db.entries}
+SkaldAPI.AddEntry("zone","new")
+assert(#db.entries==3001 and __popup=="SKALD_RETENTION","pages removed before confirmation")
+assert(db.retentionWarned,"no advance warning")
+-- Closing/declining keeps the pages and does not accept deletion.
+StaticPopupDialogs.SKALD_RETENTION.OnCancel(nil,prompt)
+assert(not db.retentionAccepted and #db.entries==3001,"cancel changed data: "..#db.entries)
+StaticPopupDialogs.SKALD_RETENTION.OnAccept(nil,prompt)
+assert(db.retentionAccepted and #db.entries==3000,"accepted cap not applied")
+assert(db.entries[1].arg=="e1" and db.entries[2].arg=="e2" and db.entries[3].arg=="e4","wrong pages retained")
+-- Reviewing the choice and choosing Keep pages pauses future automatic removal too.
+StaticPopupDialogs.SKALD_RETENTION.OnCancel(nil,prompt)
+SkaldAPI.AddEntry("zone","held")
+assert(#db.entries==3001 and not db.retentionAccepted,"keep choice ignored: "..#db.entries)
+local replacement={}; for i=1,3001 do replacement[i]={kind="zone",arg="restored",t=NOW,idx=1} end
+db.entries=replacement
+StaticPopupDialogs.SKALD_RETENTION.OnAccept(nil,prompt)
+assert(not db.retentionAccepted and #db.entries==3001,"stale prompt removed restored pages")
+ns.ResetJournal(db)
+assert(db.retentionAccepted==nil and db.retentionWarned==nil,"consent leaked to a fresh diary")
+RES="ok"`,
+});
+run('undo restores live context afresh and rolls back both copies if refreshing fails', {
+  pre: BK_PRE,
+  body: `${BK}
+local parts=B.Build().parts
+SkaldAPI.AddEntry("zone","later")
+B.Apply(B.Finish(importAll(parts)))
+local before=snap()
+local refresh=ns.RefreshDiary
+ns.RefreshDiary=function() error("undo refresh failed") end
+local ok,why=B.Undo()
+ns.RefreshDiary=refresh
+assert(not ok and tostring(why):find("undo refresh failed",1,true))
+assert(snap()==before,"undo failure changed either diary")
+SkaldCharDB.restoreUndo.state.flags={stale=true}
+SkaldCharDB.restoreUndo.state.days={old={}}
+assert(B.Undo())
+assert(next(SkaldCharDB.flags)==nil and SkaldCharDB.days==nil and SkaldCharDB.skills==nil)
+RES="ok"`,
+});
+for (const locale of ['enUS','ptBR','frFR']) run('old pages follow the current voice and restore original wording: '+locale, {
+  pre: `__locale="${locale}"`,
+  body: `local P=ns.LOCALES[GetLocale()].phrases
+local e={kind="weather",wk="rain",arg="Teldrassil",zone="Teldrassil",idx=1,fl="tone_humor_weather",voice="humor"}
+SkaldDB.tone="humor"; local original=SkaldAPI.Render(e)
+SkaldDB.tone="humble"; assert(SkaldAPI.PoolFor(e)==P.tone_humble_weather)
+assert(SkaldAPI.Render(e)~=original)
+SkaldDB.tone="epic"; assert(SkaldAPI.PoolFor(e)==P.weather_rain)
+SkaldDB.tone="humor"; assert(SkaldAPI.Render(e)==original)
+local legacy={kind="weather",wk="snow",arg="Dun Morogh",idx=1,fl="tone_humor_weather"}
+SkaldDB.tone="humble"; assert(SkaldAPI.PoolFor(legacy)==P.tone_humble_weather)
+assert(e.voice=="humor" and e.fl=="tone_humor_weather" and e.idx==1,"render mutated saved page")
+RES="ok"`,
+});
 
 console.log(failed ? `\n${failed} regression(s) FAILED` : '\nAll regressions passed');
 process.exit(failed ? 1 : 0);

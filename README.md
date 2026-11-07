@@ -55,6 +55,7 @@ Open the book with the minimap button, or type `/skald` (or `/sk`).
 | `/skald minimap` | show or hide the minimap button |
 | `/skald export` | export the diary as text |
 | `/skald backup` / `/skald restore` | save the whole diary as text / bring it back (`restore undo` goes back one step) |
+| `/skald retention` | review and accept the 3,000-page limit; pages are kept until you explicitly accept |
 | `/skald density compact\|comfy\|airy` | how full the pages are |
 | `/skald report` | text of what happened, for a bug report |
 | `/skald reader` | the whole diary as text for the web Reader |
@@ -65,6 +66,7 @@ The **Settings** tab has three pages, turned with the corners of the book: **Sty
 
 ## Limits (be aware)
 
+- The diary warns as it approaches 3,000 pages. It keeps every page until you explicitly accept the limit. After acceptance, the oldest ordinary pages are removed as new ones arrive; favourites and personal notes are always kept. Save a copy with `/skald backup` before accepting. You can postpone the choice and review it later with `/skald retention`.
 - Skald writes pages as events happen, even in combat (a level gained at the end of a fight, for example), but it never reads anything the game withholds from addons in combat; only the quiet memories wait for the fight to end.
 - Skald is a **beta**. Forever is a client of the modern (Mainline) family that hides some values from addons; Skald skips them instead of guessing, so a boss or an item the game withholds in a fight may go unwritten. Tested in a simulation of the Forever client and in the Anniversary client; the battleground pages and the Skyborne lines have not been seen in a real Forever session yet. Some events (dungeons, bosses, groups, mounts, achievements, guild) are wired up but have not been seen in a real game session yet; if one fails, please report it.
 - In the Forever client some pieces of Bard music (from the expansions) may be silent.

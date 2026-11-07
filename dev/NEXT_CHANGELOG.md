@@ -1,12 +1,6 @@
-- Tell the healing, rescue, seed delivery and hippogryph journey in four Teldrassil quests with dedicated stories in English, Portuguese and French, including existing diary pages.
-- Fix Portuguese crafting grammar, Eluna's name, the night elf guardian's gender and the article for Terraço place names.
-- Write the level pages the game never announced (a level gained while a quest was handed in, or while the book was not ready) afterwards, in their place among the pages and without a notice.
-- Attribute recovered levels to their inferred historical day and update closed daily summaries without inflating today's progress.
-- Prefer the available game kill counter over XP estimates for goals; label estimated daily kill totals in all three languages.
-- Keep kill deltas across zone/loading boundaries unassigned instead of attributing them to the arrival zone; start a fresh sampling baseline each session.
-- Record character identity and language on each new lore capture, preserve separate captures across characters, and identify legacy captures with unknown ownership in lore exports.
-- Split the work after login into small steps (one task per turn, paused in combat, never blocking the recording of events) so the game does not stall when the diary starts.
-- Tell the light of the hour with eight lines instead of three, drawn by the minute as well as by the phrase, so one evening does not repeat the same scene.
-- A standing or a companion a new character already has in its first minutes (a night elf Friendly with its capital) no longer writes a page for a goal.
-- Draw the map of a dungeon, raid or battleground on the Index page when standing in it, and add them to the Cartographer in groups of their own (Dungeons, Raids, Battlegrounds), in colour for those the character has entered; includes the Hall of Thanes.
-- Write a weather page when rain, snow or a sandstorm is strong (read from the game's C_Weather, once a minute, at most one every 45 minutes), with lines of their own in English, Portuguese and French.
+- Make backup undo transactional, refresh restored session context, and keep both copies unchanged if the operation fails.
+- Warn near 3,000 pages and require explicit acceptance before removing old ordinary pages; favourites and notes remain protected. Review the choice with `/skald retention`.
+- Retell old pages in the selected narrator voice while preserving their original pool and phrase index for switching back.
+- Repair equalizer transparency and show a Stop symbol for the Bard's stop action.
+- Validate texture format, dimensions and visible alpha; reject subprocess launch failures and missing check results. Run checks on branch pushes and pull requests, with uploads restricted to version tags.
+- Replace obsolete publishing instructions with the current single-addon workflow and disable the legacy release script.

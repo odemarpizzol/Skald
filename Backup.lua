@@ -432,7 +432,16 @@ Backup.Undo = function()
     local swapped = { t = time(), count = #(db.entries or {}), first = first, last = last, state = Capture(db) }
     Swap(db, u.state)
     db.restoreUndo = swapped
-    ns.RefreshDiary()
+    local ok, err = pcall(function()
+        ns.ReadAfresh(db)
+        ns.RefreshDiary()
+    end)
+    if not ok then
+        Swap(db, swapped.state)
+        db.restoreUndo = u
+        pcall(ns.RefreshDiary)
+        return false, tostring(err)
+    end
     return true
 end
 

@@ -1,58 +1,36 @@
-# Guia de publicação: Skald e Skald Atlas (beta)
+# Publicação do Skald
 
-Duas pastas prontas, cada uma será um repositório Git e uma página no CurseForge:
+Este repositório contém um único addon, Skald. Atlas faz parte dele. O fluxo oficial é `.github/workflows/release.yml`, com BigWigs Packager e projeto CurseForge `1748824`. O antigo `dev/tools/release.js` está desativado e não altera arquivos nem faz upload.
 
-- `skald-repo/` → Skald (o diário)
-- `skald-atlas-repo/` → Skald Atlas (os marcadores no mapa; precisa do Skald)
+## Preparar uma candidata
 
-Cada pasta já tem: os arquivos do addon, `README.md`, `CHANGELOG.md`, `LICENSE` (MIT, autor Oddynho), `.pkgmeta` e `.github/workflows/release.yml`.
+1. Escolher a versão com o responsável pelo projeto. Avaliações e correções não autorizam publicação automaticamente.
+2. Rodar `npm ci --prefix dev/tools` quando as dependências precisarem ser instaladas e `node dev/tools/checks.js` na raiz do repositório. O processo precisa terminar com `All checks passed` e código zero. Erro ao iniciar subprocesso também é falha.
+3. Completar os casos relevantes da matriz em `dev/AVALIACAO_1_0.md` nos clientes anunciados. Os testes automatizados simulam APIs; não confirmam o comportamento no jogo.
+4. Preparar `Skald.toc` e `CHANGELOG.md` com a mesma versão escolhida. Usar `dev/NEXT_CHANGELOG.md` como notas de trabalho e consolidar as mudanças no changelog da versão.
+5. Conferir os arquivos do commit e a revisão: não adicionar PDFs, ZIPs de trabalho, capturas privadas nem credenciais. O pacote deve conter uma única pasta `Skald/`, o TOC, os Lua carregados, `icon.tga`, `Textures/`, `Fonts/` e as licenças necessárias.
+6. Testar a instalação do ZIP candidato numa pasta limpa e a atualização de um diário anterior. Preservar os SavedVariables e manter um backup antes de testar restauração. Texturas novas exigem reinício completo do cliente.
 
-> Sobre o Git: sim, vale criar um repositório para cada addon. O CurseForge empacota e publica direto do GitHub quando você cria uma "tag", então você não precisa montar o zip na mão. Git já está instalado neste computador (versão 2.52).
+## Checks e publicação
 
-## 1. Antes de tudo (no jogo)
-- Teste o Skald uma última vez: abrir o livro, virar páginas, escrever uma nota, pegar um item, mudar uma opção.
-- Tire as capturas de tela: capa, índice, uma página de dia com nota, Opções, o mapa com os marcadores (Skald Atlas).
+Push nas branches `main`/`dev` e pull requests executam os checks. A execução manual também só valida. O job de upload roda exclusivamente em push de tag iniciada por `v`, depois de os checks passarem.
 
-## 2. Contas e páginas (feito por você, no navegador)
-1. **GitHub**: crie uma conta (se ainda não tem) e dois repositórios **vazios**, públicos: `skald` e `skald-atlas` (sem README, sem licença, o conteúdo já vem nas pastas).
-2. **CurseForge** (authors.curseforge.com): crie dois projetos, "Skald" e "Skald Atlas", jogo World of Warcraft. Escolha a categoria Roleplay (ou outra que fizer sentido). Cole a descrição de `CURSEFORGE_DESCRIPTION.md` e suba as capturas. Anote o **número do projeto** de cada um.
-   - Verifique se a versão do jogo "Forever" aparece na lista; se não aparecer, me diga o que o CurseForge oferece.
-3. **Token do CurseForge**: em "API tokens" da sua conta, crie um token.
-
-## 3. Colocar o número do projeto no addon
-Me diga os dois números. Eu adiciono ao `.toc` de cada um a linha `## X-Curse-Project-ID: 123456` e atualizo as pastas.
-
-## 4. Enviar para o GitHub (uma vez por pasta)
-Abra um terminal dentro de `skald-repo` e rode, trocando SEU_USUARIO:
+Somente depois da autorização de publicar, com o commit aprovado e a versão correspondente no TOC/changelog:
 
 ```bash
-git init -b main
-git add .
-git commit -m "Skald 0.26.0-beta"
-git remote add origin https://github.com/SEU_USUARIO/skald.git
-git push -u origin main
+git tag vVERSAO_ESCOLHIDA
+git push origin vVERSAO_ESCOLHIDA
 ```
 
-Repita dentro de `skald-atlas-repo` com `skald-atlas.git`.
+Substituir `VERSAO_ESCOLHIDA` pelo número aprovado. Uma tag com `-beta` ou `-alpha` mantém a classificação correspondente; uma tag como `v1.0.0` indica uma versão estável. Não publicar uma candidata de testes como estável por engano.
 
-## 5. Ligar o GitHub ao CurseForge
-No GitHub, em cada repositório: Settings → Secrets and variables → Actions → New repository secret. Nome `CF_API_KEY`, valor o token do CurseForge.
+O workflow usa `CF_API_KEY` dos secrets do GitHub e o token do próprio workflow. Tokens não devem aparecer em comandos, arquivos ou logs. `.pkgmeta` exclui ferramentas, documentação e arquivos internos do pacote.
 
-## 6. Publicar a beta
-Dentro de cada pasta:
+## Confirmar a entrega
 
-```bash
-git tag v0.26.0-beta
-git push origin v0.26.0-beta
-```
+- Conferir os jobs `checks` e `release` na execução da tag.
+- Baixar o artefato efetivamente publicado e conferir estrutura, versão do TOC e arquivos necessários.
+- Confirmar na página de distribuição a versão, a classificação e os clientes anunciados.
+- Registrar o resultado dos testes reais e atualizar as limitações do README. Só remover um aviso de validação pendente quando houver evidência do caso.
 
-Para o Skald Atlas use `v0.6.0-beta`. O GitHub empacota e envia ao CurseForge. A tag com `-beta` publica como **beta**; uma tag sem sufixo (por exemplo `v1.0.0`) publica como versão estável.
-
-## 7. Depois
-- Quando mexermos no addon de novo, eu reconstruo as pastas (`skald-repo` e `skald-atlas-repo`) com os arquivos novos; você só faz `git add . && git commit && git push` e uma nova tag.
-- Skald Atlas depende do Skald: publique o Skald primeiro.
-
-## Não verificado (confira)
-- O `.pkgmeta` e o fluxo do GitHub Actions seguem o formato do empacotador do BigWigs, mas não foram executados aqui.
-- Regras do CurseForge para addons do Forever e o nome exato da versão do jogo.
-- Licenças: Skald e Skald Atlas em MIT; fontes Cinzel, EB Garamond e Caveat em SIL OFL (textos em `Fonts/`); créditos ao QuestDB e ao CMaNGOS no README.
+Não há um segundo repositório de Atlas nem uma cópia intermediária `skald-repo` neste procedimento.

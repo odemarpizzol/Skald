@@ -596,7 +596,7 @@ local function BuildTab(panel)
                 row.song = song
                 row.name:SetText(L.BARD_TRACKS[song] or ("#" .. song))
                 local on = (i == song)
-                row.disc:SetTexture(TEX .. (on and "bard_pause" or "bard_play"))
+                row.disc:SetTexture(TEX .. (on and "hud_medal_stop" or "bard_play"))
                 if on then row.name:SetTextColor(GOLD[1], GOLD[2], GOLD[3]) else row.name:SetTextColor(body[1], body[2], body[3]) end
                 row:Show()
             else
@@ -609,7 +609,7 @@ local function BuildTab(panel)
         state:SetText(i and L.BARD_PLAYING or L.BARD_STOPPED)
         song:SetText(i and L.BARD_TRACKS[i] or L.BARD_PICK)
         clock:SetText(i and Clock(GetTime() - Bard.since) or "")
-        main.tex:SetTexture(TEX .. (i and "bard_main_pause" or "bard_main"))
+        main.tex:SetTexture(TEX .. (i and "hud_medal_stop" or "bard_main"))
         off:SetText(Bard.MusicOn() and "" or L.BARD_MUSIC_OFF)
         ShowHudName()
         Animate()

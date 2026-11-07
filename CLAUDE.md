@@ -18,7 +18,7 @@ node dev/tools/variety.js [race] [class] [tone] [locale]   # measures how often 
 
 Run `checks.js` before saying anything is ready. It runs Lua 5.3 in fengari with `dev/tools/mock.lua` standing in for the WoW API (and runs the session again with `dev/tools/forever.lua`, the Forever client: a Mainline-family client without the Classic-only functions and with `issecretvalue`; regressions load it with `pre: FOREVER + ...`): a green run means "no obvious error", **not** "works in the game". Always tell the user the simulation is not the game.
 
-The tools resolve the addon as `<parent of repo>/Skald`, so the clone folder must be named `Skald`. `dev/tools/release.js` still assumes the old `Skald-publish` layout and has not been adapted to this clone.
+The tools resolve the addon as `<parent of repo>/Skald`, so the clone folder must be named `Skald`. `dev/tools/release.js` is disabled; the official publishing procedure is `dev/GUIA_PUBLICACAO.md`.
 
 The release workflow runs `checks.js` first (job `checks`, then `release`); it needs `dev/tools` committed.
 

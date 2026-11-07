@@ -356,6 +356,20 @@ K.IsPersonal = function(e) return e.fav or e.kind == "note" end
 K.Trim = function(db)
     local entries = db.entries
     local n = #entries
+    if not db.retentionAccepted then
+        if n >= MAX_ENTRIES - 100 and not db.retentionWarned then
+            db.retentionWarned = true
+            Say(string.format(L.RETENTION_SOON, MAX_ENTRIES))
+        end
+        if n > MAX_ENTRIES then
+            -- Keep the diary intact until the owner explicitly accepts removing old, non-personal pages.
+            if not K.retentionPrompted then
+                K.retentionPrompted = true
+                StaticPopup_Show("SKALD_RETENTION", MAX_ENTRIES, nil, { journal = db, entries = entries })
+            end
+            return
+        end
+    end
     local drop = n - MAX_ENTRIES
     if drop > 0 then
         local w = 0
@@ -426,6 +440,7 @@ local function AddEntry(kind, arg, zone, extra)
     AddContext(kind, entry)
     if kind == "dungeon" or kind == "boss" then NoteCompanions(entry) end
     if K.FLAVOR_KINDS[kind] then
+        entry.voice = (SkaldDB and SkaldDB.tone) or "epic"
         local okClass, _, classFile = pcall(UnitClass, "player")
         local okRace, _, raceFile = pcall(UnitRace, "player")
         entry.cls = okClass and type(classFile) == "string" and classFile or nil
@@ -798,7 +813,23 @@ end
 function PoolFor(e)
     local kin = K.KinPool(e)
     if kin then return kin end
-    if e.fl and PHRASES[e.fl] then return PHRASES[e.fl] end
+    local tone = (SkaldDB and SkaldDB.tone) or "epic"
+    local storedTone = type(e.fl) == "string" and e.fl:match("^tone_([^_]+)_")
+    local original = e.voice or storedTone or "epic"
+    -- Retell a page in the chosen voice without changing its saved pool or phrase index.
+    -- Returning to its original voice restores the original wording and variety choices.
+    if tone ~= original and K.FLAVOR_KINDS[e.kind] then
+        local specialQuest = e.kind == "quest" and (e.cend or (e.tier or 1) >= 4 or (ns.CURATED and e.q and ns.CURATED[e.q]))
+        if not specialQuest then
+            local own = PHRASES["tone_" .. tone .. "_" .. e.kind]
+            if own then return own end
+            if tone == "kin" and e.race then
+                local key = K.RacePoolKey(e.race, e.kind, true)
+                if key then return PHRASES[key] end
+            end
+        end
+    end
+    if e.fl and PHRASES[e.fl] and (not storedTone or storedTone == tone) then return PHRASES[e.fl] end
     -- Learning a profession has lines of its own for each of the twelve.
     if e.kind == "profession" then
         local key = e.pf or (SkaldAPI.ProfessionKey and SkaldAPI.ProfessionKey(nil, e.arg))
@@ -1486,7 +1517,7 @@ K.SOUND_CANDIDATES = {
 -- Everything else the diary knows about one character (pets, companions, flight paths, goals, standings...).
 -- It is set aside with the pages and brought back with them, and emptied with them, so a cleared diary or a new
 -- character with an old name never inherits it.
-K.DIARY_STATE = { "pets", "petNow", "companions", "questObj", "questStart", "visitedMaps", "resume", "attempts",
+K.DIARY_STATE = { "retentionAccepted", "retentionWarned", "pets", "petNow", "companions", "questObj", "questStart", "visitedMaps", "resume", "attempts",
     "taxi", "marks", "goals", "goalsInit", "goalsVer", "collInit", "rep", "memoryAt", "recentIdx", "recentPh", "anniv", "zoneKills", "killBase", "zoneKillsUnassigned",
     "birthMap", "mountSpells", "visitedInstances", "wxAt" }
 
@@ -1497,6 +1528,7 @@ local function TakeState(db)
 end
 
 local function ResetJournal(db)
+    K.retentionPrompted = nil
     for _, key in ipairs(K.DIARY_STATE) do db[key] = nil end
     db.entries, db.visited, db.flags = {}, {}, {}
     db.days, db.today = nil, nil
@@ -1837,6 +1869,26 @@ StaticPopupDialogs["SKALD_FAVNOTE"] = {
     whileDead = true,
     hideOnEscape = true,
     preferredIndex = 3,
+}
+
+StaticPopupDialogs["SKALD_RETENTION"] = {
+    text = L.RETENTION_CONFIRM,
+    button1 = L.RETENTION_APPLY,
+    button2 = L.RETENTION_KEEP,
+    OnAccept = function(self, data)
+        data = type(data) == "table" and data or (self and self.data)
+        local db = Journal()
+        if not db or not data or data.journal ~= db or data.entries ~= db.entries then return end
+        db.retentionAccepted = true
+        K.Trim(db)
+        ns.RefreshDiary()
+    end,
+    OnCancel = function(self, data)
+        data = type(data) == "table" and data or (self and self.data)
+        local db = Journal()
+        if db and data and data.journal == db and data.entries == db.entries then db.retentionAccepted = nil end
+    end,
+    timeout = 0, whileDead = true, hideOnEscape = true, preferredIndex = 3,
 }
 
 StaticPopupDialogs["SKALD_CLEAR"] = {
@@ -7226,6 +7278,7 @@ Mile.reunionTold = {}
 -- After the whole diary is swapped (a backup restored or put back): what the session held about the old one goes,
 -- and the book is drawn again.
 ns.RefreshDiary = function()
+    K.retentionPrompted = nil
     K.nameSet = nil
     K.overWarned = nil
     Mile.reunionTold = {}
@@ -8921,6 +8974,9 @@ SlashCmdList["SKALD"] = function(msg)
     elseif msg == "probe lore clear" then
         Settings().loreProbe = nil
         Say(L.PROBE_LORE_CLEARED)
+    elseif msg == "retention" then
+        local db = Journal()
+        if db then StaticPopup_Show("SKALD_RETENTION", MAX_ENTRIES, nil, { journal = db, entries = db.entries }) end
     elseif msg == "clear" then
         StaticPopup_Show("SKALD_CLEAR")
     elseif msg == "quiet" then
