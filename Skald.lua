@@ -19,7 +19,7 @@ K.TextPrefix = function(text, limit)
     return text:sub(1, nextByte - 1)
 end
 
-local MAX_ENTRIES = 3000
+local MAX_ENTRIES = 5000
 
 -- Localization: texts live in Locales.lua.
 local LOCALES = ns.LOCALES

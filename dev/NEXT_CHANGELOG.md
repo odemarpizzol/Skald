@@ -4,3 +4,5 @@
 - Repair equalizer transparency and show a Stop symbol for the Bard's stop action.
 - Validate texture format, dimensions and visible alpha; reject subprocess launch failures and missing check results. Run checks on branch pushes and pull requests, with uploads restricted to version tags.
 - Replace obsolete publishing instructions with the current single-addon workflow and disable the legacy release script.
+- Remove the equaliser picture from the Bard tab (the rising notes and the tab note stay).
+- Raise the page limit from 3,000 to 5,000 pages per character (still asks before removing any).

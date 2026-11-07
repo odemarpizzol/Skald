@@ -2798,9 +2798,9 @@ local told = 0; for _, k in ipairs(keys) do if k ~= "-" then told = told + 1 end
 RES = (not bad and told >= 15) and "ok" or (bad or ("only " .. told .. " told: " .. table.concat(keys, ",")))`,
 });
 
-// The cap on pages (3000) lets the oldest go, but never a favourite or a note, and never the progress the goals read.
+// The cap on pages (5000) lets the oldest go, but never a favourite or a note, and never the progress the goals read.
 const CAP_PRE = (mark) => `local es = {}
-for i = 1, 3000 do es[i] = { t = NOW - (3001 - i) * 60, zone = "Z", kind = "zone", arg = "e" .. i, idx = 1 } end
+for i = 1, 5000 do es[i] = { t = NOW - (5001 - i) * 60, zone = "Z", kind = "zone", arg = "e" .. i, idx = 1 } end
 ${mark}
 ${SAVED('es', 'retentionAccepted = true,')}`;
 const has = `local function has(arg) for _, e in ipairs(SkaldCharDB.entries) do if e.arg == arg then return true end end return false end`;
@@ -2809,18 +2809,18 @@ run('at the cap a favourite and a note stay while the plain pages go, oldest fir
   pre: CAP_PRE('es[1].fav = true; es[2].kind = "note"'),
   body: `${has}
 SkaldAPI.AddEntry("zone", "new")
-RES = (#SkaldCharDB.entries == 3000 and has("e1") and has("e2") and not has("e3") and has("new")) and "ok"
+RES = (#SkaldCharDB.entries == 5000 and has("e1") and has("e2") and not has("e3") and has("new")) and "ok"
   or ("n=" .. #SkaldCharDB.entries .. " e1=" .. tostring(has("e1")) .. " e2=" .. tostring(has("e2")) .. " e3=" .. tostring(has("e3")))`,
 });
 
 run('when only favourites and notes are left the diary grows past the cap and loses nothing', {
-  pre: CAP_PRE('for i = 1, 3000 do if i % 2 == 0 then es[i].fav = true else es[i].kind = "note" end end'),
+  pre: CAP_PRE('for i = 1, 5000 do if i % 2 == 0 then es[i].fav = true else es[i].kind = "note" end end'),
   body: `${has}
 SkaldAPI.AddEntry("zone", "new")
 SkaldAPI.AddEntry("zone", "newer")
 local all = true
-for i = 1, 3000 do if not has("e" .. i) then all = false end end
-RES = (all and #SkaldCharDB.entries >= 3000) and "ok" or ("lost some, n=" .. #SkaldCharDB.entries)`,
+for i = 1, 5000 do if not has("e" .. i) then all = false end end
+RES = (all and #SkaldCharDB.entries >= 5000) and "ok" or ("lost some, n=" .. #SkaldCharDB.entries)`,
 });
 
 run('a note written at the cap lets an older plain page go and the book redraws', {
@@ -2830,7 +2830,7 @@ local rev = ns.layoutRev or 0
 ns.InsertNote(NOW - 30, "Z", "hello")
 local note = false
 for _, e in ipairs(SkaldCharDB.entries) do if e.kind == "note" and e.arg == "hello" then note = true end end
-RES = (#SkaldCharDB.entries == 3000 and note and has("e1") and not has("e2") and (ns.layoutRev or 0) > rev) and "ok"
+RES = (#SkaldCharDB.entries == 5000 and note and has("e1") and not has("e2") and (ns.layoutRev or 0) > rev) and "ok"
   or ("n=" .. #SkaldCharDB.entries .. " note=" .. tostring(note) .. " e2=" .. tostring(has("e2")))`,
 });
 
@@ -3316,10 +3316,10 @@ local mainPlays = B.playing == 2   -- after a stop the big button plays the piec
 p.mainButton._OnClick(p.mainButton)
 local mainStops = B.playing == nil
 p.rows[4]._OnClick(p.rows[4]); p.Animate()
-local pictureOn = rawget(p.rise, "_shown") == true and rawget(p.bars, "_shown") == true and rawget(p.tabNote, "_shown") == true
-  and tostring(rawget(p.rise, "_tex")):find("bard_notes_", 1, true) and tostring(rawget(p.bars, "_tex")):find("bard_eq_", 1, true)
+local pictureOn = rawget(p.rise, "_shown") == true and rawget(p.tabNote, "_shown") == true
+  and tostring(rawget(p.rise, "_tex")):find("bard_notes_", 1, true)
 p.rows[4]._OnClick(p.rows[4]); p.Animate()
-local pictureOff = rawget(p.rise, "_shown") ~= true and rawget(p.bars, "_shown") ~= true and rawget(p.tabNote, "_shown") ~= true
+local pictureOff = rawget(p.rise, "_shown") ~= true and rawget(p.tabNote, "_shown") ~= true
 local ticks = 1000
 GetTime = function() ticks = ticks + 1; return ticks end   -- each song begins at its own moment
 local open = false
@@ -4223,26 +4223,26 @@ RES = (SkaldDB.probeEvents.count.CAMPSITE_CONTRIBUTION == 2 and log.seen[1].ev =
 run('retention keeps every page until the owner explicitly accepts, then preserves personal pages', {
   body: `local db=SkaldCharDB
 db.entries={}; db.retentionAccepted=nil; db.retentionWarned=nil
-for i=1,3000 do db.entries[i]={t=NOW-4000+i,kind="zone",arg="e"..i,idx=1} end
+for i=1,5000 do db.entries[i]={t=NOW-4000+i,kind="zone",arg="e"..i,idx=1} end
 db.entries[1].fav=true; db.entries[2].kind="note"
 local prompt={journal=db,entries=db.entries}
 SkaldAPI.AddEntry("zone","new")
-assert(#db.entries==3001 and __popup=="SKALD_RETENTION","pages removed before confirmation")
+assert(#db.entries==5001 and __popup=="SKALD_RETENTION","pages removed before confirmation")
 assert(db.retentionWarned,"no advance warning")
 -- Closing/declining keeps the pages and does not accept deletion.
 StaticPopupDialogs.SKALD_RETENTION.OnCancel(nil,prompt)
-assert(not db.retentionAccepted and #db.entries==3001,"cancel changed data: "..#db.entries)
+assert(not db.retentionAccepted and #db.entries==5001,"cancel changed data: "..#db.entries)
 StaticPopupDialogs.SKALD_RETENTION.OnAccept(nil,prompt)
-assert(db.retentionAccepted and #db.entries==3000,"accepted cap not applied")
+assert(db.retentionAccepted and #db.entries==5000,"accepted cap not applied")
 assert(db.entries[1].arg=="e1" and db.entries[2].arg=="e2" and db.entries[3].arg=="e4","wrong pages retained")
 -- Reviewing the choice and choosing Keep pages pauses future automatic removal too.
 StaticPopupDialogs.SKALD_RETENTION.OnCancel(nil,prompt)
 SkaldAPI.AddEntry("zone","held")
-assert(#db.entries==3001 and not db.retentionAccepted,"keep choice ignored: "..#db.entries)
-local replacement={}; for i=1,3001 do replacement[i]={kind="zone",arg="restored",t=NOW,idx=1} end
+assert(#db.entries==5001 and not db.retentionAccepted,"keep choice ignored: "..#db.entries)
+local replacement={}; for i=1,5001 do replacement[i]={kind="zone",arg="restored",t=NOW,idx=1} end
 db.entries=replacement
 StaticPopupDialogs.SKALD_RETENTION.OnAccept(nil,prompt)
-assert(not db.retentionAccepted and #db.entries==3001,"stale prompt removed restored pages")
+assert(not db.retentionAccepted and #db.entries==5001,"stale prompt removed restored pages")
 ns.ResetJournal(db)
 assert(db.retentionAccepted==nil and db.retentionWarned==nil,"consent leaked to a fresh diary")
 RES="ok"`,

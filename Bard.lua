@@ -338,15 +338,11 @@ local function BuildTab(panel)
     panel.volumeBar, panel.volumeKnob = bar, knob   -- for the tests
     panel.ShowVolume = ShowVolume
 
-    -- while a song plays: notes rise by the hearth, the bars of the equaliser move, a note shows on the tab
+    -- while a song plays: notes rise by the hearth, a note shows on the tab
     local rise = panel:CreateTexture(nil, "OVERLAY")
     rise:SetSize(128, 128)
     rise:SetPoint("TOPLEFT", RIGHT_X + 214, -44)
     rise:Hide()
-    local bars = panel:CreateTexture(nil, "ARTWORK")
-    bars:SetSize(128, 64)
-    bars:SetPoint("TOPLEFT", 8, -404)
-    bars:Hide()
     local tabNote
     if panel.tabButton then
         tabNote = panel.tabButton:CreateTexture(nil, "OVERLAY")
@@ -532,16 +528,15 @@ local function BuildTab(panel)
         local beat = math.floor(GetTime() / 0.4)
         if on then
             rise:SetTexture(TEX .. "bard_notes_" .. (beat % 4 + 1))
-            bars:SetTexture(TEX .. "bard_eq_" .. (math.floor(GetTime() / 0.3) % 3 + 1))
-            rise:Show(); bars:Show()
+            rise:Show()
             if tabNote then tabNote:Show() end
             clock:SetText(Clock(GetTime() - Bard.since))
         else
-            rise:Hide(); bars:Hide()
+            rise:Hide()
             if tabNote then tabNote:Hide() end
         end
     end
-    panel.Animate, panel.rise, panel.bars, panel.tabNote = Animate, rise, bars, tabNote   -- for the tests
+    panel.Animate, panel.rise, panel.tabNote = Animate, rise, tabNote   -- for the tests
 
     local note = SkaldAPI.NoteText(panel, RIGHT_X, -364)
     note:SetText(L.BARD_VOL_NOTE)
