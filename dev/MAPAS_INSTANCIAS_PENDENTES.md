@@ -34,3 +34,8 @@ Para cada peça: obter referência real da planta e o resultado de `/skald probe
 - Masmorras e raides de TBC ainda não têm coleção própria de plantas. As artes de Terralém existentes são de zonas/cidades. O próprio plano do lote Classic deixou as peças de TBC para uma etapa posterior.
 
 Este levantamento não acrescentou mapas provisórios nem mudou o catálogo. A próxima masmorra na sequência de níveis anunciada é Ruins of Lordaeron.
+
+## Atualização: IDs de instância (tabela Map do Wago, build 1.60.1.70862)
+
+Fonte: CSV da tabela `Map` da mesma build do jogo. Confirma 2959, 2998, 2999 e 3065. Sem arte ainda: The Drowned City 2970, Blackmaw Hold 2974, Alcaz Prison 2994, The Shaper's Terrace 3001, Krol'dok Stronghold 3039. Hyjal Summit e Barrow Deeps não estão na build.
+Outras linhas com tipo de instância na mesma tabela, ainda sem arte e fora do anúncio das 9 masmorras: Battle for Gilneas 3005 e Darkspear Islands 2997 (campos de batalha, tipo 3), Demon Fall Canyon 2784, Karazhan Crypts 2875, Scarlet Enclave 2856.

@@ -9,10 +9,18 @@ Corrigido com a lista oficial da Blizzard (via `dev/MAPAS_INSTANCIAS_PENDENTES.m
 | map_excavation_wetlands | Excavation Site: Wetlands | 24-29 | 2998 |
 | map_dalaran | City of Dalaran (masmorra) | 28-33 | 2959 |
 
-## Lote 2: falta o ID de instância (conferir dentro da masmorra com `/dump GetInstanceInfo()`, 8º valor)
-Nomes em português lidos do jogo (`GetLFGDungeonInfo`, IDs de LFG 3267-3275, que NÃO são o ID de instância): O Terraço do Moldador (Shaper's Terrace, 3267), Gruta Bocanera (Blackmaw Hold, 3268), Prisão de Alcaz (Alcaz Prison, 3269), A Cidade Afogada (The Drowned City, 3270), Fortaleza de Krol'Dok (Krol'dok Stronghold, 3275). Raides (abrem em 9/12): Hyjal Summit e Barrow Deeps.
+## Lote 2: IDs lidos da tabela Map do Wago (build 1.60.1.70862, a do jogo)
+| Arquivo | Instância (pt-BR do jogo) | Nível | ID de instância |
+|---|---|---|---|
+| map_drowned_city | The Drowned City (A Cidade Afogada) | 35-40 | 2970 |
+| map_kroldok | Krol'dok Stronghold (Fortaleza de Krol'Dok) | 40-45 | 3039 |
+| map_alcaz_prison | Alcaz Prison (Prisão de Alcaz) | 48-53 | 2994 |
+| map_blackmaw_hold | Blackmaw Hold (Gruta Bocanera) | 55-60 | 2974 |
+| map_shapers_terrace | The Shaper's Terrace (O Terraço do Moldador) | 58-60 | 3001 |
 
-Nomes em português do lote 1 (do jogo): Ruínas de Lordaeron, Sítio de Escavação: Pantanal, Dalaran. Os IDs de LFG não servem para o `ZC.INSTANCE_ART`.
+Os IDs do lote 1 (2999, 2998, 2959) e o do Salão (3065) batem com a mesma tabela. Hyjal Summit e Barrow Deeps ainda não estão na build (abrem em 9/12).
+
+Mesmo prompt do lote 1 (bloco abaixo), trocando a lista das instâncias pelas 5 acima e "faça 3 novas" por "faça 5 novas". Use uma referência real da planta de cada uma, como fez nas outras; não invente salas só pela descrição.
 
 **Antes de colar:** as descrições abaixo vêm só dos nomes e do que se sabe da região, então corrija o "caráter" de cada uma se você já viu o interior.
 
