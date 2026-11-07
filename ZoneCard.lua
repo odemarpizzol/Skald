@@ -53,8 +53,11 @@ ZC.INSTANCE_ART = {
     [509] = "map_ruinsahnqiraj",
     [531] = "map_templeahnqiraj",
     [533] = "map_naxxramas",
-    -- the Forever client's own dungeon in Ironforge (instance id read in the game)
+    -- the Forever client's own dungeons: 3065 was read in the game; 2999, 2998 and 2959 come from the Spoken addon's list (not yet read in the game)
     [3065] = "map_hall_of_thanes",
+    [2999] = "map_ruins_lordaeron",
+    [2998] = "map_excavation_wetlands",
+    [2959] = "map_dalaran",
 }
 -- Hand-drawn map art for supported zones. Other zones keep the client's explored-map tiles.
 ZC.ART = {

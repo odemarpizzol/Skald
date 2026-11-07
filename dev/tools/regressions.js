@@ -2228,7 +2228,7 @@ local guard = 0
 while P.CanNext() and guard < 20 do P.Turn(1); ns.Cartographer.refresh(); guard = guard + 1 end
 local named = true
 for _, g in ipairs(groups) do for _, m in ipairs(g.items) do if not m.name or m.name == "" or m.name:find("^map_") then named = false end end end
-RES = (not before and after and total == 31 and inRaid and inBg and groups[1].items[1] and named and guard >= 2 and SkaldDB.errors == nil) and "ok"
+RES = (not before and after and total == 34 and inRaid and inBg and groups[1].items[1] and named and guard >= 2 and SkaldDB.errors == nil) and "ok"
   or ("before " .. tostring(before) .. " after " .. tostring(after) .. " total " .. total .. " guard " .. guard .. " err " .. tostring(SkaldDB.errors and SkaldDB.errors[1]))`,
 });
 
@@ -4197,7 +4197,7 @@ RES = (SkaldDB.probeEvents.count.CAMPSITE_CONTRIBUTION == 2 and log.seen[1].ev =
   const block = (src.match(/ZC\.INSTANCE_ART\s*=\s*\{([\s\S]*?)\n\}/) || [])[1] || '';
   const names = [...block.matchAll(/\[\d+\]\s*=\s*"(map_[a-z_]+)"/g)].map(m => m[1]);
   const lost = names.filter(n => !fs.existsSync(path.join(ADDONS, 'Skald', 'Textures', 'skald2', n + '.tga')));
-  if (names.length === 31 && !lost.length) console.log('  ok    every instance map has its texture (' + names.length + ')');
+  if (names.length === 34 && !lost.length) console.log('  ok    every instance map has its texture (' + names.length + ')');
   else { failed++; console.log('  FAIL  instance map textures: ' + names.length + ' named, missing: ' + lost.join(', ')); }
 }
 
