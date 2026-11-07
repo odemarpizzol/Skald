@@ -2206,6 +2206,71 @@ if not (prev and nextB) then RES = "corners not found" else
 end`,
 });
 
+run('the Cartographer lists dungeons, raids and battlegrounds after the lands, marks the ones the character entered, and the diary keeps the visit', {
+  pre: SAVED('{}', 'version = 99, goalsInit = true, goalsVer = 3, goals = {}, stats = { counts = {}, deathZones = {}, tiers = {}, played = 1, first = 1 }'),
+  body: `C_Map.GetMapInfo = function(id) return { name = "Land " .. id, mapType = 3, parentMapID = 0 } end
+local inside, zoneName = true, "Salao dos Thanes"
+function IsInInstance() return inside, "party" end
+function GetInstanceInfo() return zoneName, "party", 1, "Normal", 5, 0, false, 3065, 5 end
+function GetZoneText() return zoneName end
+local before = ns.Cartographer.WalkedInstance(3065)
+ns.NoteInstanceForTest()
+local after = ns.Cartographer.WalkedInstance(3065)
+local groups = ns.Cartographer.Places()
+local total = #groups[1].items + #groups[2].items + #groups[3].items
+local inRaid, inBg = false, false
+for _, m in ipairs(groups[2].items) do if m.id == 533 then inRaid = true end end
+for _, m in ipairs(groups[3].items) do if m.id == 489 then inBg = true end end
+local tab = btn("Charts")
+tab._OnClick(tab)
+local P = ns.Cartographer.pager
+local guard = 0
+while P.CanNext() and guard < 20 do P.Turn(1); ns.Cartographer.refresh(); guard = guard + 1 end
+local named = true
+for _, g in ipairs(groups) do for _, m in ipairs(g.items) do if not m.name or m.name == "" or m.name:find("^map_") then named = false end end end
+RES = (not before and after and total == 31 and inRaid and inBg and groups[1].items[1] and named and guard >= 2 and SkaldDB.errors == nil) and "ok"
+  or ("before " .. tostring(before) .. " after " .. tostring(after) .. " total " .. total .. " guard " .. guard .. " err " .. tostring(SkaldDB.errors and SkaldDB.errors[1]))`,
+});
+
+run('the Cartographer shows a group of four maps two to a page, big and centred, and keeps the grid for the larger groups', {
+  pre: SAVED('{}', 'version = 99, goalsInit = true, goalsVer = 3, goals = {}, stats = { counts = {}, deathZones = {}, tiers = {}, played = 1, first = 1 }'),
+  body: `C_Map.GetMapInfo = function(id) return { name = "Land " .. id, mapType = 3, parentMapID = 0 } end
+SkaldCharDB.visitedInstances = { [489] = true }
+local tab = btn("Charts")
+tab._OnClick(tab)
+local P = ns.Cartographer.pager
+local cells = {}
+for _, f in ipairs(frames) do if rawget(f, "map") and rawget(f, "slotX") then cells[#cells + 1] = f end end
+local function shown() local n = {} for _, c in ipairs(cells) do if c._shown ~= false and c.info then n[#n + 1] = c end end return n end
+local guard, seenBig, seenGrid, bgOk, bigCount = 0, false, false, false, 0
+local raidSplit, unbalanced = nil, false
+local last
+while guard < 30 do
+  ns.Cartographer.refresh()
+  local s = shown()
+  local big = s[1] and s[1].big
+  if big then
+    seenBig = true
+    local names = {}
+    for _, c in ipairs(s) do names[#names + 1] = c.info.id end
+    last = { n = #s, names = names, slots = { s[1] and s[1].slot, s[2] and s[2].slot, s[3] and s[3].slot, s[4] and s[4].slot }, pages = { s[1] and s[1].page, s[3] and s[3].page } }
+    if #s == 4 then bigCount = bigCount + 1 end
+    for _, c in ipairs(s) do if c.info.id == 489 and c.walked then bgOk = true end end
+  elseif #s > 0 then
+    seenGrid = true
+    local left, right, hasNaxx = 0, 0, false
+    for _, c in ipairs(s) do if c.page == 0 then left = left + 1 else right = right + 1 end if c.info.id == 533 then hasNaxx = true end end
+    if hasNaxx then raidSplit = left .. "/" .. right end
+    if left < right or left > right + 1 or left + right < 2 then unbalanced = true end
+  end
+  if not P.CanNext() then break end
+  P.Turn(1); guard = guard + 1
+end
+RES = (seenBig and seenGrid and bigCount == 1 and bgOk and last.n == 4 and last.slots[1] == 1 and last.slots[2] == 2 and last.slots[3] == 1 and last.slots[4] == 2
+  and last.pages[1] == 0 and last.pages[2] == 1 and raidSplit == "4/3" and not unbalanced and SkaldDB.errors == nil) and "ok"
+  or ("split " .. tostring(raidSplit) .. " unbalanced " .. tostring(unbalanced) .. " big " .. tostring(seenBig) .. " grid " .. tostring(seenGrid) .. " bigCount " .. bigCount .. " last " .. tostring(last and last.n) .. " err " .. tostring(SkaldDB.errors and SkaldDB.errors[1]))`,
+});
+
 run('the Cartographer tab opens, shows the maps in colour where the diary has seen the character and faded elsewhere, turns its pages and raises no error', {
   pre: SAVED('{}', 'version = 99, goalsInit = true, goalsVer = 3, goals = {}, stats = { counts = {}, deathZones = {}, tiers = {}, played = 1, first = 1 }'),
   body: `C_Map.GetMapInfo = function(id) return { name = "Land " .. id, mapType = 3, parentMapID = 0 } end
@@ -2331,6 +2396,25 @@ local card = ns.ZoneCard.Build(UIParent, 342)
 card:Set(1438)
 local hasArt = card.tiles[1] and card.tiles[1]._tex and card.tiles[1]._tex:find("map_teldrassil", 1, true)
 RES = (hasArt and #card.tiles == 1 and #card.found == 0 and #card.mapCorners == 4 and card.compass ~= nil) and "ok" or "art or ornaments missing"`,
+});
+
+run('the zone card draws the map of the dungeon the character stands in, with no zone rows', {
+  pre: SAVED('{}', 'version = 99, goalsInit = true, goalsVer = 3, goals = {}, stats = { counts = {}, deathZones = {}, tiers = {}, played = 1, first = 1 }'),
+  body: ZONE_STUBS + `
+local inside = true
+function IsInInstance() return inside, "party" end
+function GetInstanceInfo() return "Hall of Thanes", "party", 1, "Normal", 5, 0, false, 3065, 5 end
+local inst = ns.ZoneCard.CurrentInstance()
+local card = ns.ZoneCard.Build(UIParent, 342)
+card:Set(0, inst)
+local art = card.tiles[1] and card.tiles[1]._tex and card.tiles[1]._tex:find("map_hall_of_thanes", 1, true)
+local rowsHidden = not card.rows[1].label:IsShown()
+card:Set(1438)
+local rowsBack = card.rows[1].label:IsShown()
+function GetInstanceInfo() return "Somewhere", "party", 1, "Normal", 5, 0, false, 99999, 5 end
+local none = ns.ZoneCard.CurrentInstance() == nil
+inside = false
+RES = (inst and inst.name == "Hall of Thanes" and art and rowsHidden and rowsBack and none and ns.ZoneCard.CurrentInstance() == nil) and "ok" or "instance card wrong"`,
 });
 
 run('the Burning Crusade starting zones use their own map art', {
@@ -3981,6 +4065,37 @@ RES = (said:find("perf: client", 1, true) and said:find("quest index", 1, true) 
   or ("said: " .. said .. " errors: " .. tostring(SkaldDB.errors and SkaldDB.errors[1]))`,
 });
 
+run('rain, snow or sand strong enough writes one weather page of its kind, then not again for a while; a clear sky, a weak storm and an instance write none', {
+  body: `local E = SkaldCharDB.entries
+local function count() local n = 0 for _, e in ipairs(E) do if e.kind == "weather" then n = n + 1 end end return n end
+local now = NOW or time()
+local weather = {}
+C_Weather = { GetCurrentWeather = function() return weather end }
+function GetZoneText() return "Teldrassil" end
+weather = {}; ns.CheckWeather()
+local clear = count()
+weather = { { type = 0, intensity = 1 } }; ns.CheckWeather()
+weather = { { type = 1, intensity = 0.2 } }; ns.CheckWeather()
+weather = { { type = 4, intensity = 1 } }; ns.CheckWeather()
+local quiet = count() == 0 and clear == 0
+local inside = true
+function IsInInstance() return inside, "party" end
+weather = { { type = 1, intensity = 0.99 } }; ns.CheckWeather()
+local indoors = count() == 0
+inside = false
+ns.CheckWeather()
+local one = count() == 1
+ns.CheckWeather(); weather = { { type = 2, intensity = 0.9 } }; ns.CheckWeather()
+local gap = count() == 1
+SkaldCharDB.wxAt = SkaldCharDB.wxAt - 3000
+ns.CheckWeather()
+local last
+for _, e in ipairs(E) do if e.kind == "weather" then last = e end end
+local text = last and SkaldAPI.Render(last) or ""
+RES = (quiet and indoors and one and gap and count() == 2 and last.wk == "snow" and last.arg == "Teldrassil" and text:find("Teldrassil", 1, true) and (SkaldDB.errors == nil)) and "ok"
+  or ("quiet " .. tostring(quiet) .. " indoors " .. tostring(indoors) .. " one " .. tostring(one) .. " gap " .. tostring(gap) .. " n " .. count() .. " text " .. text)`,
+});
+
 run('a level the game never told (levels 3 and 4 missed) is written afterwards, in its place, once, with no notice', {
   body: `local E = SkaldCharDB.entries
 local fresh = #E
@@ -4080,7 +4195,7 @@ RES = (SkaldDB.probeEvents.count.CAMPSITE_CONTRIBUTION == 2 and log.seen[1].ev =
   const block = (src.match(/ZC\.INSTANCE_ART\s*=\s*\{([\s\S]*?)\n\}/) || [])[1] || '';
   const names = [...block.matchAll(/\[\d+\]\s*=\s*"(map_[a-z_]+)"/g)].map(m => m[1]);
   const lost = names.filter(n => !fs.existsSync(path.join(ADDONS, 'Skald', 'Textures', 'skald2', n + '.tga')));
-  if (names.length === 30 && !lost.length) console.log('  ok    every instance map has its texture (' + names.length + ')');
+  if (names.length === 31 && !lost.length) console.log('  ok    every instance map has its texture (' + names.length + ')');
   else { failed++; console.log('  FAIL  instance map textures: ' + names.length + ' named, missing: ' + lost.join(', ')); }
 }
 

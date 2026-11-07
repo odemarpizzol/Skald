@@ -21,7 +21,7 @@ ns.ZoneCard = ZC
 
 local TEX = "Interface\\AddOns\\Skald\\Textures\\"
 local MAP_W = 342
--- Custom instance maps are catalogued by GetInstanceInfo's instance ID. The Index does not render them yet.
+-- Custom instance maps are catalogued by GetInstanceInfo's instance ID. The Index draws the one the character stands in (ZC.CurrentInstance).
 ZC.INSTANCE_ART = {
     [489] = "map_warsong",
     [529] = "map_arathibasin",
@@ -53,6 +53,8 @@ ZC.INSTANCE_ART = {
     [509] = "map_ruinsahnqiraj",
     [531] = "map_templeahnqiraj",
     [533] = "map_naxxramas",
+    -- the Forever client's own dungeon in Ironforge (instance id read in the game)
+    [3065] = "map_hall_of_thanes",
 }
 -- Hand-drawn map art for supported zones. Other zones keep the client's explored-map tiles.
 ZC.ART = {
@@ -203,6 +205,16 @@ function ZC.CurrentMap()
         end
     end
     return nil
+end
+
+-- A place with a map of its own (ZC.INSTANCE_ART) the character is standing in now: { art, name } or nil.
+function ZC.CurrentInstance()
+    local okI, inside = pcall(IsInInstance)
+    if not (okI and inside) then return nil end
+    local okG, name, _, _, _, _, _, _, id = pcall(GetInstanceInfo)
+    local art = okG and type(id) == "number" and ZC.INSTANCE_ART[id]
+    if not art then return nil end
+    return { art = art, name = type(name) == "string" and name or "?" }
 end
 
 function ZC.Name(mapID)
@@ -492,11 +504,12 @@ function ZC.Build(parent, width)
         return tex
     end
 
-    function card:Set(mapID)
+    -- inst = { art = the picture, name = the name } tells of a place with a map of its own (a dungeon); it has no regions, quests or kills here
+    function card:Set(mapID, inst)
         local t = T()
         local y = 0
         local drawn = 0
-        local artName = ZC.ART[mapID]
+        local artName = inst and inst.art or ZC.ART[mapID]
         if artName then
             local height = math.floor(width / 2 + 0.5)
             mapBox:SetSize(width, height)
@@ -586,7 +599,7 @@ function ZC.Build(parent, width)
             end
         end
 
-        local name = ZC.Name(mapID) or "?"
+        local name = inst and inst.name or ZC.Name(mapID) or "?"
         card.title:ClearAllPoints()
         card.title:SetPoint("TOP", card, "TOPLEFT", width / 2, -y)
         card.title:SetText(string.format(t.TITLE, name))
@@ -594,6 +607,12 @@ function ZC.Build(parent, width)
         card.rule:SetPoint("TOP", card.title, "BOTTOM", 0, -6)
         y = y + 44
 
+        for _, row in ipairs(card.rows) do
+            for _, part in ipairs({ row.icon, row.label, row.value, row.leader }) do
+                if inst then part:Hide() else part:Show() end
+            end
+        end
+        if inst then return end
         local regions = ZC.Regions(mapID)
         local done, total = ZC.Quests(mapID)
         local values = {

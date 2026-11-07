@@ -21,7 +21,7 @@ Search.GROUPS = {
     { key = "battles", kinds = { boss = true, dungeon = true, death = true, revive = true, bg = true } },
     { key = "loot",    kinds = { loot = true } },
     { key = "company", kinds = { party = true, reunion = true, guild = true, guildleave = true, tame = true } },
-    { key = "journeys", kinds = { zone = true, flight = true, hearth = true, home = true, mount = true } },
+    { key = "journeys", kinds = { zone = true, weather = true, flight = true, hearth = true, home = true, mount = true } },
     { key = "deeds",   kinds = { level = true, milestone = true, achievement = true, skill = true, profession = true, rep = true, goal = true, mark = true } },
     { key = "notes",   kinds = { note = true } },
 }

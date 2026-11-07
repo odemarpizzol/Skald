@@ -8,3 +8,5 @@
 - Split the work after login into small steps (one task per turn, paused in combat, never blocking the recording of events) so the game does not stall when the diary starts.
 - Tell the light of the hour with eight lines instead of three, drawn by the minute as well as by the phrase, so one evening does not repeat the same scene.
 - A standing or a companion a new character already has in its first minutes (a night elf Friendly with its capital) no longer writes a page for a goal.
+- Draw the map of a dungeon, raid or battleground on the Index page when standing in it, and add them to the Cartographer in groups of their own (Dungeons, Raids, Battlegrounds), in colour for those the character has entered; includes the Hall of Thanes.
+- Write a weather page when rain, snow or a sandstorm is strong (read from the game's C_Weather, once a minute, at most one every 45 minutes), with lines of their own in English, Portuguese and French.

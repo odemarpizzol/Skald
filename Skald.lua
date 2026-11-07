@@ -145,7 +145,7 @@ local Notify, PulseMinimap   -- the toast and the glow of the minimap button (de
 
 -- Who is writing, and how it went, flavour some pages: a class's own words, a race's, a quest that
 -- was hard or easy for your level. The pool chosen is stored with the page, so it reads the same later.
-K.FLAVOR_KINDS = { quest = true, level = true, death = true, boss = true, zone = true, dungeon = true, hearth = true }
+K.FLAVOR_KINDS = { quest = true, level = true, death = true, boss = true, zone = true, dungeon = true, hearth = true, weather = true }
 local AddContext
 do
 local CONTEXT_KINDS = { dungeon = true, boss = true, death = true, zone = true, level = true,
@@ -247,10 +247,11 @@ local function PickFlavor(kind, entry)
         -- "Of My People": a level is told by PoolFor with no number at all (K.KinPool), whatever was drawn; a new land
         -- or a fall is told in the voice of the race three times in four.
         if kind == "level" or kind == "milestone" then return nil end
-        if entry.race and (kind == "zone" or kind == "death") then
+        if entry.race and (kind == "zone" or kind == "death" or kind == "weather") then
             local key = K.RacePoolKey(entry.race, kind)
             if key and math.random() < 0.75 then return key end
         end
+        if kind == "weather" and PHRASES.tone_kin_weather then return "tone_kin_weather" end
         -- a quest done is told with the lines of one's people about a third of the time (the highest seals, chains and the
         -- hand-written stories were left out above, and a race with no lines of its own tells the quest as usual); it is the
         -- commonest page of a long climb, so a line of a pool of sixteen must not come back too soon (dev/tools/variety.js)
@@ -306,7 +307,7 @@ K.FALLS_FORGOTTEN = 7200   -- seconds after the last fall in a dungeon, when it 
 K.RECORD_FLAG = {
     quest = "quest", level = "level", milestone = "level", death = "death",
     boss = "boss", dungeon = "boss", zone = "zone", skill = "profession", profession = "profession",
-    loot = "loot", mark = "mark", home = "mark", rep = "mark", flight = "zone", tame = "mark", revive = "death", hearth = "mark",
+    loot = "loot", mark = "mark", home = "mark", rep = "mark", flight = "zone", tame = "mark", revive = "death", hearth = "mark", weather = "zone",
     bg = "boss",
 }
 
@@ -812,6 +813,7 @@ function PoolFor(e)
         return PHRASES.revive
     end
     if e.kind == "bg" then return (e.won and PHRASES.bgWin) or PHRASES.bgLoss end
+    if e.kind == "weather" then return PHRASES["weather_" .. tostring(e.wk)] or PHRASES.weather end
     if e.kind == "tame" then
         if e.sub == "first" and PHRASES.tameFirst then return PHRASES.tameFirst end
         if e.sub == "level" and PHRASES.tameLevel then return PHRASES.tameLevel end
@@ -1194,7 +1196,7 @@ K.PLACE_FORMS = {   -- the article, and its contractions with em, de, a and por
     fp = { art = "as", em = "nas", de = "das", a = "às", por = "pelas" },
     mp = { art = "os", em = "nos", de = "dos", a = "aos", por = "pelos" },
 }
-K.PLACE_KINDS = { zone = true, death = true, revive = true, hearth = true, home = true, dungeon = true }   -- the pages whose %s is a place
+K.PLACE_KINDS = { weather = true, zone = true, death = true, revive = true, hearth = true, home = true, dungeon = true }   -- the pages whose %s is a place
 -- `phrase` with the article put where `token` (the %s, or a {tag} of the Saga) stands for `name`: em, de, a and por become
 -- na/no, da/do, à/ao and pela/pelo; after any other word, or at the start, the article comes before the name.
 -- French: the same, for à and de (au, à la, aux, à l'; du, de la, des, de l', and d' before a bare name that starts with a
@@ -1334,6 +1336,9 @@ local function RenderEntry(e)
     local phrase = list[((e.idx or 1) - 1) % #list + 1]
     if K.PLACE_KINDS[e.kind] then phrase = K.PlaceArticles(phrase, shown, "%s") end
     local text = string.format(phrase, shown)
+    text = text:gsub("{weather}", function()
+        return tostring((L.WEATHER_WORDS and L.WEATHER_WORDS[e.wk]) or "")
+    end)
     text = text:gsub("{steps}", function() return tostring(e.cend or "") end)
     text = text:gsub("{tries}", function() return tostring(e.tries or "") end)
     text = text:gsub("{days}", function() return tostring(e.since or "") end)
@@ -1343,6 +1348,24 @@ local function RenderEntry(e)
     end)
     text = text:gsub("{standing}", function() return tostring(e.st or "") end)
     text = text:gsub("{npc}", function() return npc end)
+    -- Weather pages keep race and class as data, so their personal aside can be retold in the current language too.
+    -- The main weather line still carries the rain/snow/sand and the zone; these short lines add the character's own lens.
+    if e.kind == "weather" then
+        local voice, idx = {}, math.max(1, tonumber(e.idx) or 1)
+        local race = e.race and K.RacePool(e.race)
+        local memory = e.race and L.WEATHER_RACE_MEMORY and L.WEATHER_RACE_MEMORY[e.race]
+            or (race and L.WEATHER_RACE_MEMORY and L.WEATHER_RACE_MEMORY[race])
+        local classPath = e.cls and L.WEATHER_CLASS_PATH and L.WEATHER_CLASS_PATH[e.cls]
+        local raceLines = memory and L.WEATHER_RACE_LINES
+        local classLines = classPath and L.WEATHER_CLASS_LINES
+        if type(raceLines) == "table" and #raceLines > 0 then
+            voice[#voice + 1] = string.format(raceLines[(idx - 1) % #raceLines + 1], memory)
+        end
+        if type(classLines) == "table" and #classLines > 0 then
+            voice[#voice + 1] = string.format(classLines[(idx - 1) % #classLines + 1], classPath)
+        end
+        if #voice > 0 then text = text .. " " .. table.concat(voice, " ") end
+    end
     -- what a goal reached is worth belongs to the page itself, so the notice tells it too
     local gain = ""
     if e.kind == "goal" and ns.GoalPoints and L.GOAL_GAIN and not (SkaldDB and SkaldDB.tone == "kin") then
@@ -1465,7 +1488,7 @@ K.SOUND_CANDIDATES = {
 -- character with an old name never inherits it.
 K.DIARY_STATE = { "pets", "petNow", "companions", "questObj", "questStart", "visitedMaps", "resume", "attempts",
     "taxi", "marks", "goals", "goalsInit", "goalsVer", "collInit", "rep", "memoryAt", "recentIdx", "recentPh", "anniv", "zoneKills", "killBase", "zoneKillsUnassigned",
-    "birthMap", "mountSpells" }
+    "birthMap", "mountSpells", "visitedInstances", "wxAt" }
 
 local function TakeState(db)
     local state = {}
@@ -1607,7 +1630,8 @@ K.EVENT_ICON = {
     skill = "profession", profession = "profession",
     day = "milestone",   -- until a sun or moon icon of its own is drawn
     reunion = "party", goal = "goal",
-    mark = "milestone", home = "st_hearth", rep = "achievement", flight = "st_flight",
+    mark = "milestone", home = "st_hearth", rep = "achievement", flight = "st_flight", weather = "weather",
+
     tame = "pet",
     revive = "revive", hearth = "st_hearth",
     bg = "bg",
@@ -3632,7 +3656,8 @@ local function CreateWindow()
             local y = K.TOP_Y + 4
             if not page.first and #page.rows == 0 and ns.ZoneCard then
                 -- the contents ended on the left page: the right one tells about the land the diary last stood in
-                local mapID = ns.ZoneCard.CurrentMap()
+                local inst = ns.ZoneCard.CurrentInstance and ns.ZoneCard.CurrentInstance()
+                local mapID = inst and 0 or ns.ZoneCard.CurrentMap()
                 if mapID then
                     if not s.zoneCard then
                         local okCard, card = pcall(ns.ZoneCard.Build, s.frame, K.CW)
@@ -3641,7 +3666,7 @@ local function CreateWindow()
                     if s.zoneCard then
                         s.zoneCard:ClearAllPoints()
                         s.zoneCard:SetPoint("TOPLEFT", s.frame, "TOPLEFT", px, -(K.TOP_Y - 4))
-                        local okSet, err = pcall(s.zoneCard.Set, s.zoneCard, mapID)
+                        local okSet, err = pcall(s.zoneCard.Set, s.zoneCard, mapID, inst)
                         if okSet then s.zoneCard:Show() else SkaldDB.errors = SkaldDB.errors or {}; table.insert(SkaldDB.errors, tostring(err)) end
                     end
                 end
@@ -5310,10 +5335,62 @@ local function VisitZone(zone)
     AddEntry(kind, zone, zone)
 end
 
+-- The weather: C_Weather.GetCurrentWeather answers a list of { type, intensity } (type: Enum.WeatherType, 0 clear, 1 rain,
+-- 2 snow, 3 sandstorm, 4 miscellaneous; intensity 0 to 1). It tells no event, so the minute asks; a page is written when rain,
+-- snow or sand is strong and the last weather page is not recent (seen in the Forever client: rain 1, intensity 0.996).
+K.WEATHER_KEYS = { [1] = "rain", [2] = "snow", [3] = "sand" }
+K.WEATHER_MIN, K.WEATHER_GAP = 0.5, 2700
+K.CheckWeather = function()
+    local db = Journal()
+    if not db or not ready or not (C_Weather and C_Weather.GetCurrentWeather) then return end
+    if UnitAffectingCombat and UnitAffectingCombat("player") then return end
+    local okI, inside = pcall(IsInInstance)
+    if okI and inside then return end
+    local ok, list = pcall(C_Weather.GetCurrentWeather)
+    if not ok or type(list) ~= "table" then return end
+    local key, power = nil, 0
+    for _, w in ipairs(list) do
+        if type(w) == "table" then
+            local kind, intensity = Safe(w.type), Safe(w.intensity)
+            if type(kind) == "number" and type(intensity) == "number" and K.WEATHER_KEYS[kind]
+                and intensity >= K.WEATHER_MIN and intensity > power then
+                key, power = K.WEATHER_KEYS[kind], intensity
+            end
+        end
+    end
+    if not key then return end
+    local zone = GetZoneText()
+    if type(zone) ~= "string" or zone == "" then return end
+    local now = time()
+    if db.wxAt and now - db.wxAt < K.WEATHER_GAP and now >= db.wxAt then return end
+    db.wxAt = now
+    AddEntry("weather", zone, zone, { wk = key })
+end
+ns.CheckWeather = function() return K.CheckWeather() end
+
+-- An instance with a map of its own (ZC.INSTANCE_ART) is kept as visited by its instance id; the Cartographer reads it.
+-- (An instance has no map id of the game, so it cannot be told by visitedMaps.)
+K.NoteInstance = function()
+    local zc = ns.ZoneCard
+    local db = Journal()
+    if not (zc and zc.INSTANCE_ART and db and IsInInstance and GetInstanceInfo) then return end
+    local okI, inside = pcall(IsInInstance)
+    if not (okI and inside) then return end
+    local okG, _, _, _, _, _, _, _, id = pcall(GetInstanceInfo)
+    id = okG and Safe(id)
+    if type(id) == "number" and zc.INSTANCE_ART[id] then
+        db.visitedInstances = db.visitedInstances or {}
+        db.visitedInstances[id] = true
+    end
+end
+
+ns.NoteInstanceForTest = function() return K.NoteInstance() end
+
 local function CheckZone()
     local zone = GetZoneText()
     if zone and zone ~= "" and zone ~= lastZone then
         lastZone = zone
+        pcall(K.NoteInstance)
         VisitZone(zone)
         if ns.CheckMemory then pcall(ns.CheckMemory) end
         if ns.CheckAnniversary then pcall(ns.CheckAnniversary) end
@@ -6738,6 +6815,7 @@ H.PLAYER_LOGIN = function(self, event, ...)
             ns.QueueMaintenance("CheckAnniversary", ns.CheckAnniversary)
             ns.QueueMaintenance("TrackKills", Mile.TrackKills)
             ns.QueueMaintenance("NoteBirthplace", Mile.NoteBirthplace)
+            ns.QueueMaintenance("CheckWeather", K.CheckWeather)
         end)
     end
     if not Settings().quiet then

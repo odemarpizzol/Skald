@@ -119,7 +119,7 @@
   var KIND_ICON = { quest: 'ev_quest', level: 'ev_level', milestone: 'ev_milestone', death: 'ev_death', boss: 'ev_boss', dungeon: 'ev_dungeon',
     zone: 'ev_zone', mount: 'ev_mount', guild: 'ev_guild', guildleave: 'ev_guild', party: 'ev_party', reunion: 'ev_party', achievement: 'ev_achievement',
     skill: 'ev_profession', profession: 'ev_profession', day: 'b_moon', mark: 'ev_milestone', home: 'st_hearth', hearth: 'st_hearth', rep: 'ev_achievement',
-    flight: 'st_flight', bg: 'ev_bg', tame: 'ev_pet', revive: 'ev_revive', goal: 'ev_goal', note: 'b_quill', loot: 'it_generic' };
+    flight: 'st_flight', weather: 'ev_weather', bg: 'ev_bg', tame: 'ev_pet', revive: 'ev_revive', goal: 'ev_goal', note: 'b_quill', loot: 'it_generic' };
   function iconFor(p) {
     if (p.kind === 'quest' && p.tier >= 0 && p.tier <= 5 && p.tier !== 1) return 'seal' + p.tier;
     if (p.kind === 'quest') return 'seal1';
