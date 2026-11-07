@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.0
+
+- **Maps of 44 instances in the Cartographer** (dungeons, raids and battlegrounds), including every new Forever dungeon (Ruins of Lordaeron, Excavation Site: Wetlands, City of Dalaran, The Drowned City, Krol'dok Stronghold, Alcaz Prison, Blackmaw Hold, The Shaper's Terrace) and the new battlegrounds (Battle for Gilneas, Darkspear Islands); the Index draws the map of the instance you stand in
+- **Weather pages**: rain, snow or a sandstorm strong enough is written (at most one every 45 minutes), with an icon and lines of their own
+- The diary warns near **5,000 pages** and keeps every page until you accept the limit (`/skald retention`); favourites and notes are never removed
+- Restoring and undoing a backup are safe: a failure puts both diaries back as they were
+- Old pages follow the voice you choose; going back to the first voice brings the first wording back
+- The Bard has new hand-inked art (lute, hearth, staff, rising notes); the equaliser picture is gone; the stop button shows Stop
+- Stricter checks of the pictures and of the tools; checks also run on every push
+
 ## 0.50.0-beta
 
 - **Dungeons, raids and battlegrounds in the Cartographer**: three groups of their own, in colour for those the character has entered (the Hall of Thanes included); groups of up to four maps are shown large, two to a page
