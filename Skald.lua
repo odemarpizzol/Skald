@@ -1175,8 +1175,31 @@ end
 ns.PlaceNameById = function(id)
     return id and ns.ZoneNameOfMap(id) or nil
 end
+-- The name of an instance in the language of now, from its id (or, for a page written before the id was kept, from the name
+-- it carries in any of the three languages).
+K.InstanceByName = nil
+ns.InstanceName = function(e)
+    local C = ns.Cartographer
+    local names = C and C.INSTANCE_NAMES
+    if not names then return nil end
+    local id = e.iid
+    if not id and type(e.zone) == "string" then
+        if not K.InstanceByName then
+            K.InstanceByName = {}
+            for iid, list in pairs(names) do
+                for _, n in ipairs(list) do K.InstanceByName[n] = iid end
+            end
+        end
+        id = K.InstanceByName[e.zone]
+    end
+    local list = id and names[id]
+    if not list then return nil end
+    local idx = ({ ptBR = 2, frFR = 3 })[GetLocale and GetLocale() or "enUS"] or 1
+    return list[idx]
+end
 ns.PlaceName = function(e)
-    if e.kind == "dungeon" or e.kind == "day" then return e.zone end
+    if e.kind == "dungeon" then return ns.InstanceName(e) or e.zone end
+    if e.kind == "day" then return e.zone end
     local id = (e.zone == "" and e.zm) or (type(e.m) == "number" and e.m) or e.zm
     return (id and ns.ZoneNameOfMap(id)) or e.zone
 end
@@ -1347,7 +1370,14 @@ local function RenderEntry(e)
     local list = PoolFor(e)
     if not list then return "" end
     local shown = tostring(e.kind == "quest" and QuestTitleNow(e) or e.arg)
-    if (e.kind == "zone" or e.kind == "death" or e.kind == "revive") and e.arg == e.zone then shown = tostring(ns.PlaceName(e) or e.arg) end
+    if (e.kind == "zone" or e.kind == "death" or e.kind == "revive" or e.kind == "dungeon") and e.arg == e.zone then shown = tostring(ns.PlaceName(e) or e.arg) end
+    if e.kind == "home" then
+        -- the inn is told by the name the client gave that day; in another language the city of the page tells it instead
+        local now = GetLocale and GetLocale() or "enUS"
+        local other = (e.loc and e.loc ~= now) or (not e.loc and now == "enUS" and tostring(e.arg):find("[\128-\255]"))
+        local city = other and e.zm and ns.ZoneNameOfMap(e.zm)
+        if city then shown = tostring(city) end
+    end
     if e.kind == "goal" and ns.GoalName then shown = ns.GoalName(e.arg) end
     if e.kind == "loot" then
         local ref, name, quality = ItemParts(e.arg)
@@ -5340,6 +5370,15 @@ end
 -- pages of their own.
 -- A zone is also known by its map (not only by its name, which changes with the client's language),
 -- so changing the language does not write a page for every land again.
+-- The id of the dungeon or raid the character is in (the 8th answer of GetInstanceInfo), or nil outside one.
+K.InstanceNow = function()
+    if not (IsInInstance and GetInstanceInfo) then return nil end
+    local okI, inside, kind = pcall(IsInInstance)
+    if not (okI and inside and (kind == "party" or kind == "raid")) then return nil end
+    local okG, _, _, _, _, _, _, _, id = pcall(GetInstanceInfo)
+    id = okG and Safe(id)
+    return type(id) == "number" and id or nil
+end
 local function VisitZone(zone)
     if not zone or zone == "" then return end
     local function ZoneMapKey(mapID)
@@ -5356,6 +5395,19 @@ local function VisitZone(zone)
     end
     local db = Journal()
     local visited = db.visited
+    -- An instance is told by its id, not by the name of the zone: the inside of the Deadmines is called as the outside is,
+    -- so the name does not change at the door and the land of the same name was already visited.
+    local iid = K.InstanceNow()
+    if iid then
+        local key = "i:" .. iid
+        if visited[key] then return end
+        visited[key] = true
+        for _, e in ipairs(db.entries) do
+            if e.kind == "dungeon" and (e.iid == iid or e.zone == zone) then return end   -- told before the id was kept
+        end
+        AddEntry("dungeon", zone, zone, { iid = iid })
+        return
+    end
     db.visitedMaps = db.visitedMaps or {}
     local maps = db.visitedMaps
     local mapKey
@@ -5440,14 +5492,16 @@ ns.NoteInstanceForTest = function() return K.NoteInstance() end
 
 local function CheckZone()
     local zone = GetZoneText()
-    if zone and zone ~= "" and zone ~= lastZone then
-        lastZone = zone
+    local door = K.InstanceNow()   -- a door can leave the name of the zone as it was
+    if zone and zone ~= "" and (zone ~= lastZone or door ~= K.lastDoor) then
+        lastZone, K.lastDoor = zone, door
         pcall(K.NoteInstance)
         VisitZone(zone)
         if ns.CheckMemory then pcall(ns.CheckMemory) end
         if ns.CheckAnniversary then pcall(ns.CheckAnniversary) end
     end
 end
+ns.CheckZoneForTest = function() return CheckZone() end
 
 -- A hunter's companions, the reminder on returning to the game, and a probe for class events. -----
 local Mile = {}
@@ -6829,7 +6883,8 @@ H.PLAYER_LOGIN = function(self, event, ...)
         if okClass and classFile == "HUNTER" then window:AddTab("pets", L.TAB_PETS, Mile.BuildPets) end
     end
     if ns.Pvp then pcall(ns.Pvp.Ensure) end
-    lastZone = GetZoneText()
+    lastZone, K.lastDoor = GetZoneText(), K.InstanceNow()
+    pcall(K.NoteInstance)   -- a reload inside an instance marks it for the Cartographer too
     VisitZone(lastZone)
     -- Event capture must not wait for optional maintenance (or for combat to end).
     lastXP, lastXPLevel = ReadXP()
@@ -7399,7 +7454,7 @@ end
 H.HEARTHSTONE_BOUND = function(self, event, ...)
     local ok, where = pcall(GetBindLocation)
     where = ok and Safe(where) or nil
-    if ready then AddEntry("home", (type(where) == "string" and where ~= "") and where or (GetZoneText() or "?"), nil, { m = false, x = false, y = false }) end
+    if ready then AddEntry("home", (type(where) == "string" and where ~= "") and where or (GetZoneText() or "?"), nil, { m = false, x = false, y = false, loc = GetLocale and GetLocale() or nil }) end
 end
 
 H.UPDATE_FACTION = function(self, event, ...)
@@ -7760,7 +7815,7 @@ end
 -- separated by "^" (a "^" inside is written backslash-p, a newline backslash-n, a backslash twice). Each part
 -- starts with a header line and carries a checksum of its body, so the page knows when something was copied
 -- half-way.
-K.READER_LIMIT = 16000   -- characters of a part: a text box with much more than this is slow to draw
+K.READER_LIMIT = 48000   -- characters of a part: 226 pages fit in one; a text box far beyond this may be slow to draw (not measured in the game: lower it if opening the export lags)
 K.NL, K.BS = string.char(10), string.char(92)
 K.ReaderEscape = function(t)
     t = tostring(t or "")
@@ -7807,6 +7862,24 @@ local function BuildReader(scope)
     if #entries == 0 or not db then return {} end
     local hide = Settings().exportHideNames ~= false
     local lines = {}
+    -- Optional records keep SKALDREADER1 readable by older Readers while newer ones can reproduce the book.
+    local prefs = SkaldDB or {}
+    local okBuild, _, _, _, toc = pcall(GetBuildInfo)
+    local era = ns.IsForever() and "forever" or (okBuild and type(toc) == "number" and toc >= 20000 and toc < 30000 and "tbc") or "classic"
+    for _, pair in ipairs({ { "era", era }, { "paper", prefs.paperStyle or "clean" }, { "ink", prefs.ink or 0 },
+        { "textSize", prefs.textSize or 1 }, { "density", prefs.density or "comfy" }, { "coverTitle", prefs.coverTitle or "" } }) do
+        lines[#lines + 1] = K.ReaderLine("M", pair[1], pair[2])
+    end
+    local selected, entryDay = {}, {}
+    for _, e in ipairs(entries) do selected[e] = true end
+    for _, day in ipairs(BuildDays()) do
+        local included = day.summary and selected[day.summary]
+        for _, e in ipairs(day.entries) do if selected[e] then included = true; entryDay[e] = day.key end end
+        if day.summary and selected[day.summary] then entryDay[day.summary] = day.key end
+        if included then
+            lines[#lines + 1] = K.ReaderLine("D", day.key, day.number, day.t or 0, PlainText(DayTitle(day, day.number)), day.date)
+        end
+    end
     local st = db.stats or {}
     lines[#lines + 1] = K.ReaderLine("S", st.first or 0, st.played or 0)
     for kind, n in pairs(st.counts or {}) do lines[#lines + 1] = K.ReaderLine("N", kind, n) end
@@ -7822,7 +7895,7 @@ local function BuildReader(scope)
             for _, c in ipairs(chapters) do
                 local text = c.text
                 if hide then text = HideNames(text, {}) end
-                lines[#lines + 1] = K.ReaderLine("V", c.key, c.title, text)
+                lines[#lines + 1] = K.ReaderLine("V", c.key, c.title, text, ns.SagaArt and ns.SagaArt(c.key) or "")
             end
         end
     end
@@ -7834,7 +7907,7 @@ local function BuildReader(scope)
         if hide and note ~= "" then note = HideNames(note, e) end
         local ic = e.kind == "loot" and ("loot:" .. tostring(e.cat or "")) or tostring(e.kind)
         lines[#lines + 1] = K.ReaderLine("P", e.t or 0, e.kind, e.tier or 0, e.fav and 1 or 0,
-            PlainText(tostring(ns.PlaceName(e) or "")), ic, K.TextPrefix(body, 700), K.TextPrefix(note, 300), K.ReaderInfo(e))
+            PlainText(tostring(ns.PlaceName(e) or "")), ic, body, note, K.ReaderInfo(e), entryDay[e] or "")
     end
     -- the parts: the summary lines open the first
     local bodies, current, size = {}, {}, 0
@@ -7851,9 +7924,10 @@ local function BuildReader(scope)
     local name = UnitName and UnitName("player") or "?"
     local class = (UnitClass and select(1, UnitClass("player"))) or ""
     local race = (UnitRace and select(1, UnitRace("player"))) or ""
+    local snapshot = K.ReaderChecksum(table.concat(lines, K.NL))
     for i, body in ipairs(bodies) do
         local header = K.ReaderLine("H", "SKALDREADER1", name, class, race, UnitLevel and UnitLevel("player") or 0,
-            (SkaldDB and SkaldDB.tone) or "epic", GetLocale(), #entries, i, #bodies, K.ReaderChecksum(body))
+            (SkaldDB and SkaldDB.tone) or "epic", GetLocale(), #entries, i, #bodies, K.ReaderChecksum(body), snapshot)
         out[i] = header .. K.NL .. body
     end
     return out
@@ -7975,9 +8049,9 @@ local function ShowExport()
         return
     end
 
-    local f = CreateFrame("Frame", "SkaldExportFrame", UIParent, "BackdropTemplate")
-    f:SetSize(560, 430)
-    f:SetPoint("CENTER", 0, 20)
+    local f = CreateFrame("Frame", "SkaldExportFrame", UIParent)
+    f:SetSize(620, 500)
+    f:SetPoint("CENTER", 0, 0)
     f:SetFrameStrata("DIALOG")
     f:SetClampedToScreen(true)
     f:SetMovable(true)
@@ -7985,92 +8059,116 @@ local function ShowExport()
     f:RegisterForDrag("LeftButton")
     f:SetScript("OnDragStart", f.StartMoving)
     f:SetScript("OnDragStop", f.StopMovingOrSizing)
-    f:SetBackdrop({
-        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-        edgeSize = 16,
-        insets = { left = 4, right = 4, top = 4, bottom = 4 },
-    })
-    f:SetBackdropBorderColor(0.35, 0.22, 0.10, 1)
-    local paper = f:CreateTexture(nil, "BACKGROUND")
-    paper:SetPoint("TOPLEFT", 4, -4)
-    paper:SetPoint("BOTTOMRIGHT", -4, 4)
-    paper:SetColorTexture(0.86, 0.77, 0.58, 1)
+    function f:FitScale()
+        local w, h = UIParent:GetWidth(), UIParent:GetHeight()
+        if type(w) == "number" and type(h) == "number" and w > 0 and h > 0 then
+            self:SetScale(math.max(0.5, math.min(1, w * 0.94 / 620, h * 0.90 / 500)))
+        end
+    end
+    f:SetScript("OnShow", function(self) self:FitScale() end)
+    f:RegisterEvent("DISPLAY_SIZE_CHANGED")
+    f:RegisterEvent("UI_SCALE_CHANGED")
+    f:SetScript("OnEvent", function(self) self:FitScale() end)
+    f:FitScale()
     tinsert(UISpecialFrames, "SkaldExportFrame")
 
-    local title = f:CreateFontString(nil, "OVERLAY", "QuestTitleFont")
-    title:SetPoint("CENTER", f, "TOPLEFT", 314, -28)   -- the middle of the clear band between the book and the right ornament of the banner
-    title:SetTextColor(K.HEAD_INK[1], K.HEAD_INK[2], K.HEAD_INK[3])
-    title:SetText(L.EXPORT_TITLE)
-    local TEXR = "Interface\\AddOns\\Skald\\Textures\\"
-    local readerHeader = f:CreateTexture(nil, "ARTWORK")
-    readerHeader:SetPoint("TOPLEFT", 6, -1)
-    readerHeader:SetSize(548, 54)
-    readerHeader:SetTexture(TEXR .. "rd_header")
-    CreateFrame("Button", nil, f, "UIPanelCloseButton"):SetPoint("TOPRIGHT", -2, -2)
+    -- The same leather atlas as the book; its populated region ends at 192 x 175.
+    local function Edge(point, x, y, w, h, u0, u1, v0, v1)
+        local t = f:CreateTexture(nil, "BACKGROUND", nil, 2)
+        t:SetPoint(point, f, point, x, y)
+        t:SetSize(w, h)
+        t:SetTexture(K.TEX .. "cover9")
+        t:SetTexCoord(u0 / 256, u1 / 256, v0 / 256, v1 / 256)
+    end
+    local paper = f:CreateTexture(nil, "BACKGROUND")
+    paper:SetPoint("TOPLEFT", 12, -12)
+    paper:SetPoint("BOTTOMRIGHT", -12, 12)
+    Edge("TOPLEFT", 0, 0, 28, 28, 0, 56, 0, 56)
+    Edge("TOPRIGHT", 0, 0, 28, 28, 136, 192, 0, 56)
+    Edge("BOTTOMLEFT", 0, 0, 28, 28, 0, 56, 119, 175)
+    Edge("BOTTOMRIGHT", 0, 0, 28, 28, 136, 192, 119, 175)
+    Edge("TOPLEFT", 28, 0, 564, 28, 56, 136, 0, 56)
+    Edge("BOTTOMLEFT", 28, 0, 564, 28, 56, 136, 119, 175)
+    Edge("TOPLEFT", 0, -28, 28, 444, 0, 56, 56, 119)
+    Edge("TOPRIGHT", 0, -28, 28, 444, 136, 192, 56, 119)
 
-    local function Label(text, x, y)
-        local fs = f:CreateFontString(nil, "OVERLAY", "QuestFont")
+    local TEXR = "Interface\\AddOns\\Skald\\Textures\\"
+    local titleIcon = f:CreateTexture(nil, "ARTWORK")
+    titleIcon:SetPoint("TOPLEFT", 44, -36)
+    titleIcon:SetSize(36, 36)
+    titleIcon:SetTexture(TEXR .. "rd_icon")
+    local title = f:CreateFontString(nil, "OVERLAY", "SkaldHead2")
+    -- Keep the capital letters below the 28-point leather rim.
+    title:SetPoint("TOPLEFT", 92, -36)
+    title:SetWidth(450)
+    title:SetJustifyH("LEFT")
+    title:SetTextColor(K.C_HEAD[1], K.C_HEAD[2], K.C_HEAD[3])
+    title:SetText(L.EXPORT_TITLE)
+    local function Label(text, x, y, width, font)
+        local fs = f:CreateFontString(nil, "OVERLAY", font or "QuestFont")
         fs:SetPoint("TOPLEFT", x, y)
-        fs:SetTextColor(K.HEAD_INK[1], K.HEAD_INK[2], K.HEAD_INK[3])
+        if width then fs:SetWidth(width) end
+        fs:SetJustifyH("LEFT")
+        fs:SetTextColor(K.C_BODY[1], K.C_BODY[2], K.C_BODY[3])
         fs:SetText(text)
         return fs
     end
+    Label(L.EXPORT_SUBTITLE, 92, -60, 440, "SkaldSmall")
+    CreateFrame("Button", nil, f, "UIPanelCloseButton"):SetPoint("TOPRIGHT", -8, -8)
 
     local settings = Settings()
-    local format = settings.exportFormat or "discord"
-    local scope = settings.exportScope or "recent"
-    local part, chunks = 1, {}
-
-    -- Choosers: one button per choice, the chosen one lit.
+    local format, scope = "discord", "recent"
+    local part, chunks, pages = 1, {}, 0
     local formatButtons, scopeButtons = {}, {}
-    Label(L.EXPORT_FORMAT, 20, -60)
+    Label(L.EXPORT_FORMAT, 44, -92, 86)
     for i, choice in ipairs({ { "discord", L.FORMAT_DISCORD, "ex_discord" }, { "plain", L.FORMAT_PLAIN, "ex_plain" }, { "reader", L.FORMAT_READER, "rd_icon" } }) do
-        local b = MakeParchmentButton(f, 138, 26, choice[2])
-        b:SetPoint("TOPLEFT", 110 + (i - 1) * 144, -54)
-        b:SetScript("OnClick", function() format = choice[1]; settings.exportFormat = format; part = 1; f:Refresh() end)
-        b:SetIcon(TEXR .. choice[3])
+        local b = MakeParchmentButton(f, 140, 28, choice[2])
+        b:SetPoint("TOPLEFT", 140 + (i - 1) * 148, -84)
+        b:SetScript("OnClick", function() settings.exportFormat = choice[1]; part = 1; f:Refresh() end)
+        b:SetIcon(TEXR .. choice[3], 18)
         formatButtons[choice[1]] = b
     end
-    Label(L.EXPORT_SCOPE, 20, -97)
+    Label(L.EXPORT_SCOPE, 44, -132, 86)
     for i, choice in ipairs({ { "recent", L.SCOPE_RECENT, "ex_recent" }, { "notable", L.SCOPE_NOTABLE, "ex_notable" }, { "all", L.SCOPE_ALL, "ex_all" } }) do
-        local b = MakeParchmentButton(f, 138, 26, choice[2])
-        b:SetPoint("TOPLEFT", 110 + (i - 1) * 144, -92)
-        b:SetScript("OnClick", function() scope = choice[1]; settings.exportScope = scope; part = 1; f:Refresh() end)
-        b:SetIcon(TEXR .. choice[3])
+        local b = MakeParchmentButton(f, 140, 28, choice[2])
+        b:SetPoint("TOPLEFT", 140 + (i - 1) * 148, -124)
+        b:SetScript("OnClick", function() settings.exportScope = choice[1]; part = 1; f:Refresh() end)
+        b:SetIcon(TEXR .. choice[3], 18)
         scopeButtons[choice[1]] = b
     end
 
-    -- Parts, when the text is longer than one message.
-    local prev = MakeParchmentButton(f, 36, 26, "")
-    prev:SetIcon(TEXR .. "ex_prev")
-    prev:SetPoint("TOPLEFT", 110, -130)
-    prev:SetScript("OnClick", function() part = math.max(1, part - 1); f:Refresh() end)
-    local nextButton = MakeParchmentButton(f, 36, 26, "")
-    nextButton:SetIcon(TEXR .. "ex_next")
-    nextButton:SetPoint("TOPLEFT", 152, -130)
-    nextButton:SetScript("OnClick", function() part = math.min(#chunks, part + 1); f:Refresh() end)
-    local partLabel = f:CreateFontString(nil, "OVERLAY", "QuestFont")
-    partLabel:SetPoint("LEFT", nextButton, "RIGHT", 10, 0)
-    partLabel:SetTextColor(K.HEAD_INK[1], K.HEAD_INK[2], K.HEAD_INK[3])
-    local namesButton = MakeParchmentButton(f, 232, 26, "")
-    namesButton:SetPoint("TOPRIGHT", -20, -130)
-    namesButton:SetActive(false)
+    -- Part navigation reuses the prepared export; only an option change rebuilds it.
+    local prev = MakeParchmentButton(f, 32, 28, "<")
+    prev:SetPoint("TOPLEFT", 44, -164)
+    prev:SetScript("OnClick", function() part = math.max(1, part - 1); f:Refresh(false); f:SelectPart() end)
+    local nextButton = MakeParchmentButton(f, 32, 28, ">")
+    nextButton:SetPoint("TOPLEFT", 196, -164)
+    nextButton:SetScript("OnClick", function() part = math.min(#chunks, part + 1); f:Refresh(false); f:SelectPart() end)
+    local partLabel = Label("", 82, -172, 108)
+    partLabel:SetJustifyH("CENTER")
+    local namesButton = MakeParchmentButton(f, 278, 28, "")
+    namesButton:SetPoint("TOPRIGHT", -44, -164)
     namesButton:SetScript("OnClick", function()
         settings.exportHideNames = not (settings.exportHideNames ~= false)
         part = 1
         f:Refresh()
     end)
+    local rule = f:CreateTexture(nil, "ARTWORK")
+    rule:SetPoint("TOPLEFT", 44, -204)
+    rule:SetSize(532, 1)
+    rule:SetColorTexture(K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3], 0.35)
+    local summary = Label("", 44, -220, 340)
 
-    -- The text: dark box, light letters, selected so Ctrl+C is all that is left to do.
+    -- The payload stays visible and read-only; Select text gives it focus for Ctrl+C.
     local box = CreateFrame("Frame", nil, f, "BackdropTemplate")
-    box:SetPoint("TOPLEFT", 20, -170)
-    box:SetPoint("BOTTOMRIGHT", -20, 62)
+    box:SetPoint("TOPLEFT", 44, -248)
+    box:SetPoint("BOTTOMRIGHT", -44, 110)
     box:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Buttons\\WHITE8X8", edgeSize = 1 })
-    box:SetBackdropColor(0.12, 0.08, 0.04, 0.92)
-    box:SetBackdropBorderColor(0.35, 0.22, 0.10, 1)
+    box:SetBackdropColor(0.12, 0.08, 0.04, 0.94)
+    box:SetBackdropBorderColor(K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3], 0.8)
     local scroll = CreateFrame("ScrollFrame", nil, box)
-    scroll:SetPoint("TOPLEFT", 6, -6)
-    scroll:SetPoint("BOTTOMRIGHT", -6, 6)
+    scroll:SetPoint("TOPLEFT", 10, -10)
+    scroll:SetPoint("BOTTOMRIGHT", -10, 10)
     scroll:EnableMouseWheel(true)
     scroll:SetScript("OnMouseWheel", function(self, delta)
         local range = self:GetVerticalScrollRange() or 0
@@ -8080,83 +8178,81 @@ local function ShowExport()
     edit:SetMultiLine(true)
     edit:SetAutoFocus(false)
     edit:SetFontObject(ChatFontNormal)
-    edit:SetWidth(496)
+    edit:SetWidth(508)
     edit:SetTextInsets(2, 2, 2, 2)
     scroll:SetScrollChild(edit)
     local shown = ""
-    edit:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
+    edit:SetScript("OnEscapePressed", function(self) self:ClearFocus(); f:Hide() end)
     edit:SetScript("OnEditFocusGained", function(self) self:HighlightText() end)
-    -- Read only: anything typed is put back.
     edit:SetScript("OnTextChanged", function(self, byUser)
         if byUser then self:SetText(shown); self:HighlightText() end
     end)
+    function f:SelectPart()
+        if #chunks == 0 then return end
+        edit:SetFocus()
+        edit:HighlightText()
+        scroll:SetVerticalScroll(0)
+    end
+    local selectText = MakeParchmentButton(f, 158, 28, L.EXPORT_SELECT_TEXT)
+    selectText:SetPoint("TOPRIGHT", -44, -212)
+    selectText:SetIcon(TEXR .. "rd_paste", 18)
+    selectText:SetScript("OnClick", function() f:SelectPart() end)
 
-    -- In the Reader format the text is not for reading: a card says what is ready, and the text sits small below it.
-    local card = f:CreateFontString(nil, "OVERLAY", "QuestFont")
-    card:SetPoint("TOPLEFT", 20, -174)
-    card:SetPoint("TOPRIGHT", -20, -174)
-    card:SetJustifyH("CENTER")
-    card:SetTextColor(K.HEAD_INK[1], K.HEAD_INK[2], K.HEAD_INK[3])
-    card:Hide()
-    local pasteIcon = f:CreateTexture(nil, "OVERLAY")
-    pasteIcon:SetSize(30, 30)
-    pasteIcon:SetPoint("BOTTOMLEFT", 20, 14)
+    local pasteIcon = f:CreateTexture(nil, "ARTWORK")
+    pasteIcon:SetSize(24, 24)
+    pasteIcon:SetPoint("BOTTOMLEFT", 44, 74)
     pasteIcon:SetTexture(TEXR .. "rd_paste")
-    pasteIcon:Hide()
-    local readyIcon = f:CreateTexture(nil, "OVERLAY")
-    readyIcon:SetSize(30, 30)
-    readyIcon:SetPoint("BOTTOMRIGHT", -20, 14)
-    readyIcon:SetTexture(TEXR .. "rd_ready")
-    readyIcon:Hide()
-    local hint = f:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    hint:SetPoint("BOTTOMLEFT", 22, 16)
-    hint:SetWidth(516)
-    hint:SetJustifyH("LEFT")
-    hint:SetTextColor(0.15, 0.10, 0.04)
-    hint:SetText(L.EXPORT_HINT)
+    local hint = Label("", 76, -402, 500, "SkaldSmall")
+    local readerLink = Label("odemarpizzol.github.io/Skald/reader/", 76, -434, 500, "SkaldSmall")
+    local privacy = Label(L.EXPORT_READER_PRIVACY, 76, -454, 500, "SkaldSmall")
+    privacy:SetTextColor(K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3])
 
-    function f:Refresh()
-        chunks = BuildExport(format, scope)
+    function f:Refresh(rebuild)
+        if rebuild ~= false then
+            settings = Settings()
+            format = ({ discord = true, plain = true, reader = true })[settings.exportFormat] and settings.exportFormat or "discord"
+            scope = ({ recent = true, notable = true, all = true })[settings.exportScope] and settings.exportScope or "recent"
+            chunks = BuildExport(format, scope)
+            pages = #SelectEntries(scope)
+        end
         part = math.max(1, math.min(part, math.max(1, #chunks)))
         shown = chunks[part] or L.EXPORT_EMPTY
         edit:SetText(shown)
-        -- Tall enough for the text, so the scroll frame can scroll it.
         local isReader = format == "reader"
         local _, newlines = shown:gsub("\n", "")
         edit:SetFontObject(isReader and GameFontHighlightSmall or ChatFontNormal)
-        edit:SetHeight(math.max(260, (newlines + math.ceil(#shown / (isReader and 96 or 70)) + 2) * (isReader and 12 or 14)))
+        edit:SetHeight(math.max(220, (newlines + math.ceil(#shown / (isReader and 96 or 70)) + 2) * (isReader and 12 or 14)))
         scroll:SetVerticalScroll(0)
         edit:HighlightText()
         for key, b in pairs(formatButtons) do b:SetActive(key == format) end
         for key, b in pairs(scopeButtons) do b:SetActive(key == scope) end
-        local many = #chunks > 1
-        prev:SetShown(many)
-        nextButton:SetShown(many)
-        partLabel:SetText(many and string.format(L.EXPORT_PART, part, #chunks) or "")
+        prev:SetEnabled(part > 1)
+        nextButton:SetEnabled(part < #chunks)
+        prev:SetAlpha(part > 1 and 1 or 0.4)
+        nextButton:SetAlpha(part < #chunks and 1 or 0.4)
+        selectText:SetEnabled(#chunks > 0)
+        partLabel:SetText(#chunks > 0 and string.format(L.EXPORT_PART, part, #chunks) or "")
+        summary:SetText(#chunks > 0 and (#chunks == 1 and string.format(L.EXPORT_SUMMARY1, pages) or string.format(L.EXPORT_SUMMARY, pages, #chunks)) or L.EXPORT_EMPTY)
         local hiding = settings.exportHideNames ~= false
-        namesButton:SetIcon(TEXR .. (hiding and "ex_names_hidden" or "ex_names_shown"))
+        namesButton:SetIcon(TEXR .. (hiding and "ex_names_hidden" or "ex_names_shown"), 18)
         namesButton:SetText(hiding and L.EXPORT_NAMES_HIDDEN or L.EXPORT_NAMES_SHOWN)
-        hint:SetText(format == "reader" and L.EXPORT_HINT_READER or L.EXPORT_HINT)
+        hint:SetText(isReader and L.EXPORT_COPY_READER or (format == "discord" and L.EXPORT_COPY_DISCORD or L.EXPORT_COPY_PLAIN))
         box:ClearAllPoints()
-        box:SetPoint("TOPLEFT", 20, isReader and -208 or -170)
-        box:SetPoint("BOTTOMRIGHT", -20, 62)
-        card:SetShown(isReader)
-        if isReader then
-            local pages = #SelectEntries(scope)
-            card:SetText(#chunks == 1 and string.format(L.EXPORT_READER_CARD1, pages) or string.format(L.EXPORT_READER_CARD, pages, #chunks))
-        end
-        pasteIcon:SetShown(isReader)
-        readyIcon:SetShown(isReader and #chunks > 0)
+        box:SetPoint("TOPLEFT", 44, -248)
+        box:SetPoint("BOTTOMRIGHT", -44, isReader and 110 or 80)
         hint:ClearAllPoints()
-        hint:SetPoint("BOTTOMLEFT", isReader and 56 or 22, 16)
-        hint:SetWidth(isReader and 444 or 516)
+        hint:SetPoint("TOPLEFT", 76, isReader and -402 or -440)
+        pasteIcon:ClearAllPoints()
+        pasteIcon:SetPoint("BOTTOMLEFT", 44, isReader and 74 or 36)
+        readerLink:SetShown(isReader)
+        privacy:SetShown(isReader)
+        paper:SetTexture(K.TEX .. (({ travel = "parchment_travel", war = "parchment_war", old = "parchment_old" })[settings.paperStyle] or "parchment"))
     end
 
     exportFrame = f
     f:Refresh()
     f:Show()
 end
-
 
 -- Options tab ------------------------------------------------------------------
 local function BuildOptions(panel)

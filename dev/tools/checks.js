@@ -71,6 +71,15 @@ console.log('Textures');
   for (const m of ev.matchAll(/= "([a-z_]+)"/g)) wanted.add(m[1].startsWith('st_') ? m[1] : 'ev_' + m[1]);
   if (wanted.has('ui_corner_')) { wanted.delete('ui_corner_'); for (const side of ['l', 'r']) for (const look of ['', '_travel', '_war', '_old']) wanted.add('ui_corner_' + side + look); }
   if (wanted.has('ui_seal')) { wanted.delete('ui_seal'); for (let i = 0; i <= 5; i++) wanted.add('ui_seal' + i); }
+  if (wanted.has('ui_saga_')) {
+    const sketch = (src.match(/local SKETCH = \{([^\n]+)\}/) || [])[1];
+    if (sketch) {
+      wanted.delete('ui_saga_');
+      for (const m of sketch.matchAll(/= "([a-z_]+)"/g)) {
+        for (const name of m[1] === 'camp' ? ['camp_alliance', 'camp_horde'] : [m[1]]) wanted.add('ui_saga_' + name);
+      }
+    }
+  }
   const missing = [...wanted].filter(n => !tex.has(n) && n !== 'pf_' && n !== 'ev_');
   if (missing.length) fail('missing textures: ' + missing.join(', ')); else ok(wanted.size + ' named textures exist');
 }

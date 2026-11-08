@@ -666,6 +666,16 @@ local TITLE_HEIGHT, SLOT_GAP = 63, 44
 -- Which chapters have an ink sketch (the camp takes the banner of the character's faction). The sketch has a column
 -- of its own at the right of the text: the text never runs over it, and the chapter is at least as tall as it.
 local SKETCH = { prologue = "camp", road = "walker", stories = "scroll", war = "war", falls = "falls", company = "company", marks = "seals" }
+-- The Reader exports the same illustration as the in-game chapter, including its faction.
+ns.SagaArt = function(key)
+    if key == "epilogue" then return "ui_saga_epilogue" end
+    local art = SKETCH[key]
+    if art == "camp" then
+        local ok, alliance = pcall(function() return UnitFactionGroup("player") == "Alliance" end)
+        art = (ok and alliance) and "camp_alliance" or "camp_horde"
+    end
+    return art and ("ui_saga_" .. art) or nil
+end
 local ART_W, ART_H = 104, 104
 local function ChapterHeight(c, size, width)
     local minimum = 0
