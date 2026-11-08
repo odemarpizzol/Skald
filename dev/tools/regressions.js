@@ -949,6 +949,21 @@ const THREE_DAYS = SAVED(`{
   { t = 1792180000, kind = "death", arg = "Darkshore", zone = "Darkshore", zm = 1439, m = 1439, x = 0.6, y = 0.6, idx = 1 },
 }`);
 
+run('a map marker clicked with the book shut opens the page asked for, not the newest day (the game runs OnShow when a shut book is shown)', {
+  pre: THREE_DAYS,
+  body: `__FIRE_ONSHOW = true
+SkaldCharDB.entries[1].arg = "Zxqv Marker"
+ns.layoutRev = (ns.layoutRev or 0) + 1
+SkaldFrame:Hide()
+local e = SkaldCharDB.entries[1]
+local opened = SkaldAPI.OpenEntry(e)
+local function seen(word)
+  for _, fs in ipairs(FONTS) do local t = rawget(fs, "_text"); if t and tostring(t):find(word, 1, true) then return true end end
+  return false
+end
+RES = (opened == true and SkaldFrame:IsShown() and seen("Zxqv Marker")) and "ok" or ("opened " .. tostring(opened) .. " shown " .. tostring(SkaldFrame:IsShown()) .. " seen " .. tostring(seen("Zxqv Marker")))`,
+});
+
 run('a trade page has the picture of its trade on the map pin; a trade without one, the generic trade icon; other pages keep their glyph', {
   body: `local G = SkaldAPI.AtlasPure.PinGlyph
 local base = "Interface\\\\AddOns\\\\Skald\\\\Textures\\\\"

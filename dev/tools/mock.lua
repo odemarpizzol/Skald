@@ -29,7 +29,11 @@ local function widget()
     if k=="GetStringHeight" then return function() return 20 end end
     if k=="GetFrameLevel" then return function() return 1 end end
     return function(self, ...) 
-      if k=="Show" then t._shown=true elseif k=="Hide" then t._shown=false end
+      if k=="Show" then
+        local was=t._shown; t._shown=true
+        -- opt-in: the game runs OnShow when a hidden frame is shown (a test sets __FIRE_ONSHOW)
+        if _G.__FIRE_ONSHOW and not was and rawget(t,"_OnShow") then t._OnShow(t) end
+      elseif k=="Hide" then t._shown=false end
       if k=="SetScript" then local ev,fn=...; t["_"..ev]=fn end
       if k=="GetPoint" then return "CENTER",nil,"CENTER",0,0 end
       return widget()

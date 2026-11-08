@@ -4339,14 +4339,18 @@ local function CreateWindow()
     function f:GetView() return view end
 
     function f:OpenEntry(e)
-        view = "book"
+        -- Show first: opening a shut book runs OnShow, which lands on the newest day. Placing the spread after it keeps
+        -- the page asked for (the other way round, a marker clicked with the book shut always led to the last page).
         layout = Layout()
         local page = layout.entryPage and layout.entryPage[e]
         if not page then return false end
+        f:Show()
+        view = "book"
+        layout = Layout()
+        page = layout.entryPage and layout.entryPage[e] or page
         spread = math.floor((page + 1) / 2)
         f.flashEntry = e
         f:Refresh()
-        f:Show()
         C_Timer.After(2.5, function()
             if f.flashEntry == e then f.flashEntry = nil; if f:IsShown() then f:Refresh() end end
         end)
