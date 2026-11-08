@@ -960,6 +960,16 @@ RES = (a:find("pf_alchemy", 1, true) and m:find("pf_mining", 1, true) and x:find
   or (a .. " | " .. m .. " | " .. x .. " | " .. q)`,
 });
 
+run('a click on a map marker goes to the page of its picture first, then the newest of the others', {
+  body: `local T = SkaldAPI.AtlasPure.PinTargets
+local a, b, c = { id = "a" }, { id = "b" }, { id = "c" }
+local list = T(b, { a, b, c })
+local alone = T(a, { a })
+local none = T(nil, { a, c })
+RES = (#list == 3 and list[1] == b and list[2] == c and list[3] == a and #alone == 1 and alone[1] == a
+  and #none == 2 and none[1] == c and none[2] == a) and "ok" or ("order " .. tostring(list[1] and list[1].id) .. tostring(list[2] and list[2].id) .. tostring(list[3] and list[3].id))`,
+});
+
 run('a map pin can open the page of an entry in the book', {
   pre: THREE_DAYS,
   body: `local e = SkaldCharDB.entries[2]

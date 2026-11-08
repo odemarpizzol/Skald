@@ -68,6 +68,18 @@ local function PinGlyph(entry)
     return own or ("Interface\\AddOns\\Skald\\Textures\\ev_" .. (GLYPH[entry.kind] or "zone"))
 end
 
+-- The pages a click on a marker tries, in order: the one whose picture the marker shows (the top of its group), then
+-- the others, newest first. (A click used to open the newest, which was not the page of the picture when a marker held
+-- several, so some markers led to the page they showed and others to another.)
+local function PinTargets(top, entries)
+    local list = {}
+    if top then list[1] = top end
+    for i = #(entries or {}), 1, -1 do
+        if entries[i] ~= top then list[#list + 1] = entries[i] end
+    end
+    return list
+end
+
 -- Strings and order for the Map tab (it lives inside the Skald window).
 local UI_TEXT = {
     enUS = {
@@ -228,17 +240,21 @@ local function GetPin(i, canvas)
     pin.star:SetPoint("TOPRIGHT", pin, "TOPRIGHT", 4, 4)
     pin.star:SetTexture("Interface\\AddOns\\Skald\\Textures\\ev_fav")
     pin.star:Hide()
-    -- A click opens the newest page of the marker in the book, and puts the map away.
+    -- A click opens the page whose picture the marker shows (else the newest), and puts the map away.
     pin:SetScript("OnMouseUp", function(self, button)
         if button ~= "LeftButton" or not self.entries or #self.entries == 0 then return end
-        local e = self.entries[#self.entries]
+        local targets = PinTargets(self.top, self.entries)
         GameTooltip:Hide()
         pcall(function()
             if WorldMapFrame and WorldMapFrame:IsShown() then
                 if HideUIPanel then HideUIPanel(WorldMapFrame) else WorldMapFrame:Hide() end
             end
         end)
-        if SkaldAPI and SkaldAPI.OpenEntry then SkaldAPI.OpenEntry(e) end
+        if SkaldAPI and SkaldAPI.OpenEntry then
+            for _, e in ipairs(targets) do
+                if SkaldAPI.OpenEntry(e) then break end   -- a page the book does not have is passed over
+            end
+        end
     end)
 
     -- Faint markers let the game's own show through; the one under the mouse is solid.
@@ -439,6 +455,7 @@ local function Refresh()
         local pin = GetPin(n, canvas)
         pin.entries = c.entries
         pin.title = c.title
+        pin.top = c.top
         pin.medallion:SetTexture(TEXTURES .. "pin_med" .. math.max(0, math.min(5, TierOf(c.top))))
         pin.glyph:SetTexture(PinGlyph(c.top))
         pin.count:SetText(#c.entries > 1 and #c.entries or "")
@@ -463,7 +480,7 @@ end
 -- A star marked or unmarked in the book changes the pins at once.
 SkaldAPI.favHook = Refresh
 -- (kept reachable for the regression scenarios)
-SkaldAPI.AtlasPure = { MakeFilter = MakeFilter, Cluster = Cluster, PinLevel = PinLevel, PinGlyph = PinGlyph }
+SkaldAPI.AtlasPure = { MakeFilter = MakeFilter, Cluster = Cluster, PinLevel = PinLevel, PinGlyph = PinGlyph, PinTargets = PinTargets }
 
 -- The world map frame can load on demand, so hook it as soon as it exists.
 local hooked = false
