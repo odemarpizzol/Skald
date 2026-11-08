@@ -949,6 +949,17 @@ const THREE_DAYS = SAVED(`{
   { t = 1792180000, kind = "death", arg = "Darkshore", zone = "Darkshore", zm = 1439, m = 1439, x = 0.6, y = 0.6, idx = 1 },
 }`);
 
+run('a trade page has the picture of its trade on the map pin; a trade without one, the generic trade icon; other pages keep their glyph', {
+  body: `local G = SkaldAPI.AtlasPure.PinGlyph
+local base = "Interface\\\\AddOns\\\\Skald\\\\Textures\\\\"
+local a = G({ kind = "profession", arg = "Alchemy", pf = "alchemy" })
+local m = G({ kind = "skill", arg = "Mining 75", pf = "mining" })
+local x = G({ kind = "profession", arg = "Unknown", pf = "nothing" })
+local q = G({ kind = "quest" })
+RES = (a:find("pf_alchemy", 1, true) and m:find("pf_mining", 1, true) and x:find("ev_profession", 1, true) and q:find("ev_quest", 1, true)) and "ok"
+  or (a .. " | " .. m .. " | " .. x .. " | " .. q)`,
+});
+
 run('a map pin can open the page of an entry in the book', {
   pre: THREE_DAYS,
   body: `local e = SkaldCharDB.entries[2]

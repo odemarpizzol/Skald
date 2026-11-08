@@ -61,6 +61,13 @@ local GLYPH = {
     achievement = "achievement", skill = "profession", profession = "profession",
 }
 
+-- The picture on a medallion: the book's own icon of the kind; a trade page has the picture of its trade (the generic
+-- generic trade icon is only for a trade without one).
+local function PinGlyph(entry)
+    local own = (entry.kind == "profession" or entry.kind == "skill") and SkaldAPI.EventIconPath and SkaldAPI.EventIconPath(entry.kind, entry)
+    return own or ("Interface\\AddOns\\Skald\\Textures\\ev_" .. (GLYPH[entry.kind] or "zone"))
+end
+
 -- Strings and order for the Map tab (it lives inside the Skald window).
 local UI_TEXT = {
     enUS = {
@@ -433,7 +440,7 @@ local function Refresh()
         pin.entries = c.entries
         pin.title = c.title
         pin.medallion:SetTexture(TEXTURES .. "pin_med" .. math.max(0, math.min(5, TierOf(c.top))))
-        pin.glyph:SetTexture("Interface\\AddOns\\Skald\\Textures\\ev_" .. (GLYPH[c.top.kind] or "zone"))   -- the book's own icons
+        pin.glyph:SetTexture(PinGlyph(c.top))
         pin.count:SetText(#c.entries > 1 and #c.entries or "")
         pin.star:SetShown(c.fav and true or false)
         pin:SetFrameLevel(level)
@@ -456,7 +463,7 @@ end
 -- A star marked or unmarked in the book changes the pins at once.
 SkaldAPI.favHook = Refresh
 -- (kept reachable for the regression scenarios)
-SkaldAPI.AtlasPure = { MakeFilter = MakeFilter, Cluster = Cluster, PinLevel = PinLevel }
+SkaldAPI.AtlasPure = { MakeFilter = MakeFilter, Cluster = Cluster, PinLevel = PinLevel, PinGlyph = PinGlyph }
 
 -- The world map frame can load on demand, so hook it as soon as it exists.
 local hooked = false
