@@ -960,6 +960,17 @@ RES = (a:find("pf_alchemy", 1, true) and m:find("pf_mining", 1, true) and x:find
   or (a .. " | " .. m .. " | " .. x .. " | " .. q)`,
 });
 
+run('each click of a map marker with several pages goes to the next one, round and round, and the tooltip starts at the page the click opens', {
+  body: `local O = SkaldAPI.AtlasPure.PinOrder
+local a, b, c = { id = "a" }, { id = "b" }, { id = "c" }
+local entries = { a, b, c }
+local function ids(list) local s = "" for _, e in ipairs(list) do s = s .. e.id end return s end
+-- the picture is b: b, then the newest of the others (c, a)
+local seq = { ids(O(b, entries, 1)), ids(O(b, entries, 2)), ids(O(b, entries, 3)), ids(O(b, entries, 4)), ids(O(b, entries, nil)) }
+local alone = ids(O(a, { a }, 7))
+RES = (table.concat(seq, ",") == "bca,cab,abc,bca,bca" and alone == "a" and #O(nil, {}, 1) == 0) and "ok" or table.concat(seq, ",") .. " " .. alone`,
+});
+
 run('a click on a map marker goes to the page of its picture first, then the newest of the others', {
   body: `local T = SkaldAPI.AtlasPure.PinTargets
 local a, b, c = { id = "a" }, { id = "b" }, { id = "c" }

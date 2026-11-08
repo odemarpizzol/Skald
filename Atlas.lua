@@ -80,6 +80,18 @@ local function PinTargets(top, entries)
     return list
 end
 
+-- The same pages starting at the one the next click opens: every click of a marker that holds several goes to the next
+-- page, so no page is out of reach because another of the group shares its picture. nextIndex counts from 1.
+local function PinOrder(top, entries, nextIndex)
+    local base = PinTargets(top, entries)
+    local n = #base
+    if n == 0 then return base end
+    local k = ((nextIndex or 1) - 1) % n
+    local out = {}
+    for i = 1, n do out[i] = base[(i - 1 + k) % n + 1] end
+    return out
+end
+
 -- Strings and order for the Map tab (it lives inside the Skald window).
 local UI_TEXT = {
     enUS = {
@@ -199,7 +211,7 @@ local function ShowTooltip(pin)
     GameTooltip:AddLine(pin.title or list[1].zone or "?", 1, 0.82, 0)
     local shown = 0
     -- the first line is the page a click opens (the picture of the marker), then the newest of the others
-    local order = PinTargets(pin.top, list)
+    local order = PinOrder(pin.top, list, pin.nextPage)
     for i = 1, #order do
         if shown >= MAX_TIP then break end
         local e = order[i]
@@ -211,7 +223,8 @@ local function ShowTooltip(pin)
     if #list > shown then
         GameTooltip:AddLine(string.format("+%d", #list - shown), 0.6, 0.6, 0.6)
     end
-    GameTooltip:AddLine(UI.CLICK_OPEN, 0.5, 0.5, 0.5)
+    local n = #order
+    GameTooltip:AddLine(n > 1 and string.format("%s (%d/%d)", UI.CLICK_OPEN, ((pin.nextPage or 1) - 1) % n + 1, n) or UI.CLICK_OPEN, 0.5, 0.5, 0.5)
     GameTooltip:Show()
 end
 
@@ -252,9 +265,13 @@ local function GetPin(i, canvas)
                 if HideUIPanel then HideUIPanel(WorldMapFrame) else WorldMapFrame:Hide() end
             end
         end)
-        -- only the page of the picture: if the book does not have it, say so rather than land on another page
-        if SkaldAPI and SkaldAPI.OpenEntry and targets[1] and not SkaldAPI.OpenEntry(targets[1]) then
-            print("|cffffd100Skald|r: " .. UI.NOT_SHOWN)
+        -- each click opens the next page of the marker (the first is the page of its picture); a page the book does
+        -- not have is said, not replaced by another
+        local n = #targets
+        if SkaldAPI and SkaldAPI.OpenEntry and n > 0 then
+            local index = ((self.nextPage or 1) - 1) % n + 1
+            self.nextPage = index % n + 1
+            if not SkaldAPI.OpenEntry(targets[index]) then print("|cffffd100Skald|r: " .. UI.NOT_SHOWN) end
         end
     end)
 
@@ -456,6 +473,7 @@ local function Refresh()
         local pin = GetPin(n, canvas)
         pin.entries = c.entries
         pin.title = c.title
+        if pin.cycleTop ~= c.top then pin.cycleTop, pin.nextPage = c.top, 1 end
         pin.top = c.top
         pin.medallion:SetTexture(TEXTURES .. "pin_med" .. math.max(0, math.min(5, TierOf(c.top))))
         pin.glyph:SetTexture(PinGlyph(c.top))
@@ -481,7 +499,7 @@ end
 -- A star marked or unmarked in the book changes the pins at once.
 SkaldAPI.favHook = Refresh
 -- (kept reachable for the regression scenarios)
-SkaldAPI.AtlasPure = { MakeFilter = MakeFilter, Cluster = Cluster, PinLevel = PinLevel, PinGlyph = PinGlyph, PinTargets = PinTargets }
+SkaldAPI.AtlasPure = { MakeFilter = MakeFilter, Cluster = Cluster, PinLevel = PinLevel, PinGlyph = PinGlyph, PinTargets = PinTargets, PinOrder = PinOrder }
 
 -- The world map frame can load on demand, so hook it as soon as it exists.
 local hooked = false
