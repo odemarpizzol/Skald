@@ -90,7 +90,7 @@ local UI_TEXT = {
         WHEN = "When", RANGE_ALL = "All", RANGE_SESSION = "This session", RANGE_TODAY = "Today",
         FAVONLY = "Only favourite memories",
         REGION = "This region", FIRST_VISIT = "First visit: %s", R_LINE1 = "Quests: %d   Falls: %d   Foes: %d",
-        R_LINE2 = "Levels: %d   Items: %d   Favourites: %d", CLICK_OPEN = "Click to open the page in the book",
+        R_LINE2 = "Levels: %d   Items: %d   Favourites: %d", CLICK_OPEN = "Click to open the page in the book", NOT_SHOWN = "The book does not show that page.",
         STATUS = "Showing %d of %d pages here.", STATUS_NONE = "No page here matches the filters.",
         OPACITY = "Marker opacity",
         OPACITY_HINT = "Fainter markers let the game's own quest markers show through.",
@@ -109,7 +109,7 @@ local UI_TEXT = {
         WHEN = "Quando", RANGE_ALL = "Tudo", RANGE_SESSION = "Esta sessão", RANGE_TODAY = "Hoje",
         FAVONLY = "Só memórias favoritas",
         REGION = "Esta região", FIRST_VISIT = "Primeira visita: %s", R_LINE1 = "Missões: %d   Quedas: %d   Inimigos: %d",
-        R_LINE2 = "Níveis: %d   Itens: %d   Favoritas: %d", CLICK_OPEN = "Clique para abrir a página no livro",
+        R_LINE2 = "Níveis: %d   Itens: %d   Favoritas: %d", CLICK_OPEN = "Clique para abrir a página no livro", NOT_SHOWN = "O livro não mostra essa página.",
         STATUS = "Mostrando %d de %d páginas aqui.", STATUS_NONE = "Nenhuma página daqui passa pelos filtros.",
         OPACITY = "Opacidade dos marcadores",
         OPACITY_HINT = "Marcadores mais fracos deixam ver os de missão do jogo por baixo.",
@@ -128,7 +128,7 @@ local UI_TEXT = {
         WHEN = "Quand", RANGE_ALL = "Tout", RANGE_SESSION = "Cette session", RANGE_TODAY = "Aujourd'hui",
         FAVONLY = "Seulement les souvenirs préférés",
         REGION = "Cette région", FIRST_VISIT = "Première visite\194\160: %s", R_LINE1 = "Quêtes\194\160: %d   Chutes\194\160: %d   Ennemis\194\160: %d",
-        R_LINE2 = "Niveaux\194\160: %d   Objets\194\160: %d   Préférés\194\160: %d", CLICK_OPEN = "Cliquez pour ouvrir la page dans le livre",
+        R_LINE2 = "Niveaux\194\160: %d   Objets\194\160: %d   Préférés\194\160: %d", CLICK_OPEN = "Cliquez pour ouvrir la page dans le livre", NOT_SHOWN = "Le livre ne montre pas cette page.",
         STATUS = "%d pages sur %d affichées ici.", STATUS_NONE = "Aucune page d'ici ne passe les filtres.",
         OPACITY = "Opacité des marqueurs",
         OPACITY_HINT = "Des marqueurs plus pâles laissent voir ceux des quêtes du jeu en dessous.",
@@ -198,9 +198,11 @@ local function ShowTooltip(pin)
     GameTooltip:SetOwner(pin, "ANCHOR_RIGHT")
     GameTooltip:AddLine(pin.title or list[1].zone or "?", 1, 0.82, 0)
     local shown = 0
-    for i = #list, 1, -1 do
+    -- the first line is the page a click opens (the picture of the marker), then the newest of the others
+    local order = PinTargets(pin.top, list)
+    for i = 1, #order do
         if shown >= MAX_TIP then break end
-        local e = list[i]
+        local e = order[i]
         GameTooltip:AddLine(date(SkaldAPI.DateFormat or "%b %d, %H:%M", e.t), 0.6, 0.6, 0.6)
         GameTooltip:AddLine(SkaldAPI.Render(e), 1, 1, 1, true)
         if e.fav and e.favNote then GameTooltip:AddLine(e.favNote, 1, 0.82, 0, true) end
@@ -250,10 +252,9 @@ local function GetPin(i, canvas)
                 if HideUIPanel then HideUIPanel(WorldMapFrame) else WorldMapFrame:Hide() end
             end
         end)
-        if SkaldAPI and SkaldAPI.OpenEntry then
-            for _, e in ipairs(targets) do
-                if SkaldAPI.OpenEntry(e) then break end   -- a page the book does not have is passed over
-            end
+        -- only the page of the picture: if the book does not have it, say so rather than land on another page
+        if SkaldAPI and SkaldAPI.OpenEntry and targets[1] and not SkaldAPI.OpenEntry(targets[1]) then
+            print("|cffffd100Skald|r: " .. UI.NOT_SHOWN)
         end
     end)
 
