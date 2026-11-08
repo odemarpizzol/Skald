@@ -56,7 +56,7 @@ h2.small { font-size: 1.1rem; }
 .sub { text-align: center; color: var(--muted); font-size: .95rem; margin: 0 0 8px; }
 p.saga { margin: 0 0 10px; line-height: 1.5; font-size: 1.08rem; color: var(--ink); text-align: left; }
 h2.chapter { margin-top: 18px; }
-.rule { display: block; margin: 4px auto 10px; width: 130px; height: 11px; background: url("img/b_rule.png") 0 0 / 160px 14px no-repeat; }
+.rule { display: block; margin: 4px auto 10px; width: 130px; height: 11px; background: url("img/b_rule.png") center / contain no-repeat; }
 .entry { display: grid; grid-template-columns: 26px 44px 1fr 18px; gap: 6px; align-items: start; padding: 5px 0; line-height: 1.25; font-size: 1.02rem; }
 .entry img { width: 24px; height: 24px; margin-top: 1px; }
 .entry .time { color: var(--muted); font-size: .92rem; padding-top: 2px; }
@@ -86,6 +86,7 @@ h2.chapter { margin-top: 18px; }
 
 #nav { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 10px 12px 14px; flex-wrap: wrap; }
 #nav button { padding: 6px 16px; }
+#nav button.quiet { color: #e8d6ab; }
 #nav #prev, #nav #next { line-height: 0; padding: 6px 14px; }
 .corner { position: absolute; bottom: 18px; width: 44px; height: 44px; padding: 0; border: 0; background: none; cursor: pointer; z-index: 4; transition: transform .15s; }
 .corner.left { left: 18px; transform: scaleX(-1); }
@@ -134,3 +135,73 @@ h2.chapter { margin-top: 18px; }
 .tip-foot, .tip-date { color: #a8a8a8; font-size: .88rem; }
 .tip-open { color: #ffd100; font-size: .85rem; margin-top: 6px; }
 @media print { .tip { display: none !important; } }
+
+/* Shared artwork and proportions from the current in-game book. */
+:root {
+  --page-w: 408px; --page-h: 536px; --ink: #5a3a1a;
+  --paper-image: url('img/paper_clean.png'); --corner-image: url('img/ui_corner_r.png'); --corner-left-image: url('img/ui_corner_l.png');
+  --entry-size: 1rem; --entry-gap: 5px;
+}
+:root[data-paper='travel'] { --paper-image: url('img/paper_travel.png'); --corner-image: url('img/ui_corner_r_travel.png'); --corner-left-image: url('img/ui_corner_l_travel.png'); }
+:root[data-paper='war'] { --paper-image: url('img/paper_war.png'); --corner-image: url('img/ui_corner_r_war.png'); --corner-left-image: url('img/ui_corner_l_war.png'); }
+:root[data-paper='old'] { --paper-image: url('img/paper_old.png'); --corner-image: url('img/ui_corner_r_old.png'); --corner-left-image: url('img/ui_corner_l_old.png'); }
+:root[data-ink='1'] { --ink: #2e2a3a; }
+:root[data-ink='2'] { --ink: #6e1e1a; }
+:root[data-text-size='0'] { --entry-size: .9rem; }
+:root[data-text-size='2'] { --entry-size: 1.1rem; }
+:root[data-density='compact'] { --entry-gap: 3px; }
+:root[data-density='airy'] { --entry-gap: 8px; }
+.card { background-image: url('img/paper_clean.png'); background-size: cover; }
+#book { width: 892px; height: 580px; flex-shrink: 0; padding: 22px 24px; gap: 28px;
+  background: #30190d; border-radius: 15px; box-shadow: 0 18px 48px #0008; }
+#book::after { inset: 0; border: 28px solid transparent; border-image: url('img/book_frame.png') 56 / 28px / 0 stretch; border-radius: 0; z-index: 2; }
+.spine { top: 4px; bottom: 4px; width: 28px; margin-left: -14px; background: url('img/book_spine.png') center / 28px 224px repeat-y; border-radius: 0; }
+.page { flex-shrink: 0; background: #f1e4c4 var(--paper-image) center / 100% 100% no-repeat; }
+.page.left, .page.right { border-radius: 1px; }
+.entry { font-size: var(--entry-size); padding: var(--entry-gap) 0; }
+.entry .body, p.saga { white-space: pre-wrap; overflow-wrap: anywhere; }
+.entry.note > .body { font-family: 'Caveat', cursive; font-size: 1.2em; color: var(--ink); }
+p.saga { font-size: var(--entry-size); line-height: 1.4; }
+.cover .art { width: 150px; height: 170px; margin-bottom: 12px; border-color: #96733c; background: transparent; }
+.cover .art img { width: 108px; height: 108px; }
+.cover h2 { font-size: 1.4rem; overflow-wrap: anywhere; }
+.stats li { font-size: .95rem; padding: 3px 0; }
+.seals { margin-top: 10px; }
+.seals img { width: 30px; height: 30px; }
+.index a { font-size: .95rem; line-height: 1.2; }
+.corner, .corner:hover:not(:disabled) { bottom: 22px; width: 52px; height: 52px; background: var(--corner-image) center / contain no-repeat; border-radius: 0; }
+.corner.left { left: 24px; transform: none; background-image: var(--corner-left-image); }
+.corner.left:hover { transform: translate(2px, -2px) scale(1.12); }
+.corner.right { right: 24px; }
+.corner svg { display: none; }
+#book[data-single='true'] { width: 456px; gap: 0; }
+#book[data-single='true'] .spine, #book[data-single='true'] #right { display: none; }
+#book[data-single='true'] #left { box-shadow: inset 0 0 28px #784f1820; }
+#book[data-single='true'] .corner.left { left: 24px; transform: none; background-image: var(--corner-left-image); }
+.corner.left:hover { transform: translate(2px, -2px) scale(1.12); }
+button:focus-visible, select:focus-visible, .index a:focus-visible, .entry.linked:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+@media (max-width: 760px) {
+  #reader { min-height: 100%; height: auto; }
+  #stage { flex: none; min-height: 580px; }
+  #nav { gap: 8px; }
+  #where { min-width: 120px; }
+}
+@media print {
+  .spread { gap: 28px; }
+  .spread:last-child { break-after: auto; page-break-after: auto; }
+  .page { color: var(--ink); }
+}
+
+/* Saga chapter artwork and lettering from the in-game Saga tab. */
+@font-face { font-family: 'Cinzel Decorative'; src: url('fonts/CinzelDecorative-Bold.ttf'); font-weight: 700; font-display: block; }
+.saga-page h2.chapter { margin: 12px 0 0; }
+.saga-divider { display: block; height: 38px; margin: 0 auto 10px; background: url('img/ui_saga_divider.png') center / 100% auto no-repeat; }
+p.saga { line-height: 1.55; margin-bottom: 12px; }
+p.saga.saga-lead { display: flow-root; }
+p.saga.saga-lead::first-letter { float: left; font: 700 2.9em/.9 'Cinzel Decorative', 'Cinzel', serif; color: var(--head); text-shadow: 1px 1px #e3b050; padding: 3px 5px 0 0; }
+.saga-art { position: relative; width: 170px; height: 170px; margin: 12px auto 0; opacity: .85; }
+.saga-art img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.saga-art.saga-epilogue { width: 308px; height: 190px; overflow: hidden; }
+.saga-epilogue img { position: absolute; bottom: 0; left: 0; height: auto; }
+.saga-number { display: flex; align-items: center; justify-content: center; gap: 6px; height: 25px; bottom: 8px; }
+.saga-number img { display: block; width: 54px; height: 25px; object-fit: contain; }

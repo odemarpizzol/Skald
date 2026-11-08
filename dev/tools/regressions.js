@@ -1721,7 +1721,7 @@ for n, text in ipairs(parts) do
   if tonumber(fields[12]) ~= h or tonumber(fields[10]) ~= n or tonumber(fields[11]) ~= #parts then ok = false end
   for line in (body .. nl):gmatch("([^" .. nl .. "]*)" .. nl) do
     if line:sub(1, 2) == "P^" then total = total + 1 end
-    if line ~= "" and not line:match("^[SNTGVP]%^") then ok = false end
+    if line ~= "" and not line:match("^[SNTGVPMD]%^") then ok = false end
   end
 end
 RES = (#parts >= 2 and ok and total >= 400) and "ok" or ("parts=" .. #parts .. " ok=" .. tostring(ok) .. " pages=" .. total)`,
@@ -1880,6 +1880,49 @@ SlashCmdList.SKALD("export")
 local inReader = btn("Player names: hidden")
 if hidden then hidden._OnClick(hidden) end
 RES = (hidden and inReader and btn("Player names: shown")) and "ok" or ("hidden=" .. tostring(hidden) .. " reader=" .. tostring(inReader))`,
+});
+
+run('the export window changes parts without rebuilding the diary and selects the whole part for copying', {
+  pre: SAVED('{}', 'goalsInit = true, goalsVer = 3, goals = {}, version = 99'),
+  body: `for i = 1, 400 do table.insert(SkaldCharDB.entries, { t = 1792000000 + i, kind = "note", arg = string.rep("word ", 60) .. i, zone = "x" }) end
+SkaldDB.exportFormat = "reader"; SkaldDB.exportScope = "all"
+local builds = 0
+local original = ns.BuildSaga
+ns.BuildSaga = function(...) builds = builds + 1; return original(...) end
+SlashCmdList.SKALD("export")
+local edit
+for i = #frames, 1, -1 do local candidate = frames[i]; local text = rawget(candidate, "_text")
+  if candidate._kind == "EditBox" and type(text) == "string" and text:sub(1, 15) == "H^SKALDREADER1^" then edit = candidate; break end
+end
+assert(edit, "no export field")
+local focused, selected = 0, 0
+edit.SetFocus = function() focused = focused + 1 end
+edit.HighlightText = function() selected = selected + 1 end
+local back, forward, choose = btn("<"), btn(">"), btn("Select text")
+assert(back and forward and choose, "copy controls missing")
+local first = edit:GetText()
+local firstDisabled = not back:IsEnabled()
+forward._OnClick(forward)
+local second = edit:GetText()
+choose._OnClick(choose)
+back._OnClick(back)
+local restored = edit:GetText() == first
+RES = (firstDisabled and first ~= second and restored and builds == 1 and focused == 3 and selected >= 3) and "ok"
+  or ("builds=" .. builds .. " focus=" .. focused .. " selection=" .. selected .. " restored=" .. tostring(restored))`,
+});
+
+run('the export window adopts format changes when reopened and disables copying an empty selection', {
+  pre: SAVED('{}', 'goalsInit = true, goalsVer = 3, goals = {}, version = 99'),
+  body: `SkaldDB.exportFormat = "plain"
+SlashCmdList.SKALD("export")
+SkaldDB.exportFormat = "reader"
+SlashCmdList.SKALD("export")
+local choose = btn("Select text")
+local readerChosen = btn("Reader")
+assert(readerChosen and readerChosen.active, "format did not follow the setting")
+SkaldCharDB.entries = {}
+SlashCmdList.SKALD("export")
+RES = (choose and not choose:IsEnabled() and not btn("<"):IsEnabled() and not btn(">"):IsEnabled()) and "ok" or "empty export still offers copying"`,
 });
 
 run('a pet family saved in another language is shown in the language of now', {
@@ -2235,6 +2278,41 @@ local named = true
 for _, g in ipairs(groups) do for _, m in ipairs(g.items) do if not m.name or m.name == "" or m.name:find("^map_") then named = false end end end
 RES = (not before and after and total == 44 and inRaid and inBg and classified and groups[1].items[1] and named and guard >= 2 and SkaldDB.errors == nil) and "ok"
   or ("before " .. tostring(before) .. " after " .. tostring(after) .. " total " .. total .. " guard " .. guard .. " err " .. tostring(SkaldDB.errors and SkaldDB.errors[1]))`,
+});
+
+run('a dungeon whose inside is named as its outside still gets its page at the door, once', {
+  pre: SAVED('{}', 'version = 99, goalsInit = true, goalsVer = 3, goals = {}, stats = { counts = {}, deathZones = {}, tiers = {}, played = 1, first = 1 }'),
+  body: `local inside = false
+function IsInInstance() return inside, inside and "party" or "none" end
+function GetInstanceInfo() return "Deadmines", inside and "party" or "none", 1, "Normal", 5, 0, false, inside and 36 or 0, 5 end
+function GetZoneText() return "Deadmines" end
+ns.CheckZoneForTest()
+inside = true
+ns.CheckZoneForTest()
+ns.CheckZoneForTest()
+local n, iid = 0, nil
+for _, e in ipairs(SkaldCharDB.entries) do if e.kind == "dungeon" then n = n + 1; iid = e.iid end end
+RES = (n == 1 and iid == 36 and SkaldDB.errors == nil) and "ok" or ("dungeon pages " .. n .. " iid " .. tostring(iid))`,
+});
+
+run('a reload inside an instance writes its page and marks it for the Cartographer', {
+  pre: SAVED('{}', 'version = 99, goalsInit = true, goalsVer = 3, goals = {}, stats = { counts = {}, deathZones = {}, tiers = {}, played = 1, first = 1 }') + `
+function IsInInstance() return true, "party" end
+function GetInstanceInfo() return "Deadmines", "party", 1, "Normal", 5, 0, false, 36, 5 end
+function GetZoneText() return "Deadmines" end`,
+  body: `local n = 0
+for _, e in ipairs(SkaldCharDB.entries) do if e.kind == "dungeon" and e.iid == 36 then n = n + 1 end end
+RES = (n == 1 and ns.Cartographer.WalkedInstance(36) and SkaldDB.errors == nil) and "ok"
+  or ("pages " .. n .. " walked " .. tostring(ns.Cartographer.WalkedInstance(36)))`,
+});
+
+run('a dungeon page is told by the id of the instance: its name follows the language, also for a page written before the id was kept', {
+  pre: SAVED('{}', 'version = 99, goalsInit = true, goalsVer = 3, goals = {}, stats = { counts = {}, deathZones = {}, tiers = {}, played = 1, first = 1 }'),
+  body: `local a = { kind = "dungeon", zone = "Sal\\195\\163o dos Thanes", arg = "Sal\\195\\163o dos Thanes", iid = 3065 }
+local b = { kind = "dungeon", zone = "Sal\\195\\163o dos Thanes", arg = "Sal\\195\\163o dos Thanes" }
+local c = { kind = "dungeon", zone = "Somewhere Else", arg = "Somewhere Else" }
+RES = (ns.PlaceName(a) == "The Hall of Thanes" and ns.PlaceName(b) == "The Hall of Thanes" and ns.PlaceName(c) == "Somewhere Else") and "ok"
+  or (tostring(ns.PlaceName(a)) .. " / " .. tostring(ns.PlaceName(b)) .. " / " .. tostring(ns.PlaceName(c)))`,
 });
 
 run('the Cartographer shows a group of four maps two to a page, big and centred, and keeps the grid for the larger groups', {

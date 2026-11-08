@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.2
+
+- **A dungeon is told by the id of the instance**: its name follows the language of the client (the Hall of Thanes, the Deadmines...), also on pages written before; a dungeon whose inside is named like the land outside it (the Deadmines) now gets its page at the door, and a reload inside an instance writes it and marks it for the Cartographer
+- The inn of a "home" page is told in the city of its map when the language has changed since it was written
+- **The export window is redrawn** in the look of the book: a summary of pages and parts, a Select text button (the text is no longer selected on its own), the Reader address and a note that nothing leaves your computer; it fits small screens
+- The Reader export keeps the whole text of each page (it was cut at 700 characters) and brings the day of each page, the style of the book and the Saga art; older Readers still open it. A part holds 48,000 characters instead of 16,000, so most diaries are one part
+- **The web Reader is new**: the paper of the book (clean, old, travel, war), the days, the Saga chapters with their pictures and a decorative title font (OFL)
+
 ## 1.0.1
 
 - First stable version. A file labelled 1.0.0 went out by mistake with the old 0.49.3 contents and was withdrawn; this version replaces it
