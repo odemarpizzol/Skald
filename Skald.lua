@@ -6854,6 +6854,7 @@ end
 
 H.PLAYER_LOGIN = function(self, event, ...)
     loginTime = time()
+    if SkaldDB then SkaldDB.commsReg = K.CommsRegister() end
     Mile.ResetMaintenance()
     if EnsureOwnDiary() then Say(L.NEW_CHARACTER) end
     ConvertOldNotes()
@@ -7385,43 +7386,88 @@ end
 -- Probe for talking to other addons (the shared chronicle is only worth planning if the client lets addons
 -- talk): /skald probe comms sends one tiny message on each channel that makes sense and keeps what came back.
 K.COMMS_PREFIX = "SKALD1"
+K.COMMS_LOG_MAX = 20
 H.VOICE_CHAT_TTS_PLAYBACK_FINISHED = function() if ns.SpeechFinished then ns.SpeechFinished() end end
+-- The prefix is registered at the login, not only when the probe runs: a client that has not registered it never
+-- hears a message, so a quiet receiver would log nothing.
+K.CommsRegister = function()
+    local api = C_ChatInfo or {}
+    local reg = api.RegisterAddonMessagePrefix or RegisterAddonMessagePrefix
+    if not reg then return "no function" end
+    local ok, res = pcall(reg, K.COMMS_PREFIX)
+    return (ok and "ok " or "error ") .. tostring(res)
+end
+-- A name shows only as its shape (capitals A, small letters a), as in the report: a player is not named in a paste.
+K.CommsShape = function(v)
+    v = Safe(v)
+    if type(v) ~= "string" then return "?" end
+    return (v:gsub("%u", "A"):gsub("%l", "a"))
+end
+-- What the game said about the moment a message came or went: the place, the fight, a boss.
+K.CommsContext = function()
+    local okI, inside, kind = pcall(IsInInstance)
+    local fight = InCombatLockdown and InCombatLockdown() and "yes" or "no"
+    local boss = (ns.encounter and not ns.encounter.ended) and "yes" or "no"
+    return string.format("inst=%s combat=%s boss=%s", (okI and inside) and tostring(kind) or "no", fight, boss)
+end
+-- Every Skald message heard is kept (at most K.COMMS_LOG_MAX, the newest) in the saved variables for /skald report.
 H.CHAT_MSG_ADDON = function(self, event, prefix, text, channel, sender)
-    local probe = SkaldDB and SkaldDB.commsProbe
-    if not probe or prefix ~= K.COMMS_PREFIX then return end
-    probe.received = probe.received or {}
-    if #probe.received < 10 then
-        probe.received[#probe.received + 1] = tostring(channel) .. " <- " .. tostring(Safe(sender) and "sender" or "?") .. ": " .. tostring(Safe(text) or "")
+    if Safe(prefix) ~= K.COMMS_PREFIX or not SkaldDB then return end
+    local log = SkaldDB.commsLog or {}
+    SkaldDB.commsLog = log
+    while #log >= K.COMMS_LOG_MAX do table.remove(log, 1) end
+    local body = Safe(text)
+    log[#log + 1] = { t = time(), line = string.format("%s %s <- %s | %s | %s", date("%H:%M:%S", time()), tostring(Safe(channel) or "?"),
+        K.CommsShape(sender), K.CommsContext(), type(body) == "string" and body:sub(1, 40) or "?") }
+end
+
+-- The codes SendAddonMessage answers with, by name when the client tells them (Enum.SendAddonMessageResult).
+K.CommsCodeName = function(code)
+    local list = Enum and Enum.SendAddonMessageResult
+    if type(list) == "table" then
+        for name, value in pairs(list) do
+            if value == code then return name end
+        end
     end
+    return nil
 end
 
 ns.ProbeComms = function(whisperTo)
     local api = C_ChatInfo or {}
     local send = api.SendAddonMessage or SendAddonMessage
-    local probe = { when = time(), api = {}, sent = {}, received = {} }
+    local probe = { when = time(), api = {}, sent = {}, ctx = K.CommsContext(), enum = {} }
     SkaldDB.commsProbe = probe
     for _, name in ipairs({ "RegisterAddonMessagePrefix", "SendAddonMessage", "IsAddonMessagePrefixRegistered" }) do
         probe.api[name] = (type(api[name]) == "function") and "yes" or "no"
     end
-    local reg = api.RegisterAddonMessagePrefix or RegisterAddonMessagePrefix
-    local okReg, resReg = false, "no function"
-    if reg then okReg, resReg = pcall(reg, K.COMMS_PREFIX); resReg = tostring(resReg) end
-    probe.register = (okReg and "ok " or "error ") .. tostring(resReg)
+    probe.register = K.CommsRegister()
+    SkaldDB.commsReg = probe.register
+    if Enum and type(Enum.SendAddonMessageResult) == "table" then
+        for name, value in pairs(Enum.SendAddonMessageResult) do probe.enum[#probe.enum + 1] = tostring(name) .. "=" .. tostring(value) end
+        table.sort(probe.enum)
+    end
     if send then
-        -- SAY answers "invalid chat type" (4) in this client and a whisper to oneself is refused by the game, so
-        -- the channels tried are the group, the guild and, if a name is given, a whisper to that player
+        -- SAY answers "invalid chat type" (4) in this client. A whisper to oneself is refused by the game; the
+        -- channels tried are the group (PARTY or RAID, and INSTANCE_CHAT in a group made by the finder: the finder's
+        -- members are from other realms and the party channel may not reach them), the guild and, if a name is
+        -- given (Name-Realm for another realm), a whisper to that player. Every attempt and its raw code are kept.
         local targets = {}
         if whisperTo and whisperTo ~= "" then targets[#targets + 1] = { "WHISPER", whisperTo } end
+        local finderGroup = IsInGroup and IsInGroup(_G.LE_PARTY_CATEGORY_INSTANCE or 2)
+        if finderGroup then targets[#targets + 1] = { "INSTANCE_CHAT" } end
         if IsInGroup and IsInGroup() then targets[#targets + 1] = { IsInRaid and IsInRaid() and "RAID" or "PARTY" } end
         if IsInGuild and IsInGuild() then targets[#targets + 1] = { "GUILD" } end
         for _, t in ipairs(targets) do
-            local ok, res = pcall(send, K.COMMS_PREFIX, "probe", t[1], t[2])
-            probe.sent[#probe.sent + 1] = t[1] .. " " .. (ok and "ok " or "error ") .. tostring(res)
+            local ok, res = pcall(send, K.COMMS_PREFIX, "probe " .. date("%H:%M:%S", time()), t[1], t[2])
+            local name = ok and K.CommsCodeName(res) or nil
+            probe.sent[#probe.sent + 1] = t[1] .. " " .. (ok and "ok " or "error ") .. tostring(res) .. (name and (" (" .. name .. ")") or "")
         end
     end
     C_Timer.After(4, function()
         if #probe.sent == 0 then Say(L.COMMS_NONE); return end
-        Say(string.format(L.COMMS_RESULT, #probe.received, #probe.sent))
+        local heard = 0
+        for _, e in ipairs(SkaldDB.commsLog or {}) do if e.t >= probe.when then heard = heard + 1 end end
+        Say(string.format(L.COMMS_RESULT, heard, #probe.sent))
     end)
 end
 
@@ -8918,12 +8964,16 @@ ns.BuildReport = function()
         end)
     end
     local cp = set.commsProbe
+    Add("comms prefix %s: %s", K.COMMS_PREFIX, tostring(set.commsReg or "not registered yet (reload)"))
     if cp then
-        Add("comms probe (run %s, %ds ago): register %s | api %s %s %s", date("%H:%M:%S", cp.when or 0), math.max(0, time() - (cp.when or 0)), tostring(cp.register), tostring(cp.api.RegisterAddonMessagePrefix),
+        Add("comms probe (run %s, %ds ago, %s): register %s | api %s %s %s", date("%H:%M:%S", cp.when or 0), math.max(0, time() - (cp.when or 0)), tostring(cp.ctx or "?"), tostring(cp.register), tostring(cp.api.RegisterAddonMessagePrefix),
             tostring(cp.api.SendAddonMessage), tostring(cp.api.IsAddonMessagePrefixRegistered))
         Add("  sent: %s", #cp.sent > 0 and table.concat(cp.sent, "; ") or "nothing")
-        Add("  received: %s", #cp.received > 0 and table.concat(cp.received, "; ") or "nothing")
+        if cp.enum and #cp.enum > 0 then Add("  result codes: %s", table.concat(cp.enum, ", ")) end
     end
+    local log = set.commsLog or {}
+    Add("comms heard: %d", #log)
+    for _, e in ipairs(log) do Add("  %s", e.line) end
     local errs = set.errors or {}
     Add("errors caught: %d", #errs)
     for _, e in ipairs(errs) do Add("  %s", e) end

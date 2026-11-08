@@ -1074,16 +1074,34 @@ SlashCmdList["SKALD"]("report")
 RES = (ok and ns.reportFrame and ns.reportFrame.edit) and "ok" or ("report: " .. text)`,
 });
 
-run('the comms probe sends on the channels that apply, keeps what came back and shows it in the report', {
+run('the comms probe sends on the channels that apply (the finder group too), keeps every attempt and the raw code, and shows what came back in the report without naming anyone', {
   body: `local sent = {}
+Enum = { SendAddonMessageResult = { Success = 0, AddonMessageThrottle = 3 } }
 C_ChatInfo = { RegisterAddonMessagePrefix = function() return true end,
   SendAddonMessage = function(prefix, text, channel, target) sent[#sent + 1] = channel; fire("CHAT_MSG_ADDON", prefix, text, channel, "Tester") return 0 end }
 function IsInGroup() return true end; function IsInRaid() return false end; function IsInGuild() return false end
 SlashCmdList["SKALD"]("probe comms Amigo")
 runTimers()
 local text = ns.BuildReport()
-RES = (#sent == 2 and sent[1] == "WHISPER" and sent[2] == "PARTY" and #SkaldDB.commsProbe.received == 2
-  and text:find("register ok true", 1, true) and text:find("received: WHISPER", 1, true)) and "ok" or ("sent " .. #sent .. " " .. text)`,
+RES = (#sent == 3 and sent[1] == "WHISPER" and sent[2] == "INSTANCE_CHAT" and sent[3] == "PARTY" and #SkaldDB.commsLog == 3
+  and text:find("register ok true", 1, true) and text:find("WHISPER ok 0 (Success)", 1, true) and text:find("result codes: AddonMessageThrottle=3, Success=0", 1, true)
+  and text:find("comms heard: 3", 1, true) and text:find("WHISPER <- Aaaaaa", 1, true) and not text:find("Tester", 1, true)) and "ok" or ("sent " .. #sent .. " " .. text)`,
+});
+
+run('the comms prefix is registered at the login, a Skald message is logged without any probe (place, fight, boss), other prefixes are ignored and the log is capped', {
+  pre: `__registered = 0
+C_ChatInfo = { RegisterAddonMessagePrefix = function(p) if p == "SKALD1" then __registered = __registered + 1 end return true end, SendAddonMessage = function() return 0 end }`,
+  body: `local before = #(SkaldDB.commsLog or {})
+fire("CHAT_MSG_ADDON", "OTHER", "x", "GUILD", "Someone-Realm")
+function InCombatLockdown() return true end
+ns.encounter = { id = 1, name = "Boss", at = time() }
+fire("CHAT_MSG_ADDON", "SKALD1", "hello", "GUILD", "Amigo-Realm")
+local first = SkaldDB.commsLog[1] and SkaldDB.commsLog[1].line or ""
+for i = 1, 30 do fire("CHAT_MSG_ADDON", "SKALD1", "m" .. i, "PARTY", "Amigo-Realm") end
+local text = ns.BuildReport()
+RES = (__registered >= 1 and SkaldDB.commsReg == "ok true" and before == 0 and first:find("GUILD <- Aaaaa-Aaaaa", 1, true)
+  and first:find("combat=yes boss=yes", 1, true) and #SkaldDB.commsLog == 20 and not text:find("Amigo", 1, true) and not text:find("Someone", 1, true)) and "ok"
+  or ("registered " .. __registered .. " reg " .. tostring(SkaldDB.commsReg) .. " log " .. #SkaldDB.commsLog .. " first " .. first)`,
 });
 
 const DUNGEON = `function IsInInstance() return true, "party" end
