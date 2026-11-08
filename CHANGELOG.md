@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.3
+
+- **Map markers go to the right page.** A click on a marker used to land on the last page of the book when the book was shut (the book was shown after the page was chosen, and opening it goes to the newest day). It now opens the page you asked for, also from the Search tab
+- A marker of a trade page (Cooking, Mining, Tailoring...) shows the picture of that trade, as the book does; a trade without one keeps the generic picture
+- A marker that holds several pages opens the page of its picture first, and each further click goes to the next one; the tooltip begins with that page and says which of how many ("2/5"). A page the book does not show is said, not replaced by another
+- **Test of talking between Skald users** (for the shared chronicle, which is only a plan): `/skald probe comms` sends one tiny message to the group, the guild or a player (`/skald probe comms Name-Realm`). The channel is registered at the login, and the last 20 Skald messages heard are listed in `/skald report` with the place, the fight and the boss at that moment, never with a name. Nothing is sent unless you type the command
+
 ## 1.0.2
 
 - **A dungeon is told by the id of the instance**: its name follows the language of the client (the Hall of Thanes, the Deadmines...), also on pages written before; a dungeon whose inside is named like the land outside it (the Deadmines) now gets its page at the door, and a reload inside an instance writes it and marks it for the Cartographer
