@@ -6,7 +6,7 @@ Skald listens to what happens on the road (quests, levels, deaths, new lands, du
 
 > **Version 1.0.** The core of the diary (quests, levels, deaths, lands, dungeons and bosses, groups, guild, flights, professions) has been seen working in a real Forever session. Some events have not been seen in a real session yet: battlegrounds, mounts, achievements, weather and the Skyborne lines (see Limits). Please report what you find.
 
-Made for **World of Warcraft: Forever** (1.60.1, from 4 November 2026) and **TBC Classic Anniversary** (2.5.6). Texts in **English**, **Brazilian Portuguese** and **French** (French not yet reviewed by a native speaker): the diary follows your game client's language.
+Made for **World of Warcraft: Forever** (1.60.1, from 4 November 2026) and **TBC Classic Anniversary** (2.5.6). Texts in **English**, **Brazilian Portuguese**, **French** and **Spanish** (French and Spanish not yet reviewed by a native speaker): the diary follows your game client's language.
 
 ## Features
 

@@ -14,6 +14,7 @@ for (const [k, f] of [['LOC', 'Skald/Locales.lua'], ['CUR', 'Skald/Curated.lua']
 const FORBID = {
   en: ['battle', 'blade', 'steel', 'fight', 'fought', 'slain', 'blood', 'sweat', 'sword', 'enemy', 'foe', 'kill', 'war'],
   pt: ['batalha', 'lâmina', 'lamina', 'aço', 'luta', 'sangue', 'suor', 'espada', 'inimigo', 'matar', 'guerra'],
+  es: ['batalla', 'espada', 'acero', 'combate', 'sangre', 'enemigo', 'matar', 'guerra'],
 };
 // phrases that name a forbidden word only to deny it
 const ALLOW = [/not every deed needs a sword/, /no blood was spilled/, /nem todo feito pede uma espada/, /nenhum sangue foi derramado/,
@@ -22,7 +23,8 @@ const QUEST_POOLS = ['questDelivery', 'questDeliveryNotable', 'questGather', 'qu
   'questExplore', 'questExploreNotable', 'questSeek', 'questSeekNotable', 'questChain',
   'fact_above', 'fact_below', 'fact_rich', 'fact_first', 'fact_milestone', 'fact_back', 'fact_fallen'];
 
-for (const loc of ['enUS', 'ptBR', 'frFR']) {
+for (const loc of ['enUS', 'ptBR', 'frFR', 'esES']) {
+  const vocabulary = FORBID[loc === 'enUS' ? 'en' : loc === 'esES' ? 'es' : 'pt'];
   run(`__locale="${loc}"; frames={}; SkaldDB=nil; SkaldCharDB=nil
 TIMERS={}; C_Timer={After=function(t,fn) table.insert(TIMERS,fn) end}
 function GetGuildInfo() return nil end; function IsInInstance() return false,"none" end
@@ -56,10 +58,29 @@ local function CheckUI(base, translated, path)
     end
 end
 CheckUI(ns.LOCALES.enUS, ns.LOCALES["${loc}"], "${loc}")
+if "${loc}" == "esES" then
+    if ns.LOCALES.esMX ~= ns.LOCALES.esES then problems[#problems+1] = "SPANISH ALIAS" end
+    for kind, original in pairs(ns.LOCALES.enUS.phrases) do
+        local translated = P[kind]
+        if type(translated) ~= "table" or #translated < math.max(${POOL_AIM}, #original) then
+            problems[#problems+1] = "SPANISH POOL COVERAGE " .. kind
+        end
+    end
+end
 local NO_NAME = { party = true, day = true, anniv7 = true, anniv30 = true, anniv100 = true, anniv365 = true }
 local KNOWN = { ["{diff}"] = true, ["{gold}"] = true, ["{nth}"] = true, ["{npc}"] = true, ["{steps}"] = true, ["{standing}"] = true, ["{tries}"] = true, ["{days}"] = true, ["{place}"] = true, ["{count}"] = true, ["{weather}"] = true }
 for kind, list in pairs(P) do
   for i, ph in ipairs(list) do
+    if "${loc}" == "esES" then
+      if ph:find(string.char(194, 160), 1, true) then problems[#problems+1] = "SPANISH NBSP " .. kind .. "#" .. i end
+      local plain = ph:gsub("{[^}]*}", "")
+      local _, qopen = plain:gsub("¿", "")
+      local _, qclose = plain:gsub("%?", "")
+      local _, eopen = plain:gsub("¡", "")
+      local _, eclose = plain:gsub("!", "")
+      if qopen ~= qclose or eopen ~= eclose then problems[#problems+1] = "SPANISH PUNCTUATION " .. kind .. "#" .. i end
+      for j = 1, i - 1 do if ph == list[j] then problems[#problems+1] = "SPANISH REPEAT " .. kind .. "#" .. i end end
+    end
     if (kind:find("kinLevel$") or kind:find("^tone_kin_")) and ph:find("%d") then problems[#problems+1] = "KIN NUMBER " .. kind .. "#" .. i end
     if not pcall(string.format, ph, "NAME") then problems[#problems+1] = "FORMAT " .. kind .. "#" .. i end
     local n = select(2, ph:gsub("%%s", ""))
@@ -93,7 +114,7 @@ do
     local MUST = { prologue = "date place", birth = "home land", firstPage = "date place", road = "level place", stories = "n", war = "n", warHard = "boss tries",
         falls = "n", fallsPlace = "place", company = "n", companyNames = "names", marks = "n points title", epilogue = "level", epilogueTop = "pages" }
     local COMBAT = { war = true, warHard = true, falls = true, fallsPlace = true }
-    local words = { ${FORBID[loc === 'enUS' ? 'en' : 'pt'].map(w => JSON.stringify(w)).join(', ')} }
+    local words = { ${vocabulary.map(w => JSON.stringify(w)).join(', ')} }
     local nbsp = string.char(194, 160)
     for key in pairs(E.TITLES) do if not T.TITLES[key] then problems[#problems+1] = "SAGA TITLE " .. key end end
     for key in pairs(E.POOLS) do
@@ -167,7 +188,7 @@ POOLTEXT = table.concat(dump, string.char(10))`);
   }
   console.log(`pools under ${POOL_AIM} (to widen):`, short.length ? short.join(' ') : 'none');
   console.log(`pools under ${POOL_FLOOR} (not allowed):`, tiny.length ? tiny.join(' ') : 'none'); if (tiny.length) process.exitCode = 1;
-  const words = FORBID[loc === 'enUS' ? 'en' : 'pt'];
+  const words = vocabulary;
   const bad = get('POOLTEXT').split('\n').filter(l => {
     const ph = l.split(' :: ')[1].toLowerCase();
     return words.some(w => ph.includes(w)) && !ALLOW.some(re => re.test(ph));
@@ -183,10 +204,12 @@ POOLTEXT = table.concat(dump, string.char(10))`);
   const AFTER = ['pandaria', 'pandária', 'pandarie', 'cataclysm', 'cataclismo', 'cataclysme', 'garrosh', 'death knight',
     'cavaleiro da morte', 'chevalier de la mort', 'demon hunter', 'caçador de demônios', 'chasseur de démons', 'evoker',
     'évocateur', 'dracthyr', 'shadowlands', 'terras sombrias', 'ombreterre', 'azerite', 'azerita', 'azérite', 'argus',
-    'teldrassil burn', 'queima de teldrassil', 'incendie de teldrassil'];
+    'teldrassil burn', 'queima de teldrassil', 'incendie de teldrassil', 'caballero de la muerte', 'cazador de demonios',
+    'evocador', 'tierras sombrías', 'quema de teldrassil'];
   const TBC = ['outland', 'terralém', 'outreterre', 'shattrath', 'exodar', 'naaru', 'sunwell', 'poço do sol', 'puits de soleil',
     'draenei', 'elfo sangrento', 'elfos sangrentos', 'elfe de sang', 'elfes de sang', 'blood elf', 'velen', 'draenor',
-    'legião ardente', 'légion ardente', 'burning legion', 'silvermoon', 'luaprata', "lune-d'argent"];
+    'legião ardente', 'légion ardente', 'burning legion', 'silvermoon', 'luaprata', "lune-d'argent", 'terrallende',
+    'fuente del sol', 'elfo de sangre', 'elfa de sangre', 'elfos de sangre', 'elfas de sangre', 'legión ardiente', 'lunargenta'];
   const found = [];
   for (const f of ['Locales.lua', 'Saga.lua', 'Curated.lua', 'Goals.lua']) {
     let pool = null;

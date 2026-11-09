@@ -49,7 +49,7 @@ function CreateFont() return widget() end
 GameTooltip = GameTooltip or widget()
 StaticPopupDialogs={}; function StaticPopup_Show(n) _G.__popup=n end
 SlashCmdList={}
-function GetLocale() return _G.__locale or "ptBR" end
+function GetLocale() return _G.__locale or "ptBR" end -- __locale also accepts esES/esMX; unknown values exercise fallback.
 local zone="Elwynn Forest"
 function GetZoneText() return zone end
 function SetZone(z) zone=z end

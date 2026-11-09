@@ -7,12 +7,19 @@
 local _, ns = ...
 
 local TEXTS = {
-    enUS = { TITLE = "%s in numbers", REGIONS = "Regions found", QUESTS = "Local quests", KILLS = "Creatures slain here", NONE = "No land yet." },
+    enUS = { TITLE = "%s in numbers", REGIONS = "Regions found", QUESTS = "Local quests", KILLS = "Creatures slain here", NONE = "No land yet." }, esES = {
+            TITLE = "%s en cifras",
+            REGIONS = "Regiones descubiertas",
+            QUESTS = "Misiones de la zona",
+            KILLS = "Criaturas vencidas aquí",
+            NONE = "Aún no hay tierras que mostrar.",
+        },
     ptBR = { TITLE = "%s em números", REGIONS = "Regiões descobertas", QUESTS = "Missões locais", KILLS = "Criaturas derrotadas aqui", NONE = "Nenhuma terra ainda." },
     frFR = { TITLE = "%s en chiffres", REGIONS = "Régions découvertes", QUESTS = "Quêtes locales", KILLS = "Créatures vaincues ici", NONE = "Aucune terre pour l'instant." },
 }
+TEXTS.esMX = TEXTS.esES
 local function T()
-    local loc = GetLocale and GetLocale() or "enUS"
+    local loc = ns.LocaleKey()
     return TEXTS[loc] or TEXTS.enUS
 end
 
@@ -657,7 +664,15 @@ local DC = {}
 ns.DayCard = DC
 
 local DAY_TEXTS = {
-    enUS = { TITLE = "The day in numbers", LEVEL = "Level reached", QUESTS = "Quests done", ZONES = "Lands found", FALLS = "Falls", GOALS = "Goals reached", PAGES = "Pages written" },
+    enUS = { TITLE = "The day in numbers", LEVEL = "Level reached", QUESTS = "Quests done", ZONES = "Lands found", FALLS = "Falls", GOALS = "Goals reached", PAGES = "Pages written" }, esES = {
+            TITLE = "El día en cifras",
+            LEVEL = "Nivel alcanzado",
+            QUESTS = "Misiones completadas",
+            ZONES = "Tierras descubiertas",
+            FALLS = "Caídas",
+            GOALS = "Metas alcanzadas",
+            PAGES = "Páginas escritas",
+        },
     ptBR = { TITLE = "O dia em números", LEVEL = "Nível alcançado", QUESTS = "Missões cumpridas", ZONES = "Terras descobertas", FALLS = "Quedas", GOALS = "Metas cumpridas", PAGES = "Páginas escritas" },
     frFR = { TITLE = "Le jour en chiffres", LEVEL = "Niveau atteint", QUESTS = "Quêtes accomplies", ZONES = "Terres découvertes", FALLS = "Chutes", GOALS = "Objectifs atteints", PAGES = "Pages écrites" },
 }
@@ -720,7 +735,7 @@ function DC.Build(parent, width)
         card.rows[i] = row
     end
     function card:Set(day, reference)
-        local loc = GetLocale and GetLocale() or "enUS"
+        local loc = ns.LocaleKey()
         local t = DAY_TEXTS[loc] or DAY_TEXTS.enUS
         local n = DC.Count(day)
         card.title:SetText(t.TITLE)

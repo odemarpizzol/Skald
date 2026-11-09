@@ -12,7 +12,14 @@ local L = ({
         NEED = "Skald is required.",
         TIER_SET = "showing pages of rarity %d and above.",
         TIER_HELP = "use |cffffffff/skatlas tier 0-5|r (0 shows everything, 5 only legendary). Now: %d.",
-    },
+    }, esES = {
+            LOADED = "cargado. Las páginas aparecen en el mapa del mundo. |cffffffff/skatlas|r alterna los marcadores.",
+            ON = "marcadores visibles.",
+            OFF = "marcadores ocultos.",
+            NEED = "Se necesita Skald.",
+            TIER_SET = "mostrando páginas de rareza %d o superior.",
+            TIER_HELP = "usa |cffffffff/skatlas tier 0-5|r (0 muestra todo, 5 solo lo legendario). Actual: %d.",
+        },
     ptBR = {
         LOADED = "carregado. As páginas aparecem no mapa-múndi. |cffffffff/skatlas|r alterna os marcadores.",
         ON = "marcadores visíveis.",
@@ -29,7 +36,7 @@ local L = ({
         TIER_SET = "affichage des pages de rareté %d et plus.",
         TIER_HELP = "utilisez |cffffffff/skatlas tier 0-5|r (0 montre tout, 5 seulement les légendaires). Actuel\194\160: %d.",
     },
-})[GetLocale()] or nil
+})[GetLocale() == "esMX" and "esES" or GetLocale()] or nil
 if not L then
     L = {
         LOADED = "loaded. Pages appear on the world map. |cffffffff/skatlas|r toggles pins.",
@@ -112,7 +119,51 @@ local UI_TEXT = {
             boss = "Foes", dungeon = "Dungeons", zone = "Lands", mount = "Mounts",
             guild = "Guild", party = "Group", pet = "Pets", achievement = "Deeds", profession = "Crafts",
         },
-    },
+    }, esES = {
+            TAB = "Atlas",
+            SHOW = "Mostrar marcadores en el mapa del mundo",
+            OPEN = "Abrir el mapa del mundo",
+            SUMMARY = "%s: %d %s, %d %s.",
+            PAGE = "página",
+            PAGES = "páginas",
+            PIN = "marcador",
+            PINS = "marcadores",
+            HIDDEN = "%d ocultos por los filtros.",
+            HIDDEN_ONE = "1 oculto por los filtros.",
+            NONE = "Aún no hay páginas de este lugar.",
+            WHEN = "Fecha",
+            RANGE_ALL = "Todas",
+            RANGE_SESSION = "Esta sesión",
+            RANGE_TODAY = "Hoy",
+            FAVONLY = "Solo recuerdos favoritos",
+            REGION = "Esta región",
+            FIRST_VISIT = "Primera visita: %s",
+            R_LINE1 = "Misiones: %d   Caídas: %d   Enemigos: %d",
+            R_LINE2 = "Niveles: %d   Objetos: %d   Favoritos: %d",
+            CLICK_OPEN = "Haz clic para abrir la página en el libro",
+            NOT_SHOWN = "El libro no muestra esa página.",
+            STATUS = "Mostrando %d de %d páginas de este lugar.",
+            STATUS_NONE = "Ninguna página de aquí coincide con los filtros.",
+            OPACITY = "Opacidad de los marcadores",
+            OPACITY_HINT = "Los marcadores más tenues dejan ver los de las misiones del juego.",
+            RARITY = "Rareza mínima mostrada",
+            KINDS = "Páginas visibles",
+            KIND = {
+                quest = "Misiones",
+                level = "Niveles",
+                milestone = "Hitos",
+                death = "Muertes",
+                boss = "Enemigos",
+                dungeon = "Mazmorras",
+                zone = "Tierras",
+                mount = "Monturas",
+                guild = "Hermandad",
+                party = "Grupo",
+                pet = "Mascotas",
+                achievement = "Hazañas",
+                profession = "Oficios",
+            },
+        },
     ptBR = {
         TAB = "Atlas", SHOW = "Mostrar marcadores no mapa-múndi", OPEN = "Abrir o mapa-múndi",
         SUMMARY = "%s: %d %s, %d %s.", PAGE = "página", PAGES = "páginas", PIN = "marcador", PINS = "marcadores",
@@ -152,7 +203,8 @@ local UI_TEXT = {
         },
     },
 }
-local UI = UI_TEXT[GetLocale()] or UI_TEXT.enUS
+UI_TEXT.esMX = UI_TEXT.esES
+local UI = UI_TEXT[GetLocale() == "esMX" and "esES" or GetLocale()] or UI_TEXT.enUS
 local KIND_ORDER = {
     "quest", "level", "milestone", "death", "boss", "dungeon",
     "zone", "mount", "guild", "party", "pet", "achievement", "profession",

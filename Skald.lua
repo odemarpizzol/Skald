@@ -24,7 +24,7 @@ local MAX_ENTRIES = 5000
 -- Localization: texts live in Locales.lua.
 local LOCALES = ns.LOCALES
 
-local L = LOCALES[GetLocale()] or LOCALES.enUS
+local L = LOCALES[ns.LocaleKey()] or LOCALES.enUS
 local PHRASES = L.phrases
 PHRASES.bg = PHRASES.bg or PHRASES.bgWin   -- a battleground page draws from bgWin or bgLoss (PoolFor); this only lets AddEntry know the kind
 local TITLE = "Skald"
@@ -1189,13 +1189,16 @@ ns.InstanceName = function(e)
             for iid, list in pairs(names) do
                 for _, n in ipairs(list) do K.InstanceByName[n] = iid end
             end
+            if C.INSTANCE_NAMES_ESMX then
+                for iid, name in pairs(C.INSTANCE_NAMES_ESMX) do K.InstanceByName[name] = iid end
+            end
         end
         id = K.InstanceByName[e.zone]
     end
     local list = id and names[id]
     if not list then return nil end
-    local idx = ({ ptBR = 2, frFR = 3 })[GetLocale and GetLocale() or "enUS"] or 1
-    return list[idx]
+    local idx = ({ ptBR = 2, frFR = 3, esES = 4, esMX = 4 })[GetLocale and GetLocale() or "enUS"] or 1
+    return (GetLocale() == "esMX" and C.INSTANCE_NAMES_ESMX and C.INSTANCE_NAMES_ESMX[id]) or list[idx]
 end
 ns.PlaceName = function(e)
     if e.kind == "dungeon" then return ns.InstanceName(e) or e.zone end
@@ -1317,6 +1320,27 @@ K.PlaceArticlesFr = function(phrase, name, token)
     return result .. phrase:sub(from)
 end
 K.PlaceArticles = function(phrase, name, token)
+    if type(phrase) == "string" and type(name) == "string" and ns.LocaleKey() == "esES" and name:sub(1, 3) == "El " then
+        local result, from = "", 1
+        while true do
+            local at = phrase:find(token, from, true)
+            if not at then break end
+            local before = result .. phrase:sub(from, at - 1)
+            local word = before:match("(%S+) $")
+            local prep = word and word:lower()
+            local literal = token
+            if prep == "a" or prep == "de" then
+                local joined = prep == "a" and "al" or "del"
+                if word:match("^%u") then joined = joined:sub(1, 1):upper() .. joined:sub(2) end
+                before = before:sub(1, #before - #word - 1) .. joined .. " "
+                literal = name:sub(4)
+                if token == "%s" then literal = literal:gsub("%%", "%%%%") end
+            end
+            result = before .. literal
+            from = at + #token
+        end
+        return result .. phrase:sub(from)
+    end
     if type(phrase) == "string" and type(name) == "string" and GetLocale() == "frFR" then return K.PlaceArticlesFr(phrase, name, token) end
     if type(phrase) ~= "string" or type(name) ~= "string" or GetLocale() ~= "ptBR" then return phrase end
     local forms = K.PLACE_FORMS[K.PLACE_GENDER[name:match("^(%S+)") or ""] or ""]
@@ -1360,7 +1384,7 @@ local function RenderEntry(e)
     -- A hand-picked quest tells its own story.
     if e.kind == "quest" and e.q and ns.CURATED then
         local curated = ns.CURATED[e.q]
-        local text = curated and curated.text and (curated.text[GetLocale()] or curated.text.enUS)
+        local text = curated and curated.text and (curated.text[ns.LocaleKey()] or curated.text.enUS)
         if text then
             text = text:gsub("{quest}", function() return tostring(QuestTitleNow(e)) end)
             return ns.Gendered((text:gsub("{npc}", function() return npc end)))
@@ -1379,6 +1403,7 @@ local function RenderEntry(e)
         if city then shown = tostring(city) end
     end
     if e.kind == "goal" and ns.GoalName then shown = ns.GoalName(e.arg) end
+    if ns.ProfessionNameEs then shown = ns.ProfessionNameEs(e) or shown end
     if e.kind == "loot" then
         local ref, name, quality = ItemParts(e.arg)
         if ref then
@@ -1726,6 +1751,40 @@ K.PROFESSION_BY_NAME = {
     ["minage"] = "mining", ["dépeçage"] = "skinning", ["couture"] = "tailoring",
     ["cuisine"] = "cooking", ["secourisme"] = "firstaid", ["pêche"] = "fishing", ["joaillerie"] = "jewelcrafting",
 }
+K.PROFESSION_ES = {
+    firstaid = "Primeros auxilios",
+    blacksmithing = "Herrer\195\173a",
+    leatherworking = "Peleter\195\173a",
+    alchemy = "Alquimia",
+    herbalism = "Bot\195\161nica",
+    cooking = "Cocina",
+    mining = "Miner\195\173a",
+    tailoring = "Costura",
+    engineering = "Ingenier\195\173a",
+    enchanting = "Encantamiento",
+    fishing = "Pesca",
+    skinning = "Desollar",
+    jewelcrafting = "Joyer\195\173a",
+}
+K.PROFESSION_ES_TBC = {
+    firstaid = "Primeros auxilios",
+    blacksmithing = "Herrer\195\173a",
+    leatherworking = "Peleter\195\173a",
+    alchemy = "Alquimia",
+    herbalism = "Bot\195\161nica",
+    cooking = "Cocina",
+    mining = "Miner\195\173a",
+    tailoring = "Sastrer\195\173a",
+    engineering = "Ingenier\195\173a",
+    enchanting = "Encantamiento",
+    fishing = "Pesca",
+    skinning = "Desollar",
+    jewelcrafting = "Joyer\195\173a",
+}
+for _, names in ipairs({ K.PROFESSION_ES, K.PROFESSION_ES_TBC }) do
+    for key, name in pairs(names) do K.PROFESSION_BY_NAME[name:lower()] = key end
+end
+
 local function ProfessionKey(skillLine, name)
     local key = skillLine and K.PROFESSION_BY_LINE[tonumber(skillLine)]
     if key then return key end
@@ -1734,6 +1793,17 @@ local function ProfessionKey(skillLine, name)
         local bare = name:gsub("%s+%d+$", ""):lower()
         return K.PROFESSION_BY_NAME[bare]
     end
+end
+
+-- Older pages can have a profession's old-language label; Spanish resolves its stable key at read time.
+ns.ProfessionNameEs = function(e)
+    if ns.LocaleKey() ~= "esES" or (e.kind ~= "profession" and e.kind ~= "skill") then return nil end
+    local key = e.pf or ProfessionKey(e.skillLine, e.arg)
+    local names = ns.IsForever() and K.PROFESSION_ES or K.PROFESSION_ES_TBC
+    local name = key and names[key]
+    if not name then return nil end
+    local suffix = e.kind == "skill" and type(e.arg) == "string" and e.arg:match("(%s+%d+)$") or ""
+    return name .. (suffix or "")
 end
 
 SkaldAPI.ProfessionKey = ProfessionKey
@@ -6324,6 +6394,12 @@ K.FAMILY_ICONS = {
     { "scorp", "escorp" }, { "spider", "aranha", "araign" }, { "strider", "moa", "trotteur" }, { "turtle", "tartaruga", "tortue" },
     { "wind", "vento", "vents" }, { "wolf", "lobo", "loup" },
 }
+-- Spanish names from CreatureFamily (the order is the icon table above).
+for i, name in ipairs({ "murci\195\169lago", "oso", "jabal\195\173", "carro\195\177ero", "crocolisco", "felino", "cangrejo", "gorila", "hiena", "ave rapaz", "raptor", "esc\195\179rpido", "ara\195\177a", "zancudo", "tortuga", "serpiente alada", "lobo" }) do
+    K.FAMILY_ICONS[i][#K.FAMILY_ICONS[i] + 1] = name
+end
+K.FAMILY_ICONS[14][#K.FAMILY_ICONS[14] + 1] = "zancaalta" -- esMX CreatureFamily 12
+
 -- Our own pet art (Textures\\pet_<family>.tga) is used once it is in the style of the book; until then, the game's icons.
 K.OWN_PET_ART = true
 K.FAMILY_GAME_ICONS = {
@@ -6348,14 +6424,16 @@ K.FAMILY_BOX = {
 -- Portuguese one. A name we know in any of the three languages is shown in the language of now; any other (the game's
 -- own word for a family we do not list) is shown as saved.
 K.FAMILY_NAMES = {
-    { enUS = "Bat", ptBR = "Morcego", frFR = "Chauve-souris" }, { enUS = "Bear", ptBR = "Urso", frFR = "Ours" },
-    { enUS = "Boar", ptBR = "Javali", frFR = "Sanglier" }, { enUS = "Carrion Bird", ptBR = "Ave de Carni\195\167a", frFR = "Charognard" },
-    { enUS = "Crab", ptBR = "Caranguejo", frFR = "Crabe" }, { enUS = "Crocolisk", ptBR = "Crocolisco", frFR = "Crocolisque" },
-    { enUS = "Cat", ptBR = "Gato", frFR = "F\195\169lin" }, { enUS = "Gorilla", ptBR = "Gorila", frFR = "Gorille" },
-    { enUS = "Hyena", ptBR = "Hiena", frFR = "Hy\195\168ne" }, { enUS = "Owl", ptBR = "Coruja", frFR = "Chouette" },
-    { enUS = "Raptor", ptBR = "Raptor", frFR = "Raptor" }, { enUS = "Scorpid", ptBR = "Escorpi\195\173deo", frFR = "Scorpide" },
-    { enUS = "Spider", ptBR = "Aranha", frFR = "Araign\195\169e" }, { enUS = "Wolf", ptBR = "Lobo", frFR = "Loup" },
-    { enUS = "Turtle", ptBR = "Tartaruga", frFR = "Tortue" },
+    { enUS = "Bat", esES = "Murci\195\169lago", ptBR = "Morcego", frFR = "Chauve-souris" }, { enUS = "Bear", esES = "Oso", ptBR = "Urso", frFR = "Ours" },
+    { enUS = "Boar", esES = "Jabal\195\173", ptBR = "Javali", frFR = "Sanglier" }, { enUS = "Carrion Bird", esES = "Carro\195\177ero", ptBR = "Ave de Carni\195\167a", frFR = "Charognard" },
+    { enUS = "Crab", esES = "Cangrejo", ptBR = "Caranguejo", frFR = "Crabe" }, { enUS = "Crocolisk", esES = "Crocolisco", ptBR = "Crocolisco", frFR = "Crocolisque" },
+    { enUS = "Cat", esES = "Felino", ptBR = "Gato", frFR = "F\195\169lin" }, { enUS = "Gorilla", esES = "Gorila", ptBR = "Gorila", frFR = "Gorille" },
+    { enUS = "Hyena", esES = "Hiena", ptBR = "Hiena", frFR = "Hy\195\168ne" }, { enUS = "Owl", esES = "Ave rapaz", ptBR = "Coruja", frFR = "Chouette" },
+    { enUS = "Raptor", esES = "Raptor", ptBR = "Raptor", frFR = "Raptor" }, { enUS = "Scorpid", esES = "Esc\195\179rpido", ptBR = "Escorpi\195\173deo", frFR = "Scorpide" },
+    { enUS = "Spider", esES = "Ara\195\177a", ptBR = "Aranha", frFR = "Araign\195\169e" }, { enUS = "Wolf", esES = "Lobo", ptBR = "Lobo", frFR = "Loup" },
+    { enUS = "Turtle", esES = "Tortuga", ptBR = "Tartaruga", frFR = "Tortue" },
+    { enUS = "Tallstrider", esES = "Zancudo", esMX = "Zancaalta" },
+    { enUS = "Wind Serpent", esES = "Serpiente alada", esMX = "Serpiente alada" },
 }
 Mile.FamilyLabel = function(fam)
     if type(fam) ~= "string" or fam == "" then return fam end
@@ -6363,7 +6441,7 @@ Mile.FamilyLabel = function(fam)
     local here = GetLocale()
     for _, names in ipairs(K.FAMILY_NAMES) do
         for _, name in pairs(names) do
-            if name:lower() == lower then return names[here] or names.enUS end
+            if name:lower() == lower then return names[here] or names[ns.LocaleKey(here)] or names.enUS end
         end
     end
     return fam

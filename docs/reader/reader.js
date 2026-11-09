@@ -51,12 +51,29 @@
       tip: { level: 'Niveau %1', giver: 'Donnée par %1', falls: 'Après %1 chutes', stack: '%1 fabriqués', open: 'Cliquez pour chercher sur Wowhead' }
     }
   };
+  T.esES = {
+    title: 'Skald Lector',
+    intro: 'Lee el diario de tu personaje de World of Warcraft como un libro, fuera del juego.',
+    steps: ['En el juego, escribe /skald reader.', 'Copia cada parte del texto (clic, Ctrl+A, Ctrl+C).', 'Pégala aquí. Puedes pegar las partes una tras otra.'],
+    label: 'Pega aquí el texto del diario', language: 'Idioma', jumpLabel: 'Día', open: 'Abrir el libro', clear: 'Borrar', back: 'Volver a pegar', print: 'Guardar como PDF', sound: 'Sonido al pasar página', turnBack: 'Página anterior', turnOn: 'Página siguiente',
+    privacy: 'Nada sale de esta página: tu navegador lee el texto sin enviarlo a ningún sitio.',
+    part: 'Parte %1 de %2', partBad: 'Parte %1: copia incompleta', waiting: 'falta la parte %1',
+    ready: 'Ya están todas las partes. Puedes abrir el libro.', mixed: 'Estas partes pertenecen a diarios distintos. Borra el texto y vuelve a pegarlo.',
+    empty: 'Pega el texto que has copiado del juego.', diaryOf: 'Diario de %1', level: 'nivel %1 %2', story: 'La historia hasta hoy', saga: 'La Saga', days: 'Días', index: 'Índice',
+    day: 'Día %1', page: 'Página %1 de %2', pages: 'Páginas %1–%2 de %3', cover: 'Portada', first: 'Primera página escrita', played: 'Tiempo de camino', goals: 'Metas alcanzadas', points: 'Puntos de metas',
+    stat: { quest: 'Misiones completadas', level: 'Niveles ganados', death: 'Veces que caí', dungeon: 'Mazmorras visitadas', boss: 'Jefes derrotados', kill: 'Criaturas vencidas' },
+    date: function (d) { return d.toLocaleDateString('es'); }, hours: '%1 h %2 min', minutes: '%1 min', tier: ['Trivial', 'Común', 'Poco común', 'Raro', 'Épico', 'Legendario'],
+    truncated: 'El diario tiene más páginas que las que has pegado.',
+    tip: { level: 'Nivel %1', giver: 'Encargo de %1', falls: 'Después de %1 caídas', stack: '%1 fabricados', open: 'Haz clic para buscar en Wowhead' }
+  };
+  T.esMX = T.esES;
+  function languageKey(locale) { return locale === 'esMX' ? 'esES' : locale; }
   var lang = 'ptBR';
   function L() { return T[lang] || T.ptBR; }
   function fmt(s) { var a = arguments; return String(s).replace(/%(\d)/g, function (_, n) { return a[+n] !== undefined ? a[+n] : ''; }); }
   (function pickLanguage() {
     var n = (navigator.language || 'pt-BR').toLowerCase();
-    lang = n.indexOf('fr') === 0 ? 'frFR' : n.indexOf('en') === 0 ? 'enUS' : 'ptBR';
+    lang = n.indexOf('es') === 0 ? 'esES' : n.indexOf('fr') === 0 ? 'frFR' : n.indexOf('en') === 0 ? 'enUS' : 'ptBR';
   })();
 
   // ---- reading the text ----------------------------------------------------------------------------------------
@@ -618,7 +635,7 @@
 
   function openBook(m) {
     model = m;
-    lang = T[m.locale] ? m.locale : lang;
+    lang = T[m.locale] ? languageKey(m.locale) : lang;
     applyLanguage();
     applyPreferences(m.prefs);
     singlePage = window.innerWidth <= 760;
@@ -652,7 +669,9 @@
 
   function applyLanguage() {
     var t = L();
-    document.documentElement.lang = lang === 'ptBR' ? 'pt-BR' : lang === 'frFR' ? 'fr' : 'en';
+    $('lang').value = languageKey(lang);
+    $('lang').setAttribute('aria-label', t.language || 'Language');
+    document.documentElement.lang = lang === 'ptBR' ? 'pt-BR' : lang === 'frFR' ? 'fr' : lang === 'esES' ? 'es' : 'en';
     document.title = t.title;
     $('t-title').textContent = t.title;
     $('t-intro').textContent = t.intro;
@@ -667,7 +686,7 @@
     $('sound').setAttribute('aria-label', t.sound); $('sound').title = t.sound;
     ['cornerL', 'prev'].forEach(function (id) { $(id).title = t.turnBack; $(id).setAttribute('aria-label', t.turnBack); });
     ['cornerR', 'next'].forEach(function (id) { $(id).title = t.turnOn; $(id).setAttribute('aria-label', t.turnOn); });
-    $('jump').setAttribute('aria-label', t.days);
+    $('jump').setAttribute('aria-label', t.jumpLabel || t.days);
   }
 
   var parsed = [];

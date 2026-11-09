@@ -22,56 +22,56 @@ local C = {}
 -- (2026-11-05). NPC/spell/event objectives can be mistaken for fights or sightseeing.
 -- Text-only overrides also repair old pages without changing their saved type or rarity.
 C[5621] = { text = {
-    enUS = "In \"{quest}\", I healed a wounded sentinel and strengthened her with a blessing. My first lessons became help someone could feel.",
+    enUS = "In \"{quest}\", I healed a wounded sentinel and strengthened her with a blessing. My first lessons became help someone could feel.", esES = "En «{quest}» pude sanar a una centinela herida y darle fuerza con una bendición. Mis primeras lecciones sirvieron para aliviar a alguien.",
     ptBR = "Em \"{quest}\", curei uma sentinela ferida e a fortaleci com uma bênção. Minhas primeiras lições se tornaram ajuda que alguém pôde sentir.",
     frFR = "Pour «\194\160{quest}\194\160», j'ai soigné une sentinelle blessée et l'ai fortifiée par une bénédiction. Mes premières leçons ont servi à soulager quelqu'un.",
 } }
 C[99053] = { text = {
-    enUS = "\"{quest}\" ended with a rescue. A sentinel escaped danger, and I returned to tell someone who had feared for her.",
+    enUS = "\"{quest}\" ended with a rescue. A sentinel escaped danger, and I returned to tell someone who had feared for her.", esES = "Terminé «{quest}» después de rescatar a una centinela. Volví con la noticia de que había escapado del peligro.",
     ptBR = "\"{quest}\" terminou com um resgate. Uma sentinela escapou do perigo, e voltei para contar a quem temia por ela.",
     frFR = "Avec «\194\160{quest}\194\160», j'ai porté secours à une sentinelle. Elle a échappé au danger, et je suis de retour auprès de ceux qui craignaient pour elle.",
 } }
 C[922] = { text = {
-    enUS = "I delivered a seed in \"{quest}\", hoping it would help the research. It carried the corruption too; the search for a cure goes on.",
+    enUS = "I delivered a seed in \"{quest}\", hoping it would help the research. It carried the corruption too; the search for a cure goes on.", esES = "Llevé una semilla para la investigación de «{quest}». También llevaba la corrupción; aún queda camino hasta encontrar una cura.",
     ptBR = "Entreguei uma semente em \"{quest}\", na esperança de ajudar nos estudos. Ela também carregava a corrupção; a busca por uma cura continua.",
     frFR = "J'ai livré une graine pour «\194\160{quest}\194\160», dans l'espoir d'aider les recherches. Elle portait aussi la corruption\194\160; la recherche d'un remède continue.",
 } }
 C[6342] = { text = {
-    enUS = "A hippogryph carried me to my delivery in \"{quest}\". The fish samples reached their destination, and I learned a new route above the sea.",
+    enUS = "A hippogryph carried me to my delivery in \"{quest}\". The fish samples reached their destination, and I learned a new route above the sea.", esES = "Un hipogrifo me llevó a cumplir la entrega de «{quest}». Las muestras de peces llegaron a su destino y yo aprendí una ruta sobre el mar.",
     ptBR = "Um hipogrifo me levou à entrega de \"{quest}\". As amostras de peixe chegaram ao destino, e aprendi uma nova rota sobre o mar.",
     frFR = "Un hippogriffe m'a conduit{g:|e} vers ma livraison pour «\194\160{quest}\194\160». Les échantillons de poissons sont arrivés à destination, et j'ai découvert une route au-dessus de la mer.",
 } }
 
 -- Thunderfury (Legendary) ---------------------------------------------------
 C[7785] = { tier = 5, text = {
-    enUS = "A vessel, a whisper of wind, and the beginning of a legend: \"{quest}\". {npc} set me on a road few ever walk.",
+    enUS = "A vessel, a whisper of wind, and the beginning of a legend: \"{quest}\". {npc} set me on a road few ever walk.", esES = "Un recipiente y un susurro del viento me pusieron en marcha con «{quest}». {npc} abrió ante mí un camino que pocas personas llegan a recorrer.",
     ptBR = "Um receptáculo, um sussurro de vento e o começo de uma lenda: \"{quest}\". {npc} me pôs numa estrada que poucos trilham.",
     frFR = "Un réceptacle, un souffle de vent et le début d'une légende\194\160: «\194\160{quest}\194\160». {npc} m'a mis sur une route que peu de gens empruntent.",
 } }
 C[7786] = { tier = 5, text = {
-    enUS = "The wind itself had a name, and I learned it: \"{quest}\". Whatever answers to that name is not to be trifled with.",
+    enUS = "The wind itself had a name, and I learned it: \"{quest}\". Whatever answers to that name is not to be trifled with.", esES = "En «{quest}» aprendí que hasta el viento puede responder a un nombre. No lo olvidaré cuando vuelva a escucharlo.",
     ptBR = "O próprio vento tinha um nome, e eu o aprendi: \"{quest}\". Seja o que for que responde a esse nome, não é para brincadeiras.",
     frFR = "Le vent lui-même avait un nom, et je l'ai appris\194\160: «\194\160{quest}\194\160». Ce qui répond à ce nom ne se prend pas à la légère.",
 } }
 C[7787] = { tier = 5, text = {
-    enUS = "Thunderfury rises. Some blades are forged; this one was earned along a long and fearsome road. \"{quest}\" is a name the world will repeat.",
+    enUS = "Thunderfury rises. Some blades are forged; this one was earned along a long and fearsome road. \"{quest}\" is a name the world will repeat.", esES = "Con «{quest}» dejé que la leyenda tomara forma en una hoja ganada paso a paso. El esfuerzo de ese camino sigue en mis manos.",
     ptBR = "Thunderfury se ergue. Algumas lâminas são forjadas; esta foi conquistada numa estrada longa e temível. \"{quest}\" é um nome que o mundo vai repetir.",
     frFR = "Foudrefuria se dresse. Certaines lames sont forgées\194\160; celle-ci a été méritée sur une longue et redoutable route. «\194\160{quest}\194\160» est un nom que le monde répétera.",
 } }
 
 -- Atiesh (Legendary) --------------------------------------------------------
 C[9250] = { tier = 5, text = {
-    enUS = "The frame of a legendary staff, and a road ahead that does not forgive hesitation: \"{quest}\".",
+    enUS = "The frame of a legendary staff, and a road ahead that does not forgive hesitation: \"{quest}\".", esES = "El armazón de un bastón legendario espera algo más de mí. «{quest}» abrió un camino que exige constancia.",
     ptBR = "A armação de um cajado lendário, e uma estrada pela frente que não perdoa hesitação: \"{quest}\".",
     frFR = "La structure d'un bâton légendaire, et une route devant moi qui ne pardonne pas l'hésitation\194\160: «\194\160{quest}\194\160».",
 } }
 C[9251] = { tier = 5, text = {
-    enUS = "A staff that should have been a guardian's, and is now befouled. What I do with it next will matter: \"{quest}\".",
+    enUS = "A staff that should have been a guardian's, and is now befouled. What I do with it next will matter: \"{quest}\".", esES = "En «{quest}» encontré un bastón que debió pertenecer a un guardián y ahora lleva corrupción. Mis próximos pasos tendrán que responder por él.",
     ptBR = "Um cajado que devia ser de um guardião, e que agora está corrompido. O que farei com ele em seguida vai importar: \"{quest}\".",
     frFR = "Un bâton qui aurait dû appartenir à un gardien, et qui est désormais souillé. Ce que j'en ferai ensuite comptera\194\160: «\194\160{quest}\194\160».",
 } }
 local ATIESH_WHOLE = { tier = 5, text = {
-    enUS = "The greatstaff is whole, and so is the legend: \"{quest}\". Let the guardians of old know it has found a bearer.",
+    enUS = "The greatstaff is whole, and so is the legend: \"{quest}\". Let the guardians of old know it has found a bearer.", esES = "La obra de «{quest}» está completa. El gran bastón ya tiene quien lleve su historia más allá de esta página.",
     ptBR = "O grande cajado está inteiro, e a lenda também: \"{quest}\". Que os guardiões de outrora saibam que ele encontrou quem o empunhe.",
     frFR = "Le grand bâton est entier, et la légende aussi\194\160: «\194\160{quest}\194\160». Que les gardiens d'autrefois sachent qu'il a trouvé son porteur.",
 } }
@@ -79,12 +79,12 @@ for _, id in ipairs({ 9257, 9269, 9270, 9271 }) do C[id] = ATIESH_WHOLE end
 
 -- Attunements and keys (Epic) -----------------------------------------------
 C[6502] = { tier = 4, text = {
-    enUS = "Step by step I earned it: \"{quest}\". An amulet to open a dragon's door, and the nerve to walk through.",
+    enUS = "Step by step I earned it: \"{quest}\". An amulet to open a dragon's door, and the nerve to walk through.", esES = "Gané paso a paso lo que necesitaba en «{quest}»: un amuleto para abrir la puerta de un dragón y valor para cruzarla.",
     ptBR = "Passo a passo, eu a conquistei: \"{quest}\". Um amuleto para abrir a porta de um dragão, e a coragem de atravessá-la.",
     frFR = "Pas à pas, je l'ai mérité\194\160: «\194\160{quest}\194\160». Une amulette pour ouvrir la porte d'un dragon, et le courage de la franchir.",
 } }
 local KEY = { tier = 4, text = {
-    enUS = "A key, long sought and hard won: \"{quest}\". Behind that door waits a place where the bravest are measured.",
+    enUS = "A key, long sought and hard won: \"{quest}\". Behind that door waits a place where the bravest are measured.", esES = "Hoy conseguí la llave que buscaba en «{quest}». Detrás de la puerta me espera otra prueba, pero esta promesa está cumplida.",
     ptBR = "Uma chave, muito procurada e arduamente conquistada: \"{quest}\". Atrás daquela porta há um lugar onde os bravos são medidos.",
     frFR = "Une clé, longtemps cherchée et durement gagnée\194\160: «\194\160{quest}\194\160». Derrière cette porte se trouve un lieu où les plus braves sont mesurés.",
 } }
@@ -92,72 +92,72 @@ C[5505], C[5511] = KEY, KEY
 
 -- Long chains (Epic and Rare) -----------------------------------------------
 C[1267] = { tier = 4, text = {
-    enUS = "A man had vanished, and a long trail of favors, letters and doubt led to the end of it: \"{quest}\". Not every hero draws a sword; some follow a thread.",
+    enUS = "A man had vanished, and a long trail of favors, letters and doubt led to the end of it: \"{quest}\". Not every hero draws a sword; some follow a thread.", esES = "Seguí cartas, favores y dudas en «{quest}» hasta saber qué había ocurrido con un hombre desaparecido. Una historia también puede resolverse prestando atención.",
     ptBR = "Um homem desapareceu, e uma longa trilha de favores, cartas e dúvidas levou ao fim dela: \"{quest}\". Nem todo herói saca a espada; alguns seguem um fio.",
     frFR = "Un homme avait disparu, et une longue piste de faveurs, de lettres et de doutes menait à sa fin\194\160: «\194\160{quest}\194\160». Tous les héros ne tirent pas l'épée\194\160; certains suivent un fil.",
 } }
 C[5944] = { tier = 4, text = {
-    enUS = "I walked into dreams and came back: \"{quest}\". Not every road is paved with stone.",
+    enUS = "I walked into dreams and came back: \"{quest}\". Not every road is paved with stone.", esES = "Crucé el mundo de los sueños en «{quest}» y encontré el camino de vuelta. Hay rutas que nunca aparecerán trazadas sobre piedra.",
     ptBR = "Entrei nos sonhos e voltei: \"{quest}\". Nem toda estrada é feita de pedra.",
     frFR = "J'ai traversé le monde des rêves et retrouvé mon chemin\194\160: «\194\160{quest}\194\160». Toutes les routes ne sont pas pavées de pierre.",
 } }
 C[8729] = { tier = 4, text = {
-    enUS = "The sea has a temper, and I answered it: \"{quest}\". The tide remembers those who stood before it.",
+    enUS = "The sea has a temper, and I answered it: \"{quest}\". The tide remembers those who stood before it.", esES = "El mar puso a prueba mi voluntad en «{quest}». Hoy puedo contar que no aparté la mirada de la marea.",
     ptBR = "O mar tem seu temperamento, e eu o enfrentei: \"{quest}\". A maré se lembra de quem ficou diante dela.",
     frFR = "La mer a son caractère, et j'y ai répondu\194\160: «\194\160{quest}\194\160». La marée se souvient de ceux qui se sont tenus devant elle.",
 } }
 local SILITHID = { tier = 4, text = {
-    enUS = "Something stirs beneath the sands, and I followed it to the end: \"{quest}\". The silithid rise, and so do I.",
+    enUS = "Something stirs beneath the sands, and I followed it to the end: \"{quest}\". The silithid rise, and so do I.", esES = "Seguí lo que despertaba bajo las arenas hasta el final de «{quest}». La amenaza de los silítidos ya tiene un lugar en mi memoria.",
     ptBR = "Algo se agita sob as areias, e eu o segui até o fim: \"{quest}\". Os silitídeos se erguem, e eu também.",
     frFR = "Quelque chose remue sous les sables, et je l'ai suivi jusqu'au bout\194\160: «\194\160{quest}\194\160». Les silithides se lèvent, et moi aussi.",
 } }
 C[4267], C[32] = SILITHID, SILITHID
 C[8446] = { tier = 4, text = {
-    enUS = "A nightmare closed over me and I walked through it: \"{quest}\".",
+    enUS = "A nightmare closed over me and I walked through it: \"{quest}\".", esES = "La pesadilla de «{quest}» se cerró a mi alrededor. La atravesé y regresé para escribirlo.",
     ptBR = "Um pesadelo se fechou sobre mim e eu o atravessei: \"{quest}\".",
     frFR = "Un cauchemar s'est refermé sur moi et je l'ai traversé\194\160: «\194\160{quest}\194\160».",
 } }
 C[8447] = { tier = 4, text = {
-    enUS = "Legends do not wake on their own. \"{quest}\" is what it took.",
+    enUS = "Legends do not wake on their own. \"{quest}\" is what it took.", esES = "Lo vivido en «{quest}» me recordó que una leyenda necesita manos que la pongan en marcha. Hoy puse las mías.",
     ptBR = "As lendas não despertam sozinhas. \"{quest}\" foi o que custou.",
     frFR = "Les légendes ne s'éveillent pas seules. «\194\160{quest}\194\160» est ce qu'il a fallu.",
 } }
 
 -- Duskwood's long tales, and a king's audience (Rare) -----------------------
 C[55] = { tier = 3, text = {
-    enUS = "The shadow over Duskwood had a name, and the name was \"{quest}\". I followed it until there was nothing left to follow.",
+    enUS = "The shadow over Duskwood had a name, and the name was \"{quest}\". I followed it until there was nothing left to follow.", esES = "Encontré un nombre para la sombra del bosque en «{quest}». Seguí su rastro hasta que dejó de haber una pregunta pendiente.",
     ptBR = "A sombra sobre Duskwood tinha um nome, e o nome era \"{quest}\". Segui-o até não haver mais nada a seguir.",
     frFR = "L'ombre sur le Bois de la Pénombre avait un nom, et ce nom était «\194\160{quest}\194\160». Je l'ai suivie jusqu'à ce qu'il n'y ait plus rien à suivre.",
 } }
 C[253] = { tier = 3, text = {
-    enUS = "A grim tale reached its grim end: \"{quest}\". Duskwood keeps its secrets, but not this one.",
+    enUS = "A grim tale reached its grim end: \"{quest}\". Duskwood keeps its secrets, but not this one.", esES = "Una historia sombría encontró su final en «{quest}». Hoy el bosque conserva un secreto menos.",
     ptBR = "Uma história sombria chegou ao seu sombrio fim: \"{quest}\". Duskwood guarda seus segredos, mas não este.",
     frFR = "Un sombre récit a atteint sa sombre fin\194\160: «\194\160{quest}\194\160». Le Bois de la Pénombre garde ses secrets, mais pas celui-ci.",
 } }
 C[98] = { tier = 3, text = {
-    enUS = "The legend of Stalvan, told to its last word: \"{quest}\". Some stories wait in the dark for someone to finish them.",
+    enUS = "The legend of Stalvan, told to its last word: \"{quest}\". Some stories wait in the dark for someone to finish them.", esES = "Llevé la historia de Stalvan hasta su última palabra en «{quest}». No todos los relatos esperan su final a plena luz.",
     ptBR = "A lenda de Stalvan, contada até a última palavra: \"{quest}\". Algumas histórias esperam no escuro por alguém que as termine.",
     frFR = "La légende de Stalvan, racontée jusqu'à son dernier mot\194\160: «\194\160{quest}\194\160». Certaines histoires attendent dans le noir que quelqu'un les termine.",
 } }
 C[396] = { tier = 3, text = {
-    enUS = "At the end of a long climb, an audience with a king: \"{quest}\".",
+    enUS = "At the end of a long climb, an audience with a king: \"{quest}\".", esES = "La larga subida de «{quest}» terminó en una audiencia con un rey. Me detuve a recordar todo lo que había costado llegar.",
     ptBR = "No fim de uma longa subida, uma audiência com um rei: \"{quest}\".",
     frFR = "Au bout d'une longue ascension, une audience avec un roi\194\160: «\194\160{quest}\194\160».",
 } }
 
 -- Second batch: long chains at the top level, again told only from their names.
 C[3628] = { tier = 4, text = {
-    enUS = "A name earned in fire: \"{quest}\". I am not the one who began this road.",
+    enUS = "A name earned in fire: \"{quest}\". I am not the one who began this road.", esES = "El fuego dejó un nombre nuevo junto al mío en «{quest}». Ya no soy quien empezó este camino.",
     ptBR = "Um nome conquistado no fogo: \"{quest}\". Não sou a mesma pessoa que começou esta estrada.",
     frFR = "Un nom gagné dans le feu\194\160: «\194\160{quest}\194\160». Cette route a commencé avant moi.",
 } }
 C[5466] = { tier = 4, text = {
-    enUS = "The lich had a name and a cold hall, and I took the road to both: \"{quest}\".",
+    enUS = "The lich had a name and a cold hall, and I took the road to both: \"{quest}\".", esES = "Seguí el rastro de un liche hasta su sala helada en «{quest}». Hoy puedo escribir el final del encuentro.",
     ptBR = "O lich tinha um nome e um salão gelado, e tomei a estrada para os dois: \"{quest}\".",
     frFR = "La liche avait un nom et une salle glacée. J'ai suivi la piste jusqu'à son repaire\194\160: «\194\160{quest}\194\160».",
 } }
 C[3962] = { tier = 4, text = {
-    enUS = "\"{quest}\". Some warnings are worth heeding, and some gifts are worth taking. I did what the road asked.",
+    enUS = "\"{quest}\". Some warnings are worth heeding, and some gifts are worth taking. I did what the road asked.", esES = "«{quest}» me dejó una advertencia y un regalo que merecía ser aceptado. Hice lo que me pedía el camino.",
     ptBR = "\"{quest}\". Alguns avisos merecem ser ouvidos, e alguns presentes merecem ser aceitos. Fiz o que a estrada pediu.",
     frFR = "«\194\160{quest}\194\160». Certains avertissements valent d'être écoutés, et certains présents d'être acceptés. J'ai fait ce que la route demandait.",
 } }
@@ -165,85 +165,85 @@ C[3962] = { tier = 4, text = {
 -- Third batch: written from what each quest asks and what the NPC says on the hand-in.
 -- Eastern Plaguelands cauldrons: curated so the length of the chain does not make them legendary.
 local CAULDRON = { tier = 3, text = {
-    enUS = "Reagents in the mix, and the Scourge near it recoiled: \"{quest}\". One less source of the plague.",
+    enUS = "Reagents in the mix, and the Scourge near it recoiled: \"{quest}\". One less source of the plague.", esES = "Con los componentes de «{quest}», una fuente de la peste dejó de ayudar a la Plaga. Mis manos también pueden cambiar estas tierras.",
     ptBR = "Reagentes na mistura, e o Flagelo ao redor recuou: \"{quest}\". Uma fonte a menos da praga.",
     frFR = "Des composants dans le mélange, et le Fléau s'est reculé devant\194\160: «\194\160{quest}\194\160». Une source de peste en moins.",
 } }
 for _, id in ipairs({ 5218, 5221, 5224, 5227 }) do C[id] = CAULDRON end
 
 local MISSION_DONE = { tier = 4, text = {
-    enUS = "Every cauldron I reworked now turns against the plague that made it: \"{quest}\". Won with reagents and patience, not only steel.",
+    enUS = "Every cauldron I reworked now turns against the plague that made it: \"{quest}\". Won with reagents and patience, not only steel.", esES = "Los calderos de «{quest}» se vuelven ahora contra la peste que los alimentaba. Esta parte de la victoria necesitó componentes y paciencia.",
     ptBR = "Cada caldeirão que refiz agora se volta contra a praga que o criou: \"{quest}\". Vencido com reagentes e paciência, e não só com aço.",
     frFR = "Chaque chaudron que j'ai remanié se retourne désormais contre la peste qui l'a fait naître\194\160: «\194\160{quest}\194\160». Gagné avec des composants et de la patience, pas seulement de l'acier.",
 } }
 C[5237], C[5238] = MISSION_DONE, MISSION_DONE
 
 C[8182] = { tier = 4, text = {
-    enUS = "Legend speaks of the Soulflayer ruling the old troll world through terror, and it may rise again: \"{quest}\" put a name on the threat.",
+    enUS = "Legend speaks of the Soulflayer ruling the old troll world through terror, and it may rise again: \"{quest}\" put a name on the threat.", esES = "La amenaza que encontré en «{quest}» lleva la memoria de un antiguo terror trol. Hoy pude poner un nombre a lo que puede regresar.",
     ptBR = "A lenda fala de um ser que governou o antigo mundo troll pelo terror, e ele pode se erguer de novo: \"{quest}\" deu um nome à ameaça.",
     frFR = "La légende dit que l'Écorcheur d'âmes régnait sur l'ancien monde troll par la terreur, et qu'il pourrait revenir\194\160: «\194\160{quest}\194\160» a mis un nom sur la menace.",
 } }
 C[8730] = { tier = 4, text = {
-    enUS = "Nefarian is slain and the shard goes back where it belongs: \"{quest}\". The Aspects themselves are watching what I do next.",
+    enUS = "Nefarian is slain and the shard goes back where it belongs: \"{quest}\". The Aspects themselves are watching what I do next.", esES = "Nefarian ha caído y el fragmento vuelve al lugar que le corresponde en «{quest}». Sé que mis decisiones tienen testigos más antiguos que yo.",
     ptBR = "Nefarian está morto e o fragmento volta ao lugar a que pertence: \"{quest}\". Os próprios Aspectos observam o que farei em seguida.",
     frFR = "Nefarian est mort et l'éclat retourne là où il doit être\194\160: «\194\160{quest}\194\160». Les Aspects eux-mêmes observent ce que je ferai ensuite.",
 } }
 
 C[5168] = { tier = 3, text = {
-    enUS = "A libram and a shield, together again: \"{quest}\". The heroes of Darrowshire are remembered a little more.",
+    enUS = "A libram and a shield, together again: \"{quest}\". The heroes of Darrowshire are remembered a little more.", esES = "Reuní de nuevo un libro sagrado y un escudo en «{quest}». Los recuerdos de quienes defendieron su hogar merecen ese cuidado.",
     ptBR = "Um libram e um escudo, juntos de novo: \"{quest}\". Os heróis de Darrowshire são lembrados um pouco mais.",
     frFR = "Un libram et un bouclier, de nouveau réunis\194\160: «\194\160{quest}\194\160». Les héros de Darrowshire sont un peu mieux rappelés.",
 } }
 C[5181] = { tier = 3, text = {
-    enUS = "The skull of a ravager and the shattered sword of a traitor: \"{quest}\". Even villains belong in the annals of Darrowshire.",
+    enUS = "The skull of a ravager and the shattered sword of a traitor: \"{quest}\". Even villains belong in the annals of Darrowshire.", esES = "Un cráneo y una espada rota cerraron mi parte en «{quest}». También los nombres que duelen tienen lugar en la historia.",
     ptBR = "O crânio de um devastador e a espada partida de um traidor: \"{quest}\". Até os vilões têm lugar nos anais de Darrowshire.",
     frFR = "Le crâne d'un ravageur et l'épée brisée d'un traître\194\160: «\194\160{quest}\194\160». Même les infâmes ont leur place dans les annales de Darrowshire.",
 } }
 C[5242] = { tier = 3, text = {
-    enUS = "The straight path down to the bottom, and a head to show for it: \"{quest}\". The Shadow Council will not forget this blow.",
+    enUS = "The straight path down to the bottom, and a head to show for it: \"{quest}\". The Shadow Council will not forget this blow.", esES = "Bajé hasta el final del camino de «{quest}» y regresé con la prueba del golpe dado al Consejo de la Sombra.",
     ptBR = "O caminho reto até o fundo, e uma cabeça como prova: \"{quest}\". O Conselho das Sombras não esquecerá este golpe.",
     frFR = "Le chemin direct jusqu'au fond, et une tête pour le prouver\194\160: «\194\160{quest}\194\160». Le Conseil des ténèbres n'oubliera pas ce coup.",
 } }
 
 local EYE = { tier = 4, text = {
-    enUS = "Tales of my heroics travel far, and the honour is mine: \"{quest}\". Let the enemy hear it.",
+    enUS = "Tales of my heroics travel far, and the honour is mine: \"{quest}\". Let the enemy hear it.", esES = "El recuerdo de «{quest}» ha llevado mi nombre más lejos de lo que alcanzan mis pasos. Quiero merecer lo que se cuente de mí.",
     ptBR = "Contos dos meus feitos viajam longe, e a honra é minha: \"{quest}\". Que o inimigo ouça isso.",
     frFR = "Le récit de mes exploits voyage loin, et l'honneur est pour moi\194\160: «\194\160{quest}\194\160». Que l'ennemi l'entende.",
 } }
 C[7167], C[7172] = EYE, EYE
 C[6187] = { tier = 4, text = {
-    enUS = "I led an army against the man who was once Nathanos Marris, and order is restored: \"{quest}\". May his memory rest easier now.",
+    enUS = "I led an army against the man who was once Nathanos Marris, and order is restored: \"{quest}\". May his memory rest easier now.", esES = "Guié un ejército en «{quest}» contra quien una vez fue Nathanos Marris. La batalla acabó y con ella una parte de aquella historia.",
     ptBR = "Liderei um exército contra aquele que um dia foi Nathanos Marris, e a ordem foi restaurada: \"{quest}\". Que a memória dele descanse em paz agora.",
     frFR = "J'ai mené une armée contre l'homme qui fut autrefois Nathanos Marris, et l'ordre est rétabli\194\160: «\194\160{quest}\194\160». Que sa mémoire repose plus paisiblement.",
 } }
 
 C[8587] = { tier = 3, text = {
-    enUS = "Five hundred pounds of chicken, carried across Azeroth: \"{quest}\". Not every legend is grim.",
+    enUS = "Five hundred pounds of chicken, carried across Azeroth: \"{quest}\". Not every legend is grim.", esES = "Crucé Azeroth con una cantidad poco razonable de pollo para «{quest}». El libro también necesita recordar los viajes que hacen sonreír.",
     ptBR = "Cerca de duzentos e vinte e sete quilos de frango, levados por todo Azeroth: \"{quest}\". Nem toda lenda é sombria.",
     frFR = "Environ deux cent vingt-sept kilos de poulet, portés à travers Azeroth\194\160: «\194\160{quest}\194\160». Toutes les légendes ne sont pas sombres.",
 } }
 C[5121] = { tier = 3, text = {
-    enUS = "The Winterfall furbolg were never a warlike people, until a strange substance changed them: \"{quest}\". Their High Chief is down, and the studies can resume.",
+    enUS = "The Winterfall furbolg were never a warlike people, until a strange substance changed them: \"{quest}\". Their High Chief is down, and the studies can resume.", esES = "La sustancia que alteró a los fúrbolgs dejó su rastro en «{quest}». Su gran jefe ha caído y la investigación puede continuar.",
     ptBR = "Os furbolgs de Winterfall nunca foram um povo belicoso, até uma substância estranha mudá-los: \"{quest}\". O chefe deles caiu, e os estudos podem continuar.",
     frFR = "Les furbolgs Orfroide n'ont jamais été un peuple belliqueux, jusqu'à ce qu'une étrange substance les change\194\160: «\194\160{quest}\194\160». Leur grand chef est tombé, et les études peuvent reprendre.",
 } }
 C[1475] = { tier = 3, text = {
-    enUS = "Ten tablets from a temple sunk beneath the water: \"{quest}\". An old dwarf's last obligation is kept.",
+    enUS = "Ten tablets from a temple sunk beneath the water: \"{quest}\". An old dwarf's last obligation is kept.", esES = "Recuperé las tablillas del templo sumergido para «{quest}». Una vieja obligación encontró por fin unas manos dispuestas a terminarla.",
     ptBR = "Dez tábuas de um templo afundado sob a água: \"{quest}\". A última obrigação de um velho anão foi cumprida.",
     frFR = "Dix tablettes d'un temple englouti sous les eaux\194\160: «\194\160{quest}\194\160». La dernière obligation d'un vieux nain est tenue.",
 } }
 C[4786] = { tier = 3, text = {
-    enUS = "A robe, and a warning with it: defy the corruption of this path with will alone. \"{quest}\".",
+    enUS = "A robe, and a warning with it: defy the corruption of this path with will alone. \"{quest}\".", esES = "La túnica de «{quest}» llegó con una advertencia: la voluntad tendrá que sostenerse frente a la corrupción del camino elegido.",
     ptBR = "Uma veste, e um aviso com ela: desafie a corrupção deste caminho só com vontade. \"{quest}\".",
     frFR = "Une robe, et un avertissement avec\194\160: défier la corruption de ce chemin par la seule volonté. «\194\160{quest}\194\160».",
 } }
 C[1958] = { tier = 3, text = {
-    enUS = "Many have fallen to the creatures I faced, and I did not. The orb is ready: \"{quest}\".",
+    enUS = "Many have fallen to the creatures I faced, and I did not. The orb is ready: \"{quest}\".", esES = "Superé a las criaturas que aguardaban en «{quest}». El orbe está preparado y yo guardo otra prueba en la memoria.",
     ptBR = "Muitos caíram diante das criaturas que enfrentei, e eu não. O orbe está pronto: \"{quest}\".",
     frFR = "Beaucoup sont tombés devant les créatures que j'ai affrontées, et pas moi. L'orbe est prêt\194\160: «\194\160{quest}\194\160».",
 } }
 C[667] = { tier = 3, text = {
-    enUS = "We held the line against the naga until the tide rose: \"{quest}\". A captain offered me a place on his crew; the road had other plans.",
+    enUS = "We held the line against the naga until the tide rose: \"{quest}\". A captain offered me a place on his crew; the road had other plans.", esES = "Resistimos a los naga en «{quest}» hasta que cambió la marea. Un capitán me ofreció lugar en su tripulación; mi ruta seguía en otra dirección.",
     ptBR = "Seguramos a linha contra os nagas até a maré subir: \"{quest}\". Um capitão me ofereceu um lugar na tripulação; a estrada tinha outros planos.",
     frFR = "Nous avons tenu la ligne contre les nagas jusqu'à la montée de la marée\194\160: «\194\160{quest}\194\160». Un capitaine m'a offert une place dans son équipage\194\160; la route avait d'autres plans.",
 } }
@@ -252,64 +252,67 @@ C[667] = { tier = 3, text = {
 -- The hunter's first lessons (Taming the Beast): the game lends a beast for a little while. Each lesson has a
 -- text of its own (a class milestone, rare), so a hunter never reads the same page twice.
 C[6061] = { tier = 3, text = {
-    enUS = "A hunter learns the wild by taming it: \"{quest}\". The beast will not stay, but what I learned of it will.",
+    enUS = "A hunter learns the wild by taming it: \"{quest}\". The beast will not stay, but what I learned of it will.", esES = "En «{quest}» aprendí a conocer la naturaleza ganándome una confianza breve. La criatura seguirá libre; yo conservaré la lección.",
     ptBR = "Quem caça aprende sobre a natureza ao domá-la: \"{quest}\". A fera não vai ficar, mas o que aprendi com ela, sim.",
     frFR = "Qui chasse apprend à connaître la nature en l'apprivoisant\194\160: «\194\160{quest}\194\160». La bête ne restera pas, mais ce que j'ai appris d'elle, si.",
 } }
 C[6062] = { tier = 3, text = {
-    enUS = "The beast let itself be led for a little while: \"{quest}\". I learned to read the wild, and the wild learned my name.",
+    enUS = "The beast let itself be led for a little while: \"{quest}\". I learned to read the wild, and the wild learned my name.", esES = "La criatura de «{quest}» aceptó seguirme por un rato. Aprendí a leer sus gestos antes de pretender guiar sus pasos.",
     ptBR = "A fera deixou-se guiar por um tempo: \"{quest}\". Aprendi a ler a natureza, e a natureza aprendeu o meu nome.",
     frFR = "La bête s'est laissé guider un moment\194\160: «\194\160{quest}\194\160». J'ai appris à lire la nature, et la nature a appris mon nom.",
 } }
 C[6063] = { tier = 3, text = {
-    enUS = "One more lesson in patience: \"{quest}\". A friend borrowed from the wild is still a friend, for as long as it lasts.",
+    enUS = "One more lesson in patience: \"{quest}\". A friend borrowed from the wild is still a friend, for as long as it lasts.", esES = "Hoy «{quest}» me dio otra lección de paciencia. La amistad prestada por la naturaleza también merece ser cuidada.",
     ptBR = "Mais uma lição de paciência: \"{quest}\". Um amigo emprestado da natureza ainda é um amigo, enquanto dura.",
     frFR = "Une leçon de patience de plus\194\160: «\194\160{quest}\194\160». Un ami emprunté à la nature reste un ami, tant qu'il dure.",
 } }
 C[6064] = { tier = 3, text = {
-    enUS = "\"{quest}\": my first steps as a true hunter. The leash was only a lesson; the bond is what I keep.",
+    enUS = "\"{quest}\": my first steps as a true hunter. The leash was only a lesson; the bond is what I keep.", esES = "Mis primeros pasos en la senda de la caza pasaron por «{quest}». Lo que llevo conmigo es el vínculo que aprendí a formar.",
     ptBR = "\"{quest}\": meus primeiros passos na arte da caça. A coleira era só uma lição; o laço é o que fica.",
     frFR = "«\194\160{quest}\194\160»\194\160: mes premiers pas dans l'art de la chasse. La laisse n'était qu'une leçon\194\160; le lien, lui, reste.",
 } }
 C[6082] = { tier = 3, text = {
-    enUS = "I did not command the beast in \"{quest}\", I asked, and it listened. That is the whole craft.",
+    enUS = "I did not command the beast in \"{quest}\", I asked, and it listened. That is the whole craft.", esES = "En «{quest}» no bastó con dar una orden. Tuve que pedir confianza y aprender a escuchar la respuesta.",
     ptBR = "Em \"{quest}\" eu não comandei a fera, eu pedi, e ela ouviu. Essa é a arte inteira.",
     frFR = "Dans «\194\160{quest}\194\160», je n'ai pas commandé la bête, j'ai demandé, et elle a écouté. C'est tout l'art.",
 } }
 C[6083] = { tier = 3, text = {
-    enUS = "Fur, fang and a patient hand: \"{quest}\" taught me what no book could.",
+    enUS = "Fur, fang and a patient hand: \"{quest}\" taught me what no book could.", esES = "El pelaje, los colmillos y unas manos pacientes fueron mis maestros en «{quest}». Ningún libro habría podido sustituirlos.",
     ptBR = "Pelo, presa e uma mão paciente: \"{quest}\" me ensinou o que nenhum livro ensina.",
     frFR = "Fourrure, crocs et main patiente\194\160: «\194\160{quest}\194\160» m'a appris ce qu'aucun livre n'enseigne.",
 } }
 C[6084] = { tier = 3, text = {
-    enUS = "\"{quest}\" is done. The wild lent me its strength for an hour, and I will remember how it felt.",
+    enUS = "\"{quest}\" is done. The wild lent me its strength for an hour, and I will remember how it felt.", esES = "Terminé «{quest}» con el recuerdo de una fuerza que la naturaleza me prestó durante un rato.",
     ptBR = "\"{quest}\" está feita. A natureza me emprestou sua força por uma hora, e vou lembrar como foi.",
     frFR = "«\194\160{quest}\194\160» est accomplie. La nature m'a prêté sa force pour une heure, et je me souviendrai de ce que c'était.",
 } }
 C[6085] = { tier = 3, text = {
-    enUS = "The wild tests every hunter once. \"{quest}\" was my test, and I was not found wanting.",
+    enUS = "The wild tests every hunter once. \"{quest}\" was my test, and I was not found wanting.", esES = "La prueba de «{quest}» me pidió demostrar lo que estaba aprendiendo. Hoy pude responder sin abandonar la paciencia.",
     ptBR = "A natureza põe à prova quem caça. \"{quest}\" foi o meu teste, e passei.",
     frFR = "La nature met à l'épreuve toute personne qui chasse. «\194\160{quest}\194\160» fut mon épreuve, et je l'ai réussie.",
 } }
 C[6087] = { tier = 3, text = {
-    enUS = "Quiet steps, steady breath, and a beast that trusted me: \"{quest}\".",
+    enUS = "Quiet steps, steady breath, and a beast that trusted me: \"{quest}\".", esES = "Di pasos suaves, mantuve el aliento sereno y gané la confianza de una criatura en «{quest}».",
     ptBR = "Passos silenciosos, respiração firme e uma fera que confiou em mim: \"{quest}\".",
     frFR = "Pas silencieux, souffle égal, et une bête qui m'a fait confiance\194\160: «\194\160{quest}\194\160».",
 } }
 C[6088] = { tier = 3, text = {
-    enUS = "Before I had a companion of my own, \"{quest}\" showed me what it would be to have one.",
+    enUS = "Before I had a companion of my own, \"{quest}\" showed me what it would be to have one.", esES = "Antes de tener una compañía propia, «{quest}» me permitió comprender lo que significa no seguir el rastro a solas.",
     ptBR = "Antes de ter um companheiro meu, \"{quest}\" me mostrou como seria ter um.",
     frFR = "Avant d'avoir un compagnon bien à moi, «\194\160{quest}\194\160» m'a montré ce que ce serait d'en avoir un.",
 } }
 C[6101] = { tier = 3, text = {
-    enUS = "A hunter is made one lesson at a time. \"{quest}\" was another stone in the path.",
+    enUS = "A hunter is made one lesson at a time. \"{quest}\" was another stone in the path.", esES = "La senda de la caza se aprende una lección cada vez. «{quest}» dejó hoy otra señal en mi camino.",
     ptBR = "A prática se constrói uma lição de cada vez. \"{quest}\" foi mais uma pedra no caminho.",
     frFR = "La pratique se construit une leçon à la fois. «\194\160{quest}\194\160» fut une pierre de plus sur le chemin.",
 } }
 C[6102] = { tier = 3, text = {
-    enUS = "\"{quest}\": the beast went back to the wild, and I went on a little wiser.",
+    enUS = "\"{quest}\": the beast went back to the wild, and I went on a little wiser.", esES = "La criatura de «{quest}» volvió a la naturaleza. Yo regresé con una lección que seguirá andando conmigo.",
     ptBR = "\"{quest}\": a fera voltou à natureza, e eu segui meu caminho com um pouco mais de sabedoria.",
     frFR = "«\194\160{quest}\194\160»\194\160: la bête est retournée à la nature, et j'ai poursuivi ma route un peu plus sage.",
 } }
 
+for _, quest in pairs(C) do
+    if quest.text then quest.text.esMX = quest.text.esES end
+end
 ns.CURATED = C

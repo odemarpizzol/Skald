@@ -1,7 +1,7 @@
 // Drives Skald in the simulated game (fengari = Lua 5.3 + dev/tools/mock.lua standing in for the WoW API).
 // It is NOT the game: use it to poke the addon, not to prove it works in the client.
 //
-//   node .claude/skills/run-skald/driver.js [--locale ptBR|frFR] [--saved '<lua table for SkaldCharDB>'] [--level N] '<lua body>'
+//   node .claude/skills/run-skald/driver.js [--locale enUS|ptBR|frFR|esES|esMX] [--saved '<lua table for SkaldCharDB>'] [--level N] '<lua body>'
 //   echo '<lua body>' | node .claude/skills/run-skald/driver.js
 //
 // The body runs after ADDON_LOADED + PLAYER_LOGIN. Helpers in scope: fire(event, ...), runTimers(), count(kind),

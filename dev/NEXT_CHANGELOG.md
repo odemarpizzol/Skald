@@ -1,0 +1,4 @@
+- Redesigned the Bard as a songbook: repertoire seals above numbered songs, a new centered fireside illustration with an instrument, and playback controls grouped on the right page.
+- Playlists by side: All, Alliance or Horde; the list, next, before and Shuffle keep to the one chosen.
+- Labels in English, Brazilian Portuguese and French; game music volume details are on hover.
+- Spanish (esES/esMX): complete shared diary prose, Saga, curated quest stories, addon UI and web Reader; official client names, regional aliases and locale coverage tests.

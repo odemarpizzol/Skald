@@ -59,9 +59,24 @@ with sync_playwright() as p:
         page.locator('#reader').wait_for(state='visible')
         page.evaluate('document.fonts.ready')
 
-    for locale, paper, size, density in [('enUS', 'clean', 1, 'comfy'), ('ptBR', 'travel', 2, 'airy'), ('frFR', 'war', 0, 'compact'), ('enUS', 'old', 2, 'comfy')]:
+    for browser_locale in ('es-ES', 'es-MX'):
+        context = browser.new_context(locale=browser_locale)
+        localized = context.new_page()
+        localized.goto(URL)
+        assert localized.locator('html').get_attribute('lang') == 'es'
+        assert localized.locator('#lang').input_value() == 'esES'
+        assert localized.locator('#t-title').inner_text() == 'Skald Lector'
+        context.close()
+    print('ok Spanish browser language detection: es-ES and es-MX')
+
+    for locale, paper, size, density in [('enUS', 'clean', 1, 'comfy'), ('ptBR', 'travel', 2, 'airy'), ('frFR', 'war', 0, 'compact'), ('esES', 'clean', 1, 'comfy'), ('esMX', 'old', 2, 'airy'), ('enUS', 'old', 2, 'comfy')]:
         text, expected, notes, story = export(locale, paper, size, density, entries=30, long=True)
         open_export(text)
+        if locale in ('esES', 'esMX'):
+            assert page.locator('html').get_attribute('lang') == 'es'
+            assert page.locator('#lang').input_value() == 'esES', 'regional locale did not select Español'
+            assert page.locator('#print').inner_text() == 'Guardar como PDF'
+            assert page.locator('#jump').get_attribute('aria-label') == 'Día'
         assert page.locator('html').get_attribute('data-paper') == paper
         assert len(page.locator('#jump option').all()) == 3, 'session groups merged'
         assert page.locator('#left .cover h2').text_content() == 'Memories of Azeroth'

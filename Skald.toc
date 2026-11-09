@@ -5,8 +5,12 @@
 ## Notes-ptBR: Escreve automaticamente a crônica épica da sua jornada por Azeroth. Use /skald.
 ## Title-frFR: Skald
 ## Notes-frFR: Écrit automatiquement la chronique épique de votre voyage à travers Azeroth. Utilisez /skald.
+## Title-esES: Skald
+## Notes-esES: Escribe automáticamente la crónica de tu viaje por Azeroth, con tu propia voz. Usa /skald.
+## Title-esMX: Skald
+## Notes-esMX: Escribe automáticamente la crónica de tu viaje por Azeroth, con tu propia voz. Usa /skald.
 ## Author: Oddynho
-## Version: 1.0.3
+## Version: 1.0.4
 ## OptionalDeps: Spoken, QuestDB
 ## Category: Roleplay
 ## X-Curse-Project-ID: 1748824

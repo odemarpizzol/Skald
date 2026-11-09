@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.4
+
+- **The Bard is redrawn as a songbook**: seals above the six numbered songs, a handwritten line at the foot of the left page, and the title, the new hearth picture (with the instrument in it) and the controls centred on the right page. Long song names fit the space
+- **Playlists by side**: choose All, Alliance or Horde under the list. The list, next, before, Shuffle and the end of each song keep to it (the music of the lands belongs to both sides); the choice is kept
+- Labels in English, Brazilian Portuguese and French; the details of the game's music volume are on hover
+- **Spanish (esES and esMX)**: the diary, the Saga, the hand-written quest stories, the tabs, the Atlas, the Cartographer and the web Reader now speak Spanish, with the client's own names for lands, dungeons and pets. One shared text serves Spain and Latin America; it has not had a native reviewer yet
+
 ## 1.0.3
 
 - **Map markers go to the right page.** A click on a marker used to land on the last page of the book when the book was shut (the book was shown after the page was chosen, and opening it goes to the newest day). It now opens the page you asked for, also from the Search tab

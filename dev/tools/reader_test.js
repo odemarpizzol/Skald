@@ -107,5 +107,15 @@ SkaldCharDB.entries[2].favNote = string.rep("margin ", 60) .. "END"
   }
 } finally { fs.rmSync(temp, { recursive: true, force: true }); }
 
+for (const locale of ['esES', 'esMX']) {
+  const file = path.join(os.tmpdir(), 'skald_reader_' + locale + '_fixture.txt');
+  const result = spawnSync(process.execPath, [path.join(__dirname, 'reader_sample.js'), path.join(__dirname, 'fixtures/reader_saved.lua'), file, locale], { encoding: 'utf8' });
+  if (require('./check_helpers').toolFailure(result, /written/)) { fail(locale + ': exporter failed: ' + (result.stderr || result.stdout)); continue; }
+  const parsed = R.build(R.readParts(fs.readFileSync(file, 'utf8')));
+  check(parsed.locale === locale && parsed.pages.length >= 5 && parsed.saga.length >= 3, locale + ': export/import keeps the client locale and all content');
+  check(parsed.saga.some(c => c.title === 'Epílogo') && parsed.saga.every(c => !/[{}]/.test(c.text)), locale + ': actual Spanish Saga survives export');
+  fs.unlinkSync(file);
+}
+
 console.log(failed ? `\n${failed} reader check(s) FAILED` : '\nAll reader checks passed');
 process.exit(failed ? 1 : 0);

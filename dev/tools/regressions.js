@@ -135,7 +135,7 @@ SkaldAPI.GameFacts=function() return {} end
 assert(ns.GoalFacts().kills==113,"missing fallback")
 RES="ok"`,
 });
-for (const [loc,word] of [['ptBR','estimativa'],['enUS','estimate'],['frFR','estimation']]) {
+for (const [loc,word] of [['ptBR','estimativa'],['enUS','estimate'],['frFR','estimation'],['esES','estimación'],['esMX','estimación']]) {
   run('daily kill estimates are identified, including legacy pages: '+loc, {
     pre: `__locale="${loc}"`,
     body: `local e={kind="day",arg="2020-01-01",idx=1,day={k=113}}
@@ -188,13 +188,15 @@ RES="ok"`,
 
 
 // Real diary findings: Aelyndra, Forever, 2026-11-05. No private saved data in fixtures.
-for (const loc of ['ptBR', 'enUS', 'frFR']) {
+for (const loc of ['ptBR', 'enUS', 'frFR', 'esES', 'esMX']) {
   run('Aelyndra quest stories override old misleading types and racial flavours: ' + loc, {
     pre: `__locale="${loc}"; function UnitSex() return 3 end`,
     body: `local expected = {
       ptBR = { [5621]="curei", [99053]="resgate", [922]="semente", [6342]="hipogrifo" },
       enUS = { [5621]="healed", [99053]="rescue", [922]="seed", [6342]="hippogryph" },
-      frFR = { [5621]="soigné", [99053]="secours", [922]="graine", [6342]="hippogriffe" }
+      frFR = { [5621]="soigné", [99053]="secours", [922]="graine", [6342]="hippogriffe" },
+      esES = { [5621]="sanar", [99053]="rescatar", [922]="semilla", [6342]="hipogrifo" },
+      esMX = { [5621]="sanar", [99053]="rescatar", [922]="semilla", [6342]="hipogrifo" }
     }
     for id, word in pairs(expected[GetLocale()]) do
       for _, flavour in ipairs({false, "race_NightElf_quest"}) do
@@ -393,9 +395,9 @@ for i = 1, #goals do for j = i + 1, math.min(i + 5, #goals) do if goals[i].idx =
 RES = (#goals >= 40 and repeated == 0) and "ok" or ("goals " .. #goals .. ", a phrase back within five pages " .. repeated .. " times")`,
 });
 
-run('the voice of each old race has its lines for a quest in the three languages: at least eight, one title each, no number, nothing of a later time', {
+run('the voice of each old race has its lines for a quest in every supported locale: at least eight, one title each, no number, nothing of a later time', {
   body: `local bad, count = {}, 0
-for _, loc in ipairs({ "enUS", "ptBR", "frFR" }) do
+for _, loc in ipairs({ "enUS", "ptBR", "frFR", "esES", "esMX" }) do
   local P = ns.LOCALES[loc].phrases
   for _, race in ipairs({ "Human", "Dwarf", "NightElf", "Gnome", "Orc", "Scourge", "Tauren", "Troll" }) do
     local pool = P["race_" .. race .. "_quest"]
@@ -409,7 +411,7 @@ for _, loc in ipairs({ "enUS", "ptBR", "frFR" }) do
     end
   end
 end
-RES = (#bad == 0 and count == 24) and "ok" or table.concat(bad, " ; ")`,
+RES = (#bad == 0 and count == 40) and "ok" or table.concat(bad, " ; ")`,
 });
 
 run('the voice "Of My People": a quest of a race with lines of its own is told with them, a quest of the highest seals keeps its own telling, and a race without lines raises no error', {
@@ -540,7 +542,7 @@ for _, e in ipairs(SkaldCharDB.entries) do if e.kind == "zone" and e ~= first th
 local ok2 = late and late.fl ~= "race_Orc_start"
 -- every line holds the place once, and none holds a digit
 local bad = {}
-for _, loc in ipairs({ "enUS", "ptBR", "frFR" }) do
+for _, loc in ipairs({ "enUS", "ptBR", "frFR", "esES", "esMX" }) do
   for _, race in ipairs({ "Orc", "Human", "Dwarf", "Gnome", "NightElf", "Tauren", "Troll", "Scourge", "Draenei", "BloodElf" }) do
     local pool = ns.LOCALES[loc].phrases["race_" .. race .. "_start"]
     if type(pool) ~= "table" or #pool < 8 then bad[#bad + 1] = loc .. " " .. race .. " size" else
@@ -554,7 +556,7 @@ RES = (ok1 and ok2 and #bad == 0 and SkaldDB.errors == nil) and "ok" or ("first=
 run('the Draenei and the Blood Elves have lines of their own in the three languages: for a land, a fall, a rising level and a quest', {
   body: `local bad, count = {}, 0
 local kinds = { zone = 1, death = 1, quest = 1, kinLevel = 0 }   -- how many titles or places each line holds
-for _, loc in ipairs({ "enUS", "ptBR", "frFR" }) do
+for _, loc in ipairs({ "enUS", "ptBR", "frFR", "esES", "esMX" }) do
   local P = ns.LOCALES[loc].phrases
   for _, race in ipairs({ "Draenei", "BloodElf" }) do
     for kind, names in pairs(kinds) do
@@ -570,7 +572,7 @@ for _, loc in ipairs({ "enUS", "ptBR", "frFR" }) do
     end
   end
 end
-RES = (#bad == 0 and count == 24) and "ok" or table.concat(bad, " ; ")`,
+RES = (#bad == 0 and count == 40) and "ok" or table.concat(bad, " ; ")`,
 });
 
 run('a Draenei or a Blood Elf in the voice "Of My People": the level, the land, the fall and the quest are told with the lines of the race', {
@@ -611,7 +613,7 @@ function GetProfessionInfo(i) if i == 1 then return "Cooking", nil, 1, nil, nil,
   body: `local byLine = SkaldAPI.ProfessionKey(755, nil)
 local byName = SkaldAPI.ProfessionKey(nil, "Joalheria") == "jewelcrafting" and SkaldAPI.ProfessionKey(nil, "Joaillerie") == "jewelcrafting" and SkaldAPI.ProfessionKey(nil, "Jewelcrafting 150") == "jewelcrafting"
 local pools = true
-for _, loc in ipairs({ "enUS", "ptBR", "frFR" }) do local P = ns.LOCALES[loc].phrases.profession_jewelcrafting; if type(P) ~= "table" or #P < 8 then pools = false end end
+for _, loc in ipairs({ "enUS", "ptBR", "frFR", "esES", "esMX" }) do local P = ns.LOCALES[loc].phrases.profession_jewelcrafting; if type(P) ~= "table" or #P < 8 then pools = false end end
 fire("SKILL_LINES_CHANGED"); runTimers()
 local page, n = nil, 0
 for _, e in ipairs(SkaldCharDB.entries) do if e.kind == "profession" and e.pf == "jewelcrafting" then page = e; n = n + 1 end end
@@ -653,7 +655,7 @@ local noTop = not at65:lower():find("top of the world", 1, true)
 local sevenNotSixty = at70:find("70", 1, true) and not at70:lower():find("sixty", 1, true)
 local oldTop = at60:lower():find("top of the world", 1, true)
 local pools = true
-for _, loc in ipairs({ "enUS", "ptBR", "frFR" }) do
+for _, loc in ipairs({ "enUS", "ptBR", "frFR", "esES", "esMX" }) do
   for _, ph in ipairs(ns.SagaTexts[loc].POOLS.epilogueTop) do
     local low = ph:lower()
     if low:find("sixty", 1, true) or low:find("sessenta", 1, true) or low:find("soixante", 1, true) then pools = false end
@@ -2095,7 +2097,7 @@ end
 RES = (n >= 6) and "ok" or ("only " .. n .. " different prologues in 40 diaries")`,
 });
 
-for (const [loc, who] of [['ptBR', 'Aldor'], ['frFR', 'Aldor']]) {
+for (const [loc, who] of [['ptBR', 'Aldor'], ['frFR', 'Aldor'], ['esES', 'Aldor'], ['esMX', 'Aldor']]) {
   run(`the Saga of a woman in ${loc}: every form agrees, no tag is left, the names are the first names`, {
     pre: `__locale = "${loc}"; function UnitSex() return 3 end
 ${SAGA_DIARY(1792000000, 'quest = 80, boss = 3, death = 5', ', level = 60')}`,
@@ -2142,7 +2144,7 @@ end
 RES = (ok and counts[1] <= counts[3] and counts[3] <= counts[4] and counts[4] > counts[1]) and "ok" or (why .. " pages=" .. table.concat(counts, "/"))`,
 });
 
-for (const [loc, pats] of [['enUS', ['count', 'tally']], ['ptBR', ['%f[%a]conta%f[%A]']], ['frFR', ['%f[%a]compte%f[%A]']]]) {
+for (const [loc, pats] of [['enUS', ['count', 'tally']], ['ptBR', ['%f[%a]conta%f[%A]']], ['frFR', ['%f[%a]compte%f[%A]']], ['esES', ['%f[%a]cuenta%f[%A]']], ['esMX', ['%f[%a]cuenta%f[%A]']]]) {
   run(`the Saga of ${loc} does not count in every chapter: at most two chapters use the counting formula`, {
     pre: `__locale = "${loc}"; ${SAGA_DIARY()}`,
     body: `local worst, at = 0, 0
@@ -2190,7 +2192,7 @@ end
 RES = (seen and not bad) and "ok" or tostring(bad or "no falls chapter")`,
 });
 
-for (const [loc, home, land] of [['enUS', 'Shadowglen', 'Teldrassil'], ['ptBR', 'Umbravale', 'Teldrassil'], ['frFR', 'Sylvarde', 'Teldrassil']]) {
+for (const [loc, home, land] of [['enUS', 'Shadowglen', 'Teldrassil'], ['ptBR', 'Umbravale', 'Teldrassil'], ['frFR', 'Sylvarde', 'Teldrassil'], ['esES', 'Cañada Umbría', 'Teldrassil'], ['esMX', 'Cañada Umbría', 'Teldrassil']]) {
   run(`the Saga of ${loc} tells where a race is born, and the first page only when it was written elsewhere`, {
     pre: `__locale = "${loc}"; ${SAGA_DIARY()}
 function UnitRace() return "Night Elf", "NightElf" end
@@ -3491,7 +3493,8 @@ local B = ns.Bard
 B.Stop()
 p.rows[3]._OnClick(p.rows[3])
 local playsRow = B.playing == 3 and rawget(p.song, "_text") == ns.LOCALES.enUS.BARD_TRACKS[3] and rawget(p.state, "_text") == ns.LOCALES.enUS.BARD_PLAYING
-  and tostring(rawget(p.rows[3].disc, "_tex")):find("hud_medal_stop", 1, true) and tostring(rawget(p.rows[2].disc, "_tex")):find("bard_play", 1, true)
+  and p.rows[3].active and not p.rows[2].active
+  and tostring(rawget(p.rows[3].disc, "_tex")):find("bard_note_on", 1, true)
 p.nextButton._OnClick(p.nextButton)
 local nextOk = B.playing == 4
 p.prevButton._OnClick(p.prevButton)
@@ -3504,10 +3507,9 @@ local mainPlays = B.playing == 2   -- after a stop the big button plays the piec
 p.mainButton._OnClick(p.mainButton)
 local mainStops = B.playing == nil
 p.rows[4]._OnClick(p.rows[4]); p.Animate()
-local pictureOn = rawget(p.rise, "_shown") == true and rawget(p.tabNote, "_shown") == true
-  and tostring(rawget(p.rise, "_tex")):find("bard_notes_", 1, true)
+local pictureOn = rawget(p, "rise") == nil and rawget(p.tabNote, "_shown") == true
 p.rows[4]._OnClick(p.rows[4]); p.Animate()
-local pictureOff = rawget(p.rise, "_shown") ~= true and rawget(p.tabNote, "_shown") ~= true
+local pictureOff = rawget(p.tabNote, "_shown") ~= true
 local ticks = 1000
 GetTime = function() ticks = ticks + 1; return ticks end   -- each song begins at its own moment
 local open = false
@@ -3534,9 +3536,9 @@ p.rows[1]._OnClick(p.rows[1])
 local offSaid = B.playing == nil and rawget(p.off, "_text") == ns.LOCALES.enUS.BARD_MUSIC_OFF
 MUSIC.cvars.Sound_EnableMusic = "1"
 local miss = {}
-for _, loc in ipairs({ "enUS", "ptBR", "frFR" }) do
+for _, loc in ipairs({ "enUS", "ptBR", "frFR", "esES", "esMX" }) do
   local L = ns.LOCALES[loc]
-  for _, k in ipairs({ "BARD_TAB", "BARD_LEFT", "BARD_RIGHT", "BARD_PLAYING", "BARD_STOPPED", "BARD_PICK", "BARD_VOLUME", "BARD_VOL_NOTE", "BARD_MUSIC_OFF", "BARD_TIP_PLAY", "BARD_TIP_STOP", "BARD_TIP_PREV", "BARD_TIP_NEXT" }) do
+  for _, k in ipairs({ "BARD_TAB", "BARD_LEFT", "BARD_RIGHT", "BARD_PLAYING", "BARD_STOPPED", "BARD_PICK", "BARD_VOLUME", "BARD_VOL_NOTE", "BARD_MUSIC_OFF", "BARD_TIP_PLAY", "BARD_TIP_STOP", "BARD_TIP_PREV", "BARD_TIP_NEXT", "BARD_GAME_VOLUME", "BARD_FOOTNOTE", "BARD_HUD_CLOSED", "BARD_HUD_TIP" }) do
     if type(L[k]) ~= "string" or L[k] == "" then miss[#miss + 1] = loc .. "." .. k end
   end
   if type(L.BARD_TRACKS) ~= "table" or #L.BARD_TRACKS ~= #B.TRACKS then miss[#miss + 1] = loc .. ".BARD_TRACKS" end
@@ -3551,7 +3553,7 @@ run('the Bard: the list has pages the corners turn, the song that plays brings i
   body: `local B = ns.Bard
 local tab = btn("Bard"); tab._OnClick(tab)
 local p
-for i = #frames, 1, -1 do if rawget(frames[i], "shuffleCheck") then p = frames[i]; break end end
+for i = #frames, 1, -1 do if rawget(frames[i], "orderItems") then p = frames[i]; break end end
 B.Stop(); B.last = nil; B.history = {}; B.page = 1
 local pages = B.Pages() == math.ceil(#B.TRACKS / 6) and B.Pages() >= 5
 local rows1 = p.rows[1]._shown == true and rawget(p.rows[1], "song") == 1 and rawget(p.rows[6], "song") == 6
@@ -3663,7 +3665,7 @@ p.hudNext._OnClick(p.hudNext)
 local round = SkaldDB.bardHud == "bar"   -- four looks go round
 p.hudBack._OnClick(p.hudBack)
 local back = SkaldDB.bardHud == "medal"
-local named = rawget(p.hudName.text, "_text") == string.format(ns.LOCALES.enUS.BARD_HUD_LABEL, ns.LOCALES.enUS.BARD_HUDS[4])
+local named = rawget(p.hudName.text, "_text") == ns.LOCALES.enUS.BARD_HUDS[4]
 SkaldDB.bardHud = "plate"   -- a look that is gone (kept by an earlier version) falls back to the first one
 local gone = B.HudStyle() == "bar"
 SkaldDB.bardHud = "wood"; p.ApplyHud()
@@ -3680,7 +3682,7 @@ local skipPrev = B.playing == 4
 p.miniStopArt._OnClick(p.miniStopArt)
 local stopped = B.playing == nil and skipNext and skipPrev
 local miss = {}
-for _, loc in ipairs({ "enUS", "ptBR", "frFR" }) do
+for _, loc in ipairs({ "enUS", "ptBR", "frFR", "esES", "esMX" }) do
   local L = ns.LOCALES[loc]
   if type(L.BARD_HUD_LABEL) ~= "string" or not L.BARD_HUD_LABEL:find("%s", 1, true) or type(L.BARD_HUDS) ~= "table" or #L.BARD_HUDS ~= 4 then miss[#miss + 1] = loc end
 end
@@ -3855,7 +3857,7 @@ local round = SkaldDB.tabStyle == "leather" and pic(days):find("tab_idle", 1, tr
 p.lookBack._OnClick(p.lookBack)
 local back = SkaldDB.tabStyle == "wood" and pic(days):find("tab_wood_idle", 1, true) ~= nil
 local miss = {}
-for _, loc in ipairs({ "enUS", "ptBR", "frFR" }) do
+for _, loc in ipairs({ "enUS", "ptBR", "frFR", "esES", "esMX" }) do
   local L = ns.LOCALES[loc]
   if type(L.OPT_TABLOOK) ~= "string" or type(L.TAB_LOOKS) ~= "table" or #L.TAB_LOOKS ~= 5 then miss[#miss + 1] = loc end
 end
@@ -3877,7 +3879,7 @@ local old = SkaldDB.paperStyle == "old"
 pb.clean._OnClick(pb.clean)
 local clean = SkaldDB.paperStyle == nil
 local miss = {}
-for _, loc in ipairs({ "enUS", "ptBR", "frFR" }) do
+for _, loc in ipairs({ "enUS", "ptBR", "frFR", "esES", "esMX" }) do
   local L = ns.LOCALES[loc]
   if type(L.OPT_PAPER) ~= "string" or type(L.PAPER_NAMES) ~= "table" or not (L.PAPER_NAMES.clean and L.PAPER_NAMES.travel and L.PAPER_NAMES.war and L.PAPER_NAMES.old) then miss[#miss + 1] = loc end
 end
@@ -4078,7 +4080,7 @@ RES = (before == false and on and sample and clean and off and SkaldDB.errors ==
 
 run('the PvP tab line of the diary: ten or more lines in each language, none with a number, and it moves on with each match but holds still between them', {
   body: `local bad = {}
-for _, loc in ipairs({ "enUS", "ptBR", "frFR" }) do
+for _, loc in ipairs({ "enUS", "ptBR", "frFR", "esES", "esMX" }) do
   local ok, UI = pcall(function() return ns.Pvp.TEXTS[loc] end)
   local list = ok and UI and UI.LINES
   if not list or #list < 10 then bad[#bad + 1] = loc .. " pool " .. tostring(list and #list) else
@@ -4157,6 +4159,136 @@ for i, t in ipairs(ns.Bard.TRACKS) do
 end
 for i = 1, ns.Bard.Pages() * ns.Bard.PER_PAGE do if ns.Bard.TRACKS[i] and not ns.Bard.TRACKS[i].len then named = false end end
 RES = (forever == 27 and not tbc and named and ns.IsForever()) and "ok" or ("tracks=" .. forever .. " tbc=" .. tostring(tbc) .. " named=" .. tostring(named))`,
+});
+
+run('Bard playlist by side: the list, next, before, chance and the end of a song keep to the Alliance or the Horde (lands go to both)', {
+  body: `GetTime = GetTime or function() return 100 end
+local B = ns.Bard
+local all = #B.Pool()
+B.SetSide("A")
+local a = B.Pool()
+B.SetSide("H")
+local h = B.Pool()
+local aOnly, hOnly = 0, 0
+for _, i in ipairs(a) do if B.TRACKS[i].side == "H" then aOnly = aOnly + 1 end end
+for _, i in ipairs(h) do if B.TRACKS[i].side == "A" then hOnly = hOnly + 1 end end
+-- chance: a hundred draws, none from the other side
+local stray = 0
+for _ = 1, 100 do local r = B.Random(nil); if B.TRACKS[r].side == "A" then stray = stray + 1 end end
+-- next from a piece of the other side lands on the Horde's list
+SkaldDB.bardShuffle = false
+B.playing, B.last = nil, 1   -- Stormwind (Alliance)
+local ok = B.Step(1)
+local landed = B.playing
+-- the list shows only the side
+B.SetSide(nil)
+local back = #B.Pool()
+RES = (all == #B.TRACKS and #a < all and #h < all and aOnly == 0 and hOnly == 0 and stray == 0 and ok
+  and B.TRACKS[landed].side ~= "A" and back == all and B.Pages() == math.ceil(all / B.PER_PAGE)) and "ok"
+  or ("all=" .. all .. " a=" .. #a .. " h=" .. #h .. " aOnly=" .. aOnly .. " hOnly=" .. hOnly .. " stray=" .. stray .. " landed=" .. tostring(landed))`,
+});
+
+run('the Bard repertoire seals choose a side without stopping the music, show the chosen one and go back to page 1', {
+  pre: 'GetTime = function() return 100 end\n' + SAVED('{}'),
+  body: `local B = ns.Bard
+local tab = btn("Bard"); tab._OnClick(tab)
+local p
+for i = #frames, 1, -1 do if rawget(frames[i], "sideItems") then p = frames[i]; break end end
+assert(p and p.sideItems.all and p.sideItems.A and p.sideItems.H, "repertoire seals missing")
+B.SetSide(nil); p.Refresh()
+assert(p.sideItems.all.active and not p.sideItems.H.active, "all not marked")
+B.Play(1)
+local playing, stopped = B.playing, MUSIC.stopped
+B.page = 2
+p.sideItems.H._OnClick(p.sideItems.H)
+assert(B.Side() == "H" and B.page == 1, "Horde selection failed")
+assert(B.playing == playing and MUSIC.stopped == stopped, "selecting a playlist stopped music")
+assert(p.sideItems.H.active and not p.sideItems.all.active and not p.sideItems.A.active, "chosen seal not marked")
+p.sideItems.A._OnClick(p.sideItems.A)
+assert(B.Side() == "A" and p.sideItems.A.active, "Alliance selection failed")
+p.sideItems.all._OnClick(p.sideItems.all)
+RES = (B.Side() == nil and p.sideItems.all.active) and "ok" or "All selection failed"`,
+});
+
+run('the Bard playback choices persist shuffle without changing the song or repertoire', {
+  pre: 'GetTime = function() return 100 end\n' + SAVED('{}'),
+  body: `local B = ns.Bard
+local tab = btn("Bard"); tab._OnClick(tab)
+local p
+for i = #frames, 1, -1 do if rawget(frames[i], "orderItems") then p = frames[i]; break end end
+assert(p and p.orderItems.sequential and p.orderItems.shuffle, "playback choices missing")
+B.SetSide("A"); B.Play(1); p.Refresh()
+assert(p.orderItems.sequential.active and not p.orderItems.shuffle.active, "default order not marked")
+local playing, stopped = B.playing, MUSIC.stopped
+p.orderItems.shuffle._OnClick(p.orderItems.shuffle)
+assert(SkaldDB.bardShuffle == true and B.Shuffle(), "shuffle not saved")
+assert(p.orderItems.shuffle.active and not p.orderItems.sequential.active, "shuffle not marked")
+p.Refresh()
+assert(p.orderItems.shuffle.active, "refresh lost shuffle selection")
+p.orderItems.sequential._OnClick(p.orderItems.sequential)
+assert(SkaldDB.bardShuffle == false and not B.Shuffle(), "sequential not saved")
+assert(p.orderItems.sequential.active and not p.orderItems.shuffle.active, "sequential not marked")
+for _, loc in ipairs({ "enUS", "ptBR", "frFR", "esES", "esMX" }) do
+  for _, key in ipairs({ "BARD_REPERTOIRE", "BARD_PLAY_ORDER", "BARD_SEQUENTIAL" }) do
+    assert(type(ns.LOCALES[loc][key]) == "string" and ns.LOCALES[loc][key] ~= "", "missing playback label")
+  end
+end
+RES = (B.playing == playing and MUSIC.stopped == stopped and B.Side() == "A") and "ok" or "playback choice changed music or repertoire"`,
+});
+
+
+run('Spanish clients share one complete locale and Saga table; unknown locale keeps the English fallback', {
+  body: `assert(ns.LOCALES.esES == ns.LOCALES.esMX, "Spanish prose duplicated")
+assert(ns.SagaTexts.esES == ns.SagaTexts.esMX, "Spanish Saga duplicated")
+assert(ns.LocaleKey("esMX") == "esES" and ns.LocaleKey("deDE") == "deDE", "locale normalization changed fallback")
+assert((ns.LOCALES.deDE or ns.LOCALES.enUS) == ns.LOCALES.enUS, "unknown locale lost English")
+RES = "ok"`,
+});
+
+for (const locale of ['esES','esMX']) {
+  run('Spanish old entries resolve official instance names and professions without rewriting saved data: '+locale, {
+    pre: `__locale="${locale}"; function UnitSex() return 3 end`,
+    body: `local L=ns.LOCALES[GetLocale()]
+local expected=GetLocale()=="esMX" and "El Salón de Señores Feudales" or "El Salón de los Feudales"
+local entry={kind="dungeon",iid=3065,zone="The Hall of Thanes",arg="The Hall of Thanes",idx=1}
+assert(ns.InstanceName(entry)==expected,"instance ID not localized")
+local rendered=SkaldAPI.Render(entry)
+assert(rendered:find(expected,1,true),rendered)
+assert(entry.zone=="The Hall of Thanes" and entry.arg=="The Hall of Thanes" and entry.idx==1,"entry rewritten")
+assert(ns.InstanceName({zone="El Salón de Señores Feudales"})==expected,"old regional name not recognized")
+assert(ns.FamilyLabel("Wolf")=="Lobo" and ns.FamilyLabel("Chauve-souris")=="Murciélago","pet family not localized")
+assert(ns.Gendered("{g:un|una} {g:viajero|viajera}")=="una viajera","Spanish gender agreement")
+assert(SkaldAPI.ProfessionKey(nil,"Botánica")=="herbalism","Forever profession alias missing")
+assert(SkaldAPI.ProfessionKey(nil,"Sastrería")=="tailoring","TBC profession alias missing")
+local p={kind="profession",pf="alchemy",arg="Alchimie",idx=1}
+assert(SkaldAPI.Render(p):find("Alquimia",1,true),"old profession name not localized")
+assert(p.arg=="Alchimie" and p.pf=="alchemy","profession rewritten")
+assert(ns.Search.Fold("AÑO, acción, pingüino")=="ano, accion, pinguino","Spanish search folding")
+assert(btn(L.BARD_TAB) and btn(L.SEARCH_TAB) and btn(L.TAB_SETTINGS),"Spanish tabs unavailable")
+local groups=ns.Cartographer.Places()
+local found=false
+for _,group in ipairs(groups) do for _,item in ipairs(group.items) do
+  if item.id==3065 then assert(item.name==expected,"Cartographer disagrees with diary"); found=true end
+end end
+assert(found,"instance absent from Cartographer")
+RES="ok"`,
+  });
+  run('Spanish place articles contract only a/de + El and preserve placeholders and other names: '+locale, {
+    pre: `__locale="${locale}"`,
+    body: `assert(ns.PlaceArticles("Volví a %s.","El Exodar","%s")=="Volví al Exodar.","a + El")
+assert(ns.PlaceArticles("Salí de {place}.","El Salón de los Feudales","{place}")=="Salí del Salón de los Feudales.","de + El")
+assert(ns.PlaceArticles("Entré en %s.","El Salón de los Feudales","%s")=="Entré en %s.","en must preserve article")
+assert(ns.PlaceArticles("Volví a %s.","Orgrimmar","%s")=="Volví a %s.","bare name changed")
+RES="ok"`,
+  });
+}
+
+run('an unknown client locale builds the book and its auxiliary tabs in English', {
+  pre: '__locale="deDE"',
+  body: `assert(btn(ns.LOCALES.enUS.TAB_SETTINGS),"English settings fallback missing")
+assert(btn("Charts") and btn("Deeds") and btn("Saga"),"auxiliary fallback missing")
+assert(SkaldAPI.Render({kind="zone",arg="Elsewhere",idx=1}):find("Elsewhere",1,true),"English renderer failed")
+RES="ok"`,
 });
 
 run('outside Forever the Bard keeps every piece', {
@@ -4454,7 +4586,7 @@ assert(B.Undo())
 assert(next(SkaldCharDB.flags)==nil and SkaldCharDB.days==nil and SkaldCharDB.skills==nil)
 RES="ok"`,
 });
-for (const locale of ['enUS','ptBR','frFR']) run('old pages follow the current voice and restore original wording: '+locale, {
+for (const locale of ['enUS','ptBR','frFR','esES','esMX']) run('old pages follow the current voice and restore original wording: '+locale, {
   pre: `__locale="${locale}"`,
   body: `local P=ns.LOCALES[GetLocale()].phrases
 local e={kind="weather",wk="rain",arg="Teldrassil",zone="Teldrassil",idx=1,fl="tone_humor_weather",voice="humor"}

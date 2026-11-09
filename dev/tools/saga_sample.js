@@ -1,4 +1,4 @@
-// Prints the Saga of a simulated diary, to read it: node dev/tools/saga_sample.js [enUS|ptBR|frFR] [female|male] [level]
+// Prints the Saga of a simulated diary, to read it: node dev/tools/saga_sample.js [enUS|ptBR|frFR|esES|esMX] [female|male] [level]
 const { lua, lauxlib, lualib, to_luastring, to_jsstring } = require('fengari');
 const fs = require('fs');
 const path = require('path');

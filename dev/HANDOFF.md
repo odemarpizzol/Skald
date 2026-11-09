@@ -1,6 +1,6 @@
 # Skald: handoff para o Claude Code (2026-11-01)
 
-Addon de World of Warcraft (família Classic), diário épico em primeira pessoa mostrado como um livro de couro aberto. O repo mantém `## Interface: 16001`; o cliente de teste atual é o Anniversary (TOC 20506 só na cópia). Os textos saem em en/ptBR/frFR.
+Addon de World of Warcraft (família Classic), diário épico em primeira pessoa mostrado como um livro de couro aberto. O repo mantém `## Interface: 16001`; o cliente de teste atual é o Anniversary (TOC 20506 só na cópia). Os textos saem em en/ptBR/frFR e espanhol compartilhado esES/esMX.
 Autor Oddynho, MIT, CurseForge ID 1748824. Respostas ao usuário SEMPRE em português (pt-br).
 
 ## Onde está tudo
@@ -61,3 +61,20 @@ Ornamento/letra capitular na Saga (arte), mais capítulos (faixas de nível, cad
 - **Cuidado no Forever:** a tabela `Z.Forever` é igual à do Vanilla (as missões próprias do Forever, ~1800, não estão nela), então na Zephras Isle o cartão mostra a contagem do próprio diário ou "1 / ?": não é bug. Os IDs de mapa (`ZC.ART`, tabela) são os 14xx do Classic; o Forever pode usar outros: conferir com `/skald probe maps` e, se diferirem, o cartão cai no mapa do jogo (nada quebra).
 - **Dia 04, lista de conferência:** `/run print((select(4,GetBuildInfo())))` (se ≠ 16001, ajustar o TOC e `Flavour()` em `ZoneCard.lua`); `/skald probe maps` em um mapa novo e dentro de uma masmorra; `/skald perf` (cabeçalho deve dizer "table of the build (Forever)"); `/skald report`; Skyborne nível 1 com `/skald probe lore` e `/skald probe events`; zona/missão/início/chefe do Skyborne e mapa da Zephras com lore real; nomes oficiais pt/fr pelo probe.
 - Outras pendências: testar no jogo os ~1500 textos novos, o artigo em francês e as frases de início; descrição do CurseForge (créditos do QuestDB e prints); CI a cada push e `release.js` no layout antigo; revisão nativa do francês. Arquivos que nunca vão para o repositório: `teste.pdf` e o zip do Chronicler.
+
+## Bardo aprovado e aplicado em 09/11/2026
+
+- Composição aprovada: `output/bard-reimagined-v2/index.html`. Selos acima das seis cantigas numeradas; frase manuscrita no rodapé esquerdo; títulos, lareira e controles centralizados na direita. O instrumento integra a lareira; saíram a pauta e as notas grandes flutuantes.
+- `Textures/skald2/bard_hearth.tga` substituída por TGA 32 bits, 512×256, com alfa. PNG e prompt da arte feita com imagegen em `output/bard-reimagined-v2/`. Textos en/pt/fr; nomes longos têm a fonte do título ajustada ao espaço.
+- `checks.js` completo e regressões do Bardo contra os módulos instalados passaram. Isto é simulação: a conferência visual no WoW ainda está pendente.
+- Copiados e conferidos por SHA-256 no Forever: `Bard.lua`, `Locales.lua` e `Textures/skald2/bard_hearth.tga`. Comprovante em `output/bard-reimagined-v2/instalacao.json`; backup dos arquivos do jogo em `output/backups/forever-bard-before-20261109-095731/`.
+- Fechar e abrir o WoW para carregar a arte. Sem publicação nem alteração de TOC: a cópia do jogo ainda informa 1.0.1 e o workspace informa 1.0.3.
+
+## Espanhol na dev — 09/11/2026
+
+- Espanhol completo em uma única tabela: `ns.LOCALES.esMX = ns.LOCALES.esES`, com 2.630 frases nos 248 pools, 112 parágrafos de Saga e 52 histórias personalizadas. No mínimo oito variantes por pool espanhol, nunca menos que o inglês. Interface, tabelas auxiliares, profissões, famílias, Cartógrafo e Reader também cobertos.
+- Tratamento escolhido: **tú na interface**, primeira pessoa na narrativa, mantendo as vozes épica, humilde, bem-humorada e racial. Sem vosotros/vos/usted como tratamento de interface. Espanhol neutro, sem NBSP; gênero com as tags existentes. **Pendência: revisão nativa do espanhol**, como a revisão nativa do francês já pendente.
+- Nomes por ID vêm das tabelas do cliente: Forever 1.60.1.70862 (esES/esMX) e TBC 2.5.4.44833. Narrativa compartilhada, seis nomes regionais de instância e Zancudo/Zancaalta preservados conforme o cliente. Fonte e limites em `dev/ESPANHOL_NOMES.md`; validar nomes no Anniversary 2.5.6 atual e fazer conferência visual real nas duas variantes.
+- Textos existentes enUS/ptBR/frFR e Reader comparados com o estado inicial: preservados. Sem mudança de formato salvo/exportado, sem migração de páginas e sem tradução inventada de NPCs/chefes históricos sem ID ou fonte localizável.
+- `checks.js` completo, browser do Reader esES/esMX/PDF e três combinações de `variety.js` passaram. A simulação não é o jogo. Roteiro, arquivos e desempenho em `dev/ESPANHOL.md`; evidência de preservação em `output/spanish-work/preservation.json`.
+- Trabalhado na `dev`, preservando as mudanças locais anteriores, sem stash, commit, tag, publicação ou cópia ao jogo. A versão **1.0.4 já estava modificada antes da tarefa** e foi preservada; não atribuir esse bump à localização. Não copiar nada para o jogo sem pedido do usuário.

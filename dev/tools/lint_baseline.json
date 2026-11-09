@@ -371,9 +371,12 @@
   "tonumber",
   "type"
  ],
- "Skald/Locales.lua": [],
+ "Skald/Locales.lua": [
+  "GetLocale"
+ ],
  "Skald/Curated.lua": [
-  "ipairs"
+  "ipairs",
+  "pairs"
  ],
  "Skald/XPTiers.lua": []
 }
