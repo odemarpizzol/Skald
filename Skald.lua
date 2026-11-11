@@ -2370,13 +2370,14 @@ local function ItemInfo(ref)
     elseif classID == 0 and subclassID == 5 then cat = "food"
     elseif classID == 0 and subclassID == 7 then cat = "bandage"
     elseif classID == 7 then cat = "material"
+    elseif classID == 3 then cat = "gem"
     elseif classID == 4 then cat = K.ARMOR_SLOT[equipLoc] or "armor" end
     return cat, icon, (classID == 4) and subclassID or nil
 end
 
 -- Gear: anything you can wear, wield or carry as a bag. Recipes, materials and loose goods are not.
 local function IsGear(cat)
-    return cat ~= "other" and cat ~= "recipe" and cat ~= "material" and cat ~= "ammo" and cat ~= "food" and cat ~= "bandage"
+    return cat ~= "other" and cat ~= "recipe" and cat ~= "material" and cat ~= "gem" and cat ~= "ammo" and cat ~= "food" and cat ~= "bandage"
 end
 
 -- The icon of a page of loot: the book's own icon where it has one for that kind of item (judged
@@ -5171,7 +5172,9 @@ local function BossDown(name, encounterID)
     if type(difficultyID) == "number" and K.HARD_DIFFICULTY[difficultyID] then tier = tier + 1 end
     if tries and tries >= 2 then tier = tier + 1 end
     if not id then tier = 2 end   -- a world boss or an elite met on the road, away from any dungeon
-    AddEntry("boss", name, nil, { tries = tries, tier = math.max(2, math.min(5, tier)) })
+    -- The ids of the encounter and of the instance, when the client gave them: a boss page is text in the language it was
+    -- written in; these are what a shared chronicle can compare across languages. Pages written before have neither.
+    AddEntry("boss", name, nil, { tries = tries, tier = math.max(2, math.min(5, tier)), enc = encounterID, iid = id })
 end
 
 -- The quest is already gone from the log when QUEST_TURNED_IN fires, so fall
@@ -5351,6 +5354,9 @@ K.LOOT_DAY_CAP = 12
 -- What counts as gear. Anything else (meat, pelts, cloth, herbs, quest papers) is left out
 -- unless it is rare (blue or better): that keeps the diary free of junk.
 K.LOOT_RARE_TIER = 3
+-- Trade goods (shards, essences, ore, herbs, cloth) and gems are the stuff of a profession, not a find: they need to be epic to
+-- have a page of their own (a blue shard used to write "a good find" and used up the day's pages of loot).
+K.LOOT_TRADE_TIER = 4
 
 -- The game's own loot messages ("You receive loot: %s."), turned into patterns.
 local function LootPattern(fmt)
@@ -5392,7 +5398,10 @@ local function OnLoot(text)
 
     local cat, icon, mat = ItemInfo(ref)
 
-    if s.lootGear ~= false and not IsGear(cat) and quality < K.LOOT_RARE_TIER then return end
+    if s.lootGear ~= false and not IsGear(cat) then
+        local need = (cat == "material" or cat == "gem") and K.LOOT_TRADE_TIER or K.LOOT_RARE_TIER
+        if quality < need then return end
+    end
 
     -- Making the same thing again and again is one page that counts them, not a page for each.
     local iid = tonumber(tostring(item):match("item:(%d+)"))
@@ -5513,9 +5522,18 @@ local function VisitZone(zone)
     AddEntry(kind, zone, zone)
 end
 
--- The weather: C_Weather.GetCurrentWeather answers a list of { type, intensity } (type: Enum.WeatherType, 0 clear, 1 rain,
--- 2 snow, 3 sandstorm, 4 miscellaneous; intensity 0 to 1). It tells no event, so the minute asks; a page is written when rain,
--- snow or sand is strong and the last weather page is not recent (seen in the Forever client: rain 1, intensity 0.996).
+-- The weather: C_Weather.GetCurrentWeather answers ONE table { type, intensity } (type: Enum.WeatherType, 0 clear, 1 rain,
+-- 2 snow, 3 sandstorm, 4 miscellaneous; intensity 0 to 1): /dump in Forever shows [1]={ intensity=0.93, type=1 }, the first
+-- value returned being the table itself, not a list of them (reading it as a list wrote no page until 1.0.5). A list is read
+-- too, in case another client answers one. It tells no event, so the minute asks; a page is written when rain, snow or sand
+-- is strong and the last weather page is not recent.
+K.WeatherReadings = function(answer)
+    if type(answer) ~= "table" then return {} end
+    if answer.type ~= nil or answer.intensity ~= nil then return { answer } end
+    local out = {}
+    for _, w in ipairs(answer) do if type(w) == "table" then out[#out + 1] = w end end
+    return out
+end
 K.WEATHER_KEYS = { [1] = "rain", [2] = "snow", [3] = "sand" }
 K.WEATHER_MIN, K.WEATHER_GAP = 0.5, 2700
 K.CheckWeather = function()
@@ -5527,7 +5545,7 @@ K.CheckWeather = function()
     local ok, list = pcall(C_Weather.GetCurrentWeather)
     if not ok or type(list) ~= "table" then return end
     local key, power = nil, 0
-    for _, w in ipairs(list) do
+    for _, w in ipairs(K.WeatherReadings(list)) do
         if type(w) == "table" then
             local kind, intensity = Safe(w.type), Safe(w.intensity)
             if type(kind) == "number" and type(intensity) == "number" and K.WEATHER_KEYS[kind]
@@ -5545,6 +5563,46 @@ K.CheckWeather = function()
     AddEntry("weather", zone, zone, { wk = key })
 end
 ns.CheckWeather = function() return K.CheckWeather() end
+
+-- /skald probe weather: what the game answers now and why a page would (not) be written. Read only; /skald report shows it.
+ns.ProbeWeather = function()
+    local db = Journal()
+    local p = { when = time(), zone = GetZoneText and GetZoneText() or "?", ready = ready and true or false, list = {}, why = {} }
+    p.api = (C_Weather and type(C_Weather.GetCurrentWeather) == "function") and "yes" or "no"
+    local okI, inside = pcall(IsInInstance or function() return false end)
+    p.instance = okI and inside and true or false
+    p.combat = (UnitAffectingCombat and UnitAffectingCombat("player")) and true or false
+    p.lastPageAgo = (db and db.wxAt) and (time() - db.wxAt) or nil
+    local best = 0
+    if p.api == "yes" then
+        local ok, list = pcall(C_Weather.GetCurrentWeather)
+        p.call = ok and type(list) or "error"
+        if ok and type(list) == "table" then
+            p.size = #list
+            p.first = type(list[1])
+            p.shape = (list.type ~= nil or list.intensity ~= nil) and "one table { type, intensity }" or "list"
+            p.secretList = (_G.issecretvalue and issecretvalue(list)) and true or false
+            for _, w in ipairs(K.WeatherReadings(list)) do
+                if type(w) == "table" then
+                    local kind, intensity = Safe(w.type), Safe(w.intensity)
+                    local hid = (_G.issecretvalue and (issecretvalue(w.type) or issecretvalue(w.intensity))) and " (value hidden by the game)" or ""
+                    p.list[#p.list + 1] = string.format("type=%s intensity=%s%s", tostring(kind), type(intensity) == "number" and string.format("%.2f", intensity) or tostring(intensity), hid)
+                    if type(kind) == "number" and type(intensity) == "number" and K.WEATHER_KEYS[kind] and intensity >= K.WEATHER_MIN and intensity > best then best = intensity end
+                end
+            end
+        end
+    end
+    if p.api == "no" then p.why[#p.why + 1] = "no C_Weather.GetCurrentWeather in this client" end
+    if not p.ready then p.why[#p.why + 1] = "diary not ready" end
+    if p.combat then p.why[#p.why + 1] = "in combat" end
+    if p.instance then p.why[#p.why + 1] = "inside an instance" end
+    if p.api == "yes" and #p.list == 0 then p.why[#p.why + 1] = "the game lists no weather" end
+    if #p.list > 0 and best == 0 then p.why[#p.why + 1] = "no rain/snow/sand at or above " .. K.WEATHER_MIN .. " (or the value is hidden)" end
+    if p.lastPageAgo and p.lastPageAgo >= 0 and p.lastPageAgo < K.WEATHER_GAP then p.why[#p.why + 1] = "a weather page was written " .. p.lastPageAgo .. "s ago (gap " .. K.WEATHER_GAP .. "s)" end
+    p.verdict = (#p.why == 0) and "a page would be written at the next minute" or "no page: " .. table.concat(p.why, "; ")
+    SkaldDB.weatherProbe = p
+    return p
+end
 
 -- An instance with a map of its own (ZC.INSTANCE_ART) is kept as visited by its instance id; the Cartographer reads it.
 -- (An instance has no map id of the game, so it cannot be told by visitedMaps.)
@@ -7501,6 +7559,9 @@ H.CHAT_MSG_ADDON = function(self, event, prefix, text, channel, sender)
     local body = Safe(text)
     log[#log + 1] = { t = time(), line = string.format("%s %s <- %s | %s | %s", date("%H:%M:%S", time()), tostring(Safe(channel) or "?"),
         K.CommsShape(sender), K.CommsContext(), type(body) == "string" and body:sub(1, 40) or "?") }
+    -- the talking layer (Comms.lua) listens only once something has made one and set it here; until then this is all
+    local live = ns.CommsLive
+    if live and live.Hear then pcall(live.Hear, live, prefix, text, channel, sender) end
 end
 
 -- The codes SendAddonMessage answers with, by name when the client tells them (Enum.SendAddonMessageResult).
@@ -7551,6 +7612,55 @@ ns.ProbeComms = function(whisperTo)
         for _, e in ipairs(SkaldDB.commsLog or {}) do if e.t >= probe.when then heard = heard + 1 end end
         Say(string.format(L.COMMS_RESULT, heard, #probe.sent))
     end)
+end
+
+-- G1 of the shared chronicle: can the client tell which of the people in the group are of our guild? Read only: nothing is
+-- sent. It reads the group twice (now, and four seconds later, as guild data can arrive late) and keeps only COUNTS by what each
+-- call answered, never a name. /skald probe guild, in a group, then /skald report.
+K.GuildGroupRead = function()
+    local mine = GetGuildInfo and Safe((GetGuildInfo("player")))
+    local read = { at = time(), mine = type(mine) == "string" and mine ~= "", units = 0, same = 0, other = 0, unknown = 0, flagYes = 0, flagNo = 0, flagNil = 0 }
+    local group = "none"
+    local units = {}
+    if IsInRaid and IsInRaid() then
+        group = "raid"
+        for i = 1, (GetNumGroupMembers and GetNumGroupMembers() or 0) do units[#units + 1] = "raid" .. i end
+    elseif IsInGroup and IsInGroup() then
+        group = "party"
+        for i = 1, 4 do units[#units + 1] = "party" .. i end
+    end
+    read.group = group
+    for _, unit in ipairs(units) do
+        if UnitExists and UnitExists(unit) and not (UnitIsUnit and UnitIsUnit(unit, "player")) then
+            read.units = read.units + 1
+            local flag
+            if type(UnitIsInMyGuild) == "function" then
+                local okFlag, v = pcall(UnitIsInMyGuild, unit)
+                if okFlag then flag = Safe(v) end   -- (not `and/or`: a false answer must stay false)
+            end
+            if flag == true then read.flagYes = read.flagYes + 1 elseif flag == false then read.flagNo = read.flagNo + 1 else read.flagNil = read.flagNil + 1 end
+            local g = GetGuildInfo and Safe((GetGuildInfo(unit)))
+            if type(g) ~= "string" or g == "" then read.unknown = read.unknown + 1
+            elseif read.mine and g == mine then read.same = read.same + 1
+            else read.other = read.other + 1 end
+        end
+    end
+    return read
+end
+ns.ProbeGuildGroup = function()
+    local probe = { when = time(), api = {}, reads = {} }
+    SkaldDB.guildProbe = probe
+    for _, name in ipairs({ "UnitIsInMyGuild", "GetGuildInfo", "IsInGuild", "GetNumGroupMembers" }) do
+        probe.api[#probe.api + 1] = name .. "=" .. ((type(_G[name]) == "function") and "yes" or "no")
+    end
+    probe.reads[1] = K.GuildGroupRead()
+    if C_Timer and C_Timer.After then
+        C_Timer.After(4, function()
+            probe.reads[2] = K.GuildGroupRead()
+            Say(string.format(L.GUILDGROUP_RESULT, probe.reads[2].units, probe.reads[2].same))
+        end)
+    end
+    return probe
 end
 
 H.ENCOUNTER_START = function(self, event, ...)
@@ -9053,6 +9163,22 @@ ns.BuildReport = function()
         Add("  sent: %s", #cp.sent > 0 and table.concat(cp.sent, "; ") or "nothing")
         if cp.enum and #cp.enum > 0 then Add("  result codes: %s", table.concat(cp.enum, ", ")) end
     end
+    local wp = set.weatherProbe
+    if wp then
+        Add("weather probe (run %s, %ds ago): zone %s | api %s call %s | instance %s combat %s ready %s", date("%H:%M:%S", wp.when or 0), math.max(0, time() - (wp.when or 0)), tostring(wp.zone),
+            tostring(wp.api), tostring(wp.call), tostring(wp.instance), tostring(wp.combat), tostring(wp.ready))
+        Add("  shape %s | size %s, first %s, hidden %s", tostring(wp.shape), tostring(wp.size), tostring(wp.first), tostring(wp.secretList))
+        for _, line in ipairs(wp.list or {}) do Add("  %s", line) end
+        Add("  %s", tostring(wp.verdict))
+    end
+    local gp = set.guildProbe
+    if gp then
+        Add("guild group probe (run %s, %ds ago): api %s", date("%H:%M:%S", gp.when or 0), math.max(0, time() - (gp.when or 0)), table.concat(gp.api or {}, " "))
+        for i, r in ipairs(gp.reads or {}) do
+            Add("  read %d (%s, own guild %s): units=%d same=%d other=%d unknown=%d | UnitIsInMyGuild true=%d false=%d nil=%d", i, tostring(r.group), tostring(r.mine),
+                r.units or 0, r.same or 0, r.other or 0, r.unknown or 0, r.flagYes or 0, r.flagNo or 0, r.flagNil or 0)
+        end
+    end
     local log = set.commsLog or {}
     Add("comms heard: %d", #log)
     for _, e in ipairs(log) do Add("  %s", e.line) end
@@ -9247,6 +9373,12 @@ SlashCmdList["SKALD"] = function(msg)
         end)
         Settings().statDump = dump
         Say(ok and string.format("%d statistics listed. Type /reload to save them.", #dump) or "could not read the statistics.")
+    elseif msg == "probe weather" then
+        local p = ns.ProbeWeather()
+        Say(string.format(L.WEATHER_PROBE_RESULT, #p.list, p.verdict))
+    elseif msg == "probe guild" then
+        ns.ProbeGuildGroup()
+        Say(L.GUILDGROUP_SENT)
     elseif msg == "probe comms" or msg:match("^probe comms ") then
         ns.ProbeComms(strtrim(raw:sub(13)))
         Say(L.COMMS_SENT)

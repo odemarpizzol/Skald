@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.5
+
+- **Weather pages work now**: the game answers the weather as one table (type and strength), which the diary read as a list, so no weather page had ever been written. Rain, snow or a sandstorm strong enough is written again (at most one every 45 minutes), seen in a real session. Two phrases of the Portuguese weather asides were mended
+- **Trade materials stop making "a good find" pages**: ore, herbs, leather, cloth and gems that are not epic no longer write a page of their own (gear and recipes are unchanged)
+- **Ground for the shared guild chronicle** (nothing to see in the book yet): the channel between Skald users with its queue, the data of a chapter told by several players, and tests that send nothing. Boss pages keep the id of the encounter and of the instance, so that chapters can be put together later
+- New tests for the developer: `/skald probe guild` (who of the group is of your guild, counts only) and `/skald probe weather` (what the game answers about the weather); both only read, and show in `/skald report`
+
 ## 1.0.4
 
 - **The Bard is redrawn as a songbook**: seals above the six numbered songs, a handwritten line at the foot of the left page, and the title, the new hearth picture (with the instrument in it) and the controls centred on the right page. Long song names fit the space

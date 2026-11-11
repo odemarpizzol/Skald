@@ -5,7 +5,7 @@ const fs = require('fs');
 const path = require('path');
 
 const ADDONS = path.resolve(__dirname, '../../..');
-const FILES = [['LOC', 'Locales.lua'], ['CUR', 'Curated.lua'], ['XPT', 'XPTiers.lua'], ['CH', 'Skald.lua'], ['AT', 'Atlas.lua'], ['GL', 'Goals.lua'], ['SG', 'Saga.lua'], ['ZC', 'ZoneCard.lua'], ['CT', 'Cartographer.lua'], ['PV', 'Pvp.lua'], ['BK', 'Backup.lua'], ['SR', 'Search.lua'], ['BD', 'Bard.lua']];
+const FILES = [['LOC', 'Locales.lua'], ['CUR', 'Curated.lua'], ['XPT', 'XPTiers.lua'], ['CH', 'Skald.lua'], ['AT', 'Atlas.lua'], ['GL', 'Goals.lua'], ['SG', 'Saga.lua'], ['ZC', 'ZoneCard.lua'], ['CT', 'Cartographer.lua'], ['PV', 'Pvp.lua'], ['BK', 'Backup.lua'], ['SR', 'Search.lua'], ['BD', 'Bard.lua'], ['CM', 'Comms.lua'], ['CR', 'Chronicle.lua']];
 let failed = 0;
 
 // The game, as far as the addon can tell. `pre` runs before the addon loads (saved data, game answers);
@@ -39,7 +39,7 @@ function count(k) local n=0 for _,e in ipairs(SkaldCharDB.entries) do if e.kind=
 ${pre}
 ns={}
 assert(load(LOC,"=L"))("Skald",ns); assert(load(CUR,"=U"))("Skald",ns); assert(load(XPT,"=X"))("Skald",ns)
-assert(load(CH,"=C"))("Skald",ns); assert(load(AT,"=A"))("Skald",ns); assert(load(GL,"=G"))("Skald",ns); assert(load(SG,"=S"))("Skald",ns); assert(load(ZC,"=Z"))("Skald",ns); assert(load(CT,"=T"))("Skald",ns); assert(load(PV,"=P"))("Skald",ns); assert(load(BK,"=B"))("Skald",ns); assert(load(SR,"=R"))("Skald",ns); assert(load(BD,"=D"))("Skald",ns)
+assert(load(CH,"=C"))("Skald",ns); assert(load(AT,"=A"))("Skald",ns); assert(load(GL,"=G"))("Skald",ns); assert(load(SG,"=S"))("Skald",ns); assert(load(ZC,"=Z"))("Skald",ns); assert(load(CT,"=T"))("Skald",ns); assert(load(PV,"=P"))("Skald",ns); assert(load(BK,"=B"))("Skald",ns); assert(load(SR,"=R"))("Skald",ns); assert(load(BD,"=D"))("Skald",ns); assert(load(CM,"=M"))("Skald",ns); assert(load(CR,"=H"))("Skald",ns)
 function finishStartup()
   for i=1,100 do
     if not ns.MaintenanceState or ns.MaintenanceState().pending==0 then return end
@@ -1123,6 +1123,32 @@ SlashCmdList["SKALD"]("report")
 RES = (ok and ns.reportFrame and ns.reportFrame.edit) and "ok" or ("report: " .. text)`,
 });
 
+run('the guild probe reads the group twice and keeps only counts by what each call answered (same guild, other, unknown, the flag), never a name; with no group it says so', {
+  pre: `function IsInGroup() return true end
+function IsInRaid() return false end
+local guilds = { player = "Our Guild", party1 = "Our Guild", party2 = "Other Guild", party3 = nil }
+function GetGuildInfo(u) return guilds[u] end
+function UnitExists(u) return u == "player" or u == "party1" or u == "party2" or u == "party3" end
+function UnitIsUnit(a, b) return a == b end
+function UnitIsInMyGuild(u) if u == "party1" then return true elseif u == "party2" then return false end return nil end`,
+  body: `local p = ns.ProbeGuildGroup()
+runTimers()
+assert(#p.reads == 2, "two reads expected, got " .. #p.reads)
+local r = p.reads[2]
+assert(r.group == "party" and r.units == 3 and r.same == 1 and r.other == 1 and r.unknown == 1, "counts: " .. r.units .. "/" .. r.same .. "/" .. r.other .. "/" .. r.unknown)
+assert(r.flagYes == 1 and r.flagNo == 1 and r.flagNil == 1, "flag counts")
+local report = ns.BuildReport()
+assert(report:find("guild group probe", 1, true) and report:find("same=1 other=1 unknown=1", 1, true), "the report has no probe lines")
+for _, w in ipairs({ "Our Guild", "Other Guild" }) do
+  local at = report:find(w, 1, true)
+  if at then error("'" .. w .. "' leaked into the report: " .. report:sub(math.max(1, at - 60), at + 40):gsub("\\n", " | ")) end
+end
+-- no group
+function IsInGroup() return false end
+local q = ns.ProbeGuildGroup(); runTimers()
+RES = (q.reads[1].group == "none" and q.reads[1].units == 0) and "ok" or "no group not told"`,
+});
+
 run('the comms probe sends on the channels that apply (the finder group too), keeps every attempt and the raw code, and shows what came back in the report without naming anyone', {
   body: `local sent = {}
 Enum = { SendAddonMessageResult = { Success = 0, AddonMessageThrottle = 3 } }
@@ -1418,6 +1444,26 @@ function GetZoneText() return "Darkshore" end; fire("ZONE_CHANGED_NEW_AREA")
 RES = (off == nil and combat == nil and SEEN == nil) and "ok" or ("off=" .. tostring(off) .. " combat=" .. tostring(combat) .. " young=" .. tostring(SEEN))`,
 });
 
+
+run('trade goods and gems below epic are not pages of "a good find" (a blue shard is a reagent, not a deed); gear, recipes and an epic material still are', {
+  pre: `LOOT_ITEM_SELF = "You receive loot: %s."
+GetItemInfoInstant = function(ref)
+  local id = tonumber(tostring(ref):match("item:(%d+)"))
+  if id == 701 then return id, "Trade Goods", "Enchanting", "", 134400, 7, 12 end      -- a shard
+  if id == 702 then return id, "Gem", "Red", "", 134400, 3, 0 end                      -- a cut gem
+  if id == 703 then return id, "Armor", "Cloth", "INVTYPE_CHEST", 134400, 4, 1 end     -- gear
+  if id == 704 then return id, "Recipe", "Alchemy", "", 134400, 9, 6 end               -- a recipe
+  return id, "Misc", "", "", 134400, 15, 0
+end`,
+  body: `local function loot(id, color, name) fire("CHAT_MSG_LOOT", "You receive loot: |cff" .. color .. "|Hitem:" .. id .. "::::::::15:::::|h[" .. name .. "]|h|r."); runTimers() end
+loot(701, "0070dd", "Small Glimmering Shard")
+loot(702, "0070dd", "Blue Gem")
+local reagents = count("loot")
+loot(703, "0070dd", "Blue Robe")
+loot(704, "0070dd", "Blue Recipe")
+loot(701, "a335ee", "Epic Essence")
+RES = (reagents == 0 and count("loot") == 3) and "ok" or ("reagent pages=" .. reagents .. " total=" .. count("loot"))`,
+});
 
 run('making the same thing again is one page that counts them', {
   pre: `LOOT_ITEM_CREATED_SELF = "You create: %s."; LOOT_ITEM_CREATED_SELF_MULTIPLE = "You create: %sx%d."`,
@@ -1718,6 +1764,19 @@ RES = (rowWithEvidence and rowWithEvidence.evidence:find("A Lenda do Vento", 1, 
   or ("row: " .. tostring(rowWithEvidence and rowWithEvidence.evidence))`,
 });
 
+
+run('a boss page keeps the id of the encounter and of the instance (so a shared chronicle can tell the same boss in any language); without them nothing is invented', {
+  pre: DUNGEON,
+  body: `${BOSSES}
+fire("ENCOUNTER_START", 573, "Edwin VanCleef")
+fire("ENCOUNTER_END", 573, "Edwin VanCleef", 1, 5, 1); runTimers()
+local e = last()
+local withId = (e.kind == "boss" and e.enc == 573 and type(e.iid) == "number")
+-- a boss told by BOSS_KILL without an encounter id keeps none
+fire("BOSS_KILL", nil, "Some Boss"); runTimers()
+local f = last()
+RES = (withId and f.kind == "boss" and f.enc == nil) and "ok" or ("enc=" .. tostring(e.enc) .. " iid=" .. tostring(e.iid) .. " second enc=" .. tostring(f.enc))`,
+});
 
 run('where the client announces encounters, the falls are those at that very boss', {
   pre: DUNGEON,
@@ -4291,6 +4350,358 @@ assert(SkaldAPI.Render({kind="zone",arg="Elsewhere",idx=1}):find("Elsewhere",1,t
 RES="ok"`,
 });
 
+// Comms.lua over a fake bus: two Skalds (Alice and Bob) in one state. The bus echoes to the sender on every channel but a whisper
+// (the game does the same), and a test can lose, repeat or reorder what is in flight, or script what the game answers.
+const BUS = `local clock = 0
+local function now() return clock end
+local bus = { nodes = {}, flight = {}, sent = {}, answer = nil }
+local function deliver(from, prefix, text, channel, target)
+  if bus.answer then local a = bus.answer(from, text, channel, target, #bus.sent); if a ~= "go" then return a end end
+  bus.sent[#bus.sent + 1] = text
+  for name, node in pairs(bus.nodes) do
+    local gets = (channel == "WHISPER") and (name == target) or (channel ~= "WHISPER")
+    if gets then bus.flight[#bus.flight + 1] = { to = node, from = from, prefix = prefix, text = text, channel = channel } end
+  end
+  return 0
+end
+local function Node(name, extra)
+  local n = { name = name, got = {} }
+  local o = { prefix = "SKALD1", now = now, me = name,
+    send = function(prefix, text, channel, target) return deliver(n, prefix, text, channel, target) end,
+    onMessage = function(kind, value, sender, channel, id) n.got[#n.got + 1] = { kind = kind, value = value, sender = sender, channel = channel, id = id } end }
+  for k, v in pairs(extra or {}) do o[k] = v end
+  n.comms = ns.Comms.New(o)
+  bus.nodes[name] = n
+  return n
+end
+-- send everything due, moving the clock a little each turn
+local function drain(node, turns)
+  for _ = 1, turns or 60 do clock = clock + 0.3; node.comms:Pump() end
+end
+-- hand what is in flight to the receivers: "plain", "twice" or "reverse"
+local function flush(mode)
+  local f = bus.flight; bus.flight = {}
+  if mode == "reverse" then local r = {}; for i = #f, 1, -1 do r[#r + 1] = f[i] end; f = r end
+  for _, m in ipairs(f) do
+    m.to.comms:Hear(m.prefix, m.text, m.channel, m.from.name)
+    if mode == "twice" then m.to.comms:Hear(m.prefix, m.text, m.channel, m.from.name) end
+  end
+end
+local function same(a, b)
+  if type(a) ~= type(b) then return false end
+  if type(a) ~= "table" then return a == b end
+  for k, v in pairs(a) do if not same(v, b[k]) then return false end end
+  for k in pairs(b) do if a[k] == nil then return false end end
+  return true
+end
+local function story()
+  local list = {}
+  for i = 1, 14 do list[i] = { n = i, text = "Chapter " .. i .. ": the road to Dun Morogh and back again", ok = (i % 2 == 0) } end
+  return { title = "The Deadmines", day = 4, list = list }
+end`;
+
+run('Comms over a fake bus: a message of several chunks arrives once, equal, every chunk fits the limit, and our own echo is ignored', {
+  body: `${BUS}
+local alice, bob = Node("Alice"), Node("Bob")
+local v = story()
+local id, why = alice.comms:Send("chron", v, "GUILD")
+assert(id, "not queued: " .. tostring(why))
+assert(alice.comms:Waiting() == 1 and #bus.sent == 0, "something was sent before the pump")
+drain(alice); flush("plain")
+local biggest = 0
+for _, t in ipairs(bus.sent) do biggest = math.max(biggest, #t + #"SKALD1") end
+assert(#bus.sent >= 3, "expected several chunks, got " .. #bus.sent)
+assert(biggest <= 255, "a chunk of " .. biggest .. " bytes")
+assert(#bob.got == 1 and bob.got[1].kind == "chron" and bob.got[1].sender == "Alice" and bob.got[1].channel == "GUILD", "bob did not get it once")
+assert(same(bob.got[1].value, v), "the message changed on the way")
+assert(#alice.got == 0 and alice.comms.stats.self == #bus.sent, "the echo was not ignored")
+RES = "ok"`,
+});
+
+run('Comms: chunks that come twice or in the wrong order still make one message; a lost chunk makes none and the half message is forgotten', {
+  body: `${BUS}
+local alice, bob = Node("Alice"), Node("Bob")
+alice.comms:Send("chron", story(), "GUILD"); drain(alice); flush("reverse")
+assert(#bob.got == 1, "reverse: " .. #bob.got)
+alice.comms:Send("chron", story(), "GUILD"); drain(alice); flush("twice")
+assert(#bob.got == 2, "twice: " .. #bob.got)
+-- one chunk lost
+alice.comms:Send("chron", story(), "GUILD"); drain(alice)
+local lost = 0
+for i = #bus.flight, 1, -1 do local m = bus.flight[i]; if m.to == bob and lost == 0 then table.remove(bus.flight, i); lost = 1 end end
+flush("plain")
+assert(#bob.got == 2, "a message with a hole was delivered")
+assert(bob.comms.partialCount == 1, "the half message is not kept")
+clock = clock + 400; bob.comms:Expire(clock)
+assert(bob.comms.partialCount == 0 and bob.comms.stats.expired == 1, "the half message was not forgotten")
+RES = "ok"`,
+});
+
+run('Comms: a lock (code 11) mid-message holds it and nothing is lost; after a short hold it goes on, after a long one it begins again, and the receiver gets one message either way', {
+  body: `${BUS}
+local alice, bob = Node("Alice"), Node("Bob")
+local locked = true
+bus.answer = function(from, text, channel, target, sentSoFar) if locked and sentSoFar >= 2 then return 11 end return "go" end
+local v = story()
+alice.comms:Send("chron", v, "GUILD"); drain(alice, 20); flush("plain")
+local before = #bus.sent
+assert(before == 2 and alice.comms:Held() and alice.comms:Waiting() == 1, "not held after two chunks: " .. before)
+assert(#bob.got == 0, "delivered half")
+drain(alice, 20)   -- six seconds more, still locked, still inside the retry gap
+assert(#bus.sent == 2, "sent while locked")
+locked = false
+alice.comms:Resume(); drain(alice); flush("plain")
+assert(#bob.got == 1 and same(bob.got[1].value, v) and alice.comms:Waiting() == 0 and not alice.comms:Held(), "short hold did not finish")
+-- a long hold: the message begins again, the receiver has forgotten the first chunks, and there is still one message
+locked = true
+bus.sent = {}
+alice.comms:Send("chron", v, "GUILD"); drain(alice, 20); flush("plain")
+clock = clock + 120; bob.comms:Expire(clock)
+locked = false
+alice.comms:Resume(); drain(alice); flush("plain")
+assert(#bob.got == 2 and same(bob.got[2].value, v) and alice.comms:Waiting() == 0, "long hold: " .. #bob.got)
+RES = "ok"`,
+});
+
+run('Comms: throttled answers wait and try again (with a limit), a hard no drops that message and lets the next go, a player offline drops it, nothing and true count as accepted, false is retried a few times', {
+  body: `${BUS}
+local alice, bob = Node("Alice"), Node("Bob")
+local small = { a = 1 }
+-- throttled twice (3 then 8), then accepted
+local tries = 0
+bus.answer = function() tries = tries + 1; if tries == 1 then return 3 elseif tries == 2 then return 8 end return "go" end
+alice.comms:Send("chron", small, "GUILD")
+alice.comms:Pump(); clock = clock + 0.3
+assert(alice.comms:Waiting() == 1 and alice.comms.stats.throttled == 1, "first throttle")
+drain(alice, 30); flush("plain")
+assert(#bob.got == 1 and alice.comms.stats.throttled == 2 and alice.comms:Waiting() == 0, "after throttles")
+-- a hard no, then a good one behind it
+bus.answer = function(from, text, channel) if channel == "GUILD" then return 10 end return "go" end
+local dropped = {}
+alice.comms.onDrop = function(kind, id, why) dropped[#dropped + 1] = why end
+alice.comms:Send("chron", small, "GUILD"); alice.comms:Send("chron", small, "PARTY")
+drain(alice, 30); flush("plain")
+assert(dropped[1] == "not in a guild" and #bob.got == 2 and alice.comms:Waiting() == 0, "hard no: " .. tostring(dropped[1]) .. " got " .. #bob.got)
+-- offline target
+bus.answer = function() return 12 end
+alice.comms:Send("chron", small, "WHISPER", "Bob"); drain(alice, 10)
+assert(dropped[2] == "target offline" and alice.comms:Waiting() == 0, "offline")
+-- the old client answers nothing (accepted); a boolean false is an error with a few tries
+bus.answer = function() return nil end
+alice.comms:Send("chron", small, "PARTY"); drain(alice, 10)
+assert(alice.comms:Waiting() == 0 and alice.comms.stats.sent >= 1, "nothing answered counts as accepted")
+bus.answer = function() return false end
+alice.comms:Send("chron", small, "PARTY"); drain(alice, 60)
+assert(alice.comms:Waiting() == 0 and dropped[3] == "error 9", "false: " .. tostring(dropped[3]))
+-- the queue has a ceiling
+bus.answer = function() return 11 end
+local queued = 0
+for _ = 1, 60 do if alice.comms:Send("chron", small, "GUILD") then queued = queued + 1 end end
+assert(queued == ns.Comms.QUEUE_MAX, "queue ceiling " .. queued)
+RES = "ok"`,
+});
+
+run('Comms validates what it hears: wrong prefix, shape, version, counts, kind, checksum, payload, too many half messages from one sender, a secret sender, the same name with or without a realm', {
+  body: `${BUS}
+local bob = Node("Bob", { kinds = { chron = true } })
+local c = bob.comms
+assert(c:Hear("OTHER", "1:chron:1:1:1:5:n1;", "GUILD", "Eve") == "ignored")
+assert(c:Hear("SKALD1", 42, "GUILD", "Eve"):find("^bad"), "a non-string")
+assert(c:Hear("SKALD1", "garbage", "GUILD", "Eve"):find("bad: header"))
+assert(c:Hear("SKALD1", "2:chron:1:1:1:5:n1;", "GUILD", "Eve"):find("bad: version"))
+assert(c:Hear("SKALD1", "1:chron:1:1:99:5:n1;", "GUILD", "Eve"):find("bad: count"))
+assert(c:Hear("SKALD1", "1:chron:1:0:1:5:n1;", "GUILD", "Eve"):find("bad: count"))
+assert(c:Hear("SKALD1", "1:other:1:1:1:5:n1;", "GUILD", "Eve"):find("bad: kind"))
+assert(c:Hear("SKALD1", "1:chron:1:1:1:5:n1;", "GUILD", "Eve"):find("bad: checksum"), "a wrong checksum")
+-- a payload that is not a table (the right checksum of "n5;")
+local sum = ns.Backup.Checksum("n5;")
+assert(c:Hear("SKALD1", "1:chron:2:1:1:" .. string.format("%.0f", sum) .. ":n5;", "GUILD", "Eve") == "bad: payload", "payload not a table")
+-- a text that is not our format at all, with the right checksum
+local junk = "load(\\"os.exit()\\")"
+local jsum = ns.Backup.Checksum(junk)
+assert(c:Hear("SKALD1", "1:chron:3:1:1:" .. string.format("%.0f", jsum) .. ":" .. junk, "GUILD", "Eve") == "bad: payload", "junk was accepted")
+-- the first chunk of four messages from one sender: the fourth is refused
+for id = 10, 12 do assert(c:Hear("SKALD1", "1:chron:" .. id .. ":1:2:5:xx", "GUILD", "Mallory") == "partial") end
+assert(c:Hear("SKALD1", "1:chron:13:1:2:5:xx", "GUILD", "Mallory") == "bad: busy", "no ceiling on half messages")
+assert(c.partialBy.Mallory == 3)
+-- a chunk that disagrees with the first of its message
+assert(c:Hear("SKALD1", "1:chron:10:2:3:5:xx", "GUILD", "Mallory") == "bad: mismatch")
+-- names
+assert(ns.Comms.SameName("Bob-Realm", "Bob") and ns.Comms.SameName("Bob", "bob-Realm") and ns.Comms.SameName("Bob-A", "bob-a"))
+assert(not ns.Comms.SameName("Bob-A", "Bob-B") and not ns.Comms.SameName("Bobby", "Bob"))
+-- the shape the Forever client's sender was seen in: a space where the hyphen is, and realms with a space or a mark in them
+assert(ns.Comms.SameName("Bob Realm", "Bob-Realm") and ns.Comms.SameName("Bob Area 52", "Bob-Area52") and ns.Comms.SameName("Bob Azjol-Nerub", "Bob-AzjolNerub"))
+assert(not ns.Comms.SameName("Bob Area 52", "Bob-Other") and not ns.Comms.SameName("Bobby Realm", "Bob-Realm"))
+local mine = Node("Alice-Realm")
+local chunkOf
+alice = Node("Zed-Elsewhere"); alice.comms:Send("chron", { a = 1 }, "GUILD"); drain(alice); chunkOf = bus.sent[#bus.sent]
+assert(mine.comms:Hear("SKALD1", chunkOf, "GUILD", "Alice Realm") ~= "ok" and mine.comms:Hear("SKALD1", chunkOf, "GUILD", "Alice Realm") == "self", "own echo with a space was taken for a stranger")
+assert(mine.comms:Hear("SKALD1", chunkOf, "GUILD", "Zed Elsewhere") == "ok", "a stranger with a space was not heard")
+RES = "ok"`,
+});
+
+run('Comms in the Forever client: a secret sender is refused, the callback that fails does not break the hearing, and a message goes through the fake bus with the withholding-safe filter', {
+  pre: FOREVER,
+  body: `${BUS}
+FOREVER_SECRET["Eve"] = true
+local safe = function(v) if issecretvalue(v) then return nil end return v end
+local alice, bob = Node("Alice", { safe = safe }), Node("Bob", { safe = safe, onMessage = function() error("boom") end })
+alice.comms:Send("chron", story(), "GUILD"); drain(alice); flush("plain")
+assert(bob.comms.stats.delivered == 1, "the callback that fails stopped the hearing")
+assert(bob.comms:Hear("SKALD1", "1:chron:9:1:1:5:n1;", "GUILD", "Eve"):find("bad: shape"), "a secret sender was accepted")
+RES = "ok"`,
+});
+
+run('Comms is inert: loading it sends nothing, the book does not listen through it until something is set, and once set the one entry point (CHAT_MSG_ADDON) feeds it while the passive log still records', {
+  pre: `SENT_COUNT = 0
+function SendAddonMessage() SENT_COUNT = SENT_COUNT + 1 end
+C_ChatInfo = { SendAddonMessage = SendAddonMessage, RegisterAddonMessagePrefix = function() return true end, IsAddonMessagePrefixRegistered = function() return true end }`,
+  body: `${BUS}
+assert(ns.Comms and ns.Comms.New and ns.CommsLive == nil, "not inert at load")
+assert(SENT_COUNT == 0, "loading sent something")
+local alice, bob = Node("Alice"), Node("Bob")
+alice.comms:Send("chron", { a = 1 }, "GUILD"); drain(alice)
+local chunk = bus.sent[1]
+fire("CHAT_MSG_ADDON", "SKALD1", chunk, "GUILD", "Alice-Realm")
+assert(#bob.got == 0 and bob.comms.stats.heard == 0, "heard without being set")
+ns.CommsLive = bob.comms
+fire("CHAT_MSG_ADDON", "SKALD1", chunk, "GUILD", "Alice-Realm")
+assert(#bob.got == 1 and bob.got[1].value.a == 1, "the entry point did not feed it")
+assert(SkaldDB.commsLog and #SkaldDB.commsLog == 2, "the passive log stopped")
+RES = "ok"`,
+});
+
+// Chronicle.lua: contributions of one adventure from two players over the fake bus.
+const CHRON = `${BUS}
+local C = ns.Chronicle
+local T = 1790000000
+local function boss(enc, t, tries) return { kind = "boss", arg = "x", enc = enc, iid = 36, t = t, tries = tries } end
+local function chaptersOf(store) return C.Chapters(store) end
+local function chronNode(name, extra)
+  local n
+  local store = C.NewStore()
+  n = Node(name, { kinds = { chron = true }, onMessage = function(kind, value, sender) n.results[#n.results + 1] = C.Receive(store, kind, value, sender) end })
+  n.store, n.results = store, {}
+  return n
+end`;
+
+run('Chronicle: two players tell the same run; each ends with the same one chapter, bosses by the union of their ids (never a sum), authors once, the note cleaned', {
+  body: `${CHRON}
+local alice, bob = chronNode("Alice"), chronNode("Bob")
+local a = assert(C.Build({ boss(573, T), boss(574, T + 300, 2) }, { with = { "Bob" }, note = "Dug deep. |cffff0000red|r and |Hitem:1|h[x]|h" }))
+local b = assert(C.Build({ boss(574, T + 310, 3), boss(575, T + 900) }, { note = "Bob was here" }))
+C.Add(alice.store, "Alice", a); C.Add(bob.store, "Bob", b)
+alice.comms:Send("chron", a, "GUILD"); drain(alice); flush("plain")
+bob.comms:Send("chron", b, "GUILD"); drain(bob); flush("plain")
+assert(bob.results[1] == "added" and alice.results[1] == "added", "the contributions did not cross: " .. tostring(bob.results[1]) .. " / " .. tostring(alice.results[1]))
+for _, n in ipairs({ alice, bob }) do
+  local ch = chaptersOf(n.store)
+  assert(#ch == 1, n.name .. ": " .. #ch .. " chapters")
+  local c = ch[1]
+  assert(#c.bosses == 3 and c.bosses[1].enc == 573 and c.bosses[2].enc == 574 and c.bosses[3].enc == 575, n.name .. ": bosses")
+  assert(c.bosses[2].tries == 3 and #c.bosses[2].by == 2, "the boss both told: most tries, two authors")
+  assert(#c.authors == 2 and c.authors[1] == "Alice" and c.authors[2] == "Bob" and c.count == 2, "authors")
+  assert(#c.notes == 2 and not c.notes[1].text:find("|", 1, true) and not c.notes[2].text:find("|", 1, true), "notes")
+end
+assert(ns.Backup.Serialize(chaptersOf(alice.store)) == ns.Backup.Serialize(chaptersOf(bob.store)), "the two books differ")
+RES = "ok"`,
+});
+
+run('Chronicle: a newer revision replaces, the same or an older one changes nothing, another run or another day is another chapter, and a person named joins a contribution with no boss in common', {
+  body: `${CHRON}
+local s = C.NewStore()
+local a1 = assert(C.Build({ boss(573, T) }, { note = "first", rev = 1 }))
+local a2 = assert(C.Build({ boss(573, T) }, { note = "second", rev = 2 }))
+assert(C.Add(s, "Alice", a1) == "added")
+assert(C.Add(s, "Alice", a1) == "stale", "the same revision again")
+assert(C.Add(s, "Alice", a2) == "replaced")
+assert(C.Add(s, "Alice", a1) == "stale", "an older revision")
+local ch = C.Chapters(s)
+assert(#ch == 1 and ch[1].count == 1 and ch[1].notes[1].text == "second", "the revision did not replace")
+-- the next day, the same dungeon: another chapter (newest first)
+C.Add(s, "Alice", C.Build({ boss(573, T + 86400) }, {}))
+-- another instance at the same time
+local other = C.Build({ { kind = "boss", enc = 900, iid = 43, t = T + 100 } }, {})
+C.Add(s, "Alice", other)
+ch = C.Chapters(s)
+assert(#ch == 3 and ch[1].t0 > ch[2].t0 or ch[1].t0 >= ch[2].t0, "chapters: " .. #ch)
+assert(#ch == 3, "expected 3 chapters, got " .. #ch)
+-- a run that overlaps in time and place but shares no boss and names nobody: not the same story
+local carol = C.Build({ boss(600, T + 200) }, {})
+C.Add(s, "Carol", carol)
+assert(#C.Chapters(s) == 4, "joined without a reason")
+-- the same, naming Alice: joined to Alice's run
+local carol2 = C.Build({ boss(600, T + 200) }, { with = { "Alice" }, rev = 2 })
+assert(C.Add(s, "Carol", carol2) == "replaced")
+ch = C.Chapters(s)
+assert(#ch == 3, "a named person did not join: " .. #ch)
+RES = "ok"`,
+});
+
+run('Chronicle: what comes from outside is cleaned (bars, control marks, length, unknown fields, counts, types, version, the author the game reported), and a build with no boss id says so', {
+  body: `${CHRON}
+local s = C.NewStore()
+local long = string.rep("word ", 100)
+local raw = { v = 1, iid = 36, t0 = T, t1 = T + 60, rev = 1, by = "Mallory", evil = "x", boss = nil,
+  bosses = { { enc = 573, t = T, tries = 2, evil = 1 }, { enc = -4 }, { enc = 0/0 }, { enc = "a" }, { enc = 573 } },
+  with = { "Bob|cffff0000", long, "Dan" }, note = "|cffff0000red|r |Hitem:1|h[x]|h |TInterface/Icon:20|t" .. string.char(10, 9) .. "bell " .. long }
+assert(C.Add(s, "Alice", raw) == "added")
+local c = s.contribs["Alice|36|" .. T]
+assert(c and c.by == "Alice" and c.evil == nil and #c.bosses == 1 and c.bosses[1].evil == nil and c.bosses[1].enc == 573, "fields or author")
+assert(not c.note:find("|", 1, true) and not c.note:find("[%c]") and #c.note <= C.MAX_NOTE, "note: " .. tostring(c.note))
+assert(c.with[1] == "Bob" .. "cffff0000" and #c.with[2] <= C.MAX_NAME and c.with[3] == "Dan", "names")
+-- a note in letters of more than one byte is not cut through a letter
+local acc = string.rep("ã", 300)
+C.Add(s, "Bob", { v = 1, iid = 36, t0 = T, t1 = T, rev = 1, bosses = { { enc = 573 } }, note = acc })
+local n2 = s.contribs["Bob|36|" .. T].note
+assert(#n2 <= C.MAX_NOTE and #n2 % 2 == 0 and n2:match("^[ã]+$"), "cut through a letter")
+-- bad ones
+assert(C.Add(s, "X", { v = 2, iid = 36, t0 = T, t1 = T, rev = 1, bosses = { { enc = 1 } } }) == "bad: version")
+assert(C.Add(s, "X", { v = 1, iid = 36, t0 = T + 5, t1 = T, rev = 1, bosses = { { enc = 1 } } }) == "bad: fields")
+assert(C.Add(s, "X", { v = 1, iid = 36, t0 = T, t1 = T, rev = 1, bosses = {} }) == "bad: no boss")
+assert(C.Add(s, "X", { v = 1, iid = "36", t0 = T, t1 = T, rev = 1, bosses = { { enc = 1 } } }) == "bad: fields")
+assert(C.Add(s, "X", "text"):find("^bad"))
+assert(C.Add(s, "", { v = 1 }) == "bad: author")
+-- more than the ceiling of bosses
+local many = {}
+for i = 1, 40 do many[i] = { enc = i } end
+C.Add(s, "Many", { v = 1, iid = 36, t0 = T, t1 = T, rev = 1, bosses = many })
+assert(#s.contribs["Many|36|" .. T].bosses == C.MAX_BOSSES, "boss ceiling")
+-- a build from pages with no id of the encounter invents nothing
+local none, why = C.Build({ { kind = "boss", arg = "x", iid = 36, t = T }, { kind = "boss", arg = "y", enc = 5, t = T } }, {})
+assert(none == nil and why == "no boss with an id", "an unnumbered boss was kept")
+RES = "ok"`,
+});
+
+run('Chronicle: bars of a note that crosses the bus are gone on arrival, a store keeps at most MAX_CONTRIBS (the oldest go), a realistic contribution (five bosses, five names, a full note) is four chunks at most, and the store survives the diary serializer', {
+  body: `${CHRON}
+local alice, bob = chronNode("Alice"), chronNode("Bob")
+-- sent raw, as a hostile client would: Comms and the serializer carry the bar through, the chronicle must clean it
+alice.comms:Send("chron", { v = 1, iid = 36, t0 = T, t1 = T, rev = 1, bosses = { { enc = 573 } }, note = "hi |cffff0000red|r |TInterface/Icon:20|t" }, "GUILD")
+drain(alice); flush("plain")
+local c = bob.store.contribs["Alice|36|" .. T]
+assert(c and not c.note:find("|", 1, true), "a bar arrived")
+-- a realistic contribution: five bosses, five names, a full note
+local five = {}
+for i = 1, 5 do five[i] = boss(560 + i, T + i * 300, i % 3) end
+local full = assert(C.Build(five, { with = { "Brother", "Sister", "Cousin", "Friend", "Knight" }, note = string.rep("a story of the road ", 14):sub(1, C.MAX_NOTE) }))
+bus.sent = {}
+alice.comms:Send("chron", full, "GUILD"); drain(alice)
+assert(#bus.sent <= 4, "a realistic contribution took " .. #bus.sent .. " chunks")   -- about 730 bytes written; a chunk holds about 215
+-- the ceiling of the store
+local s = C.NewStore()
+for i = 1, C.MAX_CONTRIBS + 50 do C.Add(s, "A", { v = 1, iid = 36, t0 = T + i * 10000, t1 = T + i * 10000, rev = 1, bosses = { { enc = 1 } } }) end
+local n = 0
+for _ in pairs(s.contribs) do n = n + 1 end
+assert(n == C.MAX_CONTRIBS and #s.order == C.MAX_CONTRIBS, "store size " .. n)
+assert(s.contribs["A|36|" .. (T + 10000)] == nil and s.contribs["A|36|" .. (T + (C.MAX_CONTRIBS + 50) * 10000)] ~= nil, "the oldest did not go first")
+-- the store goes through the diary's serializer and comes back the same
+local text = ns.Backup.Serialize(bob.store)
+local back = ns.Backup.Deserialize(text)
+assert(ns.Backup.Serialize(C.Chapters(back)) == ns.Backup.Serialize(C.Chapters(bob.store)), "the store changed through the serializer")
+RES = "ok"`,
+});
+
 run('outside Forever the Bard keeps every piece', {
   body: `RES = (#ns.Bard.TRACKS == 33 and not ns.IsForever()) and "ok" or ("tracks=" .. #ns.Bard.TRACKS)`,
 });
@@ -4387,7 +4798,7 @@ RES = (said:find("perf: client", 1, true) and said:find("quest index", 1, true) 
   or ("said: " .. said .. " errors: " .. tostring(SkaldDB.errors and SkaldDB.errors[1]))`,
 });
 
-run('rain, snow or sand strong enough writes one weather page of its kind, then not again for a while; a clear sky, a weak storm and an instance write none', {
+run('the game answers the weather as ONE table { type, intensity } (seen in Forever: /dump shows [1]={intensity=..,type=1}); rain, snow or sand strong enough writes one weather page of its kind, then not again for a while; a clear sky, a weak storm and an instance write none', {
   body: `local E = SkaldCharDB.entries
 local function count() local n = 0 for _, e in ipairs(E) do if e.kind == "weather" then n = n + 1 end end return n end
 local now = NOW or time()
@@ -4396,25 +4807,27 @@ C_Weather = { GetCurrentWeather = function() return weather end }
 function GetZoneText() return "Teldrassil" end
 weather = {}; ns.CheckWeather()
 local clear = count()
-weather = { { type = 0, intensity = 1 } }; ns.CheckWeather()
-weather = { { type = 1, intensity = 0.2 } }; ns.CheckWeather()
-weather = { { type = 4, intensity = 1 } }; ns.CheckWeather()
+weather = { type = 0, intensity = 1 }; ns.CheckWeather()
+weather = { type = 1, intensity = 0.2 }; ns.CheckWeather()
+weather = { type = 4, intensity = 1 }; ns.CheckWeather()
 local quiet = count() == 0 and clear == 0
 local inside = true
 function IsInInstance() return inside, "party" end
-weather = { { type = 1, intensity = 0.99 } }; ns.CheckWeather()
+weather = { type = 1, intensity = 0.99 }; ns.CheckWeather()
 local indoors = count() == 0
 inside = false
 ns.CheckWeather()
 local one = count() == 1
-ns.CheckWeather(); weather = { { type = 2, intensity = 0.9 } }; ns.CheckWeather()
+ns.CheckWeather(); weather = { type = 2, intensity = 0.9 }; ns.CheckWeather()
 local gap = count() == 1
 SkaldCharDB.wxAt = SkaldCharDB.wxAt - 3000
 ns.CheckWeather()
+SkaldCharDB.wxAt = SkaldCharDB.wxAt - 3000
+weather = { { type = 1, intensity = 0.9 } }; ns.CheckWeather()   -- a list of them is read too
 local last
 for _, e in ipairs(E) do if e.kind == "weather" then last = e end end
 local text = last and SkaldAPI.Render(last) or ""
-RES = (quiet and indoors and one and gap and count() == 2 and last.wk == "snow" and last.arg == "Teldrassil" and text:find("Teldrassil", 1, true) and (SkaldDB.errors == nil)) and "ok"
+RES = (quiet and indoors and one and gap and count() == 3 and last.wk == "rain" and last.arg == "Teldrassil" and text:find("Teldrassil", 1, true) and (SkaldDB.errors == nil)) and "ok"
   or ("quiet " .. tostring(quiet) .. " indoors " .. tostring(indoors) .. " one " .. tostring(one) .. " gap " .. tostring(gap) .. " n " .. count() .. " text " .. text)`,
 });
 

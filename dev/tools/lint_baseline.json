@@ -115,6 +115,8 @@
   "UnitGUID",
   "UnitIsDead",
   "UnitIsGhost",
+  "UnitIsInMyGuild",
+  "UnitIsUnit",
   "UnitLevel",
   "UnitName",
   "UnitRace",
@@ -181,7 +183,6 @@
   "C_Timer",
   "CreateFrame",
   "GameTooltip",
-  "GetLocale",
   "GetMoney",
   "SkaldAPI",
   "SkaldCharDB",
@@ -202,7 +203,6 @@
  ],
  "Skald/Saga.lua": [
   "C_Map",
-  "GetLocale",
   "SkaldAPI",
   "SkaldCharDB",
   "SkaldDB",
@@ -232,7 +232,6 @@
   "CreateFrame",
   "GetBuildInfo",
   "GetInstanceInfo",
-  "GetLocale",
   "InCombatLockdown",
   "IsInInstance",
   "LibStub",
@@ -272,7 +271,6 @@
  ],
  "Skald/Pvp.lua": [
   "CreateFrame",
-  "GetLocale",
   "GetPVPLifetimeStats",
   "GetRealZoneText",
   "GetRealmName",
@@ -369,6 +367,29 @@
   "string",
   "table",
   "tonumber",
+  "type"
+ ],
+ "Skald/Comms.lua": [
+  "error",
+  "ipairs",
+  "math",
+  "pairs",
+  "pcall",
+  "self",
+  "setmetatable",
+  "string",
+  "table",
+  "tonumber",
+  "tostring",
+  "type"
+ ],
+ "Skald/Chronicle.lua": [
+  "ipairs",
+  "math",
+  "pairs",
+  "pcall",
+  "table",
+  "tostring",
   "type"
  ],
  "Skald/Locales.lua": [
