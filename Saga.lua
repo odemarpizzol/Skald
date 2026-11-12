@@ -339,7 +339,7 @@ local TEXT = {
             birth = {
                 "Meu nome é {name}, {g:um|uma} {race} {class}. Nasci em {home}, em {land}, e tudo o que fiz desde então começou ali.",
                 "Vim ao mundo em {home}, em {land}. Um lugar pequeno para uma história que cresceu a cada página.",
-                "Todo povo tem um começo, e o meu foi {home}, em {land}. A estrada leva para longe dele, mas nunca esquece de todo o caminho de volta.",
+                "Todo povo tem um começo, e o meu foi {home}, em {land}. A estrada leva para longe dali, mas nunca se esquece do caminho de volta.",
                 "{name}, {g:um|uma} {race} {class}, nascid{g:o|a} em {home}, em {land}. Pouco mais se sabia de mim, então, do que o nome daquele lugar.",
                 "Fique dito onde tudo começou: {home}, em {land}, entre os meus, com um nome, uma bolsa e uma longa estrada por aprender.",
                 "Dizem que uma saga deve começar onde nasceu o seu herói, e a minha começa em {home}, em {land}, onde {g:um|uma} {race} chamad{g:o|a} {name} olhou o céu pela primeira vez.",
@@ -370,30 +370,30 @@ local TEXT = {
                 "As missões foram as páginas dos meus dias: recados, juramentos, pequenas promessas cumpridas. Levei {#n:missão|missões} até o fim.",
                 "Cada missão é uma promessa, e tentei cumprir todas: até aqui, {#n:promessa cumprida|promessas cumpridas}.",
                 "Algumas tarefas foram pequenas, outras viraram histórias dignas de serem ouvidas. Juntas são {#n:missão|missões}, e não trocaria nenhuma.",
-                "Nunca recusei um desconhecido que precisava de uma mão, e o diário prova: {#n:missão|missões} vistas até o fim, do primeiro recado ao mais recente.",
-                "Uma estrada é feita de recados. Os meus, terminados e assinados, são {#n:missão|missões}, e cada um deixou marca no jeito como caminho.",
+                "Nunca recusei ajuda a quem precisava de uma mão, e o diário prova: levei {#n:missão|missões} até o fim, do primeiro recado ao mais recente.",
+                "Uma estrada é feita de recados. Concluí {#n:missão|missões}, e cada tarefa deixou marca no jeito como caminho.",
                 "Pergunte às aldeias o que fiz por elas e falarão de recados. Eu lhe digo o número: {n}.",
-                "O diário de missões é um livro à parte, e nele estão {#n:entrada fechada|entradas fechadas}. Carrego todas, com leveza.",
+                "O diário de missões é um livro à parte, com {#n:registro concluído|registros concluídos}. Carrego essa história com leveza.",
                 "O que é um herói senão alguém que responde quando chamado? Respondi {#n:vez|vezes}, e o chamado não parou.",
             },
             war = {
-                "Alguns inimigos não caem só pela espada. Caem pela paciência, pelos amigos, pela terceira tentativa. Derrubei {#n:grande|grandes}.",
+                "Alguns inimigos não caem só pela espada. Caem pela paciência, pelos amigos, pela terceira tentativa. Derrubei {#n:grande adversário|grandes adversários}.",
                 "Estive em salões onde as paredes guardam a memória de cada golpe, e deixei {#n:chefe caído|chefes caídos} atrás de mim.",
                 "Um chefe é uma pergunta que a masmorra faz, e a cada vez respondi com aço e companhia. Respondi {#n:vez|vezes}.",
                 "Guardaram os seus tronos com tudo o que tinham, e não bastou. Vi {#n:trono esvaziado|tronos esvaziados}.",
                 "As trompas de guerra dos lugares fundos agora soam para mim. Chefes derrotados: {n}.",
                 "Desci às profundezas para ser {g:posto|posta} à prova, e fui. Entre os meus inimigos, {#n:campeão jaz quieto|campeões jazem quietos} por minha causa.",
                 "Sangue, ruído e depois o silêncio que vem após a queda do grande. Conheci esse silêncio {#n:vez|vezes}.",
-                "Nenhuma canção minha existe sem o choque das armas. {#n:grande adversário terminou|grandes adversários terminaram} nela.",
+                "Nenhuma canção minha existe sem o choque das armas. Enfrentei {#n:grande adversário|grandes adversários} para ter o que cantar.",
             },
             warHard = {
-                "{boss} não cedeu com facilidade. Caí diante dele, e me levantei, e a vitória me custou {#tries:queda|quedas}.",
-                "De todos os grandes, {boss} foi o que mais me custou: {#tries:queda|quedas} antes que ele enfim jazesse quieto.",
+                "{boss} não cedeu com facilidade. Caí, voltei a me levantar, e a vitória me custou {#tries:queda|quedas}.",
+                "Nenhuma luta me custou tanto quanto a de {boss}: {#tries:queda|quedas} antes que eu enfim vencesse.",
                 "{boss} me ensinou primeiro a humildade e depois a vitória, ao preço de {#tries:queda|quedas}.",
-                "Lembro de {boss} melhor que dos outros, porque perdi antes de vencer: {#tries:tentativa perdida|tentativas perdidas}.",
+                "Lembro-me de {boss} melhor que dos outros adversários, porque perdi antes de vencer: {#tries:tentativa perdida|tentativas perdidas}.",
                 "A vitória sobre {boss} foi mais doce pelo caminho que custou, um caminho de {#tries:queda|quedas}.",
                 "Algumas vitórias são limpas. A de {boss} não foi, e não a quereria de outro modo. Antes dela, {#tries:queda|quedas}.",
-                "Contarão de {boss} como aquele que quase me venceu. Antes da vitória, {#tries:queda|quedas}.",
+                "Contarão que quase perdi para {boss}. Antes da vitória, {#tries:queda|quedas}.",
                 "{boss} se pôs entre mim e o capítulo seguinte, e cobrou um pedágio de {#tries:queda|quedas}. Paguei, e passei.",
             },
             falls = {
@@ -401,17 +401,17 @@ local TEXT = {
                 "Um herói se mede tanto pelo levantar quanto pela glória. Levantei-me depois de {#n:queda|quedas}.",
                 "A morte não foi estranha a ninguém nesta estrada. Encontrei-a {#n:vez|vezes}.",
                 "O curandeiro de espíritos conhece o meu rosto: {#n:visita|visitas}.",
-                "Nem toda página é triunfo. Algumas são o silêncio depois de uma queda: {#n:página|páginas} delas.",
+                "Nem toda página é triunfo. Registrei o silêncio depois de cair em {#n:página|páginas} deste diário.",
                 "Levantei-me todas as vezes, depois de {#n:queda|quedas} ao todo.",
                 "Cada queda deixou uma lição: {#n:lição aprendida|lições aprendidas} do jeito difícil.",
-                "Deitei no chão mais vezes do que gosto de admitir: {#n:queda|quedas}, e cada uma bem ganha.",
+                "Deitei-me no chão mais vezes do que gosto de admitir: {#n:queda|quedas}, e cada uma deixou uma lição.",
             },
             fallsPlace = {
                 "Foi em {place} que mais caí.",
-                "{place} foi a mestra mais dura.",
+                "Minhas lições mais duras vieram de {place}.",
                 "Em {place}, a morte chamou mais alto.",
                 "A terra que mais me exigiu foi {place}.",
-                "Conheço o chão de {place} melhor que a maioria, de tanto deitar nele.",
+                "Conheço o chão de {place} melhor que a maioria, de tanto me deitar nele.",
                 "{place} me tomou mais do que qualquer outra terra.",
                 "Se eu cair de novo, preferiria que não fosse em {place}.",
                 "Pergunte onde mais doeu e direi {place}.",
@@ -424,25 +424,25 @@ local TEXT = {
                 "Masmorras e longas estradas fazem amigos de desconhecidos. O meu livro de companheiros guarda {#n:nome|nomes}.",
                 "Nenhuma saga é narrada por uma voz só. Comigo caminhou gente: {#n:pessoa lembrada|pessoas lembradas} aqui.",
                 "Guardo-os como se guarda uma lamparina: {#n:companheiro|companheiros} da estrada, cada um uma pequena luz.",
-                "A companhia foi o melhor tesouro da estrada, e lembro de {#n:companheiro|companheiros}.",
+                "A companhia foi o melhor tesouro da estrada, e guardo na memória {#n:companheiro|companheiros}.",
             },
             companyNames = {
-                "Entre eles, lembro melhor de: {names}.",
+                "Entre eles, lembro-me melhor de {names}.",
                 "Penso mais vezes em {names}.",
                 "Se a estrada um dia me levar de volta a {names}, a cerveja é por minha conta.",
                 "Os nomes que ficam mais claros: {names}.",
                 "Fique escrito que caminhei com {names}.",
                 "A {names}: {g:obrigado|obrigada} pela companhia.",
                 "De todos eles, aqueles com quem caminharia de novo: {names}.",
-                "Levanto um copo, em memória, a {names}.",
+                "Ergo um copo em homenagem a {names}.",
             },
             marks = {
-                "A estrada também pediu feitos dignos de um selo. Cumpri {#n:meta|metas}, que valem {#points:ponto|pontos}, e o título que me renderam é {title}.",
+                "A estrada também pediu feitos dignos de um selo. Cumpri {#n:meta|metas}, somei {#points:ponto|pontos} e conquistei o título de {title}.",
                 "Juntei {#points:ponto|pontos} de renome em metas cumpridas, {n} ao todo, e com eles o título de {title}.",
-                "Um selo aqui, outro ali: {#n:meta cumprida|metas cumpridas}, {#points:ponto ganho|pontos ganhos}, e o título que trazem é {title}.",
+                "Um selo aqui, outro ali: {#n:meta cumprida|metas cumpridas}, {#points:ponto ganho|pontos ganhos}, e o título conquistado é {title}.",
                 "Renome é um livro-caixa e eu mantenho o meu. Metas cumpridas: {n}. Pontos: {points}. Chamam-me {title}.",
                 "Nem tudo o que importa se mede, mas parte se mede. Metas cumpridas: {n}; pontos: {points}; o meu título, {title}.",
-                "{title}: é o que {#points:ponto|pontos} de renome, ganhos em {#n:meta|metas}, fizeram de mim.",
+                "{title}: o título que conquistei ao somar {#points:ponto|pontos} de renome em {#n:meta cumprida|metas cumpridas}.",
                 "Os selos do livro guardam as minhas metas: cumpridas, {n}; valor, {#points:ponto|pontos}; e o título, {title}.",
                 "Metas pequenas, outras maiores, algumas que pediram paciência: {#n:meta cumprida|metas cumpridas}, {#points:ponto ganho|pontos ganhos}, e o nome {title} para vestir.",
             },
@@ -889,7 +889,7 @@ local function Decorate(text, markList)
             if m:find("^%d") and before:find("%d") or m:find("%d$") and after:find("%d") or (#m == 1 and not m:find("%d")) then
                 scan = a + 1
             else
-                out[#out + 1] = text:sub(from, a - 1) .. "|cff8a5a14" .. m .. "|r"
+                out[#out + 1] = text:sub(from, a - 1) .. (ns.IsDarkMode() and "|cffd6b365" or "|cff8a5a14") .. m .. "|r"
                 from, scan = b + 1, b + 1
             end
         end
@@ -989,31 +989,32 @@ local function BuildSagaTab(panel)
             slot.title = panel:CreateFontString(nil, "OVERLAY", "SkaldHead2")
             slot.title:SetWidth(CW)
             slot.title:SetJustifyH("CENTER")
-            slot.title:SetTextColor(SkaldAPI.C_HEAD[1], SkaldAPI.C_HEAD[2], SkaldAPI.C_HEAD[3])
+            ns.ThemeText(slot.title, SkaldAPI.C_HEAD[1], SkaldAPI.C_HEAD[2], SkaldAPI.C_HEAD[3])
             -- the flourish under the title (its picture has a clear margin: 422 of 512 across)
             slot.rule = panel:CreateTexture(nil, "ARTWORK")
             slot.rule:SetSize(330 * 512 / 422, 330 * 64 / 422)
             slot.rule:SetPoint("TOP", slot.title, "BOTTOM", 0, 6)
             slot.rule:SetTexture("Interface\\AddOns\\Skald\\Textures\\ui_saga_divider")
+            ns.ThemeTint(slot.rule, "ornament")
             slot.capShadow = panel:CreateFontString(nil, "OVERLAY", "SkaldDrop")
-            slot.capShadow:SetTextColor(0.89, 0.69, 0.31)
+            ns.ThemeText(slot.capShadow, 0.89, 0.69, 0.31, 1, { 0.10, 0.08, 0.05 })
             slot.capShadow:SetPoint("TOPLEFT", slot.title, "BOTTOMLEFT", 1, -34)
             slot.cap = panel:CreateFontString(nil, "OVERLAY", "SkaldDrop")
-            slot.cap:SetTextColor(0.43, 0.118, 0.102)
+            ns.ThemeText(slot.cap, 0.43, 0.118, 0.102)
             slot.cap:SetPoint("TOPLEFT", slot.title, "BOTTOMLEFT", 0, -32)
             slot.lead = panel:CreateFontString(nil, "OVERLAY", "SkaldSaga")
             slot.lead:SetJustifyH("LEFT")
             slot.lead:SetJustifyV("TOP")
             slot.lead:SetSpacing(6)
             slot.lead:SetWordWrap(true)
-            slot.lead:SetTextColor(SkaldAPI.C_BODY[1], SkaldAPI.C_BODY[2], SkaldAPI.C_BODY[3])
+            ns.ThemeText(slot.lead, SkaldAPI.C_BODY[1], SkaldAPI.C_BODY[2], SkaldAPI.C_BODY[3])
             slot.body = panel:CreateFontString(nil, "OVERLAY", "SkaldSaga")
             slot.body:SetWidth(CW)
             slot.body:SetJustifyH("LEFT")
             slot.body:SetJustifyV("TOP")
             slot.body:SetSpacing(6)
             slot.body:SetWordWrap(true)
-            slot.body:SetTextColor(SkaldAPI.C_BODY[1], SkaldAPI.C_BODY[2], SkaldAPI.C_BODY[3])
+            ns.ThemeText(slot.body, SkaldAPI.C_BODY[1], SkaldAPI.C_BODY[2], SkaldAPI.C_BODY[3])
             slot.body:SetPoint("TOPLEFT", slot.title, "BOTTOMLEFT", 0, -32)
             -- a faded ink sketch in a column of its own at the right of the text, as if drawn on the page
             slot.art = panel:CreateTexture(nil, "BACKGROUND")
@@ -1034,7 +1035,7 @@ local function BuildSagaTab(panel)
         side.epilogue:Hide()
         side.number = panel:CreateFontString(nil, "OVERLAY", "SkaldSmall")
         side.number:SetPoint("BOTTOM", panel, "BOTTOMLEFT", x + CW / 2, 2)
-        side.number:SetTextColor(SkaldAPI.C_MUTED[1], SkaldAPI.C_MUTED[2], SkaldAPI.C_MUTED[3])
+        ns.ThemeText(side.number, SkaldAPI.C_MUTED[1], SkaldAPI.C_MUTED[2], SkaldAPI.C_MUTED[3])
         -- the number between two sprigs of laurel, as on the pages of the book
         side.laurelL = panel:CreateTexture(nil, "ARTWORK")
         side.laurelL:SetSize(56, 28)
@@ -1050,7 +1051,7 @@ local function BuildSagaTab(panel)
     empty:SetPoint("TOPLEFT", 0, -10)
     empty:SetWidth(CW)
     empty:SetJustifyH("LEFT")
-    empty:SetTextColor(SkaldAPI.C_BODY[1], SkaldAPI.C_BODY[2], SkaldAPI.C_BODY[3])
+    ns.ThemeText(empty, SkaldAPI.C_BODY[1], SkaldAPI.C_BODY[2], SkaldAPI.C_BODY[3])
     local pages, spread = {}, 1
     local fontSize = 16
     local function Spreads() return math.max(1, math.ceil(#pages / 2)) end

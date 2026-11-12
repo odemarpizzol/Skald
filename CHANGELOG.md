@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.6
+
+- **Dark mode** (Settings, Style, next to the ink): charcoal pages, ivory lettering and antique-gold headings, applied at once and remembered. It is off by default, your paper, ink and cover choices are kept, and the pictures and maps keep their art. The web Reader opens the diary in the same look when the export carries it. It has only been seen in a simulation so far: please report what looks wrong
+- **The Portuguese texts were reviewed**: spelling, agreement, verbs and articles in 268 lines of the diary, the Saga, the quest stories, the goals and the Reader; places now take their article ("na Ilha Névoa Lazúli", "no Vale Ammen") in flight pages and in the notices of memories
+
 ## 1.0.5
 
 - **Weather pages work now**: the game answers the weather as one table (type and strength), which the diary read as a list, so no weather page had ever been written. Rain, snow or a sandstorm strong enough is written again (at most one every 45 minutes), seen in a real session. Two phrases of the Portuguese weather asides were mended

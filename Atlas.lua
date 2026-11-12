@@ -2,7 +2,7 @@
 -- Pins the pages of the Skald journal on the world map. It stays dormant when the separate
 -- Skald Atlas addon (an old install) is also running, so nothing is drawn twice.
 
-local ADDON_NAME = ...
+local ADDON_NAME, ns = ...
 
 local L = ({
     enUS = {
@@ -301,7 +301,7 @@ local function GetPin(i, canvas)
         local file, size = GameFontNormalSmall:GetFont()
         if file then pin.count:SetFont(file, (size or 10) + 2, "OUTLINE") end
     end)
-    pin.count:SetTextColor(1, 1, 1)
+    ns.ThemeText(pin.count, 1, 1, 1)
     pin.star = pin:CreateTexture(nil, "OVERLAY", nil, 2)
     pin.star:SetSize(12, 12)
     pin.star:SetPoint("TOPRIGHT", pin, "TOPRIGHT", 4, 4)
@@ -644,8 +644,10 @@ local function BuildMapTab(panel)
         b:SetPoint("TOPLEFT", tier * 56 + 4, -176)
         -- The chosen seal is circled, as in Skald's Options.
         local ring = SkaldAPI.MakeDisc(b, "BACKGROUND", 48, 0.431, 0.118, 0.102, 0)
+        ns.ThemeFill(ring, 0.431, 0.118, 0.102, 1)
         ring:SetPoint("CENTER", 0, 0)
         local inner = SkaldAPI.MakeDisc(b, "BACKGROUND", 44, 0.93, 0.87, 0.72, 1)
+        ns.ThemeFill(inner, 0.93, 0.87, 0.72, 1, "paper")
         inner:SetPoint("CENTER", 0, 0)
         local icon = b:CreateTexture(nil, "ARTWORK")
         icon:SetAllPoints()
@@ -743,7 +745,7 @@ local function BuildMapTab(panel)
         fs:SetPoint("TOPLEFT", 4, y)
         fs:SetWidth(334)
         fs:SetJustifyH("LEFT")
-        fs:SetTextColor(color[1], color[2], color[3])
+        ns.ThemeText(fs, color[1], color[2], color[3])
         return fs
     end
     local regionName = Line(-362, "SkaldBody", head)

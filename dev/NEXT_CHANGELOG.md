@@ -1,4 +1,2 @@
-- Weather pages work now: the game answers the weather as one table, which the diary read as a list, so no weather page had ever been written; two phrases of the Portuguese weather asides mended.
-- Trade materials (ore, herbs, leather, cloth, gems) that are not epic no longer write "a good find" pages.
-- Ground for the shared guild chronicle (not visible yet): the Skald-to-Skald channel with its queue and the data of a chapter; boss pages keep the encounter and instance ids.
-- /skald probe guild and /skald probe weather: read-only tests shown in /skald report.
+- Optional dark mode in Settings, Style: charcoal paper, light lettering and antique-gold headings, applied at once and remembered; paper, ink and cover choices are kept and the Reader export carries it.
+- Portuguese texts reviewed (268 lines): agreement, verbs, articles of places.

@@ -1,12 +1,23 @@
 local handlers = {}
 FONTS = {}
+TEXTURES = {}
 local function widget()
   local w = {}
   setmetatable(w, {__index=function(t,k)
     if k=="IsShown" then return function() return t._shown end end
+    if k=="SetShown" then return function(self,v) if v then self:Show() else self:Hide() end end end
     if k=="SetPoint" then return function(self,...) t._pt={...} end end
     if k=="SetAlpha" then return function(self,v) t._alpha=v end end
     if k=="GetAlpha" then return function() return t._alpha or 1 end end
+    if k=="SetTextColor" then return function(self,r,g,b,a) t._textColor={r,g,b,a or 1} end end
+    if k=="GetTextColor" then return function() local c=t._textColor or {1,1,1,1}; return c[1],c[2],c[3],c[4] end end
+    if k=="SetVertexColor" then return function(self,r,g,b,a) t._vertexColor={r,g,b,a or 1} end end
+    if k=="SetColorTexture" then return function(self,r,g,b,a) t._fillColor={r,g,b,a or 1} end end
+    if k=="SetBackdropColor" then return function(self,...) t._backdropColor={...} end end
+    if k=="SetBackdropBorderColor" then return function(self,...) t._backdropBorderColor={...} end end
+    if k=="SetBlendMode" then return function(self,v) t._blendMode=v end end
+    if k=="SetDesaturated" then return function(self,v) t._desaturated=v end end
+    if k=="CreateTexture" then return function() local w=widget(); table.insert(TEXTURES,w); return w end end
     if k=="CreateFontString" then return function() local w=widget(); table.insert(FONTS,w); return w end end
     if k=="SetTexture" then return function(self,v) t._tex=v end end
     if k=="SetEnabled" then return function(self,v) t._enabled=v end end

@@ -32,7 +32,7 @@ local UI_TEXT = {
     ptBR = {
         TAB = "Cartógrafo", TITLE = "Cartógrafo", CHARTED = "%d de %d terras mapeadas", OF = "%d de %d",
         WALKED = "Você já andou por aqui. Clique para ver mais.", NOT_YET = "Ainda não percorrida.", EMPTY = "Ainda sem mapas.",
-        BACK = "Voltar aos mapas", PLACES = "%s: %d de %d visitados", DUNGEONS = "Masmorras", RAIDS = "Raides", BGS = "Campos de batalha",
+        BACK = "Voltar aos mapas", PLACES = "%s: visitas a %d de %d", DUNGEONS = "Masmorras", RAIDS = "Raides", BGS = "Campos de batalha",
         BEEN = "Voc\195\170 j\195\161 esteve aqui.", HERE = "Páginas escritas aqui", NONE_HERE = "Nenhuma página foi escrita aqui ainda.", DATE = "%d/%m/%Y",
     },
     frFR = {
@@ -223,10 +223,10 @@ local function BuildTab(panel)
     count:SetPoint("TOPLEFT", RIGHT_X, -12)
     count:SetWidth(CW)
     count:SetJustifyH("CENTER")
-    count:SetTextColor(muted[1], muted[2], muted[3])
+    ns.ThemeText(count, muted[1], muted[2], muted[3])
     local empty = panel:CreateFontString(nil, "OVERLAY", "SkaldBody")
     empty:SetPoint("TOP", panel, "TOP", 0, -140)
-    empty:SetTextColor(muted[1], muted[2], muted[3])
+    ns.ThemeText(empty, muted[1], muted[2], muted[3])
     empty:SetText(UI.EMPTY)
     empty:Hide()
 
@@ -329,15 +329,15 @@ local function BuildTab(panel)
         row:SetPoint("TOPLEFT", RIGHT_X, -52 - (i - 1) * 56)
         row.date = row:CreateFontString(nil, "OVERLAY", "SkaldSmall")
         row.date:SetPoint("TOPLEFT", 0, -2)
-        row.date:SetTextColor(muted[1], muted[2], muted[3])
+        ns.ThemeText(row.date, muted[1], muted[2], muted[3])
         row.text = row:CreateFontString(nil, "OVERLAY", "SkaldBody")
         row.text:SetPoint("TOPLEFT", 0, -18)
         row.text:SetWidth(CW)
         row.text:SetJustifyH("LEFT")
-        row.text:SetTextColor(body[1], body[2], body[3])
+        ns.ThemeText(row.text, body[1], body[2], body[3])
         row.hover = row:CreateTexture(nil, "BACKGROUND")
         row.hover:SetAllPoints()
-        row.hover:SetColorTexture(0.43, 0.12, 0.10, 0.08)
+        ns.ThemeFill(row.hover, 0.43, 0.12, 0.10, 0.08, "hover")
         row.hover:Hide()
         row:SetScript("OnEnter", function(self) self.hover:Show() end)
         row:SetScript("OnLeave", function(self) self.hover:Hide() end)
@@ -351,7 +351,7 @@ local function BuildTab(panel)
     none:SetPoint("TOPLEFT", RIGHT_X, -70)
     none:SetWidth(CW)
     none:SetJustifyH("CENTER")
-    none:SetTextColor(muted[1], muted[2], muted[3])
+    ns.ThemeText(none, muted[1], muted[2], muted[3])
     none:SetText(UI.NONE_HERE)
     none:Hide()
 
@@ -462,12 +462,13 @@ local function BuildTab(panel)
                 cell:Show()
                 cell.map:SetTexture(TEX .. info.art)
                 pcall(cell.map.SetDesaturated, cell.map, not walked)
-                cell.map:SetAlpha(walked and 0.95 or 0.38)
-                cell.frame:SetAlpha(walked and 1 or 0.5)
+                ns.ThemeAlpha(cell.map, walked and 0.95 or 0.38, walked and 0.95 or 0.50)
+                ns.ThemeTint(cell.map, walked and "mapVisited" or "mapUnvisited")
+                ns.ThemeAlpha(cell.frame, walked and 1 or 0.5, walked and 0.90 or 0.64)
                 cell.stamp:SetShown(walked)
                 cell.name:SetText(info.name)
-                if walked then cell.name:SetTextColor(head[1], head[2], head[3])
-                else cell.name:SetTextColor(muted[1], muted[2], muted[3]) end
+                if walked then ns.ThemeText(cell.name, head[1], head[2], head[3])
+                else ns.ThemeText(cell.name, muted[1], muted[2], muted[3]) end
             end
         end
     end

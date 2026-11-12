@@ -213,18 +213,17 @@ local function BuildTab(panel)
     edit:SetAutoFocus(false)
     edit:SetMaxLetters(60)
     edit:SetFontObject("SkaldBody")
-    edit:SetTextColor(body[1], body[2], body[3])
+    ns.ThemeText(edit, body[1], body[2], body[3])
     edit:SetTextInsets(8, 8, 0, 0)
     edit:SetBackdrop(FRAME)
-    edit:SetBackdropColor(0.62, 0.48, 0.28, 0.32)   -- a darker scrap of parchment, as in the settings
-    edit:SetBackdropBorderColor(0.45, 0.30, 0.14, 1)
     local placeholder = edit:CreateFontString(nil, "OVERLAY", "SkaldBody")
     placeholder:SetPoint("LEFT", 8, 0)
-    placeholder:SetTextColor(muted[1], muted[2], muted[3])
-    placeholder:SetAlpha(0.7)
+    ns.ThemeText(placeholder, muted[1], muted[2], muted[3])
+    ns.ThemeAlpha(placeholder, 0.7, 1)
     placeholder:SetText(L.SEARCH_TYPE_HERE)
     local focused = false
     local function ShowPlaceholder()
+        ns.ThemeBackdrop(edit, { 0.62, 0.48, 0.28, 0.32 }, { 0.45, 0.30, 0.14, 1 }, focused and "inputFocus" or "input")
         if (edit:GetText() or "") == "" and not focused then placeholder:Show() else placeholder:Hide() end
     end
     edit:SetScript("OnEditFocusGained", function() focused = true; CloseSelects(); ShowPlaceholder() end)
@@ -254,8 +253,8 @@ local function BuildTab(panel)
         s.list:SetPoint("TOPLEFT", s.button, "BOTTOMLEFT", 0, -2)
         s.list:SetSize(CW, #names * 26 + 6)
         s.list:SetBackdrop(FRAME)
-        s.list:SetBackdropColor(0.80, 0.68, 0.45, 1)    -- opaque: what lies under it must not show through
-        s.list:SetBackdropBorderColor(0.45, 0.30, 0.14, 1)
+        -- opaque: what lies under it must not show through
+        ns.ThemeBackdrop(s.list, { 0.80, 0.68, 0.45, 1 }, { 0.45, 0.30, 0.14, 1 }, "list")
         s.list:Hide()
         for i, name in ipairs(names) do
             local item = SkaldAPI.MakeButton(s.list, CW - 6, 24, name)
@@ -288,18 +287,18 @@ local function BuildTab(panel)
     count:SetPoint("TOPLEFT", 0, -430)
     count:SetWidth(CW)
     count:SetJustifyH("CENTER")
-    count:SetTextColor(head[1], head[2], head[3])
+    ns.ThemeText(count, head[1], head[2], head[3])
     local capNote = panel:CreateFontString(nil, "OVERLAY", "SkaldSmall")
     capNote:SetPoint("TOPLEFT", 0, -452)
     capNote:SetWidth(CW)
     capNote:SetJustifyH("CENTER")
-    capNote:SetTextColor(muted[1], muted[2], muted[3])
+    ns.ThemeText(capNote, muted[1], muted[2], muted[3])
 
     local pageLabel = panel:CreateFontString(nil, "OVERLAY", "SkaldBody")
     pageLabel:SetPoint("TOPLEFT", RIGHT_X, -430)
     pageLabel:SetWidth(CW)
     pageLabel:SetJustifyH("CENTER")
-    pageLabel:SetTextColor(body[1], body[2], body[3])
+    ns.ThemeText(pageLabel, body[1], body[2], body[3])
 
     -- the pages found, on the right: the picture of the page, when and where, and the story with the words found
     local rows = {}
@@ -318,17 +317,17 @@ local function BuildTab(panel)
         row.when:SetPoint("TOPLEFT", 42, -2)
         row.when:SetWidth(CW - 62)
         row.when:SetJustifyH("LEFT")
-        row.when:SetTextColor(muted[1], muted[2], muted[3])
+        ns.ThemeText(row.when, muted[1], muted[2], muted[3])
         row.text = row:CreateFontString(nil, "OVERLAY", "SkaldBody")
         row.text:SetPoint("TOPLEFT", 42, -16)
         row.text:SetWidth(CW - 42)
         row.text:SetHeight(32)
         row.text:SetJustifyH("LEFT")
         row.text:SetJustifyV("TOP")
-        row.text:SetTextColor(body[1], body[2], body[3])
+        ns.ThemeText(row.text, body[1], body[2], body[3])
         row.hover = row:CreateTexture(nil, "BACKGROUND")
         row.hover:SetAllPoints()
-        row.hover:SetColorTexture(0.43, 0.12, 0.10, 0.08)
+        ns.ThemeFill(row.hover, 0.43, 0.12, 0.10, 0.08, "hover")
         row.hover:Hide()
         row:SetScript("OnEnter", function(self)
             if not self.entry then return end
@@ -352,6 +351,7 @@ local function BuildTab(panel)
     local pages = 1
     refresh = function()
         local db = SkaldCharDB
+        local found = ns.IsDarkMode() and "ffe8bd72" or FOUND
         local entries = db and db.entries or {}
         local group = Search.GROUPS[state.group]
         local days = Search.DAYS[state.whenIx]
@@ -394,11 +394,11 @@ local function BuildTab(panel)
                 local line = date(SkaldAPI.DateFormat or "%d/%m/%Y", e.t or 0)
                 local okPlace, place = pcall(ns.PlaceName, e)
                 if okPlace and place and place ~= "" then
-                    line = line .. "  -  " .. Search.Highlight(Plain(place), terms, FOUND, 40)
+                    line = line .. "  -  " .. Search.Highlight(Plain(place), terms, found, 40)
                 end
                 row.when:SetText(line)
                 local ok, text = pcall(SkaldAPI.Render, e)
-                row.text:SetText(ok and Search.Highlight(Plain(text), terms, FOUND, 120) or "")
+                row.text:SetText(ok and Search.Highlight(Plain(text), terms, found, 120) or "")
             end
         end
     end

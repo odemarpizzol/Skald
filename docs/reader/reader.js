@@ -23,8 +23,8 @@
     ptBR: {
       title: 'Skald Leitor',
       intro: 'Leia o diário do seu personagem de World of Warcraft como um livro, fora do jogo.',
-      steps: ['No jogo, digite /skald reader.', 'Copie cada parte do texto (clique nele, Ctrl+A, Ctrl+C).', 'Cole aqui embaixo. Pode colar as partes uma depois da outra.'],
-      label: 'Cole aqui o texto do diário', open: 'Abrir o livro', clear: 'Limpar', back: 'Colar de novo', print: 'Salvar como PDF', sound: 'Som de virar a página', turnBack: 'Página anterior', turnOn: 'Próxima página',
+      steps: ['No jogo, digite /skald reader.', 'Copie cada parte do texto (clique na parte, pressione Ctrl+A e depois Ctrl+C).', 'Cole aqui embaixo. Você pode colar as partes uma depois da outra.'],
+      label: 'Cole aqui o texto do diário', language: 'Idioma', jumpLabel: 'Dia', open: 'Abrir o livro', clear: 'Limpar', back: 'Colar de novo', print: 'Salvar como PDF', sound: 'Som de virar a página', turnBack: 'Página anterior', turnOn: 'Próxima página',
       privacy: 'Nada sai desta página: o texto é lido pelo seu navegador e não é enviado a lugar nenhum.',
       part: 'Parte %1 de %2', partBad: 'Parte %1: cópia incompleta', waiting: 'falta a parte %1',
       ready: 'Todas as partes chegaram. Pode abrir o livro.', mixed: 'Essas partes são de diários diferentes. Limpe e cole de novo.',
@@ -32,8 +32,8 @@
       day: 'Dia %1', page: 'Página %1 de %2', pages: 'Páginas %1–%2 de %3', cover: 'Capa', first: 'Primeira página escrita', played: 'Tempo na estrada', goals: 'Metas cumpridas', points: 'Pontos de metas',
       stat: { quest: 'Missões cumpridas', level: 'Níveis conquistados', death: 'Vezes que caí', dungeon: 'Masmorras visitadas', boss: 'Chefes derrotados', kill: 'Criaturas vencidas' },
       date: function (d) { return d.toLocaleDateString('pt-BR'); }, hours: '%1h %2min', minutes: '%1min', tier: ['Trivial', 'Comum', 'Incomum', 'Rara', 'Épica', 'Lendária'],
-      truncated: 'O diário tem mais páginas do que as coladas.',
-      tip: { level: 'Nível %1', giver: 'Dada por %1', falls: 'Depois de %1 quedas', stack: '%1 feitos', open: 'Clique para procurar no Wowhead' }
+      truncated: 'O diário tem mais páginas do que as que foram coladas aqui.',
+      tip: { level: 'Nível %1', giver: 'Missão dada por %1', falls: 'Quedas anteriores: %1', stack: 'Unidades produzidas: %1', open: 'Clique para procurar no Wowhead' }
     },
     frFR: {
       title: 'Lecteur Skald',
@@ -144,7 +144,7 @@
         if (!line) return;
         var f = line.split('^').map(unescapeField);
         switch (f[0]) {
-          case 'M': if (['era', 'paper', 'ink', 'textSize', 'density', 'coverTitle'].indexOf(f[1]) >= 0) model.prefs[f[1]] = f[2]; break;
+          case 'M': if (['era', 'paper', 'ink', 'darkMode', 'textSize', 'density', 'coverTitle'].indexOf(f[1]) >= 0) model.prefs[f[1]] = f[2]; break;
           case 'D': model.days[f[1]] = { key: f[1], n: +f[2], t: +f[3], title: f[4], date: f[5] }; break;
           case 'S': model.first = +f[1]; model.played = +f[2]; break;
           case 'N': model.counts[f[1]] = +f[2]; break;
@@ -197,6 +197,7 @@
     var root = document.documentElement;
     root.dataset.paper = ['clean', 'travel', 'war', 'old'].indexOf(prefs.paper) >= 0 ? prefs.paper : 'clean';
     root.dataset.ink = ['0', '1', '2'].indexOf(prefs.ink) >= 0 ? prefs.ink : '0';
+    root.dataset.darkMode = prefs.darkMode === '1' ? 'true' : 'false';
     root.dataset.textSize = ['0', '1', '2'].indexOf(prefs.textSize) >= 0 ? prefs.textSize : '1';
     root.dataset.density = ['compact', 'comfy', 'airy'].indexOf(prefs.density) >= 0 ? prefs.density : 'comfy';
   }

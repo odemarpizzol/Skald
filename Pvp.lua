@@ -95,7 +95,7 @@ local UI_TEXT = {
         HK = "Mortes honrosas", SEP = ": ",
         EMPTY = "Nenhum campo de batalha ainda. O primeiro será escrito aqui.",
         EMPTY_HINT = "Cada partida, vencida ou perdida, será marcada aqui, campo por campo.",
-        REC = "%d vitórias, %d derrotas", WON_TAG = "vitória", LOST_TAG = "derrota", DATE = "%d/%m/%Y",
+        REC = "Vitórias: %d; derrotas: %d", WON_TAG = "vitória", LOST_TAG = "derrota", DATE = "%d/%m/%Y",
         WORLD = "Por ora, registro aqui apenas as batalhas nos campos.",
         LINES = {
             "As bandeiras caíram e se ergueram de novo, e eu estive sob cada uma delas.",
@@ -367,7 +367,7 @@ local function BuildTab(panel)
         fs:SetWidth(width)
         fs:SetJustifyH(justify or "LEFT")
         local c = color or body
-        fs:SetTextColor(c[1], c[2], c[3])
+        ns.ThemeText(fs, c[1], c[2], c[3])
         return fs
     end
 
@@ -381,7 +381,7 @@ local function BuildTab(panel)
         fs:SetPoint("TOP", panel, "TOPLEFT", cx, y)
         fs:SetWidth(width)
         fs:SetJustifyH("CENTER")
-        fs:SetTextColor(color[1], color[2], color[3])
+        ns.ThemeText(fs, color[1], color[2], color[3])
         return fs
     end
     local GREEN, WINE = { 0.25, 0.42, 0.20 }, { 0.43, 0.12, 0.10 }
@@ -448,15 +448,15 @@ local function BuildTab(panel)
         row.date:SetPoint("LEFT", 28, 0)
         row.date:SetWidth(72)
         row.date:SetJustifyH("LEFT")
-        row.date:SetTextColor(muted[1], muted[2], muted[3])
+        ns.ThemeText(row.date, muted[1], muted[2], muted[3])
         row.text = row:CreateFontString(nil, "OVERLAY", "SkaldBody")
         row.text:SetPoint("LEFT", 104, 0)
         row.text:SetWidth(CW - 104)
         row.text:SetJustifyH("LEFT")
-        row.text:SetTextColor(body[1], body[2], body[3])
+        ns.ThemeText(row.text, body[1], body[2], body[3])
         row.hover = row:CreateTexture(nil, "BACKGROUND")
         row.hover:SetAllPoints()
-        row.hover:SetColorTexture(0.43, 0.12, 0.10, 0.08)
+        ns.ThemeFill(row.hover, 0.43, 0.12, 0.10, 0.08, "hover")
         row.hover:Hide()
         row:SetScript("OnEnter", function(self) self.hover:Show() end)
         row:SetScript("OnLeave", function(self) self.hover:Hide() end)

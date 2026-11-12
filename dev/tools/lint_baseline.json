@@ -138,6 +138,7 @@
   "rawget",
   "select",
   "self",
+  "setmetatable",
   "string",
   "strtrim",
   "table",

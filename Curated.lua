@@ -80,7 +80,7 @@ for _, id in ipairs({ 9257, 9269, 9270, 9271 }) do C[id] = ATIESH_WHOLE end
 -- Attunements and keys (Epic) -----------------------------------------------
 C[6502] = { tier = 4, text = {
     enUS = "Step by step I earned it: \"{quest}\". An amulet to open a dragon's door, and the nerve to walk through.", esES = "Gané paso a paso lo que necesitaba en «{quest}»: un amuleto para abrir la puerta de un dragón y valor para cruzarla.",
-    ptBR = "Passo a passo, eu a conquistei: \"{quest}\". Um amuleto para abrir a porta de um dragão, e a coragem de atravessá-la.",
+    ptBR = "Passo a passo, conquistei o que buscava em \"{quest}\": um amuleto para abrir a porta de um dragão e a coragem de atravessá-la.",
     frFR = "Pas à pas, je l'ai mérité\194\160: «\194\160{quest}\194\160». Une amulette pour ouvrir la porte d'un dragon, et le courage de la franchir.",
 } }
 local KEY = { tier = 4, text = {
@@ -93,7 +93,7 @@ C[5505], C[5511] = KEY, KEY
 -- Long chains (Epic and Rare) -----------------------------------------------
 C[1267] = { tier = 4, text = {
     enUS = "A man had vanished, and a long trail of favors, letters and doubt led to the end of it: \"{quest}\". Not every hero draws a sword; some follow a thread.", esES = "Seguí cartas, favores y dudas en «{quest}» hasta saber qué había ocurrido con un hombre desaparecido. Una historia también puede resolverse prestando atención.",
-    ptBR = "Um homem desapareceu, e uma longa trilha de favores, cartas e dúvidas levou ao fim dela: \"{quest}\". Nem todo herói saca a espada; alguns seguem um fio.",
+    ptBR = "Um homem desapareceu, e segui uma longa trilha de favores, cartas e dúvidas até esclarecer o mistério em \"{quest}\". Nem todo herói saca a espada; alguns seguem um fio.",
     frFR = "Un homme avait disparu, et une longue piste de faveurs, de lettres et de doutes menait à sa fin\194\160: «\194\160{quest}\194\160». Tous les héros ne tirent pas l'épée\194\160; certains suivent un fil.",
 } }
 C[5944] = { tier = 4, text = {
@@ -173,7 +173,7 @@ for _, id in ipairs({ 5218, 5221, 5224, 5227 }) do C[id] = CAULDRON end
 
 local MISSION_DONE = { tier = 4, text = {
     enUS = "Every cauldron I reworked now turns against the plague that made it: \"{quest}\". Won with reagents and patience, not only steel.", esES = "Los calderos de «{quest}» se vuelven ahora contra la peste que los alimentaba. Esta parte de la victoria necesitó componentes y paciencia.",
-    ptBR = "Cada caldeirão que refiz agora se volta contra a praga que o criou: \"{quest}\". Vencido com reagentes e paciência, e não só com aço.",
+    ptBR = "Cada caldeirão que refiz agora se volta contra a praga que o criou: \"{quest}\". Uma vitória com reagentes e paciência, e não só com aço.",
     frFR = "Chaque chaudron que j'ai remanié se retourne désormais contre la peste qui l'a fait naître\194\160: «\194\160{quest}\194\160». Gagné avec des composants et de la patience, pas seulement de l'acier.",
 } }
 C[5237], C[5238] = MISSION_DONE, MISSION_DONE
@@ -234,7 +234,7 @@ C[1475] = { tier = 3, text = {
 } }
 C[4786] = { tier = 3, text = {
     enUS = "A robe, and a warning with it: defy the corruption of this path with will alone. \"{quest}\".", esES = "La túnica de «{quest}» llegó con una advertencia: la voluntad tendrá que sostenerse frente a la corrupción del camino elegido.",
-    ptBR = "Uma veste, e um aviso com ela: desafie a corrupção deste caminho só com vontade. \"{quest}\".",
+    ptBR = "Uma veste e, com ela, um aviso: só uma vontade firme pode enfrentar a corrupção deste caminho. \"{quest}\".",
     frFR = "Une robe, et un avertissement avec\194\160: défier la corruption de ce chemin par la seule volonté. «\194\160{quest}\194\160».",
 } }
 C[1958] = { tier = 3, text = {

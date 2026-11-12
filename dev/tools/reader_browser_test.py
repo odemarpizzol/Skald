@@ -24,9 +24,10 @@ def record(*fields):
         return str(value).replace('\\', '\\\\').replace('^', '\\p').replace('\n', '\\n')
     return '^'.join(map(escape, fields))
 
-def export(locale='enUS', paper='clean', size=1, density='comfy', entries=30, legacy=False, long=False):
+def export(locale='enUS', paper='clean', size=1, density='comfy', entries=30, legacy=False, long=False, dark=False, accents=False):
     rows = [] if legacy else [record('M', 'paper', paper), record('M', 'textSize', size), record('M', 'ink', 2), record('M', 'density', density), record('M', 'era', 'tbc'), record('M', 'coverTitle', 'Memories of Azeroth'), record('D', '2026-11-08@1', 7, 1794142800, 'Day 7: A road to remember', '2026-11-08'), record('D', '2026-11-08@2', 8, 1794149900, 'Day 8: Together again', '2026-11-08')]
     rows += [record('S', 1794142800, 3700), record('N', 'quest', entries), record('N', 'milestone', 2), record('N', 'level', 3)]
+    if not legacy: rows.append(record('M', 'darkMode', 1 if dark else 0))
     story = ('Along the road, every journey left a memory. Árvore, lumière, snow and rain. ' * (80 if long else 3))
     rows.append(record('V', 'road', 'The road ahead', story))
     rows.append(record('V', 'epilogue', 'A quiet evening', 'I closed the book.'))
@@ -37,6 +38,8 @@ def export(locale='enUS', paper='clean', size=1, density='comfy', entries=30, le
         if i == 1: text = '<img src=x onerror="window.readerXss=true"> & <script>bad()</script>'
         expected_text.append(text); expected_notes.append(note)
         fields = ['P', 1794142800 + i * 120, 'note' if i == 0 else 'quest', 1, 1 if i == 0 else 0, 'Teldrassil', 'note' if i == 0 else 'quest', text, note, 'title=A memory~q=77']
+        if accents and i == 1: fields[3] = 2
+        if accents and i == 2: fields[2] = fields[6] = 'death'
         if not legacy: fields.append('2026-11-08@1' if i < entries // 2 else '2026-11-08@2')
         rows.append(record(*fields))
     body = '\n'.join(rows)
@@ -117,6 +120,47 @@ with sync_playwright() as p:
             page.set_viewport_size({'width': 1440, 'height': 960})
             page.wait_for_function("document.querySelector('#book').dataset.single === 'false'")
         print('ok', locale, paper, 'long entries, notes, Saga, print, session groups:', result['pages'], 'pages')
+
+    # The saved night theme preserves the paper and ink choices and resets for an older/light diary.
+    for paper in ('clean', 'travel', 'war', 'old'):
+        text, expected, notes, story = export(locale='ptBR', paper=paper, entries=8, dark=True, accents=True)
+        open_export(text)
+        assert page.locator('html').get_attribute('data-dark-mode') == 'true'
+        assert page.locator('html').get_attribute('data-paper') == paper
+        colors = page.evaluate('''() => {
+          const color = s => getComputedStyle(document.querySelector(s)).color;
+          return { ink: color('.cover h2'), muted: color('.run'), bg: getComputedStyle(document.querySelector('.page')).backgroundColor,
+            blend: getComputedStyle(document.querySelector('.page')).backgroundBlendMode };
+        }''')
+        assert colors['blend'] == 'multiply' and colors['bg'] == 'rgb(40, 45, 46)', colors
+        assert colors['ink'] == 'rgb(200, 170, 104)', colors
+        if paper == 'clean':
+            page.screenshot(path=str(OUT / 'reader-dark-cover.png'))
+            page.locator('#jump').select_option(index=1)
+            page.screenshot(path=str(OUT / 'reader-dark-day.png'))
+            page.set_viewport_size({'width': 390, 'height': 844})
+            page.wait_for_function("document.querySelector('#book').dataset.single === 'true'")
+            assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
+            page.screenshot(path=str(OUT / 'reader-dark-mobile.png'), full_page=True)
+            page.set_viewport_size({'width': 1440, 'height': 960})
+            page.wait_for_function("document.querySelector('#book').dataset.single === 'false'")
+        page.evaluate('window.print = function () {}')
+        page.locator('#print').click()
+        assert page.locator('#sheet .page').count() > 0
+        all_text = page.locator('#sheet .entry .body').all_text_contents()
+        assert any('I watched the rain' in t for t in all_text), 'dark print lost the diary'
+        accents = page.evaluate('''() => {
+          const color = s => getComputedStyle(document.querySelector('#sheet ' + s)).color;
+          return { body: color('.entry.t2 .body'), tag: color('.entry.t2 .tag'),
+            death: color('.entry.death .body'), time: color('.entry.death .time') };
+        }''')
+        assert accents == {'body': 'rgb(229, 183, 170)', 'tag': 'rgb(131, 197, 110)',
+                           'death': 'rgb(229, 183, 170)', 'time': 'rgb(229, 161, 155)'}, accents
+    text, _, _, _ = export(legacy=True)
+    open_export(text)
+    assert page.locator('html').get_attribute('data-dark-mode') == 'false', 'dark theme leaked into a legacy diary'
+    assert page.evaluate("getComputedStyle(document.querySelector('.page')).backgroundBlendMode") == 'normal'
+    print('ok dark mode: all papers, saved ink, PDF pages, mobile and return to light')
 
     # Every native chapter has its artwork, including both faction camps and the Epilogue.
     text, _, _, _ = export(entries=4)

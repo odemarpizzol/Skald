@@ -4,7 +4,7 @@
 
 Skald listens to what happens on the road (quests, levels, deaths, new lands, dungeons, bosses, battlegrounds, achievements, professions) and writes each event as a short page in the first person. Quests are told by what they asked of you, and the rarer the deed, the grander the telling. Open the book any time to read your story, one day per page, and write a line of your own at the foot of each day.
 
-> **Version 1.0.** The core of the diary (quests, levels, deaths, lands, dungeons and bosses, groups, guild, flights, professions) has been seen working in a real Forever session. Some events have not been seen in a real session yet: battlegrounds, mounts, achievements, weather and the Skyborne lines (see Limits). Please report what you find.
+> **Version 1.0.** The core of the diary (quests, levels, deaths, lands, dungeons and bosses, groups, guild, flights, professions) has been seen working in a real Forever session. Some events have not been seen in a real session yet: battlegrounds, mounts, achievements and the Skyborne lines (see Limits). Please report what you find.
 
 Made for **World of Warcraft: Forever** (1.60.1, from 4 November 2026) and **TBC Classic Anniversary** (2.5.6). Texts in **English**, **Brazilian Portuguese**, **French** and **Spanish** (French and Spanish not yet reviewed by a native speaker): the diary follows your game client's language.
 
@@ -70,7 +70,7 @@ The **Settings** tab has three pages, turned with the corners of the book: **Sty
 
 - The diary warns as it approaches 5,000 pages. It keeps every page until you explicitly accept the limit. After acceptance, the oldest ordinary pages are removed as new ones arrive; favourites and personal notes are always kept. Save a copy with `/skald backup` before accepting. You can postpone the choice and review it later with `/skald retention`.
 - Skald writes pages as events happen, even in combat (a level gained at the end of a fight, for example), but it never reads anything the game withholds from addons in combat; only the quiet memories wait for the fight to end.
-- Forever is a client of the modern (Mainline) family that hides some values from addons; Skald skips them instead of guessing, so a boss or an item the game withholds in a fight may go unwritten. Tested in the real Forever client (quests, levels, deaths, dungeons, bosses, groups, guild) and in a simulation of it; the battleground pages, mounts, achievements, weather pages, the Skyborne lines and the maps of the newer instances (their ids come from the game's data and have not all been read inside the instance) have not been seen in a real session yet; if one fails, please report it.
+- Forever is a client of the modern (Mainline) family that hides some values from addons; Skald skips them instead of guessing, so a boss or an item the game withholds in a fight may go unwritten. Tested in the real Forever client (quests, levels, deaths, dungeons, bosses, groups, guild, weather) and in a simulation of it; the battleground pages, mounts, achievements, the Skyborne lines and the maps of the newer instances (their ids come from the game's data and have not all been read inside the instance) have not been seen in a real session yet; if one fails, please report it.
 - In the Forever client some pieces of Bard music (from the expansions) may be silent.
 - Quest rarity is an estimate from the data available; if you see an odd grade, tell us which quest.
 

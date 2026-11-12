@@ -205,3 +205,36 @@ p.saga.saga-lead::first-letter { float: left; font: 700 2.9em/.9 'Cinzel Decorat
 .saga-epilogue img { position: absolute; bottom: 0; left: 0; height: auto; }
 .saga-number { display: flex; align-items: center; justify-content: center; gap: 6px; height: 25px; bottom: 8px; }
 .saga-number img { display: block; width: 54px; height: 25px; object-fit: contain; }
+
+/* The optional in-game night palette, carried by the export without changing its format. */
+:root[data-dark-mode='true'] {
+  color-scheme: dark;
+  --ink: #e1d5bb; --head: #c8aa68; --muted: #b4a58e; --note: #d6c19c;
+  --leather: #22180f; --leather-2: #140f0a;
+}
+:root[data-dark-mode='true'][data-ink='1'] { --ink: #d3d8e5; }
+:root[data-dark-mode='true'][data-ink='2'] { --ink: #e5b7aa; }
+:root[data-dark-mode='true'] .page,
+:root[data-dark-mode='true'] .card { background-color: #282d2e; background-blend-mode: multiply; }
+:root[data-dark-mode='true'] #book { background-color: #17120d; }
+:root[data-dark-mode='true'] #book::after,
+:root[data-dark-mode='true'] .spine { filter: brightness(.65); }
+:root[data-dark-mode='true'] .corner { filter: brightness(.25); }
+:root[data-dark-mode='true'] .rule,
+:root[data-dark-mode='true'] .saga-divider { filter: brightness(1.8); }
+:root[data-dark-mode='true'] .run,
+:root[data-dark-mode='true'] .stats li .dots,
+:root[data-dark-mode='true'] .entry.day { border-color: #c8aa6855; }
+:root[data-dark-mode='true'] .entry .body { color: var(--ink); }
+:root[data-dark-mode='true'] .entry.t2 .tag { color: #83c56e; }
+:root[data-dark-mode='true'] .entry.t3 .tag { color: #7dafe8; }
+:root[data-dark-mode='true'] .entry.t4 .tag { color: #c29ae7; }
+:root[data-dark-mode='true'] .entry.t5 .tag { color: #e8ad61; }
+:root[data-dark-mode='true'] .entry.death .time { color: #e5a19b; }
+:root[data-dark-mode='true'] .entry.day .body { color: var(--head); }
+:root[data-dark-mode='true'] p.saga.saga-lead::first-letter { text-shadow: 1px 1px #19140d; }
+:root[data-dark-mode='true'] textarea,
+:root[data-dark-mode='true'] #lang { background: #191816; color: var(--ink); border-color: #77633e; }
+:root[data-dark-mode='true'] .chip { background: #29261f; color: var(--muted); }
+:root[data-dark-mode='true'] .chip.ok { color: #b5d6a5; background: #273125; }
+:root[data-dark-mode='true'] .chip.bad { color: #edb0a5; background: #39231f; }

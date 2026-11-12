@@ -358,6 +358,22 @@ end
 RES = (#bad == 0 and n > 300) and "ok" or (n .. " phrases, bad (" .. #bad .. "): " .. table.concat(bad, " ; "):sub(1, 600))`,
 });
 
+run('Portuguese: flight and reunion pages contract feminine, masculine and plural places while keeping bare proper names', {
+  pre: `__locale = "ptBR"`,
+  body: `for _, row in ipairs({
+  { "Ilha Névoa Lazúli", "na", "da" }, { "Vale Ammen", "no", "do" },
+  { "Ilhas do Eco", "nas", "das" }, { "Durotar", "em", "de" }
+}) do
+  local place, em, de = row[1], row[2], row[3]
+  local flight = SkaldAPI.Render({ kind = "flight", arg = place, idx = 1 })
+  local reunion = SkaldAPI.Render({ kind = "reunion", arg = "Aria", pn = place, idx = 1 })
+  assert(flight:find("céus " .. de .. " " .. place, 1, true), flight)
+  assert(reunion:find("ao meu lado " .. em .. " " .. place, 1, true), reunion)
+  assert(reunion:find("Aria", 1, true), reunion)
+end
+RES = "ok"`,
+});
+
 run('Portuguese: the Saga tells the place of birth with its article ("na Ilha Névoa Lazúli, em Kalimdor") in every opening it has', {
   pre: `__locale = "ptBR"
 ${PT_BAD_BEFORE}
@@ -1368,6 +1384,14 @@ function GetZoneText() return "Elwynn Forest" end; fire("ZONE_CHANGED_NEW_AREA")
 NOW = NOW + 700
 function GetZoneText() return "Darkshore" end; fire("ZONE_CHANGED_NEW_AREA")
 RES = (first and first:find("Darkshore", 1, true) and SEEN == nil) and "ok" or ("first=" .. tostring(first) .. " again=" .. tostring(SEEN and SEEN.text))`,
+});
+
+run('Portuguese: quiet memories apply place articles in the notice itself', {
+  pre: `__locale = "ptBR"\n${MEMORY()}`,
+  body: `ns.ZoneNameOfMap = function() return "Ilhas do Eco" end
+math.random = function() return 1 end
+${GO_TO_DARKSHORE}
+RES = (SEEN and SEEN.text:find("Já estive nas Ilhas do Eco", 1, true)) and "ok" or tostring(SEEN and SEEN.text)`,
 });
 
 run('a favourite note is the memory itself, in the player\'s own words', {
@@ -3922,6 +3946,277 @@ for _, loc in ipairs({ "enUS", "ptBR", "frFR", "esES", "esMX" }) do
 end
 RES = (first and ribbon and parchment and round and back and #miss == 0) and "ok"
   or ("first=" .. tostring(first) .. " ribbon=" .. tostring(ribbon) .. " parchment=" .. tostring(parchment) .. " round=" .. tostring(round) .. " back=" .. tostring(back) .. " missing: " .. table.concat(miss, ","))`,
+});
+
+run('dark mode: the Style switch updates existing pages, headings, surfaces and new tabs immediately, and restores the original appearance', {
+  pre: `__locale = "ptBR"
+SkaldDB = { paperStyle = "war", ink = 2, cover = "blue" }`,
+  body: `local switch
+for _, f in ipairs(frames) do if rawget(f, "darkMode") then switch = f.darkMode; break end end
+assert(switch and switch.caption == "Modo escuro", "Style switch missing")
+assert(not ns.IsDarkMode(), "dark mode enabled on an existing install")
+local labels, saved = {}, {}
+for _, fs in ipairs(FONTS) do
+  if fs:GetText() == ns.LOCALES.ptBR.BARD_RIGHT or fs:GetText() == ns.LOCALES.ptBR.BARD_GAME_VOLUME then
+    labels[#labels + 1] = fs
+    saved[fs] = { fs:GetTextColor() }
+  end
+end
+assert(#labels >= 2, "Bard text missing")
+local entries, n, revision = SkaldCharDB.entries, #SkaldCharDB.entries, ns.layoutRev or 0
+switch._OnClick(switch)
+assert(SkaldDB.darkMode == true and ns.IsDarkMode(), "switch did not save preference")
+assert((ns.layoutRev or 0) > revision, "page/search colours stayed cached")
+for _, fs in ipairs(labels) do
+  local r,g,b = fs:GetTextColor()
+  assert(r > .7 and g > .6 and b > .3, "old text remained dark")
+end
+local papers = 0
+for _, t in ipairs(TEXTURES) do
+  local file = rawget(t, "_tex")
+  if type(file) == "string" and (file:find("parchment_war",1,true) or file:find("burn9",1,true) or file:find("ui_corner_",1,true)) then
+    papers = papers + 1
+    local c = rawget(t,"_vertexColor")
+    local corner = file:find("ui_corner_",1,true)
+    assert(c and c[1] < (corner and .3 or .2) and c[2] < (corner and .3 or .2) and c[3] < (corner and .3 or .21), "a page edge stayed light")
+  end
+end
+assert(papers >= 14, "paper, edges or turn corners missing")
+local late = CreateFrame("Frame"):CreateFontString()
+ns.ThemeText(late, SkaldAPI.C_BODY[1], SkaldAPI.C_BODY[2], SkaldAPI.C_BODY[3])
+local r,g,b = late:GetTextColor()
+assert(r > .8 and g > .8, "a late-created tab used light-mode ink")
+switch._OnClick(switch)
+assert(not SkaldDB.darkMode and not ns.IsDarkMode(), "switch did not return to light")
+for _, fs in ipairs(labels) do
+  local r,g,b = fs:GetTextColor(); local c = saved[fs]
+  assert(r == c[1] and g == c[2] and b == c[3], "original lettering not restored")
+end
+assert(SkaldDB.paperStyle == "war" and SkaldDB.ink == 2 and SkaldDB.cover == "blue", "visual choices were overwritten")
+assert(SkaldCharDB.entries == entries and #entries == n, "switch changed the diary")
+RES = "ok"`,
+});
+
+for (const savedDark of [false, true]) run('dark mode: the cover ribbon darkens with ivory totals and restores its light artwork, saved mode ' + savedDark, {
+  pre: `SkaldDB = { darkMode = ${savedDark} }`,
+  body: `local counts, original = {}, {}
+for _, fs in ipairs(FONTS) do
+  local point = rawget(fs,"_pt")
+  local seal = point and type(point[2]) == "table" and rawget(point[2],"_tex")
+  if type(seal) == "string" and seal:match("seal%d$") then
+    counts[#counts + 1] = fs
+    original[fs] = { text = fs:GetText() }
+  end
+end
+assert(#counts == 6, "six ribbon counters not found")
+local ribbon
+for _, t in ipairs(TEXTURES) do
+  local file = rawget(t,"_tex")
+  if type(file) == "string" and file:match("ui_ribbon$") then ribbon = t; break end
+end
+assert(ribbon, "cover ribbon missing")
+ns.SetDarkMode(false)
+for _, fs in ipairs(counts) do original[fs].color = { fs:GetTextColor() } end
+local function luminance(r,g,b)
+  local function channel(c) return c <= .04045 and c/12.92 or ((c+.055)/1.055)^2.4 end
+  return .2126*channel(r)+.7152*channel(g)+.0722*channel(b)
+end
+ns.SetDarkMode(true)
+local tint = rawget(ribbon,"_vertexColor") or { 1, 1, 1 }
+assert(tint[1] < .4 and tint[2] < .4 and tint[3] < .4, "cover ribbon remained bright gold")
+for _, fs in ipairs(counts) do
+  local r,g,b = fs:GetTextColor()
+  assert(r > .8 and g > .8 and b > .7, "dark ribbon counter did not use ivory ink")
+  -- An opaque white source pixel is the brightest possible part of the tinted artwork.
+  local background = luminance(tint[1],tint[2],tint[3])
+  assert((luminance(r,g,b)+.05)/(background+.05) >= 4.5, "counter lost contrast on dark ribbon")
+  assert(fs:GetText() == original[fs].text, "theme changed a rarity total")
+end
+ns.SetDarkMode(false)
+local light = ribbon._vertexColor
+assert(light[1] == 1 and light[2] == 1 and light[3] == 1, "golden light ribbon not restored")
+for _, fs in ipairs(counts) do
+  local r,g,b = fs:GetTextColor(); local c = original[fs].color
+  assert(r == c[1] and g == c[2] and b == c[3], "light ribbon ink not restored")
+end
+RES = "ok"`,
+});
+
+run('dark mode: rarity selectors use a charcoal centre and gold outline without changing filters or seals', {
+  body: `local selectors, original = {}, {}
+local atlasTarget
+for _, f in ipairs(frames) do
+  local inner, icon = rawget(f,"inner"), rawget(f,"icon")
+  local ring = rawget(f,"ring") or rawget(f,"mark")
+  local file = icon and rawget(icon,"_tex")
+  if inner and ring and type(file) == "string" and file:match("seal%d$") then
+    selectors[#selectors + 1] = { button = f, inner = inner, ring = ring, icon = icon }
+    original[f] = { inner = inner._fillColor, ring = ring._fillColor, file = file, alpha = rawget(icon,"_alpha") or 1 }
+    if rawget(f,"mark") and file:match("seal3$") then atlasTarget = f end
+  end
+end
+assert(#selectors == 18 and atlasTarget, "Atlas and Options rarity selectors missing")
+local mapTier = SkaldAtlasDB.minTier
+ns.SetDarkMode(true)
+assert(SkaldAtlasDB.minTier == mapTier, "theme changed minimum map rarity")
+for _, s in ipairs(selectors) do
+  local c = s.inner._fillColor
+  assert(c[1] < .2 and c[2] < .2 and c[3] < .2, "cream selection centre remained")
+  local outline = s.ring._fillColor
+  assert(outline[1] > .7 and outline[2] > .6 and outline[3] < .5, "selection outline not gold")
+  assert(s.icon._tex == original[s.button].file and (rawget(s.icon,"_alpha") or 1) == original[s.button].alpha, "theme altered seal or rarity fading")
+end
+atlasTarget._OnClick(atlasTarget)
+assert(SkaldAtlasDB.minTier == 3 and atlasTarget.mark:IsShown() and atlasTarget.inner:IsShown(), "selection no longer applies the filter")
+ns.SetDarkMode(false)
+for _, s in ipairs(selectors) do
+  for i = 1, 4 do
+    assert(s.inner._fillColor[i] == original[s.button].inner[i], "light selection centre not restored")
+    assert(s.ring._fillColor[i] == original[s.button].ring[i], "light selection outline not restored")
+  end
+end
+assert(SkaldAtlasDB.minTier == 3, "return to light reset chosen filter")
+RES = "ok"`,
+});
+
+run('dark mode: map fades blend into charcoal, controls retain their states and light colours return', {
+  body: `local card = ns.ZoneCard.Build(UIParent, 342)
+local alpha = card.fade[1][1]._fillColor[4]
+local idle = SkaldAPI.MakeButton(UIParent, 100, 26, "Test")
+local active = SkaldAPI.MakeButton(UIParent, 100, 26, "Chosen", "seg")
+active:SetActive(true)
+local action = SkaldAPI.MakeButton(UIParent, 100, 26, "Action", "gold")
+local original = { action.text:GetTextColor() }
+ns.SetDarkMode(true)
+for _, side in ipairs(card.fade) do
+  for _, strip in ipairs(side) do
+    local c = strip._fillColor
+    assert(c[1] < .2 and c[2] < .2 and c[3] < .2, "cream halo survived around map")
+  end
+end
+assert(card.fade[1][1]._fillColor[4] == alpha, "fade gradient changed")
+assert(active.active and active._backdropColor[1] > .2, "chosen control lost its state")
+local r,g,b = action.text:GetTextColor()
+assert(r > .9 and g > .8 and action._backdropColor[1] < .5, "action label has dark ink on dark fill")
+idle._OnEnter(idle)
+assert(idle:GetAlpha() == 1, "hover dimmed label")
+ns.SetDarkMode(false)
+assert(idle:GetAlpha() == .88, "hover did not return to light appearance")
+assert(card.fade[1][1]._fillColor[1] == .97 and card.fade[1][1]._fillColor[2] == .89, "original map fade not restored")
+assert(action._backdropColor[1] == .89, "action fill not restored")
+r,g,b = action.text:GetTextColor()
+assert(r == original[1] and g == original[2] and b == original[3], "action ink not restored")
+assert(active.active and active._backdropColor[1] == SkaldAPI.C_HEAD[1], "selected light control not restored")
+RES = "ok"`,
+});
+
+run('dark mode: Search focus, Bard selection and transport hover stay legible across theme changes', {
+  pre: 'GetTime = function() return 100 end',
+  body: `local search = btn("Search"); search._OnClick(search)
+local p
+for _, f in ipairs(frames) do if rawget(f,"searchBox") then p = f end end
+local box = p.searchBox
+box:SetText("")
+local placeholder = p.placeholder
+assert(placeholder and placeholder:GetAlpha() == .7, "search placeholder missing")
+local bard = btn("Bard"); bard._OnClick(bard)
+local b
+for _, f in ipairs(frames) do if rawget(f,"mainButton") then b = f end end
+b.rows[1]._OnClick(b.rows[1])
+local playing = ns.Bard.playing
+ns.SetDarkMode(true)
+assert(placeholder:GetAlpha() == 1 and box._backdropColor[1] < .2, "search retained faded light style")
+box._OnEditFocusGained(box)
+assert(box._backdropBorderColor[1] > .7 and not placeholder:IsShown(), "search focus not marked")
+box._OnEditFocusLost(box)
+assert(box._backdropBorderColor[1] < .5 and placeholder:IsShown(), "search focus stuck")
+assert(b.rows[1].shade._fillColor[4] > b.rows[1].hover._fillColor[4], "selection weaker than hover")
+assert(b.rows[1].line._fillColor[4] > b.rows[2].line._fillColor[4], "playing underline lost")
+local normal = b.mainButton.tex._vertexColor[1]
+assert(normal < 1 and b.volumeBar.frame._vertexColor[1] < 1, "brass stayed overbright")
+b.mainButton._OnEnter(b.mainButton)
+assert(b.mainButton.tex._vertexColor[1] > normal, "transport hover invisible")
+b.mainButton._OnLeave(b.mainButton)
+assert(b.mainButton.tex._vertexColor[1] == normal, "transport hover reset to white")
+assert(ns.Bard.playing == playing, "theme interrupted song")
+ns.SetDarkMode(false)
+assert(placeholder:GetAlpha() == .7 and box._backdropColor[1] == .62, "search light style not restored")
+assert(b.mainButton.tex._vertexColor[1] == 1 and b.rows[1].shade._fillColor[4] == .08, "Bard light style not restored")
+RES = "ok"`,
+});
+
+run('dark mode: rarity labels keep their accents while journal paragraphs use the chosen reading ink', {
+  pre: SAVED(`{
+    { t = 1792000000, kind = "quest", arg = "Refinement quest", tier = 2, idx = 1, zone = "Darkshore", m = 1439 },
+    { t = 1792000100, kind = "death", idx = 1, zone = "Darkshore", m = 1439 },
+  }`),
+  body: `local e = SkaldCharDB.entries[1]
+local entries, tier, idx = SkaldCharDB.entries, e.tier, e.idx
+local function questText()
+  assert(SkaldAPI.OpenEntry(e), "quest could not be opened")
+  for _, fs in ipairs(FONTS) do
+    local s = fs:GetText()
+    if type(s) == "string" and s:find("Refinement quest",1,true) then return s end
+  end
+  error("quest paragraph missing")
+end
+ns.SetDarkMode(true)
+local s = questText()
+assert(s:find("|cff83c56e",1,true) and s:find("|cffe1d5bb",1,true), "rarity and reading ink not separated")
+ns.SetDarkMode(false)
+s = questText()
+assert(not s:find("|cffe1d5bb",1,true), "dark inline ink survived cached layout")
+assert(SkaldCharDB.entries == entries and e.tier == tier and e.idx == idx, "appearance changed stored pages")
+RES = "ok"`,
+});
+
+run('dark mode: Cartographer preserves discovery and seals while lifting unread maps', {
+  pre: `C_Map.GetMapInfo = function(id) return { mapType = 3, name = "Land " .. id, parentMapID = 0 } end\n` + SAVED('{}', 'visitedMaps = { ["map:1439"] = true },'),
+  body: `ns.SetDarkMode(true)
+local list = ns.Cartographer.List()
+SkaldCharDB.visitedMaps = { ["map:" .. list[1].id] = true }
+local tab = btn("Charts"); tab._OnClick(tab)
+local visited, unknown
+for _, f in ipairs(frames) do
+  if rawget(f,"map") and rawget(f,"walked") ~= nil and f:IsShown() then
+    if f.walked then visited = f else unknown = f end
+  end
+end
+assert(visited and unknown, "map fixtures missing")
+assert(not visited.map._desaturated and visited.stamp:IsShown(), "visited map lost colour or seal")
+assert(unknown.map._desaturated and not unknown.stamp:IsShown(), "unknown map looked visited")
+assert(unknown.map:GetAlpha() == .50 and visited.map:GetAlpha() == .95, "dark map visibility incorrect")
+ns.SetDarkMode(false)
+assert(unknown.map:GetAlpha() == .38 and visited.map:GetAlpha() == .95, "light map visibility not restored")
+assert(unknown.map._desaturated and not unknown.stamp:IsShown() and visited.stamp:IsShown(), "theme changed exploration state")
+RES = "ok"`,
+});
+
+for (const locale of ['enUS', 'ptBR', 'frFR', 'esES', 'esMX']) run('dark mode: saved night appearance loads in ' + locale, {
+  pre: `__locale = "${locale}"; SkaldDB = { darkMode = true }`,
+  body: `assert(ns.IsDarkMode(), "saved mode ignored")
+local switch
+for _, f in ipairs(frames) do if rawget(f, "darkMode") then switch = f.darkMode end end
+assert(switch and switch.caption == ns.LOCALES["${locale}"].OPT_DARKMODE, "localized switch missing")
+local seen = 0
+for _, t in ipairs(TEXTURES) do
+  if type(rawget(t,"_tex")) == "string" and t._tex:find("parchment",1,true) then
+    local c = rawget(t,"_vertexColor")
+    assert(c and c[1] < .2, "saved mode did not tint the initial page")
+    seen = seen + 1
+  end
+end
+assert(seen >= 2, "book not built")
+local contrast = function(r,g,b)
+  local function channel(c) return c <= .04045 and c/12.92 or ((c+.055)/1.055)^2.4 end
+  return .2126*channel(r)+.7152*channel(g)+.0722*channel(b)
+end
+local bg = contrast(.145,.141,.129)
+for _, c in ipairs({ SkaldAPI.C_BODY, SkaldAPI.C_HEAD, SkaldAPI.C_MUTED, {0,.22,.65}, {.42,.08,.58}, {.5,.08,.08} }) do
+  local r,g,b = ns.ThemeColor(c[1],c[2],c[3])
+  assert((contrast(r,g,b)+.05)/(bg+.05) >= 4.5, "night ink has insufficient contrast")
+end
+RES = "ok"`,
 });
 
 run('the paper of the pages: the Notices page offers four papers, the choice is kept (clean is the default and is not stored), and the names are in the three languages', {

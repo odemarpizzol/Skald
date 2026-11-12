@@ -209,12 +209,12 @@ local UI_TEXT = {
             },
         },
     ptBR = {
-        TAB = "Feitos", OF = "%d de %d", DONE_ON = "Cumprida em %s", BEFORE = "Cumprida antes do diário contar", SECRET = "???",
+        TAB = "Feitos", OF = "%d de %d", DONE_ON = "Cumprida em %s", BEFORE = "Cumprida antes do início dos registros", SECRET = "???",
         SECRET_HINT = "Uma meta ainda por descobrir.", DATE = "%d/%m/%Y", TOTAL = "%d de %d metas cumpridas",
         POINTS = "%d de %d pontos", PTS = "%d pts", WORTH = "Vale %d pontos", NEXT_TITLE = "Próximo título: %s, com %d pontos.",
         TITLES = { [0] = "Recém-chegad{g:o|a}", [50] = "Caminhante", [150] = "Viajante", [300] = "Desbravador{g:|a}", [500] = "Personagem de Lendas", [750] = "Lenda da Estrada", [1100] = "Um Nome nas Canções", [1600] = "Guardi{g:ão|ã} das Longas Histórias", [2200] = "Imortal de Azeroth" },
         EMPTY = "Nada aqui ainda.",
-        EVID = { chain = "\"%s\", uma cadeia de %d missões.", hard = "%s (quedas antes dele: %d).", reunion = "Reencontro com %s.", pet = "%s (%s).", petlevel = "%s alcançou o meu nível.", with = "Com: %s." },
+        EVID = { chain = "\"%s\", uma cadeia de %d missões.", hard = "%s (quedas antes da vitória: %d).", reunion = "Reencontro com %s.", pet = "%s (%s).", petlevel = "%s alcançou o meu nível.", with = "Com: %s." },
         OPEN_HINT = "Clique para abrir a página no livro.",
         CATS = { explorer = "Exploração", road = "A Estrada", story = "Histórias", war = "Guerra", craft = "Ofícios", beasts = "Feras", company = "Companhia", collection = "Coleção", renown = "Fortuna e Renome" },
         FACT = {
@@ -222,12 +222,12 @@ local UI_TEXT = {
             zones = "Descubra %d terras.", flights = "Aprenda %d rotas de voo.", level = "Chegue ao nível %d.",
             quests = "Cumpra %d missões.", chains = "Cadeias de missões concluídas: %d.", rareQ = "Cumpra uma missão rara ou melhor.",
             epicQ = "Cumpra uma missão épica ou melhor.", dungeons = "Masmorras visitadas: %d.", bosses = "Chefes derrotados: %d.",
-            hardBoss = "Derrote um chefe depois de cair para ele.", kills = "Criaturas vencidas: %d.", profs = "Ofícios aprendidos: %d.",
+            hardBoss = "Derrote um chefe depois de sofrer uma derrota nessa luta.", kills = "Criaturas vencidas: %d.", profs = "Ofícios aprendidos: %d.",
             skillStep = "Alcance %d de habilidade num ofício.", pets = "Companheiros domados: %d.", petLevel = "Veja um companheiro alcançar o seu nível.",
             companions = "Companheiros de estrada lembrados: %d.", reunions = "Reencontre alguém de uma masmorra.",
             guild = "Entre numa guilda.", party = "Junte-se a um grupo pela primeira vez.",
             mounts = "Montarias reunidas: %d.", critters = "Mascotes reunidos: %d.",
-            gold = "Tenha %d de ouro.", repFriendly = "Torne-se Amistoso com uma facção.", repHonored = "Torne-se Honrado com uma facção.", repExalted = "Chegue a Exaltado com uma facção.", bgWins = "Campos de batalha vencidos: %d.",
+            gold = "Tenha %d de ouro.", repFriendly = "Alcance o grau Amistoso com uma facção.", repHonored = "Alcance o grau Honrado com uma facção.", repExalted = "Alcance o grau Exaltado com uma facção.", bgWins = "Campos de batalha vencidos: %d.",
         },
         NAMES_AT70 = { level60 = "Sessenta, e a Estrada Continua" },
         NAMES = {
@@ -240,7 +240,7 @@ local UI_TEXT = {
             flights5 = "Um Assento Acima das Nuvens", flights15 = "Estradas do Céu de Azeroth",
             level10 = "Além do Primeiro Limiar", level20 = "Um Nome nas Tavernas", level30 = "A Estrada nos Ossos",
             level40 = "Hora da Montaria", level50 = "A Longa Subida", level60 = "No Topo do Mundo",
-            quests50 = "Recados e Juramentos", quests150 = "Cem Pequenas Promessas", quests400 = "O Diário de Missões É um Livro",
+            quests50 = "Recados e Juramentos", quests150 = "Cento e Cinquenta Pequenas Promessas", quests400 = "O Diário de Missões É um Livro",
             chains1 = "Uma História Contada até o Fim", chains5 = "Cinco Longas Estradas", rareQ = "Digna de um Selo", epicQ = "Um Conto para os Bardos",
             dungeons1 = "Rumo às Profundezas", dungeons5 = "Cada Vez Mais Fundo", bosses1 = "A Primeira Queda de um Inimigo", bosses10 = "Dez Tronos Derrubados",
             hardBoss = "Vitória Depois do Caminho Difícil", kills500 = "Um Campo de Inimigos Caídos", kills2500 = "A Natureza Se Lembra",
@@ -646,15 +646,16 @@ local function BuildGoalsTab(panel)
         bar.frame:SetSize(width * 512 / 434, height + 3)
         bar.frame:SetPoint("TOPLEFT", -width * 40 / 434, 1)
         bar.frame:SetTexture(TEX .. "ui_bar_frame")
+        ns.ThemeTint(bar.frame, "metal")
         bar.fill = bar:CreateTexture(nil, "OVERLAY")
         bar.fill:SetTexture(TEX .. "ui_bar_fill")
-        bar.fill:SetVertexColor(0.84, 0.75, 0.57, 1)
+        ns.ThemeTint(bar.fill, "metal", 0.84, 0.75, 0.57)
         bar.leftCap = bar:CreateTexture(nil, "OVERLAY")
         bar.leftCap:SetTexture(TEX .. "bar_cap_left")
-        bar.leftCap:SetVertexColor(0.84, 0.75, 0.57, 1)
+        ns.ThemeTint(bar.leftCap, "metal", 0.84, 0.75, 0.57)
         bar.rightCap = bar:CreateTexture(nil, "OVERLAY")
         bar.rightCap:SetTexture(TEX .. "bar_cap_right")
-        bar.rightCap:SetVertexColor(0.84, 0.75, 0.57, 1)
+        ns.ThemeTint(bar.rightCap, "metal", 0.84, 0.75, 0.57)
         bar.fill:SetPoint("TOPLEFT", 9, -4)
         bar.fill:SetHeight(height - 8)   -- inside the dark track, clear of the rim of the frame
         bar.max = width - 18
@@ -692,12 +693,12 @@ local function BuildGoalsTab(panel)
     titleLine:SetPoint("TOP", 0, 0)
     titleLine:SetWidth(CW)
     titleLine:SetJustifyH("CENTER")
-    titleLine:SetTextColor(head[1], head[2], head[3])
+    ns.ThemeText(titleLine, head[1], head[2], head[3])
     total = header:CreateFontString(nil, "OVERLAY", "SkaldSmall")
     total:SetPoint("TOP", 0, -18)
     total:SetWidth(CW)
     total:SetJustifyH("CENTER")
-    total:SetTextColor(muted[1], muted[2], muted[3])
+    ns.ThemeText(total, muted[1], muted[2], muted[3])
     pointsBar = MakeBar(header, CW - 70, 14)
     pointsBar:SetPoint("TOP", 0, -33)
     header:SetScript("OnEnter", function(self)
@@ -723,11 +724,11 @@ local function BuildGoalsTab(panel)
         row.icon:SetTexture(TEX .. cat.icon)
         row.name = row:CreateFontString(nil, "OVERLAY", "SkaldBody")
         row.name:SetPoint("TOPLEFT", 44, -4)
-        row.name:SetTextColor(body[1], body[2], body[3])
+        ns.ThemeText(row.name, body[1], body[2], body[3])
         row.name:SetText(UI.CATS[cat.key])
         row.count = row:CreateFontString(nil, "OVERLAY", "SkaldSmall")
         row.count:SetPoint("TOPRIGHT", -6, -6)
-        row.count:SetTextColor(muted[1], muted[2], muted[3])
+        ns.ThemeText(row.count, muted[1], muted[2], muted[3])
         row.bar = MakeBar(row, CW - 54, 14)
         row.bar:SetPoint("BOTTOMLEFT", 44, 4)
         row.mark = row:CreateTexture(nil, "BACKGROUND")
@@ -769,17 +770,17 @@ local function BuildGoalsTab(panel)
         row.desc:SetPoint("TOPLEFT", 46, -20)
         row.desc:SetWidth(CW - 50)
         row.desc:SetJustifyH("LEFT")
-        row.desc:SetTextColor(muted[1], muted[2], muted[3])
+        ns.ThemeText(row.desc, muted[1], muted[2], muted[3])
         row.bar = MakeBar(row, CW - 116, 14)
         row.bar:SetPoint("TOPLEFT", 46, -34)
         row.count = row:CreateFontString(nil, "OVERLAY", "SkaldSmall")
         row.count:SetWidth(62)
         row.count:SetJustifyH("LEFT")
         row.count:SetPoint("LEFT", row, "TOPRIGHT", -62, -41)
-        row.count:SetTextColor(muted[1], muted[2], muted[3])
+        ns.ThemeText(row.count, muted[1], muted[2], muted[3])
         row.hover = row:CreateTexture(nil, "BACKGROUND")
         row.hover:SetAllPoints()
-        row.hover:SetColorTexture(0.43, 0.12, 0.10, 0.08)
+        ns.ThemeFill(row.hover, 0.43, 0.12, 0.10, 0.08, "hover")
         row.hover:Hide()
         row:SetScript("OnEnter", function(self)
             if not self.worth then return end
@@ -804,7 +805,7 @@ local function BuildGoalsTab(panel)
     pageNote:SetPoint("TOPLEFT", panel, "TOPLEFT", RIGHT_X, -430)
     local pageLabel = pageNote:CreateFontString(nil, "OVERLAY", "SkaldBody")
     pageLabel:SetPoint("CENTER", 0, 0)
-    pageLabel:SetTextColor(body[1], body[2], body[3])
+    ns.ThemeText(pageLabel, body[1], body[2], body[3])
     pageNote.label = pageLabel   -- for the tests
 
     refreshTab = function()
@@ -883,10 +884,10 @@ local function BuildGoalsTab(panel)
                 row.worth, row.title = (not g.secret or rec) and (POINTS[g.tier] or 0) or nil, NameOf(g.id)
                 row.points:SetText((g.secret and not rec) and "?" or tostring(POINTS[g.tier] or 0))
                 if rec then
-                    row.points:SetTextColor(head[1], head[2], head[3])
+                    ns.ThemeText(row.points, head[1], head[2], head[3])
                     row.gem:SetAlpha(1)
                 else
-                    row.points:SetTextColor(muted[1], muted[2], muted[3])
+                    ns.ThemeText(row.points, muted[1], muted[2], muted[3])
                     row.gem:SetAlpha(0.45)
                 end
                 -- a goal still to do shows its seal faded and without colour; one reached shows it in full
@@ -895,7 +896,7 @@ local function BuildGoalsTab(panel)
                     row.icon:SetTexture(TEX .. "goal_medal" .. g.tier)
                     row.icon:SetAlpha(1)
                     row.name:SetText(NameOf(g.id))
-                    row.name:SetTextColor(head[1], head[2], head[3])
+                    ns.ThemeText(row.name, head[1], head[2], head[3])
                     local line, entry = Evidence(g, db)
                     row.evidence, row.entry, row.title = line, entry, NameOf(g.id)
                     row.desc:SetText(line or (rec.retro and UI.BEFORE or string.format(UI.DONE_ON, date(UI.DATE, rec.t or time()))))
@@ -905,7 +906,7 @@ local function BuildGoalsTab(panel)
                     row.icon:SetTexture(TEX .. "goal_locked")
                     row.icon:SetAlpha(0.8)
                     row.name:SetText(UI.SECRET)
-                    row.name:SetTextColor(muted[1], muted[2], muted[3])
+                    ns.ThemeText(row.name, muted[1], muted[2], muted[3])
                     row.desc:SetText(UI.SECRET_HINT)
                     row.bar:Set(0)
                     row.count:SetText("")
@@ -913,7 +914,7 @@ local function BuildGoalsTab(panel)
                     row.icon:SetTexture(TEX .. "goal_medal" .. g.tier)
                     row.icon:SetAlpha(0.6)
                     row.name:SetText(NameOf(g.id))
-                    row.name:SetTextColor(body[1], body[2], body[3])
+                    ns.ThemeText(row.name, body[1], body[2], body[3])
                     local shownTarget = target * (g.mult or 1)
                     row.desc:SetText(string.format(UI.FACT[g.fact], shownTarget))
                     row.bar:Set(math.min(value, target) / target)

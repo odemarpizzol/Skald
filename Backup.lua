@@ -504,11 +504,11 @@ local function MakeWindow(name, title, height)
     local paper = f:CreateTexture(nil, "BACKGROUND")
     paper:SetPoint("TOPLEFT", 4, -4)
     paper:SetPoint("BOTTOMRIGHT", -4, 4)
-    paper:SetColorTexture(0.86, 0.77, 0.58, 1)
+    ns.ThemeFill(paper, 0.86, 0.77, 0.58, 1, "paper")
     tinsert(UISpecialFrames, name)
     local head = f:CreateFontString(nil, "OVERLAY", "QuestTitleFont")
     head:SetPoint("TOP", 0, -18)
-    head:SetTextColor(INK[1], INK[2], INK[3])
+    ns.ThemeText(head, INK[1], INK[2], INK[3])
     head:SetText(title)
     CreateFrame("Button", nil, f, "UIPanelCloseButton"):SetPoint("TOPRIGHT", -2, -2)
     return f
@@ -520,7 +520,7 @@ local function MakeText(f, x, y, width, size)
     fs:SetWidth(width)
     fs:SetJustifyH("LEFT")
     fs:SetJustifyV("TOP")
-    fs:SetTextColor(0.15, 0.10, 0.04)
+    ns.ThemeText(fs, 0.15, 0.10, 0.04)
     return fs
 end
 

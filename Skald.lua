@@ -1019,7 +1019,7 @@ K.ITEM_INK = {
 }
 local function ColoredItem(ref, name, quality)
     local c = K.ITEM_INK[quality] or K.ITEM_INK[5]
-    local hex = string.format("%02x%02x%02x", math.floor(c[1] * 255 + 0.5), math.floor(c[2] * 255 + 0.5), math.floor(c[3] * 255 + 0.5))
+    local hex = K.ColorKey(ns.ThemeColor(c[1], c[2], c[3]))
     return "|cff" .. hex .. "|H" .. ref .. "|h[" .. name .. "]|h|r"
 end
 
@@ -1420,7 +1420,7 @@ local function RenderEntry(e)
         end
     end
     local phrase = list[((e.idx or 1) - 1) % #list + 1]
-    if K.PLACE_KINDS[e.kind] then phrase = K.PlaceArticles(phrase, shown, "%s") end
+    if K.PLACE_KINDS[e.kind] or (e.kind == "flight" and GetLocale() == "ptBR") then phrase = K.PlaceArticles(phrase, shown, "%s") end
     local text = string.format(phrase, shown)
     text = text:gsub("{weather}", function()
         return tostring((L.WEATHER_WORDS and L.WEATHER_WORDS[e.wk]) or "")
@@ -1429,9 +1429,9 @@ local function RenderEntry(e)
     text = text:gsub("{tries}", function() return tostring(e.tries or "") end)
     text = text:gsub("{days}", function() return tostring(e.since or "") end)
     text = text:gsub("{count}", function() return tostring(e.n or "") end)
-    text = text:gsub("{place}", function()
-        return tostring((e.pz and ns.ZoneNameOfMap and ns.ZoneNameOfMap(e.pz)) or e.pn or L.UNKNOWN_ZONE)
-    end)
+    local place = tostring((e.pz and ns.ZoneNameOfMap and ns.ZoneNameOfMap(e.pz)) or e.pn or L.UNKNOWN_ZONE)
+    if GetLocale() == "ptBR" then text = K.PlaceArticles(text, place, "{place}") end
+    text = text:gsub("{place}", function() return place end)
     text = text:gsub("{standing}", function() return tostring(e.st or "") end)
     text = text:gsub("{npc}", function() return npc end)
     -- Weather pages keep race and class as data, so their personal aside can be retold in the current language too.
@@ -2223,6 +2223,133 @@ K.C_NOTE  = { 0.353, 0.227, 0.102 }   -- #5A3A1A
 K.C_HDR   = { 0.478, 0.290, 0.180 }   -- #7A4A2E
 K.INKS = { { 0.353, 0.227, 0.102 }, { 0.180, 0.165, 0.227 }, { 0.431, 0.118, 0.102 } }   -- sepia, iron gall, burgundy
 
+-- Book theme: keep the original inks and artwork so switching back is lossless.
+-- Bind our own lettering, surfaces and decorative tints; game tooltips keep their colours.
+K.THEME = {
+    text = setmetatable({}, { __mode = "k" }), tint = setmetatable({}, { __mode = "k" }),
+    fill = setmetatable({}, { __mode = "k" }), watch = setmetatable({}, { __mode = "k" }), colors = {},
+    alpha = setmetatable({}, { __mode = "k" }), backdrop = setmetatable({}, { __mode = "k" }),
+}
+K.DARK_TINT = {
+    paper = { 0.155, 0.163, 0.180 }, corner = { 0.25, 0.26, 0.26 },
+    leather = { 0.65, 0.63, 0.60 }, trim = { 0.83, 0.79, 0.69 }, tab = { 0.58, 0.58, 0.56 },
+    metal = { 0.78, 0.75, 0.67 }, control = { 0.62, 0.59, 0.53 }, controlActive = { 0.88, 0.81, 0.68 },
+    mapVisited = { 0.91, 0.88, 0.81 }, mapUnvisited = { 0.88, 0.85, 0.77 }, ornament = { 0.90, 0.83, 0.62 },
+    ribbon = { 0.32, 0.29, 0.25 },
+}
+K.DARK_FILL = {
+    paper = { 0.145, 0.141, 0.129 }, selection = { 0.784, 0.667, 0.408, 0.18 },
+    hover = { 0.784, 0.667, 0.408, 0.07 }, selectedLine = { 0.839, 0.702, 0.396, 0.78 },
+}
+K.DARK_BACKDROP = {
+    input = { { 0.10, 0.095, 0.082, 0.92 }, { 0.43, 0.36, 0.24, 1 } },
+    inputFocus = { { 0.10, 0.095, 0.082, 0.92 }, { 0.78, 0.67, 0.41, 1 } },
+    button = { { 0.17, 0.15, 0.11, 0.95 }, { 0.43, 0.36, 0.24, 1 } },
+    buttonActive = { { 0.28, 0.22, 0.12, 0.95 }, { 0.72, 0.57, 0.30, 1 } },
+    action = { { 0.38, 0.29, 0.14, 1 }, { 0.72, 0.57, 0.30, 1 } },
+    danger = { { 0.30, 0.10, 0.085, 1 }, { 0.67, 0.32, 0.23, 1 } },
+    list = { { 0.13, 0.125, 0.11, 1 }, { 0.43, 0.36, 0.24, 1 } },   -- an opened list of choices: opaque
+}
+ns.IsDarkMode = function() return SkaldDB ~= nil and SkaldDB.darkMode == true end
+K.ColorKey = function(r, g, b)
+    return string.format("%02x%02x%02x", math.floor(r * 255 + 0.5), math.floor(g * 255 + 0.5), math.floor(b * 255 + 0.5))
+end
+K.DarkInk = function(light, dark) K.THEME.colors[K.ColorKey(light[1], light[2], light[3])] = dark end
+K.DarkInk(K.C_BODY, { 0.882, 0.835, 0.733 })
+K.DarkInk(K.C_MUTED, { 0.706, 0.647, 0.557 })
+K.DarkInk(K.C_TIME, { 0.725, 0.643, 0.514 })
+K.DarkInk(K.C_NOTE, { 0.882, 0.835, 0.733 })
+K.DarkInk(K.C_HDR, { 0.722, 0.647, 0.510 })
+K.DarkInk(K.HEAD_INK, { 0.784, 0.667, 0.408 })
+K.DarkInk(K.INKS[2], { 0.827, 0.847, 0.898 })
+K.DarkInk(K.C_HEAD, { 0.784, 0.667, 0.408 })
+K.DarkInk({ 0.43, 0.118, 0.102 }, { 0.784, 0.667, 0.408 })
+K.DarkInk({ 0.62, 0.43, 0.08 }, { 0.839, 0.702, 0.396 })
+K.DarkInk({ 0.54, 0.35, 0.08 }, { 0.839, 0.702, 0.396 })
+K.DarkInk(K.INK.death, { 0.898, 0.631, 0.608 })
+K.DARK_TIERS = {
+    [0] = { 0.710, 0.710, 0.675 }, { 0.882, 0.835, 0.733 }, { 0.514, 0.773, 0.431 },
+    { 0.490, 0.686, 0.910 }, { 0.761, 0.604, 0.906 }, { 0.910, 0.678, 0.380 },
+}
+for tier, color in pairs(K.TIER_INK) do K.DarkInk(color, K.DARK_TIERS[tier]) end
+for tier, color in pairs(K.ITEM_INK) do K.DarkInk(color, K.DARK_TIERS[tier]) end
+ns.ThemeColor = function(r, g, b)
+    if not ns.IsDarkMode() then return r, g, b end
+    local c = K.THEME.colors[K.ColorKey(r, g, b)]
+    if c then return c[1], c[2], c[3] end
+    if math.max(r, g, b) < 0.72 then
+        -- Secondary inks used by companion tabs: retain hue, lift contrast on charcoal.
+        return 0.62 + r * 0.38, 0.62 + g * 0.38, 0.62 + b * 0.38
+    end
+    return r, g, b
+end
+ns.ThemeHex = function(c)
+    if ns.IsDarkMode() and c == K.INKS[3] then return "|cffe5b7aa" end
+    return "|cff" .. K.ColorKey(ns.ThemeColor(c[1], c[2], c[3]))
+end
+ns.ThemeText = function(region, r, g, b, alpha, dark)
+    K.THEME.text[region] = { r, g, b, alpha or 1, dark = dark }
+    local red, green, blue = ns.ThemeColor(r, g, b)
+    if ns.IsDarkMode() and dark then red, green, blue = dark[1], dark[2], dark[3] end
+    region:SetTextColor(red, green, blue, alpha or 1)
+end
+K.PaintTint = function(region, binding)
+    local c = ns.IsDarkMode() and K.DARK_TINT[binding.role]
+    local r, g, b = binding[1], binding[2], binding[3]
+    if ns.IsDarkMode() and binding.role == "trim" then r, g, b = 1, 1, 1 end
+    region:SetVertexColor(r * (c and c[1] or 1), g * (c and c[2] or 1), b * (c and c[3] or 1))
+    if binding.role == "ornament" then region:SetBlendMode(ns.IsDarkMode() and "ADD" or "BLEND") end
+end
+ns.ThemeTint = function(region, role, r, g, b)
+    local binding = { r or 1, g or 1, b or 1, role = role }
+    K.THEME.tint[region] = binding
+    K.PaintTint(region, binding)
+end
+K.PaintFill = function(region, binding)
+    if ns.IsDarkMode() then
+        local c = K.DARK_FILL[binding.role] or { 0.784, 0.667, 0.408 }
+        region:SetColorTexture(c[1], c[2], c[3], c[4] or binding[4])
+    else region:SetColorTexture(binding[1], binding[2], binding[3], binding[4]) end
+end
+ns.ThemeFill = function(region, r, g, b, alpha, role)
+    local binding = { r, g, b, alpha or 1, role = role }
+    K.THEME.fill[region] = binding
+    K.PaintFill(region, binding)
+end
+ns.ThemeAlpha = function(region, light, dark)
+    K.THEME.alpha[region] = { light, dark }
+    region:SetAlpha(ns.IsDarkMode() and dark or light)
+end
+K.PaintBackdrop = function(region, binding)
+    local colors = (ns.IsDarkMode() and K.DARK_BACKDROP[binding.role]) or binding
+    region:SetBackdropColor(unpack(colors[1]))
+    region:SetBackdropBorderColor(unpack(colors[2]))
+end
+ns.ThemeBackdrop = function(region, fill, border, role)
+    local binding = { fill, border, role = role }
+    K.THEME.backdrop[region] = binding
+    K.PaintBackdrop(region, binding)
+end
+ns.ThemeWatch = function(owner, refresh) K.THEME.watch[owner] = refresh end
+ns.SetDarkMode = function(on)
+    on = on == true
+    if ns.IsDarkMode() == on then return end
+    SkaldDB = SkaldDB or {}
+    SkaldDB.darkMode = on or nil
+    ns.layoutRev = (ns.layoutRev or 0) + 1
+    for region, c in pairs(K.THEME.text) do
+        local r, g, b = ns.ThemeColor(c[1], c[2], c[3])
+        if on and c.dark then r, g, b = c.dark[1], c.dark[2], c.dark[3] end
+        region:SetTextColor(r, g, b, c[4])
+    end
+    for region, binding in pairs(K.THEME.tint) do K.PaintTint(region, binding) end
+    for region, binding in pairs(K.THEME.fill) do K.PaintFill(region, binding) end
+    for region, binding in pairs(K.THEME.alpha) do region:SetAlpha(on and binding[2] or binding[1]) end
+    for region, binding in pairs(K.THEME.backdrop) do K.PaintBackdrop(region, binding) end
+    if window then window:ApplyPaper(); window:ApplyTabStyle(); window:ApplyCover() end
+    for owner, refresh in pairs(K.THEME.watch) do refresh(owner) end
+end
+
 K.BOOK_W, K.BOOK_H = 980, 580
 K.BOOK_FIT_W, K.BOOK_FIT_H, K.BOOK_MIN_SCALE = 0.96, 0.94, 0.5   -- how much of the screen the book may take, and the smallest it is drawn
 K.BOOK_SIZES = { "auto", 0.8, 1, 1.25, 1.5 }
@@ -2249,8 +2376,7 @@ local function RomanLower(n)
 end
 
 local function Hex(c)
-    return string.format("|cff%02x%02x%02x",
-        math.floor(c[1] * 255 + 0.5), math.floor(c[2] * 255 + 0.5), math.floor(c[3] * 255 + 0.5))
+    return ns.ThemeHex(c)
 end
 
 -- What a day was about, from what it held; picks the title.
@@ -2410,6 +2536,7 @@ ns.NineSlice = function(frame, file, texW, texH, border, draw)
     local function Piece(l, r, t, b2, u0, u1, v0, v1, layer)
         local tex = frame:CreateTexture(nil, "BACKGROUND", nil, layer)
         tex:SetTexture(file)
+        ns.ThemeTint(tex, "paper")
         tex:SetTexCoord(u0, u1, v0, v1)
         return tex
     end
@@ -2496,7 +2623,7 @@ local function ShowToast(e, titleText, bodyText, lines, seconds)
         fr.title:SetPoint("TOPLEFT", 102, -19)
         fr.title:SetWidth(266)
         fr.title:SetJustifyH("LEFT")
-        fr.title:SetTextColor(K.C_HEAD[1], K.C_HEAD[2], K.C_HEAD[3])
+        ns.ThemeText(fr.title, K.C_HEAD[1], K.C_HEAD[2], K.C_HEAD[3])
         fr.rule = fr:CreateTexture(nil, "ARTWORK", nil, 1)
         fr.rule:SetSize(180, 11)
         fr.rule:SetPoint("TOPLEFT", fr.title, "BOTTOMLEFT", -2, -1)
@@ -2508,7 +2635,7 @@ local function ShowToast(e, titleText, bodyText, lines, seconds)
         fr.body:SetJustifyH("LEFT")
         fr.body:SetJustifyV("TOP")
         fr.body:SetWordWrap(true)
-        fr.body:SetTextColor(K.C_BODY[1], K.C_BODY[2], K.C_BODY[3])
+        ns.ThemeText(fr.body, K.C_BODY[1], K.C_BODY[2], K.C_BODY[3])
         -- how long is left: a thin gold line along the foot that shortens
         fr.bar = fr:CreateTexture(nil, "OVERLAY")
         fr.bar:SetColorTexture(0.85, 0.65, 0.10, 0.85)
@@ -2619,11 +2746,12 @@ ns.ShowResumeCard = function(data)
         fr.icon:SetTexture(K.TEX .. "quill")
         fr.title = fr:CreateFontString(nil, "OVERLAY", "SkaldHead")
         fr.title:SetPoint("LEFT", fr.icon, "RIGHT", 12, 0)
-        fr.title:SetTextColor(K.C_HEAD[1], K.C_HEAD[2], K.C_HEAD[3])
+        ns.ThemeText(fr.title, K.C_HEAD[1], K.C_HEAD[2], K.C_HEAD[3])
         fr.rule = fr:CreateTexture(nil, "ARTWORK")
         fr.rule:SetSize(130, 11)
         fr.rule:SetPoint("TOPLEFT", fr.icon, "BOTTOMLEFT", 0, -4)
         fr.rule:SetTexture(K.TEX .. "rule")
+        ns.ThemeTint(fr.rule, "ornament")
         fr.rule:SetTexCoord(0, 160 / 256, 0, 14 / 16)
         fr.parts = {}
         fr:SetScript("OnMouseUp", function(self, button)
@@ -2648,7 +2776,7 @@ ns.ShowResumeCard = function(data)
         p:SetWidth(300)
         p:SetJustifyH("LEFT")
         p:SetWordWrap(true)
-        p:SetTextColor(r, g, b)
+        ns.ThemeText(p, r, g, b)
         p:SetText(text)
         p:Show()
         return p, gap
@@ -2761,7 +2889,7 @@ local function CreateWindow()
     local coverParts = {}
     local function Cover(x, y, w, h, u0, u1, v0, v1, level)
         local t = book:CreateTexture(nil, "BACKGROUND", nil, level or 0)
-        coverParts[#coverParts + 1] = t
+        coverParts[#coverParts + 1] = { texture = t, role = level == 2 and "trim" or "leather" }
         t:SetSize(w, h)
         t:SetPoint("TOPLEFT", x, -y)
         t:SetTexture(K.TEX .. "cover9")
@@ -2798,6 +2926,7 @@ local function CreateWindow()
     spine:SetSize(28, 572)
     spine:SetPoint("TOPLEFT", K.PAGE_XS[1] + K.PAGE_SW, -4)
     spine:SetTexture(K.TEX .. "spine", "REPEAT", "REPEAT")
+    ns.ThemeTint(spine, "leather")
     spine:SetTexCoord(0, 28 / 32, 0, 572 / 256)
     -- Behind each page, the dark of the cover shows around the burnt edges (no stack of page
     -- edges: a pale band showed through the corners of the paper).
@@ -2844,6 +2973,7 @@ local function CreateWindow()
         paper:SetPoint("TOPLEFT", (i == 1) and 5 or 0, -5)
         paper:SetPoint("BOTTOMRIGHT", (i == 1) and 0 or -5, 5)
         paper:SetTexture(K.TEX .. "parchment", "REPEAT", "REPEAT")
+        ns.ThemeTint(paper, "paper")
         local ox, oy = (i == 1) and 0 or 120, (i == 1) and 0 or 80
         paper:SetTexCoord(ox / 256, (ox + K.PAGE_SW) / 256, oy / 256, (oy + K.PAGE_SH) / 256)
         s.paper, s.paperOx, s.paperOy = paper, ox, oy
@@ -2853,6 +2983,7 @@ local function CreateWindow()
         local function Burn(point1, point2, w, h, u0, u1, v0, v1, x1, y1, x2, y2)
             local t = fr:CreateTexture(nil, "ARTWORK", nil, 1)
             t:SetTexture(K.TEX .. "burn9")
+            ns.ThemeTint(t, "paper")
             t:SetTexCoord(u0 / 256, u1 / 256, v0 / 256, v1 / 256)
             t:SetPoint(point1, x1, y1)
             if point2 then t:SetPoint(point2, x2, y2) end
@@ -2881,25 +3012,25 @@ local function CreateWindow()
         -- Header: small print either side of a thin double rule.
         local hl = fr:CreateFontString(nil, "OVERLAY", "SkaldSmall")
         hl:SetPoint("TOPLEFT", 30, -15)
-        hl:SetTextColor(K.C_HDR[1], K.C_HDR[2], K.C_HDR[3])
+        ns.ThemeText(hl, K.C_HDR[1], K.C_HDR[2], K.C_HDR[3])
         hl:SetText(L.HDR_L)
         local hr = fr:CreateFontString(nil, "OVERLAY", "SkaldSmall")
         hr:SetPoint("TOPRIGHT", i == 2 and -52 or -30, -15)   -- the wax seal of the cover sits over the right corner
-        hr:SetTextColor(K.C_HDR[1], K.C_HDR[2], K.C_HDR[3])
+        ns.ThemeText(hr, K.C_HDR[1], K.C_HDR[2], K.C_HDR[3])
         hr:SetText(L.HDR_R)
         s.hr = hr
         s.hl = hl
         -- the cover's left page names the book in the middle too (name | diary | Skald)
         s.hm = fr:CreateFontString(nil, "OVERLAY", "SkaldSmall")
         s.hm:SetPoint("TOP", 0, -15)
-        s.hm:SetTextColor(K.C_HDR[1], K.C_HDR[2], K.C_HDR[3])
+        ns.ThemeText(s.hm, K.C_HDR[1], K.C_HDR[2], K.C_HDR[3])
         s.hm:SetText(L.HDR_M)
         s.hm:Hide()
         s.headRules = {}
         for n, alpha in ipairs({ 0.55, 0.22 }) do
             local rule = fr:CreateTexture(nil, "ARTWORK", nil, 3)
             s.headRules[n] = rule
-            rule:SetColorTexture(0.43, 0.118, 0.102, alpha)
+            ns.ThemeFill(rule, 0.43, 0.118, 0.102, alpha)
             rule:SetHeight(1)
             rule:SetPoint("TOPLEFT", 30, -(35 + (n - 1) * 3))
             rule:SetPoint("TOPRIGHT", -30, -(35 + (n - 1) * 3))
@@ -2930,11 +3061,12 @@ local function CreateWindow()
         s.cover:Hide()
         s.rule = fr:CreateTexture(nil, "ARTWORK", nil, 3)
         s.rule:SetTexture(K.TEX .. "rule")
+        ns.ThemeTint(s.rule, "ornament")
         s.rule:SetTexCoord(0, 160 / 256, 0, 14 / 16)
         s.rule:SetSize(130, 11)
         s.rule:Hide()
         s.line = fr:CreateTexture(nil, "ARTWORK", nil, 3)
-        s.line:SetColorTexture(K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3], 0.3)
+        ns.ThemeFill(s.line, K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3], 0.3)
         s.line:SetHeight(1)
         s.line:Hide()
         return s
@@ -2950,7 +3082,7 @@ local function CreateWindow()
                 button.tex:SetTexture(K.TEX .. "ui_corner_" .. button.cornerSide .. suffix)
                 local hover = button:IsMouseOver()
                 local gain = hover and 1.12 or 1
-                button.tex:SetVertexColor(gain, gain, gain)
+                ns.ThemeTint(button.tex, "corner", gain, gain, gain)
             end
         end
     end
@@ -2999,7 +3131,7 @@ local function CreateWindow()
             r.time = s.frame:CreateFontString(nil, "OVERLAY", "SkaldBody")
             r.time:SetWidth(40)
             r.time:SetJustifyH("LEFT")
-            r.time:SetTextColor(K.C_TIME[1], K.C_TIME[2], K.C_TIME[3])
+            ns.ThemeText(r.time, K.C_TIME[1], K.C_TIME[2], K.C_TIME[3])
             r.text = s.frame:CreateFontString(nil, "OVERLAY", "SkaldEntry")
             r.text:SetJustifyH("LEFT")
             r.text:SetJustifyV("TOP")
@@ -3046,7 +3178,7 @@ local function CreateWindow()
             r.note:SetJustifyH("LEFT")
             r.note:SetJustifyV("TOP")
             r.note:SetWordWrap(true)
-            r.note:SetTextColor(K.C_NOTE[1], K.C_NOTE[2], K.C_NOTE[3])
+            ns.ThemeText(r.note, K.C_NOTE[1], K.C_NOTE[2], K.C_NOTE[3])
             r.noteLine = s.frame:CreateTexture(nil, "ARTWORK", nil, 3)
             r.noteLine:SetColorTexture(0.85, 0.65, 0.10, 0.65)
             r.noteLine:SetWidth(2)
@@ -3121,7 +3253,7 @@ local function CreateWindow()
     editor:SetAutoFocus(false)
     editor:SetMaxLetters(140)
     editor:SetFontObject("SkaldNote")
-    editor:SetTextColor(K.C_NOTE[1], K.C_NOTE[2], K.C_NOTE[3])
+    ns.ThemeText(editor, K.C_NOTE[1], K.C_NOTE[2], K.C_NOTE[3])
     editor:SetWidth(K.CW)
     editor:SetHeight(24)
     editor:SetScript("OnTextChanged", function(self)
@@ -3159,13 +3291,14 @@ local function CreateWindow()
             icon:SetPoint("LEFT", 0, 0)
             icon:SetTexture(K.TEX .. "inkwell_writing_128")
             local rule = area:CreateTexture(nil, "ARTWORK")
-            rule:SetColorTexture(K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3], 0.45)
+            ns.ThemeFill(rule, K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3], 0.45)
             rule:SetHeight(1)
             rule:SetPoint("BOTTOMLEFT", 44, 6)
             rule:SetPoint("BOTTOMRIGHT", 0, 6)
             local ph = area:CreateFontString(nil, "OVERLAY", "SkaldNote")
             ph:SetPoint("BOTTOMLEFT", 46, 8)
-            ph:SetTextColor(K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3], 0.6)
+            ns.ThemeText(ph, K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3])
+            ns.ThemeAlpha(ph, 0.6, 1)
             ph:SetText(L.NOTE_PLACEHOLDER)
             area.ph = ph
             s.noteArea = area
@@ -3217,9 +3350,9 @@ local function CreateWindow()
             b.text:SetJustifyH("LEFT")
             b.page = b:CreateFontString(nil, "OVERLAY", "SkaldBody")
             b.page:SetPoint("RIGHT", 0, 0)
-            b.page:SetTextColor(K.C_HEAD[1], K.C_HEAD[2], K.C_HEAD[3])
+            ns.ThemeText(b.page, K.C_HEAD[1], K.C_HEAD[2], K.C_HEAD[3])
             b.leader = b:CreateTexture(nil, "ARTWORK")
-            b.leader:SetColorTexture(K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3], 0.4)
+            ns.ThemeFill(b.leader, K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3], 0.4)
             b.leader:SetHeight(1)
             b.hl = b:CreateTexture(nil, "BACKGROUND")
             b.hl:SetAllPoints()
@@ -3353,15 +3486,16 @@ local function CreateWindow()
     local coverTitle = cover1:CreateFontString(nil, "OVERLAY", "SkaldHead")
     coverTitle:SetPoint("TOP", 0, -428)
     coverTitle:SetWidth(K.PAGE_SW - 20)
-    coverTitle:SetTextColor(K.C_HEAD[1], K.C_HEAD[2], K.C_HEAD[3])
+    ns.ThemeText(coverTitle, K.C_HEAD[1], K.C_HEAD[2], K.C_HEAD[3])
     local coverRule = cover1:CreateTexture(nil, "ARTWORK")
     coverRule:SetSize(130, 11)
     coverRule:SetPoint("TOP", coverTitle, "BOTTOM", 0, -4)
     coverRule:SetTexture(K.TEX .. "rule")
+    ns.ThemeTint(coverRule, "ornament")
     coverRule:SetTexCoord(0, 160 / 256, 0, 14 / 16)
     local coverLevel = cover1:CreateFontString(nil, "OVERLAY", "SkaldBody")
     coverLevel:SetPoint("TOP", coverRule, "BOTTOM", 0, -4)
-    coverLevel:SetTextColor(K.C_BODY[1], K.C_BODY[2], K.C_BODY[3])
+    ns.ThemeText(coverLevel, K.C_BODY[1], K.C_BODY[2], K.C_BODY[3])
 
     -- The cover, right: the journey in numbers and the quests by rarity. -----------------
     local stats = sides[2].cover
@@ -3370,19 +3504,20 @@ local function CreateWindow()
         fs:SetPoint(justify == "RIGHT" and "TOPRIGHT" or "TOPLEFT", x, y)
         fs:SetJustifyH(justify or "LEFT")
         if width then fs:SetWidth(width) end
-        fs:SetTextColor(K.C_BODY[1], K.C_BODY[2], K.C_BODY[3])
+        ns.ThemeText(fs, K.C_BODY[1], K.C_BODY[2], K.C_BODY[3])
         return fs
     end
     local RX = sides[2].padL
     local journeyTitle = stats:CreateFontString(nil, "OVERLAY", "SkaldHead")
     journeyTitle:SetPoint("TOP", 3, -50)
     journeyTitle:SetWidth(K.CW)
-    journeyTitle:SetTextColor(K.C_HEAD[1], K.C_HEAD[2], K.C_HEAD[3])
+    ns.ThemeText(journeyTitle, K.C_HEAD[1], K.C_HEAD[2], K.C_HEAD[3])
     journeyTitle:SetText(L.S_HEADER)
     local journeyRule = stats:CreateTexture(nil, "ARTWORK")
     journeyRule:SetSize(130, 11)
     journeyRule:SetPoint("TOP", 3, -78)
     journeyRule:SetTexture(K.TEX .. "rule")
+    ns.ThemeTint(journeyRule, "ornament")
     journeyRule:SetTexCoord(0, 160 / 256, 0, 14 / 16)
 
     local FACTS = {
@@ -3414,9 +3549,9 @@ local function CreateWindow()
         factValues[fact.key] = JText(stats, "SkaldBody", 0, y - 4, "RIGHT")
         factValues[fact.key]:ClearAllPoints()
         factValues[fact.key]:SetPoint("TOPRIGHT", -30, y - 4)
-        factValues[fact.key]:SetTextColor(K.C_HEAD[1], K.C_HEAD[2], K.C_HEAD[3])
+        ns.ThemeText(factValues[fact.key], K.C_HEAD[1], K.C_HEAD[2], K.C_HEAD[3])
         local leader = stats:CreateTexture(nil, "ARTWORK")
-        leader:SetColorTexture(K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3], 0.22)
+        ns.ThemeFill(leader, K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3], 0.22)
         leader:SetHeight(1)
         leader:SetPoint("BOTTOMLEFT", factLabels[fact.key], "BOTTOMRIGHT", 6, 3)
         leader:SetPoint("BOTTOMRIGHT", factValues[fact.key], "BOTTOMLEFT", -6, 3)
@@ -3427,7 +3562,7 @@ local function CreateWindow()
             local tag = JText(stats, "SkaldItalic", 0, y - 4, "RIGHT")
             tag:ClearAllPoints()
             tag:SetPoint("TOPRIGHT", -30, y - 3)
-            tag:SetTextColor(0.45, 0.31, 0.18)
+            ns.ThemeText(tag, 0.45, 0.31, 0.18)
             factValues.topkindTag = tag
             factValues[fact.key]:ClearAllPoints()
             factValues[fact.key]:SetPoint("TOPRIGHT", tag, "TOPLEFT", -4, 1)
@@ -3439,12 +3574,14 @@ local function CreateWindow()
     rarityRule:SetSize(110, 9)
     rarityRule:SetPoint("TOP", 3, rarityTop)
     rarityRule:SetTexture(K.TEX .. "rule")
+    ns.ThemeTint(rarityRule, "ornament")
     rarityRule:SetTexCoord(0, 160 / 256, 0, 14 / 16)
     -- the ribbon the seals lean on, with the counts written on it
     local ribbon = stats:CreateTexture(nil, "ARTWORK")
     ribbon:SetSize(400, 50)   -- the drawn ribbon fills 85% of its picture: about 340 points show, the flat of it from 34 to 310
     ribbon:SetPoint("TOPLEFT", RX - 29, rarityTop - 37)
     ribbon:SetTexture(K.TEX .. "ui_ribbon")
+    ns.ThemeTint(ribbon, "ribbon")
     local rarityCounts = {}
     for tier = 0, 5 do
         local cell = CreateFrame("Frame", nil, stats)
@@ -3458,7 +3595,8 @@ local function CreateWindow()
         local count = cell:CreateFontString(nil, "OVERLAY", "SkaldBody")
         count:SetPoint("TOP", seal, "BOTTOM", 0, -2)
         local ink = K.TIER_INK[tier]
-        count:SetTextColor(ink[1], ink[2], ink[3])
+        -- The ribbon darkens with the page; keep the original rarity inks only in the light theme.
+        ns.ThemeText(count, ink[1], ink[2], ink[3], 1, { 0.882, 0.835, 0.733 })
         cell:SetScript("OnEnter", function(self)
             GameTooltip:SetOwner(self, "ANCHOR_TOP")
             GameTooltip:AddLine(L.TIERS[tier] or tostring(tier))
@@ -3470,8 +3608,8 @@ local function CreateWindow()
     -- the two notes at the foot are written by hand
     local footerPlayed = JText(stats, "SkaldNote", RX, rarityTop - 90)
     local footerFirst = JText(stats, "SkaldNote", RX, rarityTop - 110)
-    footerPlayed:SetTextColor(0.36, 0.24, 0.14)
-    footerFirst:SetTextColor(0.36, 0.24, 0.14)
+    ns.ThemeText(footerPlayed, 0.36, 0.24, 0.14)
+    ns.ThemeText(footerFirst, 0.36, 0.24, 0.14)
 
     local function UpdateCover()
         local db = Journal()
@@ -3630,13 +3768,14 @@ local function CreateWindow()
             local blocks, lastZone = {}, nil
             for _, e in ipairs(day.entries) do
                 local isQuest = e.kind == "quest" and e.tier
+                local writingInk = K.INKS[((SkaldDB and SkaldDB.ink) or 0) + 1] or K.INKS[1]
                 local ink
                 if isQuest and e.tier >= 2 then
                     ink = K.TIER_INK[e.tier]
                 elseif e.kind == "death" then
                     ink = K.INK.death
                 else
-                    ink = K.INKS[((SkaldDB and SkaldDB.ink) or 0) + 1] or K.INKS[1]
+                    ink = writingInk
                 end
                 local head = ""
                 if e.kind ~= "note" and ns.PlaceName(e) ~= lastZone then
@@ -3648,11 +3787,13 @@ local function CreateWindow()
                     head = head .. (head ~= "" and "  -  " or "") .. Hex(ink) .. L.TIERS[e.tier] .. "|r"
                 end
                 local text = RenderEntry(e)
-                if e.kind == "loot" then text = text:gsub("|r", "|r" .. Hex(ink)) end
-                local body = Hex(ink) .. text .. "|r"
+                local bodyInk = ns.IsDarkMode() and writingInk or ink
+                if e.kind == "loot" then text = text:gsub("|r", "|r" .. Hex(bodyInk)) end
+                local body = Hex(bodyInk) .. text .. "|r"
                 blocks[#blocks + 1] = {
                     text = (head ~= "" and (head .. "\n") or "") .. body,
                     time = date("%H:%M", e.t),
+                    timeInk = ns.IsDarkMode() and e.kind == "death" and K.INK.death or K.C_TIME,
                     link = (e.kind == "loot" and type(e.arg) == "string") and e.arg or nil,
                     quest = (e.kind == "quest") and e or nil,
                     entry = e,
@@ -3799,7 +3940,7 @@ local function CreateWindow()
             head:SetPoint("TOPLEFT", px, -y)
             head:SetFontObject(font or "SkaldHead")
             head:SetJustifyH("CENTER")
-            head:SetTextColor(K.C_HEAD[1], K.C_HEAD[2], K.C_HEAD[3])
+            ns.ThemeText(head, K.C_HEAD[1], K.C_HEAD[2], K.C_HEAD[3])
             head:SetText(text)
             head:Show()
             return head
@@ -3833,7 +3974,7 @@ local function CreateWindow()
                     msg:ClearAllPoints()
                     msg:SetPoint("TOPLEFT", px, -(y + 24))
                     msg:SetJustifyH("CENTER")
-                    msg:SetTextColor(K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3])
+                    ns.ThemeText(msg, K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3])
                     msg:SetText(L.EMPTY)
                     msg:Show()
                 end
@@ -3884,7 +4025,7 @@ local function CreateWindow()
             local sub = s.sub
             sub:ClearAllPoints()
             sub:SetPoint("TOPLEFT", px, -(K.TOP_Y + 28))
-            sub:SetTextColor(1, 1, 1)
+            ns.ThemeText(sub, 1, 1, 1)
             local where = KnownZone(day.zone)
             -- the small sun stays on a day whose land has no weather stamp of its own
             local stamp = weather and "" or (string.format("|T%ssun:18:18:0:0:64:64:0:64:0:64|t", K.TEX) .. " ")
@@ -3903,7 +4044,7 @@ local function CreateWindow()
             if block.closing then
                 if not s.closeLine then
                     s.closeLine = s.frame:CreateTexture(nil, "ARTWORK", nil, 3)
-                    s.closeLine:SetColorTexture(K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3], 0.3)
+                    ns.ThemeFill(s.closeLine, K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3], 0.3)
                     s.closeLine:SetHeight(1)
                     s.closeIcon = s.frame:CreateTexture(nil, "ARTWORK", nil, 3)
                     s.closeIcon:SetSize(24, 24)
@@ -3923,7 +4064,7 @@ local function CreateWindow()
                 fs:SetPoint("TOPLEFT", px + 32, -top)
                 fs:SetFontObject("SkaldEntry")
                 fs:SetWidth(K.CW - 32)
-                fs:SetTextColor(1, 1, 1)
+                ns.ThemeText(fs, 1, 1, 1)
                 fs:SetText(block.text)
                 fs:Show()
             else
@@ -3937,7 +4078,7 @@ local function CreateWindow()
                 if not s.timeline then
                     s.timeline = s.frame:CreateTexture(nil, "ARTWORK", nil, 1)
                     s.timeline:SetWidth(2)
-                    s.timeline:SetColorTexture(K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3], 0.3)
+                    ns.ThemeFill(s.timeline, K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3], 0.3)
                 end
                 if not s.timelineTop then s.timelineTop = top end
                 s.timeline:ClearAllPoints()
@@ -3947,6 +4088,8 @@ local function CreateWindow()
                 r.time:ClearAllPoints()
                 r.time:SetPoint("TOPLEFT", px + 32, -(top + 4))
                 r.time:SetText(block.time)
+                local timeInk = block.timeInk or K.C_TIME
+                ns.ThemeText(r.time, timeInk[1], timeInk[2], timeInk[3])
                 r.time:Show()
                 r.text:ClearAllPoints()
                 r.text:SetPoint("TOPLEFT", px + K.ENTRY_X, -(top + 2))
@@ -4020,7 +4163,7 @@ local function CreateWindow()
                     local label = s.doodleN[i]
                     if not label then
                         label = s.frame:CreateFontString(nil, "OVERLAY", "SkaldSmall")
-                        label:SetTextColor(K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3])
+                        ns.ThemeText(label, K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3])
                         s.doodleN[i] = label
                     end
                     if n > 1 then
@@ -4037,7 +4180,7 @@ local function CreateWindow()
                     s.doodleLine = s.frame:CreateTexture(nil, "ARTWORK", nil, 1)
                     s.doodleLine:SetHeight(1)
                 end
-                s.doodleLine:SetColorTexture(K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3], 0.3)
+                ns.ThemeFill(s.doodleLine, K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3], 0.3)
                 s.doodleLine:ClearAllPoints()
                 local size = ns.DoodleSpot(1, count, day.number, room, dscale)
                 local lineY = -(K.TOP_Y + top + room + 4)   -- the strip rests on it: its icons end at the foot of the room
@@ -4078,6 +4221,7 @@ local function CreateWindow()
             self:SetPoint("TOPLEFT", f, "TOPLEFT", self.active and -26 or -14, self.top)   -- the brass strap shows against the spine
             local st = K.TabStyle()
             self.tex:SetTexture(K.TabPicture(id, self.active))
+            ns.ThemeTint(self.tex, "tab")
             -- the open wooden tab is drawn with a buckle at its end; a short strap runs from it to the edge of the book,
             -- so the buckle holds on to something instead of hanging in the air
             if st.strap then
@@ -4101,7 +4245,7 @@ local function CreateWindow()
             self.text:SetPoint("LEFT", st.x, 0)
             self.text:SetWidth(math.max(30, st.w - (id == "bard" and 18 or 0)))
             local c = self.active and st.inkOn or st.ink
-            self.text:SetTextColor(c[1], c[2], c[3])
+            ns.ThemeText(self.text, c[1], c[2], c[3])
             if self.text.SetShadowColor then   -- a dark edge to the letters on a dark tab; none on the light one
                 if st.shadow and (c[1] + c[2] + c[3]) / 3 > 0.6 then   -- only a light letter gets one
                     self.text:SetShadowColor(0.10, 0.05, 0.02, 0.95)
@@ -4210,15 +4354,15 @@ local function CreateWindow()
     todayButton:SetPoint("TOPLEFT", f, "TOPLEFT", K.PAGE_XS[2] + K.PAGE_SW - 132, -(K.PAGE_Y + K.PAGE_SH - 38))
     todayButton.text = todayButton:CreateFontString(nil, "OVERLAY", "SkaldBody")
     todayButton.text:SetPoint("RIGHT", 0, 0)
-    todayButton.text:SetTextColor(K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3])
+    ns.ThemeText(todayButton.text, K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3])
     todayButton.text:SetText(L.TODAY)
     todayButton.glow = todayButton:CreateTexture(nil, "BACKGROUND")
     todayButton.glow:SetPoint("TOPLEFT", -8, 4)
     todayButton.glow:SetPoint("BOTTOMRIGHT", 8, -4)
     todayButton.glow:SetColorTexture(1, 0.86, 0.5, 0.18)
     todayButton.glow:Hide()
-    todayButton:SetScript("OnEnter", function(self) self.text:SetTextColor(K.C_HEAD[1], K.C_HEAD[2], K.C_HEAD[3]); self.glow:Show() end)
-    todayButton:SetScript("OnLeave", function(self) self.text:SetTextColor(K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3]); self.glow:Hide() end)
+    todayButton:SetScript("OnEnter", function(self) ns.ThemeText(self.text, K.C_HEAD[1], K.C_HEAD[2], K.C_HEAD[3]); self.glow:Show() end)
+    todayButton:SetScript("OnLeave", function(self) ns.ThemeText(self.text, K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3]); self.glow:Hide() end)
     todayButton:SetScript("OnClick", function() f:ShowSection("days") end)
     todayButton:Hide()
 
@@ -4289,7 +4433,7 @@ local function CreateWindow()
             choice = (okFaction and faction == "Horde") and "wine" or (okFaction and faction == "Alliance") and "blue" or "brown"
         end
         local c = COVER_TINT[choice] or COVER_TINT.brown
-        for _, part in ipairs(coverParts) do part:SetVertexColor(c[1], c[2], c[3]) end
+        for _, part in ipairs(coverParts) do ns.ThemeTint(part.texture, part.role, c[1], c[2], c[3]) end
         f:Refresh()
     end
 
@@ -4530,6 +4674,7 @@ local function ThreePart(b, file, cap, full)
     local function Part(u0, u1)
         local t = b:CreateTexture(nil, "BACKGROUND")
         t:SetTexture(path)
+        ns.ThemeTint(t, file == "ui_plate_active" and "controlActive" or file == "ui_strap" and "metal" or "control")
         t:SetTexCoord(u0, u1, 0, 1)
         t:Hide()
         parts[#parts + 1] = t
@@ -4568,35 +4713,43 @@ local function MakeFlatButton(parent, width, height, label, style)
         b:SetBackdropColor(0, 0, 0, 0)
         b:SetBackdropBorderColor(0, 0, 0, 0)
     end
+    local marker = b:CreateTexture(nil, "OVERLAY")
+    marker:SetPoint("BOTTOMLEFT", 12, 3)
+    marker:SetPoint("BOTTOMRIGHT", -12, 3)
+    marker:SetHeight(1)
+    ns.ThemeFill(marker, 0.839, 0.702, 0.396, 0.8)
+    ns.ThemeAlpha(marker, 0, 1)
     function b:SetActive(active)
         self.active = active and true or false
+        marker:SetShown(self.active)
         if plated then
             if showStrap then
                 showStrap(true)
-                self.text:SetTextColor(0.89, 0.72, 0.36)
+                ns.ThemeText(self.text, 0.89, 0.72, 0.36)
             else
                 showIdle(not self.active)
                 showActive(self.active)
-                if self.active then self.text:SetTextColor(0.98, 0.93, 0.82) else self.text:SetTextColor(0.88, 0.82, 0.68) end
+                if self.active then ns.ThemeText(self.text, 0.98, 0.93, 0.82) else ns.ThemeText(self.text, 0.88, 0.82, 0.68) end
             end
             return
         end
         if fill then
-            self:SetBackdropColor(fill[1], fill[2], fill[3], 1)
-            self:SetBackdropBorderColor(border[1], border[2], border[3], 1)
-            self.text:SetTextColor(ink[1], ink[2], ink[3])
+            ns.ThemeBackdrop(self, { fill[1], fill[2], fill[3], 1 }, { border[1], border[2], border[3], 1 }, style == "gold" and "action" or "danger")
+            ns.ThemeText(self.text, ink[1], ink[2], ink[3], 1, { 0.95, 0.89, 0.75 })
         elseif self.active then
-            self:SetBackdropColor(K.C_HEAD[1], K.C_HEAD[2], K.C_HEAD[3], 1)
-            self:SetBackdropBorderColor(K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3], 1)
-            self.text:SetTextColor(0.96, 0.91, 0.80)
+            ns.ThemeBackdrop(self, { K.C_HEAD[1], K.C_HEAD[2], K.C_HEAD[3], 1 }, { K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3], 1 }, "buttonActive")
+            ns.ThemeText(self.text, 0.96, 0.91, 0.80)
         else
-            self:SetBackdropColor(1, 0.97, 0.88, 0.15)
-            self:SetBackdropBorderColor(K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3], 1)
-            self.text:SetTextColor(K.C_BODY[1], K.C_BODY[2], K.C_BODY[3])
+            ns.ThemeBackdrop(self, { 1, 0.97, 0.88, 0.15 }, { K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3], 1 }, "button")
+            ns.ThemeText(self.text, K.C_BODY[1], K.C_BODY[2], K.C_BODY[3])
         end
     end
-    b:SetScript("OnEnter", function(self) self:SetAlpha(0.88) end)
-    b:SetScript("OnLeave", function(self) self:SetAlpha(1) end)
+    local hover = b:CreateTexture(nil, "HIGHLIGHT")
+    hover:SetAllPoints()
+    ns.ThemeFill(hover, 1, 1, 1, 0.07, "hover")
+    ns.ThemeAlpha(hover, 0, 1)
+    b:SetScript("OnEnter", function(self) ns.ThemeAlpha(self, 0.88, 1) end)
+    b:SetScript("OnLeave", function(self) ns.ThemeAlpha(self, 1, 1) end)
     b:SetActive(false)
     return b
 end
@@ -4615,6 +4768,7 @@ local function PlateGroup(parent, x, y, w, h)
         for _, c in ipairs(cols) do
             local t = frame:CreateTexture(nil, "BACKGROUND", nil, -1)
             t:SetTexture(path)
+            ns.ThemeTint(t, "metal")
             t:SetTexCoord(c[1], c[2], r[1], r[2])
             if c[3] == "LEFT" then t:SetWidth(M) elseif c[3] == "RIGHT" then t:SetWidth(M) end
             if r[3] == "TOP" then t:SetHeight(M) elseif r[3] == "BOTTOM" then t:SetHeight(M) end
@@ -4705,7 +4859,7 @@ local function MakeWaxCheck(parent, label, get, set, iconPath, swatch, width)
     local fs = b:CreateFontString(nil, "OVERLAY", "SkaldBody")
     b.caption = label
     fs:SetPoint("LEFT", anchor, "LEFT", textX, 0)
-    fs:SetTextColor(K.C_BODY[1], K.C_BODY[2], K.C_BODY[3])
+    ns.ThemeText(fs, K.C_BODY[1], K.C_BODY[2], K.C_BODY[3])
     fs:SetText(label)
     function b.Sync()
         local on = get() and true or false
@@ -4739,12 +4893,13 @@ local function PageHeading(panel, text, x)
     fs:SetPoint("TOPLEFT", x, 0)
     fs:SetWidth(K.CW)
     fs:SetJustifyH("CENTER")
-    fs:SetTextColor(K.C_HEAD[1], K.C_HEAD[2], K.C_HEAD[3])
+    ns.ThemeText(fs, K.C_HEAD[1], K.C_HEAD[2], K.C_HEAD[3])
     fs:SetText(text)
     local rule = panel:CreateTexture(nil, "ARTWORK")
     rule:SetSize(130, 11)
     rule:SetPoint("TOP", fs, "BOTTOM", 0, -4)
     rule:SetTexture(K.TEX .. "rule")
+    ns.ThemeTint(rule, "ornament")
     rule:SetTexCoord(0, 160 / 256, 0, 14 / 16)
     fs.rule = rule
     return fs
@@ -4755,7 +4910,7 @@ local function SectionLabel(panel, text, x, y)
     fs:SetPoint("TOPLEFT", x, y)
     fs:SetWidth(K.CW)
     fs:SetJustifyH("LEFT")
-    fs:SetTextColor(K.C_SEC[1], K.C_SEC[2], K.C_SEC[3])
+    ns.ThemeText(fs, K.C_SEC[1], K.C_SEC[2], K.C_SEC[3])
     fs:SetText(text)
     return fs
 end
@@ -4766,6 +4921,7 @@ local function PageRule(panel, x, y)
     rule:SetSize(130, 11)
     rule:SetPoint("TOP", panel, "TOPLEFT", x + K.CW / 2, y)
     rule:SetTexture(K.TEX .. "rule")
+    ns.ThemeTint(rule, "ornament")
     rule:SetTexCoord(0, 160 / 256, 0, 14 / 16)
     return rule
 end
@@ -4776,7 +4932,7 @@ local function NoteText(panel, x, y)
     fs:SetWidth(K.CW)
     fs:SetJustifyH("LEFT")
     fs:SetWordWrap(true)
-    fs:SetTextColor(K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3])
+    ns.ThemeText(fs, K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3])
     return fs
 end
 
@@ -6551,7 +6707,7 @@ Mile.BuildPets = function(panel)
     name:SetPoint("TOPLEFT", iconFrame, "TOPRIGHT", 14, -4)
     name:SetWidth(K.CW - 72)
     name:SetJustifyH("LEFT")
-    name:SetTextColor(K.C_HEAD[1], K.C_HEAD[2], K.C_HEAD[3])
+    ns.ThemeText(name, K.C_HEAD[1], K.C_HEAD[2], K.C_HEAD[3])
 
     -- The facts, in two columns: a small label over each value.
     local function Cell(col, row, label)
@@ -6560,13 +6716,13 @@ Mile.BuildPets = function(panel)
         l:SetPoint("TOPLEFT", x, y)
         l:SetWidth(124)
         l:SetJustifyH("LEFT")
-        l:SetTextColor(K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3])
+        ns.ThemeText(l, K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3])
         l:SetText(Upper(label))
         local v = panel:CreateFontString(nil, "OVERLAY", "SkaldBody")
         v:SetPoint("TOPLEFT", x, y - 16)
         v:SetWidth(124)
         v:SetJustifyH("LEFT")
-        v:SetTextColor(K.C_BODY[1], K.C_BODY[2], K.C_BODY[3])
+        ns.ThemeText(v, K.C_BODY[1], K.C_BODY[2], K.C_BODY[3])
         return v, l
     end
     local sinceV, sinceL = Cell(1, 1, L.PETL_SINCE)
@@ -6576,7 +6732,7 @@ Mile.BuildPets = function(panel)
     subLine:SetPoint("TOPLEFT", name, "BOTTOMLEFT", 0, -4)
     subLine:SetWidth(K.CW - 72)
     subLine:SetJustifyH("LEFT")
-    subLine:SetTextColor(K.C_NOTE[1], K.C_NOTE[2], K.C_NOTE[3])
+    ns.ThemeText(subLine, K.C_NOTE[1], K.C_NOTE[2], K.C_NOTE[3])
     PageRule(panel, 0, -146)
 
     -- The companion itself, standing in an arched frame like the character on the cover. Only the pet
@@ -6648,7 +6804,7 @@ Mile.BuildPets = function(panel)
         local frame = panel:CreateTexture(nil, "BACKGROUND")
         frame:SetSize(46, 46)
         frame:SetPoint("TOPLEFT", K.RIGHT_X, top)
-        frame:SetColorTexture(K.C_HEAD[1], K.C_HEAD[2], K.C_HEAD[3], K.OWN_PET_ART and 0 or 0.85)
+        ns.ThemeFill(frame, K.C_HEAD[1], K.C_HEAD[2], K.C_HEAD[3], K.OWN_PET_ART and 0 or 0.85)
         local pic = panel:CreateTexture(nil, "ARTWORK")
         pic:SetSize(K.OWN_PET_ART and 34 or 30, K.OWN_PET_ART and 34 or 30)
         pic:SetPoint("CENTER", frame, "CENTER")
@@ -6657,16 +6813,16 @@ Mile.BuildPets = function(panel)
         a:SetPoint("TOPLEFT", K.RIGHT_X + 58, top + 1)
         a:SetWidth(K.CW - 58)
         a:SetJustifyH("LEFT")
-        a:SetTextColor(K.C_BODY[1], K.C_BODY[2], K.C_BODY[3])
+        ns.ThemeText(a, K.C_BODY[1], K.C_BODY[2], K.C_BODY[3])
         local b = panel:CreateFontString(nil, "OVERLAY", "SkaldBody")
         b:SetPoint("TOPLEFT", K.RIGHT_X + 58, top - 22)
         b:SetWidth(K.CW - 58)
         b:SetJustifyH("LEFT")
-        b:SetTextColor(K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3])
+        ns.ThemeText(b, K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3])
         local line = panel:CreateTexture(nil, "ARTWORK")
         line:SetPoint("TOPLEFT", K.RIGHT_X, top - 54)
         line:SetSize(K.CW, 1)
-        line:SetColorTexture(K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3], 0.28)
+        ns.ThemeFill(line, K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3], 0.28)
         rows[i] = { a, b, frame, pic, line }
         -- The one at my side: a thin gold outline round its row and a small tag, nothing else moves.
         local mark = {}
@@ -6684,7 +6840,7 @@ Mile.BuildPets = function(panel)
         Edge("TOPLEFT", { K.RIGHT_X + K.CW + 2, top + 3 }, 1, 58)
         local tag = panel:CreateFontString(nil, "OVERLAY", "SkaldSmall")
         tag:SetPoint("TOPRIGHT", panel, "TOPLEFT", K.RIGHT_X + K.CW - 4, top - 1)
-        tag:SetTextColor(gold[1], gold[2], gold[3])
+        ns.ThemeText(tag, gold[1], gold[2], gold[3])
         tag:SetText(Upper(L.PETS_NOW))
         mark[#mark + 1] = tag
         rows[i].mark = mark
@@ -6752,7 +6908,7 @@ Mile.BuildPets = function(panel)
                     local c = atSide and K.BTN.gold or K.C_HEAD
                     rows[i][3]:SetColorTexture(c[1], c[2], c[3], atSide and 1 or 0.85)
                 end
-                rows[i][1]:SetTextColor(atSide and K.C_HEAD[1] or K.C_BODY[1], atSide and K.C_HEAD[2] or K.C_BODY[2], atSide and K.C_HEAD[3] or K.C_BODY[3])
+                ns.ThemeText(rows[i][1], atSide and K.C_HEAD[1] or K.C_BODY[1], atSide and K.C_HEAD[2] or K.C_BODY[2], atSide and K.C_HEAD[3] or K.C_BODY[3])
                 rows[i][1]:SetText(item.name)
                 for _, m in ipairs(rows[i].mark) do if atSide then m:Show() else m:Hide() end end
                 local parts = {}
@@ -7433,7 +7589,10 @@ ns.CheckMemory = function()
         local idx = math.random(#list)
         if #list > 1 and idx == Mile.memoryIdx[bestPool] then idx = idx % #list + 1 end
         Mile.memoryIdx[bestPool] = idx
-        text = string.format(list[idx], tostring(ns.ZoneNameOfMap(zid) or best.zone or L.UNKNOWN_ZONE))
+        local place = tostring(ns.ZoneNameOfMap(zid) or best.zone or L.UNKNOWN_ZONE)
+        local phrase = list[idx]
+        if GetLocale() == "ptBR" then phrase = K.PlaceArticles(phrase, place, "%s") end
+        text = string.format(phrase, place)
     end
     ns.ShowNotice(L.MEMORY_TITLE, text, 3, 9, best)
 end
@@ -8104,7 +8263,7 @@ local function BuildReader(scope)
     local prefs = SkaldDB or {}
     local okBuild, _, _, _, toc = pcall(GetBuildInfo)
     local era = ns.IsForever() and "forever" or (okBuild and type(toc) == "number" and toc >= 20000 and toc < 30000 and "tbc") or "classic"
-    for _, pair in ipairs({ { "era", era }, { "paper", prefs.paperStyle or "clean" }, { "ink", prefs.ink or 0 },
+    for _, pair in ipairs({ { "era", era }, { "paper", prefs.paperStyle or "clean" }, { "ink", prefs.ink or 0 }, { "darkMode", prefs.darkMode == true and 1 or 0 },
         { "textSize", prefs.textSize or 1 }, { "density", prefs.density or "comfy" }, { "coverTitle", prefs.coverTitle or "" } }) do
         lines[#lines + 1] = K.ReaderLine("M", pair[1], pair[2])
     end
@@ -8316,11 +8475,13 @@ local function ShowExport()
         t:SetPoint(point, f, point, x, y)
         t:SetSize(w, h)
         t:SetTexture(K.TEX .. "cover9")
+        ns.ThemeTint(t, "leather")
         t:SetTexCoord(u0 / 256, u1 / 256, v0 / 256, v1 / 256)
     end
     local paper = f:CreateTexture(nil, "BACKGROUND")
     paper:SetPoint("TOPLEFT", 12, -12)
     paper:SetPoint("BOTTOMRIGHT", -12, 12)
+    ns.ThemeTint(paper, "paper")
     Edge("TOPLEFT", 0, 0, 28, 28, 0, 56, 0, 56)
     Edge("TOPRIGHT", 0, 0, 28, 28, 136, 192, 0, 56)
     Edge("BOTTOMLEFT", 0, 0, 28, 28, 0, 56, 119, 175)
@@ -8340,14 +8501,14 @@ local function ShowExport()
     title:SetPoint("TOPLEFT", 92, -36)
     title:SetWidth(450)
     title:SetJustifyH("LEFT")
-    title:SetTextColor(K.C_HEAD[1], K.C_HEAD[2], K.C_HEAD[3])
+    ns.ThemeText(title, K.C_HEAD[1], K.C_HEAD[2], K.C_HEAD[3])
     title:SetText(L.EXPORT_TITLE)
     local function Label(text, x, y, width, font)
         local fs = f:CreateFontString(nil, "OVERLAY", font or "QuestFont")
         fs:SetPoint("TOPLEFT", x, y)
         if width then fs:SetWidth(width) end
         fs:SetJustifyH("LEFT")
-        fs:SetTextColor(K.C_BODY[1], K.C_BODY[2], K.C_BODY[3])
+        ns.ThemeText(fs, K.C_BODY[1], K.C_BODY[2], K.C_BODY[3])
         fs:SetText(text)
         return fs
     end
@@ -8394,7 +8555,7 @@ local function ShowExport()
     local rule = f:CreateTexture(nil, "ARTWORK")
     rule:SetPoint("TOPLEFT", 44, -204)
     rule:SetSize(532, 1)
-    rule:SetColorTexture(K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3], 0.35)
+    ns.ThemeFill(rule, K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3], 0.35)
     local summary = Label("", 44, -220, 340)
 
     -- The payload stays visible and read-only; Select text gives it focus for Ctrl+C.
@@ -8443,7 +8604,7 @@ local function ShowExport()
     local hint = Label("", 76, -402, 500, "SkaldSmall")
     local readerLink = Label("odemarpizzol.github.io/Skald/reader/", 76, -434, 500, "SkaldSmall")
     local privacy = Label(L.EXPORT_READER_PRIVACY, 76, -454, 500, "SkaldSmall")
-    privacy:SetTextColor(K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3])
+    ns.ThemeText(privacy, K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3])
 
     function f:Refresh(rebuild)
         if rebuild ~= false then
@@ -8487,6 +8648,7 @@ local function ShowExport()
         paper:SetTexture(K.TEX .. (({ travel = "parchment_travel", war = "parchment_war", old = "parchment_old" })[settings.paperStyle] or "parchment"))
     end
 
+    ns.ThemeWatch(f, function(owner) owner:Refresh() end)
     exportFrame = f
     f:Refresh()
     f:Show()
@@ -8508,8 +8670,10 @@ local function BuildOptions(panel)
             b:SetSize(34, 34)
             b:SetPoint("TOPLEFT", tier * 56 + 4, y)
             local ring = MakeDisc(b, "BACKGROUND", 44, K.C_HEAD[1], K.C_HEAD[2], K.C_HEAD[3], 0)
+            ns.ThemeFill(ring, K.C_HEAD[1], K.C_HEAD[2], K.C_HEAD[3], 1)
             ring:SetPoint("CENTER", 0, 0)
             local inner = MakeDisc(b, "BACKGROUND", 40, 0.93, 0.87, 0.72, 1)
+            ns.ThemeFill(inner, 0.93, 0.87, 0.72, 1, "paper")
             inner:SetPoint("CENTER", 0, 0)
             local icon = b:CreateTexture(nil, "ARTWORK")
             icon:SetAllPoints()
@@ -8674,7 +8838,7 @@ local function BuildStyle(panel)
     sample:SetJustifyH("LEFT")
     sample:SetJustifyV("TOP")
     sample:SetWordWrap(true)
-    sample:SetTextColor(K.C_NOTE[1], K.C_NOTE[2], K.C_NOTE[3])
+    ns.ThemeText(sample, K.C_NOTE[1], K.C_NOTE[2], K.C_NOTE[3])
 
     PageRule(panel, 0, -246)
     SectionLabel(panel, L.OPT_SIZE, 0, -266)
@@ -8704,6 +8868,18 @@ local function BuildStyle(panel)
 
     PageRule(panel, 0, -362)
     SectionLabel(panel, L.OPT_INK, 0, -380)
+    local darkMode = MakeWaxCheck(panel, L.OPT_DARKMODE, ns.IsDarkMode, function(on)
+        ns.SetDarkMode(on)
+        refresh()
+    end, nil, nil, 168)
+    darkMode:SetPoint("TOPLEFT", 174, -376)
+    darkMode:HookScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        GameTooltip:AddLine(L.DARKMODE_HINT, 1, 0.93, 0.78, true)
+        GameTooltip:Show()
+    end)
+    darkMode:HookScript("OnLeave", function() GameTooltip:Hide() end)
+    panel.darkMode = darkMode
     local inkBoxes = {}
     for i = 0, 2 do
         local c = K.INKS[i + 1]
@@ -8742,11 +8918,10 @@ local function BuildStyle(panel)
     edit:SetAutoFocus(false)
     edit:SetMaxLetters(28)
     edit:SetFontObject("SkaldBody")
-    edit:SetTextColor(K.C_BODY[1], K.C_BODY[2], K.C_BODY[3])
+    ns.ThemeText(edit, K.C_BODY[1], K.C_BODY[2], K.C_BODY[3])
     edit:SetTextInsets(8, 8, 0, 0)
     edit:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Buttons\\WHITE8X8", edgeSize = 1 })
-    edit:SetBackdropColor(0.62, 0.48, 0.28, 0.32)   -- a darker scrap of parchment
-    edit:SetBackdropBorderColor(0.45, 0.30, 0.14, 1)
+    ns.ThemeBackdrop(edit, { 0.62, 0.48, 0.28, 0.32 }, { 0.45, 0.30, 0.14, 1 }, "input")
     local function SaveTitle()
         local text = (edit:GetText() or ""):gsub("^%s+", ""):gsub("%s+$", "")
         Settings().coverTitle = (text ~= "") and text or nil
@@ -8813,6 +8988,7 @@ local function BuildStyle(panel)
 
     refresh = function()
         local s = Settings()
+        darkMode.Sync()
         for i, key in ipairs(K.TAB_STYLE_ORDER) do
             if key == (s.tabStyle or "leather") then lookName.text:SetText(L.TAB_LOOKS[i]) end
         end
@@ -8822,7 +8998,7 @@ local function BuildStyle(panel)
         toneHint:SetText(L.TONE_HINT[tone] or "")
         sample:SetText(L.TONE_SAMPLE[tone] or "")
         local ink = K.INKS[(s.ink or 0) + 1] or K.INKS[1]   -- the example is written in the ink chosen below
-        sample:SetTextColor(ink[1], ink[2], ink[3])
+        ns.ThemeText(sample, ink[1], ink[2], ink[3], 1, s.ink == 2 and { 0.898, 0.718, 0.667 } or nil)
         for _, cb in ipairs(colorBoxes) do cb.Sync() end
         for _, cb in ipairs(inkBoxes) do cb.Sync() end
         for i, b in pairs(textSizeButtons) do b:SetActive(i == (s.textSize or 1)) end
@@ -9211,14 +9387,14 @@ ns.ShowReport = function()
         tinsert(UISpecialFrames, "SkaldReportFrame")
         local title = f:CreateFontString(nil, "OVERLAY", "QuestTitleFont")
         title:SetPoint("TOP", 0, -14)
-        title:SetTextColor(K.HEAD_INK[1], K.HEAD_INK[2], K.HEAD_INK[3])
+        ns.ThemeText(title, K.HEAD_INK[1], K.HEAD_INK[2], K.HEAD_INK[3])
         title:SetText(L.REPORT_TITLE)
         CreateFrame("Button", nil, f, "UIPanelCloseButton"):SetPoint("TOPRIGHT", -2, -2)
         local hint = f:CreateFontString(nil, "OVERLAY", "QuestFont")
         hint:SetPoint("TOPLEFT", 20, -44)
         hint:SetPoint("TOPRIGHT", -20, -44)
         hint:SetJustifyH("LEFT")
-        hint:SetTextColor(K.HEAD_INK[1], K.HEAD_INK[2], K.HEAD_INK[3])
+        ns.ThemeText(hint, K.HEAD_INK[1], K.HEAD_INK[2], K.HEAD_INK[3])
         hint:SetText(L.REPORT_HINT)
         local box = CreateFrame("Frame", nil, f, "BackdropTemplate")
         box:SetPoint("TOPLEFT", 20, -86)

@@ -86,7 +86,7 @@ try {
   for (const [era, toc] of [['tbc', 20506], ['forever', 16001]]) {
     const saved = path.join(temp, era + '.lua'), output = path.join(temp, era + '.txt');
     const fixture = fs.readFileSync(path.join(__dirname, 'fixtures/reader_saved.lua'), 'utf8') + `
-SkaldDB = { paperStyle = "travel", ink = 2, textSize = 2, density = "airy", dayMode = 1, coverTitle = "My road" }
+SkaldDB = { paperStyle = "travel", ink = 2, darkMode = true, textSize = 2, density = "airy", dayMode = 1, coverTitle = "My road" }
 function GetBuildInfo() return "test", "1", "today", ${toc} end
 SkaldCharDB.entries[1].ses = 11
 SkaldCharDB.entries[2].ses = 22
@@ -100,6 +100,7 @@ SkaldCharDB.entries[2].favNote = string.rep("margin ", 60) .. "END"
     if (error) continue;
     const m = R.build(R.readParts(fs.readFileSync(output, 'utf8')));
     check(m.era === era && m.prefs.paper === 'travel' && m.prefs.ink === '2' && m.prefs.textSize === '2' && m.prefs.density === 'airy' && m.prefs.coverTitle === 'My road', era + ' edition and visual preferences survive the actual exporter');
+    check(m.prefs.darkMode === '1', era + ' dark mode survives the actual exporter');
     const n = m.pages.find(p => p.kind === 'note');
     check(n.text === 'long note '.repeat(120) + 'END' && n.note === 'margin '.repeat(60) + 'END', era + ' notes are exported in full beyond the old character limits');
     const z = m.pages.find(p => p.kind === 'zone' && p.place === 'Elwynn Forest');
