@@ -1,2 +1,5 @@
 - Optional dark mode in Settings, Style: charcoal paper, light lettering and antique-gold headings, applied at once and remembered; paper, ink and cover choices are kept and the Reader export carries it.
 - Portuguese texts reviewed (268 lines): agreement, verbs, articles of places.
+- Refined Saga lettering and composition: smaller drop caps, quieter dividers, text that regains the full page width below illustrations, and measured chapter pairs between dedicated opening and closing pages.
+- Revised Portuguese Saga paragraphs keep the diary's voice and avoid repeating the level in the closing. Deaths are no longer described as spirit healer visits, and Clareiras de Tirisfal takes its plural article.
+- Saga highlights keep counted phrases and hyphenated names together; numeric highlights no longer corrupt colour escapes in dark mode. The Reader uses the revised drop-cap style too.

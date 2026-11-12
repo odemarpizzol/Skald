@@ -2137,6 +2137,116 @@ const SAGA_DIARY = (first = 1792000000, counts = 'quest = 80, boss = 3, death = 
   companions = { ["Aldor-Sakaldd"] = { first = 1, last = 50 }, ["Brisa-Sakaldd"] = { first = 1, last = 40 }, ["Cato-Sakaldd"] = { first = 1, last = 30 }, ["Dora-Sakaldd"] = { first = 1, last = 20 } },
   goals = { level10 = { t = 1, retro = true }, flights5 = { t = 2, retro = true } }, goalsInit = true, goalsVer = 3 ${extra}`);
 
+run('saga refinement: Portuguese places contract correctly and the closing does not repeat the level or change narrator', {
+  pre: '__locale = "ptBR"; ' + SAGA_DIARY(),
+  body: `assert(ns.PlaceArticles("em {place}", "Clareiras de Tirisfal", "{place}") == "nas {place}", "plural place article missing")
+assert(ns.PlaceArticles("de {place}", "Clareiras de Tirisfal", "{place}") == "das {place}", "plural place contraction missing")
+local T = ns.SagaTexts.ptBR.POOLS
+for _, phrase in ipairs(T.epilogue) do
+  assert(not phrase:find("{level}",1,true) and not phrase:find("{name}",1,true), "closing repeats level or changes person")
+  assert(phrase:find("{#pages:",1,true) or phrase:find("{pages}",1,true), "closing lost page count")
+end
+for _, loc in ipairs({ "ptBR", "enUS", "frFR", "esES", "esMX" }) do
+  for _, phrase in ipairs(ns.SagaTexts[loc].POOLS.falls) do
+    assert(not phrase:lower():find("curandeiro",1,true) and not phrase:lower():find("spirit healer",1,true)
+      and not phrase:lower():find("guérisseur",1,true), "death count claimed spirit healer visits")
+  end
+end
+local entries, n = SkaldCharDB.entries, #SkaldCharDB.entries
+local a, b = ns.BuildSaga(), ns.BuildSaga()
+for i,c in ipairs(a) do assert(c.text == b[i].text, "revised story is not deterministic") end
+assert(SkaldCharDB.entries == entries and #entries == n, "revision altered the diary")
+RES = "ok"`,
+});
+
+for (const item of [
+  {name: 'counted phrase after a standalone opening letter', text: 'O curandeiro de espíritos conhece o meu rosto: 2 visitas.', cutoff: 'curandeiro de espíritos conhece o meu rosto: 2', mark: '2 visitas'},
+  {name: 'a protected name longer than eight words', text: 'O caminho cruzou a longa rota entre as colinas e os vales de uma terra distante.', cutoff: 'caminho cruzou a longa rota entre as colinas e os vales de uma terra', mark: 'a longa rota entre as colinas e os vales de uma terra distante'},
+  {name: 'a single final word beside the drop cap', text: 'A estrada guardou memórias.', cutoff: 'estrada guardou', orphan: 'memórias.'},
+]) run('saga refinement: the real composer preserves ' + item.name, {
+  body: `local cutoff = #${JSON.stringify(item.cutoff)}
+for _, fs in ipairs(FONTS) do
+  fs.GetStringHeight = function(self)
+    local s = self:GetText()
+    local plain = type(s) == "string" and s:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", "") or ""
+    if plain == "X" .. string.char(10) .. "X" then return 40 end
+    return #plain <= cutoff and 40 or 60
+  end
+end
+ns.BuildSaga = function() return { { key = "epilogue", title = "Composition test", text = ${JSON.stringify(item.text)}, marks = { ${item.mark ? JSON.stringify(item.mark) : ''} } } } end
+local tab = btn("Saga"); tab._OnClick(tab)
+local intact = ${item.mark ? 'false' : 'true'}
+for _, fs in ipairs(FONTS) do
+  local s = fs:GetText()
+  if type(s) == "string" then
+    local plain = s:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", "")
+    ${item.mark ? `if plain:find(${JSON.stringify(item.mark)},1,true) then intact = true end` : `assert(plain ~= ${JSON.stringify(item.orphan)}, "single word orphan remained")`}
+  end
+end
+assert(intact, "protected expression was split between text regions")
+RES = "ok"`,
+});
+
+run('saga refinement: measured chapters preserve the opening and closing pages and balanced chapter pairs', {
+  body: `local chapters = { {key="prologue",text="Opening"}, {key="road",text="Road"}, {key="stories",text="Stories"},
+  {key="falls",text="Falls"}, {key="marks",text="Marks"}, {key="epilogue",text="Closing"} }
+local pages = ns.SagaPages(chapters,17,342,function() return 160 end)
+assert(#pages == 4 and #pages[1] == 1 and #pages[2] == 2 and #pages[3] == 2 and #pages[4] == 1, "opening/pairs/closing layout changed")
+assert(pages[1][1].key == "prologue" and pages[4][1].key == "epilogue", "opening or closing shared a page")
+RES = "ok"`,
+});
+
+run('saga refinement: highlighting numbers never recolours the digits inside another colour escape', {
+  body: `ns.SetDarkMode(true)
+ns.BuildSaga = function() return { { key="epilogue", title="Colour test",
+  text="A estrada chegou ao nível 6, com 23 páginas guardadas.", marks={"6","23 páginas"} } } end
+local tab=btn("Saga");tab._OnClick(tab)
+local found=false
+for _, fs in ipairs(FONTS) do
+  local s=fs:GetText()
+  if type(s)=="string" then
+    local clean=s:gsub("|c%x%x%x%x%x%x%x%x",""):gsub("|r","")
+    assert(not clean:find("|c",1,true),"nested/invalid colour escape in lettering")
+    if clean:find("23 páginas",1,true) then found=true end
+  end
+end
+assert(found,"highlighting lost the page count")
+RES="ok"`,
+});
+
+run('saga refinement: paragraphs regain the full width below the sketch', {
+  body: `for _, fs in ipairs(FONTS) do
+  fs.SetWidth=function(self,w) self.qaWidth=w end
+  fs.GetWidth=function(self) return rawget(self,"qaWidth") or 342 end
+  fs.GetStringHeight=function(self)
+    local text=self:GetText()
+    text=type(text)=="string" and text:gsub("|c%x%x%x%x%x%x%x%x",""):gsub("|r","") or ""
+    if text=="" then return 0 end
+    if text=="X"..string.char(10).."X" then return 38 end
+    local lines=math.max(1,math.ceil(#text/math.max(1,math.floor(self:GetWidth()/6))))
+    return lines*16+(lines-1)*6
+  end
+end
+local long="Eu sigo pela estrada e guardo cada memória do caminho. Cada passo ensina alguma coisa e deixa uma lembrança para contar depois. Levo comigo o que aprendi até a conclusão da jornada."
+ns.BuildSaga=function() return {
+ {key="road",title="Flow test",text=long,marks={}},
+ {key="stories",title="Next chapter",text="Uma história curta para lembrar.",marks={}}
+} end
+local tab=btn("Saga");tab._OnClick(tab)
+local title
+for _,fs in ipairs(FONTS) do if fs:GetText()=="Flow test" then title=fs end end
+local full=false
+for _,fs in ipairs(FONTS) do
+  local p=rawget(fs,"_pt");local s=fs:GetText()
+  if p and p[2]==title and type(s)=="string" and s:find("jornada.",1,true) and fs:GetWidth()==SkaldAPI.CW then
+    assert(p[5] <= -136,"full-width text overlaps sketch")
+    full=true
+  end
+end
+assert(full,"paragraph remained confined to the sketch column")
+RES="ok"`,
+});
+
 run('the Saga: the same diary tells the same Saga, with every chapter, no stray tag and a page-sized text', {
   pre: SAGA_DIARY(),
   body: `local a, b = ns.BuildSaga(), ns.BuildSaga()

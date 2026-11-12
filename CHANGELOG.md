@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.7
+
+- **The Saga is refined**: smaller drop caps in a plainer letter, quieter dividers, text that takes the full width of the page again below an illustration, and chapters laid out in measured pairs between the opening and closing pages. The web Reader uses the same drop-cap style
+- **Portuguese Saga paragraphs revised**: they keep the voice of the diary and no longer repeat the level at the close; a death is no longer told as a visit to the spirit healer; Clareiras de Tirisfal takes its article
+- Saga highlights keep counted phrases and hyphenated names together, and a highlighted number can no longer break a colour code (seen in dark mode)
+
 ## 1.0.6
 
 - **Dark mode** (Settings, Style, next to the ink): charcoal pages, ivory lettering and antique-gold headings, applied at once and remembered. It is off by default, your paper, ink and cover choices are kept, and the pictures and maps keep their art. The web Reader opens the diary in the same look when the export carries it. It has only been seen in a simulation so far: please report what looks wrong

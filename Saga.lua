@@ -92,7 +92,7 @@ local TEXT = {
                 "I have fallen, and I will not pretend otherwise: {#n:fall|falls} in all.",
                 "A hero is measured by the rising as much as by the glory. I have risen after {#n:fall|falls}.",
                 "Death has been a stranger to no one on this road. I met it {#n:time|times}.",
-                "The spirit healer knows my face: {#n:visit|visits}.",
+                "I fell {#n:time|times} along the road. The falls are behind me; their lessons remain.",
                 "Not every page is a triumph. Some are the quiet after a fall: {#n:page|pages} of them.",
                 "I got up every time, after {#n:fall|falls} in all.",
                 "Every fall left a lesson: {#n:lesson|lessons} learned the hard way.",
@@ -341,7 +341,7 @@ local TEXT = {
                 "Vim ao mundo em {home}, em {land}. Um lugar pequeno para uma história que cresceu a cada página.",
                 "Todo povo tem um começo, e o meu foi {home}, em {land}. A estrada leva para longe dali, mas nunca se esquece do caminho de volta.",
                 "{name}, {g:um|uma} {race} {class}, nascid{g:o|a} em {home}, em {land}. Pouco mais se sabia de mim, então, do que o nome daquele lugar.",
-                "Fique dito onde tudo começou: {home}, em {land}, entre os meus, com um nome, uma bolsa e uma longa estrada por aprender.",
+                "Meu nome é {name}. Foi em {home}, em {land}, que minha jornada começou. A estrada ainda era longa, e eu tinha muito a aprender.",
                 "Dizem que uma saga deve começar onde nasceu o seu herói, e a minha começa em {home}, em {land}, onde {g:um|uma} {race} chamad{g:o|a} {name} olhou o céu pela primeira vez.",
                 "Antes das estradas, antes das missões, havia {home}, em {land}: o lugar onde eu, {name}, {g:um|uma} {race} {class}, dei os primeiros passos.",
                 "Nasci em {home}, em {land}. Seja o que a estrada fizer de mim, é de lá que venho.",
@@ -357,24 +357,24 @@ local TEXT = {
                 "Desde {date}, em {place}, a estrada é guardada no papel.",
             },
             road = {
-                "Nível a nível a estrada me ensinou as suas lições. Estou no nível {level}, e foi em {place} que subi pela última vez.",
-                "O nível {level} é onde esta página me encontra, e {place} é onde cresci pela última vez. Deixei para trás {#days:dia|dias} de estrada.",
-                "Não apressei o passo e não parei. Nível {level}, com {place} para trás e {#days:dia|dias} de estrada.",
-                "A estrada não mede quem viaja em anos, mas em passos, e os meus me trouxeram ao nível {level}. O último foi dado em {place}.",
-                "Cada nível foi uma porta, e {place} foi a última que abri. O nível {level} espera do outro lado.",
-                "Se perguntarem até onde cheguei: nível {level}, e o último trecho foi em {place}. Se perguntarem há quanto tempo: {#days:dia|dias}, por estas páginas.",
-                "Meço a estrada em níveis, e hoje a medida marca {level}. Foi em {place} que ela subiu da última vez; a conta dos dias, atrás dela, é {days}.",
-                "Pernas fortes, bagagem leve, nível {level}. {place} marca a última vez que me senti crescer, e a primeira página tem {#days:dia|dias}.",
+                "A estrada me trouxe ao nível {level}. Foi em {place} que dei esse passo, levando comigo as lições dos anteriores.",
+                "Cheguei ao nível {level}. Guardo na memória esse trecho por {place}, depois de {#days:dia|dias} de estrada.",
+                "Sigo no meu passo. Estou no nível {level}, com {place} na lembrança e {#days:dia|dias} de estrada para contar.",
+                "Cheguei ao nível {level} em {place}. A estrada ainda é longa, mas já não caminho como quem deu os primeiros passos.",
+                "Cada avanço abriu um caminho. O mais recente me levou ao nível {level}, em {place}, e trouxe novas coisas para aprender.",
+                "Se me perguntarem até onde cheguei, direi: nível {level}, em {place}. O restante está nestas páginas, um passo de cada vez.",
+                "O nível {level} marca este trecho da jornada. Em {place}, percebi quanto havia aprendido desde o começo.",
+                "Estou no nível {level}. Guardo {place} como lembrança do meu avanço mais recente; o que vem depois ainda está por descobrir.",
             },
             stories = {
-                "As missões foram as páginas dos meus dias: recados, juramentos, pequenas promessas cumpridas. Levei {#n:missão|missões} até o fim.",
-                "Cada missão é uma promessa, e tentei cumprir todas: até aqui, {#n:promessa cumprida|promessas cumpridas}.",
-                "Algumas tarefas foram pequenas, outras viraram histórias dignas de serem ouvidas. Juntas são {#n:missão|missões}, e não trocaria nenhuma.",
-                "Nunca recusei ajuda a quem precisava de uma mão, e o diário prova: levei {#n:missão|missões} até o fim, do primeiro recado ao mais recente.",
-                "Uma estrada é feita de recados. Concluí {#n:missão|missões}, e cada tarefa deixou marca no jeito como caminho.",
-                "Pergunte às aldeias o que fiz por elas e falarão de recados. Eu lhe digo o número: {n}.",
-                "O diário de missões é um livro à parte, com {#n:registro concluído|registros concluídos}. Carrego essa história com leveza.",
-                "O que é um herói senão alguém que responde quando chamado? Respondi {#n:vez|vezes}, e o chamado não parou.",
+                "Entre recados e juramentos, concluí {#n:missão|missões}. Cada tarefa deixou uma lembrança diferente no caminho.",
+                "Cumpri {#n:missão|missões} até aqui. Foram recados, pedidos de ajuda e promessas que escolhi levar até o fim.",
+                "Algumas tarefas foram pequenas; outras deram boas histórias. Concluí {#n:missão|missões}, e guardo um pouco de cada uma.",
+                "Levei {#n:missão|missões} até o fim. Por trás de cada pedido havia alguém, um lugar e uma razão para seguir.",
+                "Uma estrada também se faz de compromissos. Cumpri {#n:missão|missões}, e cada tarefa mudou um pouco o meu caminho.",
+                "Se eu juntasse todos os pedidos que atendi, seriam {#n:missão|missões}. Prefiro lembrar o que cada uma deixou comigo.",
+                "Meu diário guarda {#n:missão concluída|missões concluídas}. São histórias pequenas que, juntas, começam a contar a minha.",
+                "Respondi a pedidos de ajuda e cumpri {#n:missão|missões}. Ainda há vozes me chamando mais adiante.",
             },
             war = {
                 "Alguns inimigos não caem só pela espada. Caem pela paciência, pelos amigos, pela terceira tentativa. Derrubei {#n:grande adversário|grandes adversários}.",
@@ -397,22 +397,22 @@ local TEXT = {
                 "{boss} se pôs entre mim e o capítulo seguinte, e cobrou um pedágio de {#tries:queda|quedas}. Paguei, e passei.",
             },
             falls = {
-                "Caí, e não vou fingir o contrário: {#n:queda|quedas} ao todo.",
-                "Um herói se mede tanto pelo levantar quanto pela glória. Levantei-me depois de {#n:queda|quedas}.",
-                "A morte não foi estranha a ninguém nesta estrada. Encontrei-a {#n:vez|vezes}.",
-                "O curandeiro de espíritos conhece o meu rosto: {#n:visita|visitas}.",
-                "Nem toda página é triunfo. Registrei o silêncio depois de cair em {#n:página|páginas} deste diário.",
-                "Levantei-me todas as vezes, depois de {#n:queda|quedas} ao todo.",
-                "Cada queda deixou uma lição: {#n:lição aprendida|lições aprendidas} do jeito difícil.",
-                "Deitei-me no chão mais vezes do que gosto de admitir: {#n:queda|quedas}, e cada uma deixou uma lição.",
+                "Caí {#n:vez|vezes} pelo caminho. Também guardo essas lembranças: fazem parte do que vivi.",
+                "Minha jornada teve {#n:queda|quedas}. Há lições que só entendi quando precisei recomeçar.",
+                "Encontrei a morte {#n:vez|vezes}. Não deixo essas passagens fora da minha história.",
+                "Caí {#n:vez|vezes} pelo caminho. As quedas ficaram para trás; as lições vieram comigo.",
+                "Nem toda lembrança é uma vitória. Guardo {#n:queda|quedas} entre as partes mais difíceis desta estrada.",
+                "A estrada me viu cair {#n:vez|vezes}. Escrevo isso com a mesma honestidade com que conto as conquistas.",
+                "Cada queda deixou uma lição. Foram {#n:lição aprendida|lições aprendidas} do jeito mais difícil.",
+                "Conheci o chão em {#n:queda|quedas} que preferia ter evitado. Ainda assim, fazem parte deste caminho.",
             },
             fallsPlace = {
                 "Foi em {place} que mais caí.",
-                "Minhas lições mais duras vieram de {place}.",
+                "Foi em {place} que aprendi minhas lições mais duras.",
                 "Em {place}, a morte chamou mais alto.",
                 "A terra que mais me exigiu foi {place}.",
                 "Conheço o chão de {place} melhor que a maioria, de tanto me deitar nele.",
-                "{place} me tomou mais do que qualquer outra terra.",
+                "Foi em {place} que a estrada mais me cobrou.",
                 "Se eu cair de novo, preferiria que não fosse em {place}.",
                 "Pergunte onde mais doeu e direi {place}.",
             },
@@ -437,33 +437,33 @@ local TEXT = {
                 "Ergo um copo em homenagem a {names}.",
             },
             marks = {
-                "A estrada também pediu feitos dignos de um selo. Cumpri {#n:meta|metas}, somei {#points:ponto|pontos} e conquistei o título de {title}.",
-                "Juntei {#points:ponto|pontos} de renome em metas cumpridas, {n} ao todo, e com eles o título de {title}.",
-                "Um selo aqui, outro ali: {#n:meta cumprida|metas cumpridas}, {#points:ponto ganho|pontos ganhos}, e o título conquistado é {title}.",
-                "Renome é um livro-caixa e eu mantenho o meu. Metas cumpridas: {n}. Pontos: {points}. Chamam-me {title}.",
-                "Nem tudo o que importa se mede, mas parte se mede. Metas cumpridas: {n}; pontos: {points}; o meu título, {title}.",
-                "{title}: o título que conquistei ao somar {#points:ponto|pontos} de renome em {#n:meta cumprida|metas cumpridas}.",
-                "Os selos do livro guardam as minhas metas: cumpridas, {n}; valor, {#points:ponto|pontos}; e o título, {title}.",
-                "Metas pequenas, outras maiores, algumas que pediram paciência: {#n:meta cumprida|metas cumpridas}, {#points:ponto ganho|pontos ganhos}, e o nome {title} para vestir.",
+                "Cumpri {#n:feito|feitos} e conquistei {#points:ponto|pontos} de renome. O título de {title} guarda um pouco desse caminho.",
+                "Cumpri {#n:feito|feitos} e somei {#points:ponto|pontos} de renome. Conquistei o título de {title}; ainda tenho muito pela frente.",
+                "Cada selo tem uma história. Reuni {#n:feito cumprido|feitos cumpridos} e {#points:ponto|pontos} de renome, que me renderam o título de {title}.",
+                "Hoje carrego o título de {title}. Ele veio de {#n:feito cumprido|feitos cumpridos} e {#points:ponto|pontos} de renome pelo caminho.",
+                "O título de {title} acompanha minhas lembranças. Por trás dele estão {#n:feito cumprido|feitos cumpridos} e {#points:ponto|pontos} de renome.",
+                "{title}: um título para lembrar {#n:feito cumprido|feitos cumpridos} e {#points:ponto|pontos} de renome. Cada selo me recorda uma parte da jornada.",
+                "Os selos deste livro guardam {#n:feito cumprido|feitos cumpridos}. Somam {#points:ponto|pontos} de renome e o título de {title}.",
+                "Alguns feitos pediram tempo; outros vieram pelo caminho. Cumpri {#n:feito|feitos}, reuni {#points:ponto|pontos} de renome e conquistei o título de {title}.",
             },
             epilogue = {
-                "A história não terminou, só fez uma pausa onde esta página acaba. Estou no nível {level}, com {#pages:página escrita|páginas escritas}, e a estrada ainda se abre diante de {name}.",
-                "Aqui fecho o livro, por ora. Nível {level}, e a conta do diário está em {pages}. O resto é estrada, e a estrada é longa.",
-                "Se esta fosse a última página, eu ficaria contente: {#pages:página guardada|páginas guardadas}, nível {level} alcançado e um nome que coube a mim escrever. Mas há mais estrada.",
-                "Saga, dizem. Eu digo a estrada até aqui: nível {level}, {#pages:página guardada|páginas guardadas}. O próximo capítulo espera {name} do lado de fora da porta.",
-                "Saiba quem ler isto que {name} esteve aqui, chegou ao nível {level} e guardou {#pages:página|páginas} para provar. A história continua.",
-                "A tinta secou em {#pages:página|páginas}, e a estrada não secou. O nível {level} é só onde estou hoje.",
-                "O que é uma saga senão uma estrada lembrada? A minha, até aqui: nível {level}, {#pages:página guardada|páginas guardadas}, e o resto ainda por escrever.",
-                "Feche o livro com delicadeza e deixe a pena por perto. {name}, nível {level}, ainda tem o que contar. A conta de páginas até aqui: {pages}.",
+                "A história faz uma pausa nestas {#pages:página|páginas}. Deixo a pena por perto, porque ainda tenho muito a viver.",
+                "Por ora, fecho o livro com {#pages:página guardada|páginas guardadas}. O restante da história ainda me espera na estrada.",
+                "Nestas {#pages:página|páginas}, guardei o que consegui do caminho. Ainda há lugar para as lembranças que virão.",
+                "Guardei {#pages:página|páginas} até aqui. Fecho o livro por um instante; a estrada continua à minha espera.",
+                "Deixo {#pages:página|páginas} como lembrança de quem fui até aqui. Quando voltar a escrever, trarei um pouco mais da estrada.",
+                "A tinta seca nestas {#pages:página|páginas}. Do lado de fora, a jornada continua, e eu ainda tenho o que contar.",
+                "Minha história ocupa {#pages:página|páginas} por enquanto. O próximo capítulo começa quando eu voltar ao caminho.",
+                "Fecho o livro com cuidado. Guardei {#pages:página|páginas}, e deixo a pena por perto para o que vier depois.",
             },
             epilogueTop = {
-                "Nível {level}. O topo do mundo, e a página em que uma saga poderia terminar com razão. Não termina: {name} tem {#pages:página guardada|páginas guardadas}, e a estrada ainda tem curvas.",
+                "Cheguei ao cume e guardei {#pages:página|páginas} pelo caminho. Agora olho adiante: ainda há histórias para viver.",
                 "Cheguei ao cume, e a vista valeu cada uma das {#pages:página escrita|páginas escritas} pelo caminho. Agora olho o horizonte, porque há sempre mais um.",
-                "Do topo do mundo, {name} olha para trás ao longo da estrada: {#pages:página guardada|páginas guardadas}, e cada uma um passo.",
+                "Do topo, olho para o caminho que ficou para trás. Guardei {#pages:página|páginas}, e cada uma me lembra um passo.",
                 "Este é o fim da subida e o começo da lenda. {#pages:página escrita|páginas escritas}. O título: {title}.",
                 "Diziam que a estrada tinha um topo. Tinham razão, e estive nele. A conta de páginas no caminho: {pages}.",
                 "No topo, uma coisa fica clara: a história nunca foi o nível, foi a estrada. Neste livro ela tem {#pages:página|páginas} de comprimento, e continua aberta.",
-                "{level} níveis, e o diário me manteve {g:honesto|honesta} ao longo de {#pages:página|páginas}. {name}, {title}, fecha o livro só para abrir outro.",
+                "Guardei {#pages:página|páginas} sem esconder as partes difíceis. Fecho este livro com o título de {title} e a vontade de continuar.",
                 "O último capítulo de uma saga é a promessa do próximo. Guardei {#pages:página|páginas}, e guardei também a promessa.",
             },
         },
@@ -549,7 +549,7 @@ local TEXT = {
                 "Je suis tombé{g:|e}, et je ne ferai pas semblant du contraire\194\160: {#n:chute|chutes} au total.",
                 "On mesure un héros autant à son relèvement qu'à sa gloire. Je me suis relevé{g:|e} après {#n:chute|chutes}.",
                 "La mort n'a été étrangère à personne sur cette route. Je l'ai croisée {#n:fois|fois}.",
-                "Le guérisseur des esprits connaît mon visage\194\160: {#n:visite|visites}.",
+                "Je suis tombé{g:|e} {#n:fois|fois} sur cette route. Les chutes sont derrière moi, leurs leçons restent.",
                 "Toutes les pages ne sont pas des triomphes. Certaines sont le silence après une chute\194\160: {#n:page|pages} de cette sorte.",
                 "Je me suis relevé{g:|e} chaque fois, après {#n:chute|chutes} au total.",
                 "Chaque chute a laissé une leçon\194\160: {#n:leçon apprise|leçons apprises} à la dure.",
@@ -819,9 +819,8 @@ ns.BuildSaga = function()
     return chapters
 end
 
--- The chapters go onto pages by an estimate of their height (the width of the page, the size of the letter), as many
--- to a page as fit, never a chapter split. The estimate is cautious (it counts the bytes of a line, so accents make
--- it longer) and was checked against the real fonts.
+-- The UI measures chapters with the live fonts before pagination. Callers without a window use a cautious
+-- estimate. Keep at most two chapters per page, with the Prologue and Epilogue on their own pages.
 local PAGE_HEIGHT = 415          -- the room of a page (440) less a margin
 local TITLE_HEIGHT, SLOT_GAP = 63, 44
 -- Which chapters have an ink sketch (the camp takes the banner of the character's faction). The sketch has a column
@@ -838,6 +837,7 @@ ns.SagaArt = function(key)
     return art and ("ui_saga_" .. art) or nil
 end
 local ART_W, ART_H = 104, 104
+local ART_SCALE = { stories = 0.82, falls = 0.9 }
 local function ChapterHeight(c, size, width)
     local minimum = 0
     if SKETCH[c.key] then width = width - ART_W - 8; minimum = ART_H - 24 end
@@ -849,15 +849,15 @@ local function ChapterHeight(c, size, width)
     end
     return TITLE_HEIGHT + math.max(minimum, (lines - 1) * lineHeight)
 end
-ns.SagaPages = function(chapters, size, width)
+ns.SagaPages = function(chapters, size, width, measure)
     size = (type(size) == "number" and size > 0) and size or 16
     width = width or (SkaldAPI.CW or 342)
     local pages, page, used = {}, {}, 0
     for _, c in ipairs(chapters) do
-        local h = ChapterHeight(c, size, width)
+        local h = measure and measure(c) or ChapterHeight(c, size, width)
         local needed = used + (#page > 0 and SLOT_GAP or 0) + h
-        -- the Epilogue has a page of its own (with its picture): the story closes alone on the page
-        if #page > 0 and (needed > PAGE_HEIGHT or #page >= 3 or c.key == "epilogue") then
+        -- The opening and closing have their own page, with their larger illustrations.
+        if #page > 0 and (needed > PAGE_HEIGHT or #page >= 2 or c.key == "epilogue" or page[1].key == "prologue") then
             pages[#pages + 1] = page
             page, used, needed = {}, 0, h
         end
@@ -871,16 +871,12 @@ end
 -- What the tab shows of a chapter: the names of places and bosses in the colour of old gold, and the first letter
 -- of the chapter in wine (the text of the chapter itself stays plain: the Reader and the voice read that).
 local function Decorate(text, markList)
-    local marks = {}
+    local marks, ranges = {}, {}
     for _, m in ipairs(markList or {}) do
-        local inside = false
-        for _, other in ipairs(markList) do
-            if other ~= m and #other > #m and other:find(m, 1, true) then inside = true end
-        end
-        if not inside then marks[m] = true end
+        if m ~= "" then marks[m] = true end
     end
     for m in pairs(marks) do
-        local out, from, scan = {}, 1, 1
+        local scan = 1
         while true do
             local a, b = text:find(m, scan, true)
             if not a then break end
@@ -889,14 +885,23 @@ local function Decorate(text, markList)
             if m:find("^%d") and before:find("%d") or m:find("%d$") and after:find("%d") or (#m == 1 and not m:find("%d")) then
                 scan = a + 1
             else
-                out[#out + 1] = text:sub(from, a - 1) .. (ns.IsDarkMode() and "|cffd6b365" or "|cff8a5a14") .. m .. "|r"
-                from, scan = b + 1, b + 1
+                ranges[#ranges + 1] = { a, b }
+                scan = b + 1
             end
         end
-        out[#out + 1] = text:sub(from)
-        text = table.concat(out)
     end
-    return text
+    table.sort(ranges, function(a, b) if a[1] ~= b[1] then return a[1] < b[1] end return a[2] > b[2] end)
+    local out, from = {}, 1
+    local ink = ns.IsDarkMode() and "|cffd6b365" or "|cff8a5a14"
+    for _, span in ipairs(ranges) do
+        if span[1] >= from then
+            local shown = text:sub(span[1], span[2]):gsub("-", "‑")
+            out[#out + 1] = text:sub(from, span[1] - 1) .. ink .. shown .. "|r"
+            from = span[2] + 1
+        end
+    end
+    out[#out + 1] = text:sub(from)
+    return table.concat(out)
 end
 
 -- The first letter of a paragraph becomes a drop cap (two lines tall, in an ornamental face) when it is a letter.
@@ -906,76 +911,94 @@ local function CapOf(paragraph)
     return nil, paragraph
 end
 
--- Puts a chapter in a slot: the drop cap with the first two lines of the first paragraph beside it (the lead), and
--- the rest below (the body). The lead is cut at a word, never inside a name that is shown in colour.
-local function Compose(slot, c, width)
+local function TextHeight(fs, text, marks)
+    fs:SetHeight(0)
+    fs:SetText(Decorate(text, marks))
+    local ok, h = pcall(fs.GetStringHeight, fs)
+    return (ok and type(h) == "number") and h or 0
+end
+
+-- Measure and cut the same text: byte positions must not refer to the pre-normalized paragraph.
+-- Keep highlighted expressions together and avoid leaving a single last word below the drop cap.
+local function TextCut(fs, text, room, marks)
+    if room <= 0 or text == "" then return "", text, false end
+    local ends = {}
+    for after in text:gmatch("%S+()") do ends[#ends + 1] = after - 1 end
+    local function Prefix(k) return k > 0 and text:sub(1, ends[k]) or "" end
+    local lo, hi = 0, #ends
+    while lo < hi do
+        local mid = math.ceil((lo + hi) / 2)
+        if TextHeight(fs, Prefix(mid), marks) <= room + 0.5 then lo = mid else hi = mid - 1 end
+    end
+    local k = lo
+    if #ends - k == 1 and k > 1 then k = k - 1 end
+    while k > 0 do
+        local cut, inside = ends[k], false
+        for _, m in ipairs(marks or {}) do
+            local a, b = text:find(m, 1, true)
+            while a do
+                if a <= cut and b > cut then inside = true end
+                a, b = text:find(m, b + 1, true)
+            end
+        end
+        if not inside then break end
+        k = k - 1
+    end
+    local remaining = text:sub(k > 0 and ends[k] + 1 or 1)
+    local whitespace = remaining:match("^%s*") or ""
+    return Prefix(k), remaining:gsub("^%s+", ""), whitespace:find("\n", 1, true) ~= nil
+end
+
+-- Two lines beside the drop cap, then the remaining text beside the sketch. Once the sketch
+-- ends, the body uses the whole page width. Nothing is split inside a highlighted expression.
+local function Compose(slot, c, width, fullWidth, artHeight)
     local first, others = c.text:match("^(.-)\n\n(.*)$")
     if not first then first, others = c.text, "" end
     local cap, rest = CapOf(first)
-    local function Height(fs, text)
-        fs:SetHeight(0)   -- a fixed height from an earlier pass would clip what is measured
-        fs:SetText(text)
-        local ok, h = pcall(fs.GetStringHeight, fs)
-        return (ok and type(h) == "number") and h or 0
-    end
     slot.cap:SetShown(cap ~= nil)
     slot.capShadow:SetShown(cap ~= nil)
     slot.lead:SetShown(cap ~= nil)
-    slot.body:SetWidth(width)
-    if not cap then
-        slot.body:ClearAllPoints()
-        slot.body:SetPoint("TOPLEFT", slot.title, "BOTTOMLEFT", 0, -32)
-        slot.body:SetText(Decorate(c.text, c.marks))
-        local h = Height(slot.body, Decorate(c.text, c.marks))
-        slot.body:SetHeight(math.max(h, 1))
-        return math.max(h, 1)
-    end
-    slot.cap:SetText(cap)
-    slot.capShadow:SetText(cap)
-    local okW, capWidth = pcall(slot.cap.GetStringWidth, slot.cap)
-    local capW = math.max(30, (okW and type(capWidth) == "number" and capWidth or 30) + 6)
-    slot.lead:SetWidth(width - capW)
-    slot.lead:ClearAllPoints()
-    slot.lead:SetPoint("TOPLEFT", slot.title, "BOTTOMLEFT", capW, -32)
-    local twoLines = Height(slot.lead, "X\nX")
-    local words = {}
-    for w in rest:gmatch("%S+") do words[#words + 1] = w end
-    local function Joined(k) return table.concat(words, " ", 1, k) end
-    -- the most words that still fit in two lines (the text of the first paragraph is the letter and then the rest)
-    local lo, hi = 0, #words
-    while lo < hi do
-        local mid = math.ceil((lo + hi) / 2)
-        if Height(slot.lead, Joined(mid)) <= twoLines + 0.5 then lo = mid else hi = mid - 1 end
-    end
-    local k = lo
-    -- not inside a name in colour
-    for _ = 1, 8 do
-        local cut = #Joined(k)
-        local inside = false
-        for _, m in ipairs(c.marks or {}) do
-            local a, b = rest:find(m, 1, true)
-            while a do
-                if a <= cut and b > cut then inside = true end
-                a, b = rest:find(m, b + 1, true)
-            end
+    slot.middle:Hide()
+    local leadH, gap, bodyText = 0, 0, c.text
+    if cap then
+        slot.cap:SetText(cap)
+        slot.capShadow:SetText(cap)
+        local okW, capWidth = pcall(slot.cap.GetStringWidth, slot.cap)
+        local capW = math.max(24, (okW and type(capWidth) == "number" and capWidth or 24) + 5)
+        slot.lead:SetWidth(math.max(20, width - capW))
+        slot.lead:ClearAllPoints()
+        slot.lead:SetPoint("TOPLEFT", slot.title, "BOTTOMLEFT", capW, -32)
+        local twoLines = TextHeight(slot.lead, "X\nX")
+        rest = rest:gsub("%s+", " "):gsub("^%s+", ""):gsub("%s+$", "")
+        local lead, remainder = TextCut(slot.lead, rest, twoLines, c.marks)
+        leadH = math.max(TextHeight(slot.lead, lead, c.marks), twoLines)
+        slot.lead:SetHeight(leadH)
+        bodyText = remainder
+        if others ~= "" then
+            bodyText = bodyText .. (remainder ~= "" and "\n\n" or "") .. others
+            if remainder == "" then gap = 12 end
         end
-        if not inside or k == 0 then break end
-        k = k - 1
     end
-    local lead = Joined(k)
-    local remainder = table.concat(words, " ", k + 1)
-    slot.lead:SetText(Decorate(lead, c.marks))
-    local leadH = math.max(Height(slot.lead, Decorate(lead, c.marks)), twoLines)
-    slot.lead:SetHeight(leadH)
-    local bodyText = remainder
-    if others ~= "" then bodyText = bodyText .. (remainder ~= "" and "\n\n" or "") .. others end
+    local used = leadH + gap
+    if artHeight and artHeight > 0 then
+        slot.middle:SetWidth(width)
+        local beside, tail, paragraph = TextCut(slot.middle, bodyText, artHeight - used, c.marks)
+        local middleH = beside == "" and 0 or TextHeight(slot.middle, beside, c.marks)
+        slot.middle:ClearAllPoints()
+        slot.middle:SetPoint("TOPLEFT", slot.title, "BOTTOMLEFT", 0, -(32 + used))
+        slot.middle:SetHeight(math.max(1, middleH))
+        if beside == "" then slot.middle:SetText("") end
+        slot.middle:SetShown(beside ~= "")
+        used = math.max(artHeight, used + middleH) + (paragraph and tail ~= "" and 12 or 0)
+        bodyText = tail
+    end
+    slot.body:SetWidth(fullWidth or width)
     slot.body:ClearAllPoints()
-    slot.body:SetPoint("TOPLEFT", slot.lead, "BOTTOMLEFT", -capW, (remainder == "" and others ~= "") and -12 or 0)
-    local decorated = Decorate(bodyText, c.marks)
-    local bodyH = bodyText == "" and 0 or Height(slot.body, decorated)
+    slot.body:SetPoint("TOPLEFT", slot.title, "BOTTOMLEFT", 0, -(32 + used))
+    local bodyH = bodyText == "" and 0 or TextHeight(slot.body, bodyText, c.marks)
     if bodyText == "" then slot.body:SetText("") end
     slot.body:SetHeight(math.max(bodyH, 1))
-    return leadH + bodyH
+    return used + bodyH
 end
 
 -- The tab: two pages at a time (several short chapters to a page); the corners turn the pages.
@@ -992,7 +1015,7 @@ local function BuildSagaTab(panel)
             ns.ThemeText(slot.title, SkaldAPI.C_HEAD[1], SkaldAPI.C_HEAD[2], SkaldAPI.C_HEAD[3])
             -- the flourish under the title (its picture has a clear margin: 422 of 512 across)
             slot.rule = panel:CreateTexture(nil, "ARTWORK")
-            slot.rule:SetSize(330 * 512 / 422, 330 * 64 / 422)
+            slot.rule:SetSize(CW * 0.8 * 512 / 422, CW * 0.8 * 64 / 422)
             slot.rule:SetPoint("TOP", slot.title, "BOTTOM", 0, 6)
             slot.rule:SetTexture("Interface\\AddOns\\Skald\\Textures\\ui_saga_divider")
             ns.ThemeTint(slot.rule, "ornament")
@@ -1016,6 +1039,13 @@ local function BuildSagaTab(panel)
             slot.body:SetWordWrap(true)
             ns.ThemeText(slot.body, SkaldAPI.C_BODY[1], SkaldAPI.C_BODY[2], SkaldAPI.C_BODY[3])
             slot.body:SetPoint("TOPLEFT", slot.title, "BOTTOMLEFT", 0, -32)
+            slot.middle = panel:CreateFontString(nil, "OVERLAY", "SkaldSaga")
+            slot.middle:SetJustifyH("LEFT")
+            slot.middle:SetJustifyV("TOP")
+            slot.middle:SetSpacing(6)
+            slot.middle:SetWordWrap(true)
+            ns.ThemeText(slot.middle, SkaldAPI.C_BODY[1], SkaldAPI.C_BODY[2], SkaldAPI.C_BODY[3])
+            slot.middle:Hide()
             -- a faded ink sketch in a column of its own at the right of the text, as if drawn on the page
             slot.art = panel:CreateTexture(nil, "BACKGROUND")
             slot.art:SetSize(ART_W, ART_H)
@@ -1052,7 +1082,7 @@ local function BuildSagaTab(panel)
     empty:SetWidth(CW)
     empty:SetJustifyH("LEFT")
     ns.ThemeText(empty, SkaldAPI.C_BODY[1], SkaldAPI.C_BODY[2], SkaldAPI.C_BODY[3])
-    local pages, spread = {}, 1
+    local pages, spread, heights = {}, 1, {}
     local fontSize = 16
     local function Spreads() return math.max(1, math.ceil(#pages / 2)) end
     local function Show()
@@ -1080,10 +1110,18 @@ local function BuildSagaTab(panel)
             side.slots[1].title:SetPoint("TOPLEFT", side.x, top)
             for n, slot in ipairs(side.slots) do
                 local c = page[n]
+                if n > 1 then
+                    local previous = page[n - 1]
+                    local before = previous and heights[previous] or 0
+                    local current = c and heights[c] or 0
+                    local offset = math.max(before + SLOT_GAP, math.min(PAGE_HEIGHT / 2, PAGE_HEIGHT - current))
+                    slot.title:ClearAllPoints()
+                    slot.title:SetPoint("TOPLEFT", side.x, -offset)
+                end
                 slot.title:SetShown(c ~= nil)
                 slot.rule:SetShown(c ~= nil)
                 slot.body:SetShown(c ~= nil)
-                if not c then slot.cap:Hide(); slot.capShadow:Hide(); slot.lead:Hide() end
+                if not c then slot.cap:Hide(); slot.capShadow:Hide(); slot.lead:Hide(); slot.middle:Hide() end
                 if c then slot.title:SetText(c.title) end
                 local art = c and SKETCH[c.key]
                 if art == "camp" then
@@ -1092,7 +1130,7 @@ local function BuildSagaTab(panel)
                 end
                 if art then slot.art:SetTexture("Interface\\AddOns\\Skald\\Textures\\ui_saga_" .. art) end
                 -- the sketch of the scroll and quill fills more of its square than the others: drawn a little smaller, it weighs the same
-                local scale = ({ scroll = 0.82, falls = 0.9 })[art] or 1
+                local scale = c and ART_SCALE[c.key] or 1
                 slot.art:ClearAllPoints()
                 if stackedArt and art then
                     slot.art:SetSize(170, 170)
@@ -1104,19 +1142,25 @@ local function BuildSagaTab(panel)
                 slot.art:SetShown(art ~= nil)
                 -- the text takes the width left by the sketch, and the chapter is as tall as the taller of the two
                 if c then
-                    local okC, total = pcall(Compose, slot, c, (art and not stackedArt) and (CW - ART_W * scale - 8) or CW)
+                    local besideArt = art and not stackedArt
+                    local okC, total = pcall(Compose, slot, c, besideArt and (CW - ART_W * scale - 8) or CW,
+                        CW, besideArt and (ART_H * scale + 4) or nil)
                     if not okC then
                         SkaldDB.errors = SkaldDB.errors or {}
                         table.insert(SkaldDB.errors, "saga compose: " .. tostring(total))
                         slot.body:SetText(c.text)
-                    elseif art and not stackedArt and type(total) == "number" and total < ART_H - 24 then
-                        slot.body:SetHeight(math.max(1, slot.body:GetHeight() + (ART_H - 24 - total)))
+                    elseif stackedArt and art and type(total) == "number" then
+                        local artSize = math.min(170, math.max(56, PAGE_HEIGHT - TITLE_HEIGHT - total - 20))
+                        slot.art:SetSize(artSize, artSize)
                     end
                 end
                 -- the closing picture starts just under the text of the Epilogue (its drawing is in the lower half of its square)
                 if c and c.key == "epilogue" then
+                    local available = PAGE_HEIGHT - (heights[c] or TITLE_HEIGHT) - 12
+                    local pictureSize = math.min(400, math.max(160, available * 512 / 275))
+                    side.epilogue:SetSize(pictureSize, pictureSize)
                     side.epilogue:ClearAllPoints()
-                    side.epilogue:SetPoint("TOP", slot.body, "BOTTOM", 0, 130)
+                    side.epilogue:SetPoint("TOP", slot.body, "BOTTOM", 0, pictureSize * 189 / 512 - 12)
                 end
             end
         end
@@ -1132,7 +1176,18 @@ local function BuildSagaTab(panel)
         local size
         pcall(function() size = select(2, SkaldSaga:GetFont()) end)
         fontSize = (type(size) == "number" and size > 0) and size or 16
-        pages = ns.SagaPages(built, size)
+        heights = {}
+        pages = ns.SagaPages(built, size, CW, function(c)
+            local slot = sides[1].slots[1]
+            slot.title:SetText(c.title)
+            local scale = ART_SCALE[c.key] or 1
+            local besideArt = SKETCH[c.key] and c.key ~= "prologue"
+            local okH, h = pcall(Compose, slot, c, besideArt and (CW - ART_W * scale - 8) or CW,
+                CW, besideArt and (ART_H * scale + 4) or nil)
+            local height = okH and type(h) == "number" and (TITLE_HEIGHT + h) or ChapterHeight(c, fontSize, CW)
+            heights[c] = height
+            return height
+        end)
         if spread > Spreads() then spread = Spreads() end
         Show()
     end

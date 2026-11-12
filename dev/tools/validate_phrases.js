@@ -113,6 +113,7 @@ do
     }
     local MUST = { prologue = "date place", birth = "home land", firstPage = "date place", road = "level place", stories = "n", war = "n", warHard = "boss tries",
         falls = "n", fallsPlace = "place", company = "n", companyNames = "names", marks = "n points title", epilogue = "level", epilogueTop = "pages" }
+    if "${loc}" == "ptBR" then MUST.epilogue = "pages" end   -- the closing keeps the pages; the road already tells the level
     local COMBAT = { war = true, warHard = true, falls = true, fallsPlace = true }
     local words = { ${vocabulary.map(w => JSON.stringify(w)).join(', ')} }
     local nbsp = string.char(194, 160)

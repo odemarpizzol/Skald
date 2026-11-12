@@ -1240,7 +1240,7 @@ end
 K.PLACE_NOUNS = {
     f = "Ilha Floresta Costa Planície Península Baía Ponte Cidade Fortaleza Aldeia Vila Torre Caverna Gruta Cratera Praia Região Passagem Garganta Bacia Clareira Estrada Colina Montanha Serra Cordilheira Terra Mina Cripta Ruína Selva Fonte Nascente Ravina Abadia Praça Câmara Ponta Enseada Represa Savana Tundra Pradaria Baixada Encosta Escarpa Lagoa Geleira Caldeira",
     m = "Terraço Vale Lago Pântano Deserto Monte Bosque Porto Forte Ponto Campo Rio Mar Passo Covil Acampamento Posto Santuário Templo Palácio Castelo Reduto Entreposto Mirante Barranco Desfiladeiro Abismo Altiplano Planalto Cânion Poço Jardim Cemitério Mosteiro Salão Pico Bastião Cume Istmo Rochedo Penhasco Túnel Orfanato Vulcão Lamaçal",
-    fp = "Planícies Colinas Montanhas Terras Ruínas Cavernas Minas Catacumbas Profundezas Cataratas Ilhas Florestas Costas Cordilheiras Pradarias Gargantas Fontes Torres Passagens Savanas Geleiras",
+    fp = "Planícies Colinas Montanhas Terras Ruínas Cavernas Minas Catacumbas Profundezas Cataratas Ilhas Florestas Costas Cordilheiras Pradarias Gargantas Fontes Torres Passagens Savanas Geleiras Clareiras",
     mp = "Pântanos Montes Campos Picos Bosques Vales Lagos Desertos Salões Túneis Penhascos Bastiões Desfiladeiros",
 }
 K.PLACE_GENDER = {}
@@ -2098,7 +2098,7 @@ do
         Make("SkaldHead2", "Cinzel.ttf", 17, 16)
         Make("SkaldSec", "Cinzel.ttf", 13, 12)
         Make("SkaldNote", "Caveat.ttf", 20, 14)
-        Make("SkaldDrop", "CinzelDecorative-Bold.ttf", 46, 40)   -- the drop cap of the Saga
+        Make("SkaldDrop", "Cinzel.ttf", math.floor((size + 3) * 2.15 + 0.5), math.floor((size + 1) * 2.15 + 0.5))
     end
     ApplyFonts()
 end
