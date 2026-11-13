@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.8
+
+- **World-map markers keep their size with OpenMap**: OpenMap zooms by scaling the whole map, so the Skald markers grew into giant medallions. They now keep their size on the screen at any zoom, stay where they were, group by what is under the zoom, and sit above the OpenMap art. OpenMap's menu has a "Show markers on the world map" switch for them. Without OpenMap nothing changes. Only seen in a simulation so far: please report what looks wrong
+- **A crowded map marker opens a compact wheel**: hover it to see the event types with their counts, click a type to list its memories with a short title and time; hovering one shows the whole memory and clicking opens its page. Only seen in a simulation so far: please report what looks wrong
+- **Guild Chronicle preview** (a look at what is coming, nothing is shared or sent): `/skald chronicle demo` opens a tab with a made-up chapter of an expedition (the hand-drawn map, the crest, the bosses told once however many players tell them), two signed memories and the preview a player would see before sharing; `/skald chronicle off` hides it. Four new pictures (crest, divider, author seal, state marks)
+
 ## 1.0.7
 
 - **The Saga is refined**: smaller drop caps in a plainer letter, quieter dividers, text that takes the full width of the page again below an illustration, and chapters laid out in measured pairs between the opening and closing pages. The web Reader uses the same drop-cap style

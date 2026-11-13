@@ -4266,7 +4266,7 @@ local function CreateWindow()
     function f:ApplyTabStyle() for _, b in pairs(tabs) do b:SetActive(b.active) end end
     local panels, panelOrder = {}, {}
     -- The tabs in the order of the book: the diary itself, what it holds, then the settings below, a little apart.
-    local TAB_RANK = { cover = 1, index = 2, search = 2.5, days = 3, bard = 3.7, goals = 4, cartographer = 4.2, pvp = 4.3, saga = 4.5, pets = 5, map = 6, settings = 20 }
+    local TAB_RANK = { cover = 1, index = 2, search = 2.5, days = 3, bard = 3.7, goals = 4, cartographer = 4.2, pvp = 4.3, chronicle = 4.4, saga = 4.5, pets = 5, map = 6, settings = 20 }
     local hiddenTabs = {}   -- a tab the player put away (the PvP one): its button and its place are gone, its panel stays built
     local function LayoutTabs()
         local ids = {}
@@ -9478,6 +9478,8 @@ SlashCmdList["SKALD"] = function(msg)
         for _, line in ipairs(Mile.ProbeEventLines()) do Say(line) end
     elseif msg == "perf" then
         Mile.Perf()
+    elseif msg == "chronicle" or msg:match("^chronicle %a+$") then
+        if ns.ChronicleTab then for _, line in ipairs(ns.ChronicleTab.Command(msg:match("^chronicle (%a+)$"))) do Say(line) end end
     elseif msg == "pvp" or msg:match("^pvp %a+$") then
         if ns.Pvp then for _, line in ipairs(ns.Pvp.Command(msg:match("^pvp (%a+)$"))) do Say(line) end end
     elseif msg == "probe realm" then

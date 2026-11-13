@@ -1,5 +1,3 @@
-- Optional dark mode in Settings, Style: charcoal paper, light lettering and antique-gold headings, applied at once and remembered; paper, ink and cover choices are kept and the Reader export carries it.
-- Portuguese texts reviewed (268 lines): agreement, verbs, articles of places.
-- Refined Saga lettering and composition: smaller drop caps, quieter dividers, text that regains the full page width below illustrations, and measured chapter pairs between dedicated opening and closing pages.
-- Revised Portuguese Saga paragraphs keep the diary's voice and avoid repeating the level in the closing. Deaths are no longer described as spirit healer visits, and Clareiras de Tirisfal takes its plural article.
-- Saga highlights keep counted phrases and hyphenated names together; numeric highlights no longer corrupt colour escapes in dark mode. The Reader uses the revised drop-cap style too.
+- World-map markers keep their size with OpenMap (counter-scale while the map is stitched, grouping by the zoom, above the OpenMap art, a switch in its menu); nothing changes without OpenMap.
+- A crowded map marker opens a compact wheel: event types with counts, then the memories of a type (short title and time, full memory on hover, a click opens the page).
+- Local Guild Chronicle preview with a made-up chapter, signed memories and new art; `/skald chronicle demo` opens it and `off` hides it. No sharing or network communication is enabled.

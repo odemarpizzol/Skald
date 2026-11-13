@@ -10,8 +10,9 @@
 ## Title-esMX: Skald
 ## Notes-esMX: Escribe automáticamente la crónica de tu viaje por Azeroth, con tu propia voz. Usa /skald.
 ## Author: Oddynho
-## Version: 1.0.7
+## Version: 1.0.8
 ## OptionalDeps: Spoken, QuestDB
+## X-Skald-Chronicle-Art: crest,divider,quill,state
 ## Category: Roleplay
 ## X-Curse-Project-ID: 1748824
 ## X-License: MIT
@@ -35,3 +36,4 @@ Search.lua
 Bard.lua
 Comms.lua
 Chronicle.lua
+ChronicleTab.lua

@@ -163,6 +163,7 @@
   "SkaldAtlasDB",
   "SlashCmdList",
   "WorldMapFrame",
+  "UIParent",
   "_G",
   "date",
   "hooksecurefunc",
@@ -400,5 +401,22 @@
   "ipairs",
   "pairs"
  ],
- "Skald/XPTiers.lua": []
+ "Skald/XPTiers.lua": [],
+ "Skald/ChronicleTab.lua": [
+  "C_AddOns",
+  "CreateFrame",
+  "GetAddOnMetadata",
+  "GetLocale",
+  "SkaldAPI",
+  "SkaldDB",
+  "assert",
+  "date",
+  "ipairs",
+  "math",
+  "pcall",
+  "string",
+  "table",
+  "tostring",
+  "type"
+ ]
 }

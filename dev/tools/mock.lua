@@ -30,6 +30,10 @@ local function widget()
     if k=="GetHeight" then return function() return t._h or 300 end end
     if k=="SetHeight" then return function(self,v) t._h=v end end
     if k=="GetEffectiveScale" then return function() return 1 end end
+    if k=="SetScale" then return function(self,v) t._scale=v end end
+    if k=="GetScale" then return function() return t._scale or 1 end end
+    if k=="SetSize" then return function(self,w,h) t._w,t._h=w,h end end
+    if k=="GetSize" then return function() return rawget(t,"_w") or 300, t._h or 300 end end
     if k=="GetRegions" or k=="GetChildren" then return function() end end
     if k=="GetWidth" then return function() return rawget(t,"_w") or 300 end end
     if k=="CanWordWrap" or k=="IsWordWrapped" then return function() return true end end

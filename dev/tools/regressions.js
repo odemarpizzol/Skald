@@ -5,7 +5,7 @@ const fs = require('fs');
 const path = require('path');
 
 const ADDONS = path.resolve(__dirname, '../../..');
-const FILES = [['LOC', 'Locales.lua'], ['CUR', 'Curated.lua'], ['XPT', 'XPTiers.lua'], ['CH', 'Skald.lua'], ['AT', 'Atlas.lua'], ['GL', 'Goals.lua'], ['SG', 'Saga.lua'], ['ZC', 'ZoneCard.lua'], ['CT', 'Cartographer.lua'], ['PV', 'Pvp.lua'], ['BK', 'Backup.lua'], ['SR', 'Search.lua'], ['BD', 'Bard.lua'], ['CM', 'Comms.lua'], ['CR', 'Chronicle.lua']];
+const FILES = [['LOC', 'Locales.lua'], ['CUR', 'Curated.lua'], ['XPT', 'XPTiers.lua'], ['CH', 'Skald.lua'], ['AT', 'Atlas.lua'], ['GL', 'Goals.lua'], ['SG', 'Saga.lua'], ['ZC', 'ZoneCard.lua'], ['CT', 'Cartographer.lua'], ['PV', 'Pvp.lua'], ['BK', 'Backup.lua'], ['SR', 'Search.lua'], ['BD', 'Bard.lua'], ['CM', 'Comms.lua'], ['CR', 'Chronicle.lua'], ['GT', 'ChronicleTab.lua']];
 let failed = 0;
 
 // The game, as far as the addon can tell. `pre` runs before the addon loads (saved data, game answers);
@@ -39,7 +39,7 @@ function count(k) local n=0 for _,e in ipairs(SkaldCharDB.entries) do if e.kind=
 ${pre}
 ns={}
 assert(load(LOC,"=L"))("Skald",ns); assert(load(CUR,"=U"))("Skald",ns); assert(load(XPT,"=X"))("Skald",ns)
-assert(load(CH,"=C"))("Skald",ns); assert(load(AT,"=A"))("Skald",ns); assert(load(GL,"=G"))("Skald",ns); assert(load(SG,"=S"))("Skald",ns); assert(load(ZC,"=Z"))("Skald",ns); assert(load(CT,"=T"))("Skald",ns); assert(load(PV,"=P"))("Skald",ns); assert(load(BK,"=B"))("Skald",ns); assert(load(SR,"=R"))("Skald",ns); assert(load(BD,"=D"))("Skald",ns); assert(load(CM,"=M"))("Skald",ns); assert(load(CR,"=H"))("Skald",ns)
+assert(load(CH,"=C"))("Skald",ns); assert(load(AT,"=A"))("Skald",ns); assert(load(GL,"=G"))("Skald",ns); assert(load(SG,"=S"))("Skald",ns); assert(load(ZC,"=Z"))("Skald",ns); assert(load(CT,"=T"))("Skald",ns); assert(load(PV,"=P"))("Skald",ns); assert(load(BK,"=B"))("Skald",ns); assert(load(SR,"=R"))("Skald",ns); assert(load(BD,"=D"))("Skald",ns); assert(load(CM,"=M"))("Skald",ns); assert(load(CR,"=H"))("Skald",ns); assert(load(GT,"=GT"))("Skald",ns)
 function finishStartup()
   for i=1,100 do
     if not ns.MaintenanceState or ns.MaintenanceState().pending==0 then return end
@@ -1075,6 +1075,328 @@ function UnitLevel(u) return u == "player" and 12 or nil end   -- the character 
   body: `local z = SkaldAPI.RegionStats(SkaldAPI.ZoneIdOfMap(1439))
 RES = (z and z.quest == 2 and z.death == 1 and z.boss == 1 and z.level == 1 and z.loot == 1 and z.fav == 1 and z.first == 1792000000)
   and "ok" or "counts are wrong"`,
+});
+
+run('with OpenMap zoomed in (the canvas scaled up) the markers keep their size on the screen and stay at their place; without it nothing changes', {
+  body: `local A = SkaldAPI.AtlasPure
+SkaldAtlasDB = SkaldAtlasDB or {}
+table.insert(SkaldCharDB.entries, { kind = "quest", tier = 3, m = 1439, x = 0.25, y = 0.4, t = NOW, zone = "Darkshore", arg = "A", idx = 1 })
+local canvasScale, stitched = 1, false
+local canvas = CreateFrame("Frame", nil, UIParent)
+canvas:SetSize(1000, 667)
+canvas.GetScale = function() return canvasScale end
+WorldMapFrame = { IsShown = function() return true end, GetMapID = function() return 1439 end, GetCanvas = function() return canvas end,
+  GetCanvasScale = function() return canvasScale end }
+A.Refresh()
+local function first() local list, n = A.Pins() return n > 0 and list[1] or nil end
+local plainScale, plainPin = A.PinScale(), first()
+local plainSet = plainPin and plainPin:GetScale()
+-- OpenMap is there, stitched, zoomed in 4 times: the marker takes a quarter of the scale
+OpenMapAPI = { IsStitched = function() return stitched end }
+stitched = true; canvasScale = 4
+A.Refresh()
+local p, zoomed = first(), A.PinScale()
+local zoomedSet = p and p:GetScale()
+canvasScale = 8; A.Rescale()
+local deeper = p and p:GetScale()
+stitched = false; canvasScale = 1
+A.Refresh()
+local back = first() and first():GetScale()
+RES = (plainScale == 1 and plainSet == 1 and math.abs(zoomed - 0.25) < 1e-6 and zoomedSet == 0.25 and deeper == 0.125 and back == 1)
+  and "ok" or ("plain " .. tostring(plainScale) .. "/" .. tostring(plainSet) .. " zoomed " .. tostring(zoomed) .. "/" .. tostring(zoomedSet) .. " deeper " .. tostring(deeper) .. " back " .. tostring(back))`,
+});
+
+const ATLAS_WHEEL_FIXTURE = `local A = SkaldAPI.AtlasPure
+local W = A.Wheel
+assert(type(W) == "table", "crowded-pin selector missing")
+local canvas = CreateFrame("Frame", nil, UIParent)
+canvas:SetSize(1000, 667)
+local visible, mapID, zoom = true, 1439, 1
+WorldMapFrame = {
+  IsShown = function() return visible end, Hide = function() visible = false end,
+  GetMapID = function() return mapID end, GetCanvas = function() return canvas end,
+  GetCanvasScale = function() return zoom end,
+}
+SkaldAtlasDB.hidden, SkaldAtlasDB.minTier, SkaldAtlasDB.kinds, SkaldAtlasDB.range, SkaldAtlasDB.onlyFav = false, 0, {}, "all", false
+local items = {}
+local function setup(count)
+  SkaldCharDB.entries = {}
+  for i = 1, count do
+    local e = { kind = i % 3 == 0 and "death" or "quest", tier = i == 2 and 5 or 1,
+      m = 1439, x = 0.5 + (i % 3) * .001, y = .5, t = NOW - 1000 + i,
+      zone = "Darkshore", arg = "Wheel event " .. i, idx = 1, fav = i % 4 == 0 or nil }
+    if i == 4 then e.kind, e.pf = "profession", "alchemy" end
+    if e.fav then e.favNote = "Personal note " .. i end
+    SkaldCharDB.entries[i], items[i] = e, e
+  end
+  A.Refresh()
+  local pins, n = A.Pins()
+  assert(n == 1, "fixture should have one crowded pin")
+  return pins[1]
+end
+local rendered = {}
+SkaldAPI.Render = function(e) rendered[#rendered + 1] = e; return "Only " .. e.arg end
+function GameTooltip:SetOwner(owner) self.owner, self.lines = owner, {} end
+function GameTooltip:AddLine(text) table.insert(self.lines, text) end
+function GameTooltip:Show() self.visible = true end
+function GameTooltip:Hide() self.visible = false end`;
+
+run('Atlas wheel: hover separates the memories, survives the gap and closes after leaving without changing saved data', {
+  body: `${ATLAS_WHEEL_FIXTURE}
+local pin = setup(19)
+local function saved() return ns.Backup.Serialize({ SkaldDB, SkaldAtlasDB, SkaldCharDB }) end
+local before = saved()
+pin._OnEnter(pin)
+assert(W.owner == pin and W.frame:IsShown() and #W.all == 19 and #W.groups == 3 and #W.buttons == 6, "wheel did not open by type")
+assert(#rendered == 0, "group hover still renders a pile of phrases")
+local category = W.buttons[1]
+category._OnEnter(category)
+assert(type(category.group) == "table" and category.count:GetText() == #category.group.entries, "category count missing")
+assert(#rendered == 0, "category hover still renders a pile of phrases")
+category._OnMouseUp(category, "LeftButton")
+assert(W.group and W.group.key == "quest" and visible, "category click opened the book or the wrong type")
+rendered = {}
+local choice = W.buttons[1]
+choice._OnEnter(choice)
+assert(#rendered == 1 and rendered[1] == choice.entry, "hover renders more than the selected memory")
+assert(choice.entries[1] == choice.entry and #choice.entries == 1, "choice still has a mixed tooltip")
+assert(GameTooltip.owner == W.frame, "tooltip covers the neighbouring choices")
+pin._OnLeave(pin)
+W.frame._OnUpdate(W.frame, .5)
+assert(W.owner == pin, "leaving the original pin closed the hovered choice")
+choice._OnMouseUp(choice, "RightButton")
+assert(W.owner == pin and visible, "right click opened a memory")
+choice._OnLeave(choice)
+W.frame._OnEnter(W.frame)
+W.frame._OnUpdate(W.frame, .5)
+assert(W.owner == pin, "the gap between choices closed the wheel")
+W.frame._OnLeave(W.frame)
+W.frame.IsMouseOver = function() return true end
+W.frame._OnUpdate(W.frame, .4)
+assert(W.owner == pin, "transparent part of the wheel is not traversable")
+W.frame._OnLeave(W.frame)
+W.frame.IsMouseOver = function() return false end
+W.frame._OnUpdate(W.frame, .1)
+assert(W.owner == pin, "wheel closes before the crossing delay")
+W.frame._OnUpdate(W.frame, .3)
+assert(W.owner == nil and not W.frame:IsShown() and not GameTooltip.visible, "wheel or tooltip left behind")
+assert(pin:GetAlpha() == (SkaldAtlasDB.alpha or .75), "pin opacity not restored")
+assert(rawget(W.buttons[1], "entry") == nil, "closed wheel retains a stale selection")
+assert(rawget(W.buttons[1], "group") == nil, "closed wheel retains a stale category")
+assert(saved() == before, "hover changed saved data or entry coordinates")
+RES = "ok"`,
+});
+
+run('Atlas wheel: all pages remain reachable and a selected icon opens exactly its memory in the book', {
+  body: `${ATLAS_WHEEL_FIXTURE}
+local pin = setup(19)
+pin._OnEnter(pin)
+local seen, n = {}, 0
+for _, group in ipairs(W.groups) do
+  local category
+  for _, b in ipairs(W.buttons) do if rawget(b,"group") == group then category = b end end
+  assert(category, "category cannot be reached")
+  category._OnMouseUp(category, "LeftButton")
+  assert(W.group == group and visible, "type selection did not open its memories")
+  for page = 1, math.ceil(#group.entries / W.limit) do
+    assert(W.page == page, "navigation skipped a page")
+    for index, b in ipairs(W.buttons) do
+      if b:IsShown() then
+        assert(not seen[b.entry], "an event appears twice across types or pages")
+        seen[b.entry], n = true, n + 1
+        assert(b.glyph._tex == A.PinGlyph(b.entry), "choice has another event's glyph")
+        assert(b.star:IsShown() == (b.entry.fav and true or false), "choice lost its favourite star")
+        assert(b.count:GetText() == date("%H:%M", b.entry.t), "memory time missing")
+        assert(type(b.label:GetText()) == "string" and b.label:GetText() ~= "", "memory row is unnamed")
+      end
+    end
+    if page < math.ceil(#group.entries / W.limit) then W.next._OnClick(W.next) end
+  end
+  W.hub._OnMouseUp(W.hub, "LeftButton")
+  assert(W.group == nil and W.owner == pin, "back did not return to the types")
+end
+assert(n == 19, "some events cannot be selected")
+for _, e in ipairs(items) do assert(seen[e], "missing event") end
+W.buttons[1]._OnMouseUp(W.buttons[1], "LeftButton")
+W.frame._OnMouseWheel(W.frame, -1)
+assert(W.page == 2, "wheel scroll does not go forwards")
+W.next._OnClick(W.next)
+assert(W.page == 1, "next arrow does not wrap")
+W.previous._OnClick(W.previous)
+assert(W.page == 2, "previous arrow does not wrap")
+W.frame._OnMouseWheel(W.frame, 1)
+assert(W.page == 1, "wheel scroll does not go backwards")
+local choice, opened = W.buttons[4], nil
+local expected = choice.entry
+local open = SkaldAPI.OpenEntry
+SkaldAPI.OpenEntry = function(e) opened = e; return open(e) end
+SkaldFrame:Hide(); __FIRE_ONSHOW = true
+choice._OnMouseUp(choice, "LeftButton")
+assert(opened == expected and not visible and SkaldFrame:IsShown(), "click did not open the selected memory")
+assert(not W.owner and not W.frame:IsShown() and not GameTooltip.visible, "selection did not clean up the wheel")
+local found = false
+for _, fs in ipairs(FONTS) do
+  local value = fs:GetText()
+  if type(value) == "string" and value:find(expected.arg, 1, true) then found = true end
+end
+assert(found, "the book opened a different page")
+RES = "ok"`,
+});
+
+run('Atlas wheel: viewport bounds and OpenMap zoom are respected, filters and map changes close stale choices, frames are reused', {
+  body: `${ATLAS_WHEEL_FIXTURE}
+local pin = setup(25)
+zoom = 4
+OpenMapAPI = { IsStitched = function() return true end }
+canvas.GetEffectiveScale = function() return zoom end
+canvas.GetLeft = function() return -200 / zoom end
+canvas.GetTop = function() return 800 / zoom end
+WorldMapFrame.ScrollContainer = {
+  GetEffectiveScale = function() return 1 end, GetLeft = function() return 100 end, GetRight = function() return 700 end,
+  GetTop = function() return 600 end, GetBottom = function() return 200 end,
+}
+for _, e in ipairs(items) do e.x, e.y = .075, .05 end
+A.Refresh(); pin = A.Pins()[1]
+pin._OnEnter(pin)
+assert(W.frame:GetScale() == 1, "detached popup grows with the stitched map zoom")
+local p = W.frame._pt
+local x, y = -200 + p[4], 800 + p[5]
+assert(x - W.size / 2 >= 100 and x + W.size / 2 <= 700, "wheel leaves the viewport horizontally")
+assert(y - W.height / 2 >= 200 and y + W.height / 2 <= 600, "wheel leaves the viewport vertically")
+local allocated = #frames
+for i = 1, 40 do W.Close(); pin._OnEnter(pin) end
+assert(#frames == allocated and #W.buttons == 6, "hover allocates an unbounded number of frames")
+zoom = 8; A.Rescale()
+assert(not W.owner and not W.frame:IsShown(), "zoom leaves stale choices open")
+SkaldAtlasDB.minTier = 5; A.Refresh(); pin = A.Pins()[1]
+pin._OnEnter(pin)
+assert(not W.owner and #pin.entries == 1, "single filtered memory still opens a wheel")
+SkaldAtlasDB.minTier = 0; A.Refresh(); pin = A.Pins()[1]
+pin._OnEnter(pin); mapID = 12
+W.frame._OnUpdate(W.frame, .01)
+assert(not W.owner, "changing map keeps the old wheel")
+mapID = 1439; pin._OnEnter(pin); visible = false
+W.frame._OnUpdate(W.frame, .01)
+assert(not W.owner, "closing the map keeps the wheel")
+RES = "ok"`,
+});
+
+for (const locale of ['enUS', 'ptBR', 'frFR', 'esES', 'esMX']) run('Atlas wheel: localized controls and theme changes keep the selected group in ' + locale, {
+  pre: `__locale = "${locale}"`,
+  body: `${ATLAS_WHEEL_FIXTURE}
+local pin = setup(3)
+pin._OnEnter(pin)
+local expected = ns.LOCALES[GetLocale()].ATLAS_WHEEL
+assert(W.text == expected and ns.LOCALES.esMX.ATLAS_WHEEL == ns.LOCALES.esES.ATLAS_WHEEL, "wrong wheel locale")
+for _, key in ipairs({ "COUNT", "SELECT", "SCROLL", "PREVIOUS", "NEXT", "RANGE", "COUNT_ONE", "TYPES", "SELECT_TYPE", "BACK", "CLOSE", "OTHER" }) do
+  assert(type(expected[key]) == "string" and expected[key] ~= "", "missing wheel label")
+end
+assert(GameTooltip.lines[2] == string.format(expected.COUNT, 3) and W.frame.title:GetText() == expected.TYPES, "type chooser is not localized")
+assert(W.frame._backdropColor[4] > .95, "map still shows through the chooser")
+W.buttons[1]._OnMouseUp(W.buttons[1], "LeftButton")
+local entry, page = W.buttons[1].entry, W.page
+W.buttons[1]._OnEnter(W.buttons[1])
+local background = W.frame._backdropColor[1]
+ns.SetDarkMode(true)
+assert(W.frame._backdropColor[1] ~= background, "chooser did not apply the dark palette")
+ns.SetDarkMode(false)
+assert(W.frame._backdropColor[1] == background, "chooser did not restore its original palette")
+assert(W.owner == pin and W.buttons[1].entry == entry and W.page == page, "theme reset the wheel")
+RES = "ok"`,
+});
+
+run('Atlas wheel: categories merge related kinds without dropping memories or changing their facts', {
+  body: `${ATLAS_WHEEL_FIXTURE}
+local list = {
+  {kind="quest",tier=1}, {kind="skill",pf="alchemy"}, {kind="profession",pf="mining"},
+  {kind="reunion"}, {kind="party"}, {kind="guild"}, {kind="guildleave",fav=true}, {kind="tame"}, {kind="unlisted"},
+}
+local before = ns.Backup.Serialize(list)
+local groups = W.Groups(list)
+local seen, total, keys = {}, 0, {}
+for _, group in ipairs(groups) do
+  keys[#keys+1] = group.key
+  for _, entry in ipairs(group.entries) do
+    assert(not seen[entry], "memory assigned to two categories")
+    seen[entry], total = true, total + 1
+  end
+  if group.key == "profession" then assert(#group.entries == 2, "craft and skill are split") end
+  if group.key == "guild" then assert(#group.entries == 2 and group.fav, "guild category lost a memory or favourite") end
+  if group.key == "party" then assert(#group.entries == 2, "reunion and party are split") end
+  if group.key == "other" then assert(group.entries[1] == list[9] and group.label == W.text.OTHER, "unknown kind disappeared") end
+end
+assert(total == #list and table.concat(keys,",") == "quest,guild,party,pet,profession,other", "category counts or order changed")
+assert(ns.Backup.Serialize(list) == before, "categorizing changed diary facts")
+RES = "ok"`,
+});
+
+run('Atlas wheel: types are paged, Back restores the type page, one type opens directly and Close does not reopen under the pointer', {
+  body: `${ATLAS_WHEEL_FIXTURE}
+local pin = setup(15)
+local kinds = { "quest", "level", "milestone", "death", "boss", "dungeon", "zone", "mount", "guild", "party", "tame", "achievement", "profession", "unlisted", "quest" }
+for i, entry in ipairs(items) do entry.kind = kinds[i] end
+A.Refresh(); pin = A.Pins()[1]; pin._OnEnter(pin)
+assert(not W.group and #W.groups == 14, "missing type categories")
+local seen = {}
+for page = 1, 3 do
+  for _, b in ipairs(W.buttons) do
+    if b:IsShown() then assert(not seen[b.group.key], "type repeats across pages"); seen[b.group.key] = true end
+  end
+  if page < 3 then W.next._OnClick(W.next) end
+end
+local total = 0; for _ in pairs(seen) do total = total + 1 end
+assert(total == 14, "a type is unreachable")
+local chosen = W.buttons[1].group
+W.buttons[1]._OnMouseUp(W.buttons[1], "LeftButton")
+assert(W.group == chosen and #W.entries == 1 and visible, "one-memory type opened the book before previewing")
+W.frame._OnEnter(W.frame)
+assert(GameTooltip.lines[2] == W.text.COUNT_ONE, "singular event count is wrong")
+W.hub._OnMouseUp(W.hub, "LeftButton")
+assert(not W.group and W.page == 3, "Back lost the type page")
+local hide = W.frame.Hide
+W.frame.Hide = function(self) hide(self); pin._OnEnter(pin) end
+W.hub._OnMouseUp(W.hub, "LeftButton")
+assert(not W.owner and not W.frame:IsShown(), "Close instantly reopens on the underlying pin")
+W.frame.Hide = hide
+pin._OnLeave(pin); pin._OnEnter(pin)
+assert(W.owner == pin, "leaving and returning does not reopen the wheel")
+W.Close()
+pin = setup(2); pin._OnEnter(pin)
+assert(W.group and W.group.key == "quest" and #W.entries == 2, "one type requires an unnecessary category click")
+RES = "ok"`,
+});
+
+run('Atlas wheel: compact named rows fit the popup, redundant paging is hidden and the popup is outside the map overlay', {
+  body: `${ATLAS_WHEEL_FIXTURE}
+local pin = setup(19)
+local create = CreateFrame
+CreateFrame = function(kind, name, parent, ...)
+  local f = create(kind, name, parent, ...)
+  f.testParent = parent
+  return f
+end
+pin._OnEnter(pin)
+assert(W.frame.testParent == UIParent, "map overlay can still paint over the popup")
+assert(W.height < 160, "three types still occupy a large panel")
+assert(W.frame._pt[4] - W.size / 2 > pin.nx * canvas:GetWidth() + 11, "popup still covers its marker")
+assert(not W.frame.pageText:IsShown() and not W.next:IsShown(), "one-page selector still has redundant navigation")
+local bottom = 0
+for _, row in ipairs(W.buttons) do
+  if row:IsShown() then
+    assert(row.label:GetText() == row.group.label and row.count:GetText() == #row.group.entries, "category name or count missing")
+    local p = row._pt
+    assert(p[1] == "TOPLEFT" and -p[5] >= bottom, "rows overlap instead of forming a list")
+    bottom = -p[5] + row:GetHeight()
+    assert(bottom < W.height, "row leaves the popup")
+  end
+end
+W.buttons[1]._OnEnter(W.buttons[1])
+assert(W.buttons[1].highlight:IsShown(), "hovered row is not highlighted")
+W.buttons[1]._OnLeave(W.buttons[1])
+assert(not W.buttons[1].highlight:IsShown(), "row highlight is left behind")
+W.buttons[1]._OnMouseUp(W.buttons[1], "LeftButton")
+assert(W.frame.pageText:IsShown() and W.next:IsShown(), "multi-page memories lost navigation")
+RES = "ok"`,
 });
 
 run('a marker that holds a favourite carries the star', {
@@ -4973,6 +5295,250 @@ ns.CommsLive = bob.comms
 fire("CHAT_MSG_ADDON", "SKALD1", chunk, "GUILD", "Alice-Realm")
 assert(#bob.got == 1 and bob.got[1].value.a == 1, "the entry point did not feed it")
 assert(SkaldDB.commsLog and #SkaldDB.commsLog == 2, "the passive log stopped")
+RES = "ok"`,
+});
+
+// G2 is a local UI experiment: after the normal login no command or control may touch the bus or the diary.
+const CHRONICLE_DEMO_GUARD = `local sends = 0
+local function forbiddenNetwork()
+  sends = sends + 1
+  error("the local chronicle demo attempted network communication")
+end
+SendAddonMessage = forbiddenNetwork
+RegisterAddonMessagePrefix = forbiddenNetwork
+C_ChatInfo = { SendAddonMessage = forbiddenNetwork, RegisterAddonMessagePrefix = forbiddenNetwork }
+ns.Comms = setmetatable({}, { __index = function(_, key) error("the demo accessed Comms." .. tostring(key)) end })
+local function savedState()
+  local prefs = {}
+  for key, value in pairs(SkaldDB) do if key ~= "chronicleTab" then prefs[key] = value end end
+  return ns.Backup.Serialize({ prefs = prefs, diary = SkaldCharDB, atlas = SkaldAtlasDB })
+end
+local before = savedState()
+local function unchanged()
+  assert(sends == 0, "an addon message or prefix registration was attempted")
+  assert(savedState() == before, "the demo changed saved data outside chronicleTab")
+end`;
+
+run('Chronicle G2: a fresh sample joins two authors and three distinct bosses without summing victories or writing saved data', {
+  body: `${CHRONICLE_DEMO_GUARD}
+local G = ns.ChronicleTab
+local sample = G.Sample()
+assert(type(sample) == "table" and type(sample.store) == "table", "demo store missing")
+local chapters = ns.Chronicle.Chapters(sample.store)
+assert(#chapters == 1 and chapters[1].count == 2, "the same expedition was not joined")
+local ch = sample.chapter
+assert(ch.iid == 36 and #ch.bosses == 3 and #ch.authors == 2 and #ch.notes == 2, "chapter facts or authors missing")
+assert(ch.notes[1].by ~= ch.notes[2].by, "the two notes lost their different authors")
+local ids = {}
+for _, boss in ipairs(ch.bosses) do
+  assert(not ids[boss.enc], "a boss was counted twice")
+  ids[boss.enc] = true
+  if boss.enc == 900002 then assert(boss.tries == 2, "the shared boss summed both authors' tries") end
+end
+assert(ids[900001] and ids[900002] and ids[900003], "union did not retain all bosses")
+assert(#sample.own.bosses == 2, "the preview contains other authors' victories")
+local again = G.Sample()
+assert(again.store ~= sample.store and again.chapter ~= sample.chapter, "demo sample reused a persistent store")
+assert(ns.Backup.Serialize(again.chapter) == ns.Backup.Serialize(ch), "the same demo facts produced a different chapter")
+unchanged()
+RES = "ok"`,
+});
+
+run('Chronicle G2: commands, preview actions and opt-out are local; only the tab switch is saved', {
+  body: `${CHRONICLE_DEMO_GUARD}
+local G, UI = ns.ChronicleTab, ns.LOCALES.enUS.CHRONICLE
+assert(btn(UI.TAB) == nil, "chronicle tab appeared without the demo command")
+SlashCmdList.SKALD("chronicle demo")
+local tab, panel = btn(UI.TAB), G.panel
+assert(tab and tab:IsShown() and panel, "demo command did not create the tab")
+assert(SkaldDB.chronicleTab == true, "tab switch not saved")
+assert(#panel.memories == 2, "signed memories missing")
+local box = panel.noteBox
+assert(panel.notePlaceholder:IsShown(), "empty note field lost its writing prompt")
+local changed = rawget(box, "_OnTextChanged")
+box:SetText("Guardei ")
+if changed then changed(box, true) end
+assert(box:GetText() == "Guardei ", "live cleaning prevents a space between words")
+assert(not panel.notePlaceholder:IsShown(), "writing prompt overlaps the typed note")
+local raw = "|cffff0000Tinta|r " .. string.char(10, 9) .. string.rep("ã", 300)
+box:SetText(raw)
+if changed then changed(box, true) end
+box._OnEditFocusLost(box)
+local expected = ns.Chronicle.CleanText(raw, ns.Chronicle.MAX_NOTE) or ""
+assert(G.state.note == expected and box:GetText() == expected, "preview did not use Chronicle.CleanText")
+assert(#G.state.note <= ns.Chronicle.MAX_NOTE and not G.state.note:find("|", 1, true) and not G.state.note:find("[%c]"), "unsafe or oversized note")
+local last = G.state.note:byte(-1)
+if last and last >= 128 then assert(last <= 191, "note ends with an incomplete UTF-8 leading byte") end
+local states = { share = "queued", private = "private", dismiss = "dismissed" }
+for _, key in ipairs({ "share", "private", "dismiss" }) do
+  local action = assert(panel.actions[key], "missing action " .. key)
+  action._OnClick(action)
+  assert(G.state.status == states[key], "wrong demo state after " .. key)
+  assert(panel.feedback:GetText() == UI.NOT_SENT, "action did not say that nothing was sent")
+  unchanged()
+end
+panel.optOut._OnClick(panel.optOut)
+assert(G.state.suppressSuggestions == true, "suggestion checkbox did not change the local state")
+unchanged()
+SlashCmdList.SKALD("chronicle off")
+assert(SkaldDB.chronicleTab == false and not tab:IsShown(), "off did not hide the tab")
+unchanged()
+assert(not SkaldDB.errors or #SkaldDB.errors == 0, "demo logged a runtime error")
+RES = "ok"`,
+});
+
+run('Chronicle G2: a saved demo switch does not open or populate the tab without an explicit command in this session', {
+  pre: 'SkaldDB = { chronicleTab = true }',
+  body: `local G, UI = ns.ChronicleTab, ns.LOCALES.enUS.CHRONICLE
+assert(btn(UI.TAB) == nil and not G.demo, "saved switch opened the local demo on login")
+assert(rawget(G, "state") == nil, "demo state was created outside the explicit command")
+SlashCmdList.SKALD("chronicle demo")
+assert(btn(UI.TAB) and btn(UI.TAB):IsShown(), "explicit command failed with a saved switch")
+RES = "ok"`,
+});
+
+for (const loc of ['enUS', 'ptBR', 'frFR', 'esES', 'esMX']) run('Chronicle G2: localized controls and empty art fallback in ' + loc, {
+  pre: `__locale = "${loc}"
+GetAddOnMetadata = function() return nil end
+C_AddOns = { GetAddOnMetadata = GetAddOnMetadata }`,
+  body: `local UI = ns.LOCALES["${loc}"].CHRONICLE
+for _, key in ipairs({ "TAB", "TITLE", "PREVIEW", "CHAPTER_TITLE", "CHAPTER_HEADING", "TITLE_LABEL", "INSTANCE", "SHARE", "PRIVATE", "DISMISS", "NOTE_LABEL", "NOTE_PLACEHOLDER", "SUGGESTIONS_OFF", "NOT_SENT" }) do
+  assert(type(UI[key]) == "string" and UI[key] ~= "", "missing localized chronicle label " .. key)
+end
+assert(ns.LOCALES.esMX.CHRONICLE == ns.LOCALES.esES.CHRONICLE, "Spanish alias lost")
+SlashCmdList.SKALD("chronicle demo")
+local p = ns.ChronicleTab.panel
+assert(btn(UI.TAB) and p and #p.memories == 2, "localized demo not built")
+assert(type(p.crest.frame) == "table" and rawget(p.crest.frame, "_backdropBorderColor"), "missing empty book-style frame")
+assert(not p.crest.texture:IsShown(), "missing crest was replaced by a visible bitmap")
+p.actions.share._OnClick(p.actions.share)
+assert(p.feedback:GetText() == UI.NOT_SENT, "demo action not localized")
+assert(not SkaldDB.errors or #SkaldDB.errors == 0, "localized demo logged an error")
+RES = "ok"`,
+});
+
+run('Chronicle G2: the crest aligns with the map border, clears the title and keeps the chapter above the page foot', {
+  body: `SlashCmdList.SKALD("chronicle demo")
+local G, UI = ns.ChronicleTab, ns.LOCALES.enUS.CHRONICLE
+local function text(value)
+  for _, fs in ipairs(FONTS) do if fs:GetText() == value then return fs end end
+  error("missing chapter text: " .. value)
+end
+local function bounds(widget)
+  local p = assert(rawget(widget, "_pt"), "missing chapter placement")
+  assert(p[1] == "TOPLEFT" and type(p[2]) == "number" and type(p[3]) == "number", "unsupported chapter placement")
+  return { left = p[2], right = p[2] + widget:GetWidth(), top = -p[3], bottom = -p[3] + widget:GetHeight() }
+end
+local crest = bounds(G.panel.crest.frame)
+local map
+for _, texture in ipairs(TEXTURES) do
+  local file = rawget(texture, "_tex")
+  if type(file) == "string" and file:match("map_deadmines$") then map = texture; break end
+end
+local mapPoint = assert(map and rawget(map, "_pt"), "missing chapter map")
+assert(mapPoint[1] == "TOP" and mapPoint[3] == "TOPLEFT", "unsupported map placement")
+local mapBottom = -mapPoint[5] + map:GetHeight()
+assert(math.abs((crest.top + crest.bottom) / 2 - mapBottom) <= 1, "crest hangs below the map border")
+assert(math.abs((crest.left + crest.right) / 2 - mapPoint[4]) <= 1, "crest is off the map centre line")
+local title = bounds(text(UI.CHAPTER_HEADING))
+assert(crest.bottom + 6 <= title.top or crest.right + 6 <= title.left or title.right + 6 <= crest.left,
+  "chapter crest overlaps the title")
+local meta = bounds(text(date(UI.DATE_FORMAT, G.T0) .. " · " .. UI.INSTANCE))
+local summary = bounds(text(string.format(UI.SYNTHESIS, 2, 3)))
+assert(title.bottom <= meta.top and meta.bottom < summary.top, "chapter text blocks overlap")
+assert(summary.bottom <= 440, "chapter summary runs below the page content")
+RES = "ok"`,
+});
+
+run('Chronicle G2: declared package art is shown and state icons use only the first three cells', {
+  pre: `GetAddOnMetadata = function(_, key)
+  if key == "X-Skald-Chronicle-Art" then return "crest,divider,quill,state" end
+end
+C_AddOns = { GetAddOnMetadata = GetAddOnMetadata }`,
+  body: `${CHRONICLE_DEMO_GUARD}
+SlashCmdList.SKALD("chronicle demo")
+local G, p = ns.ChronicleTab, ns.ChronicleTab.panel
+assert(p.crest.texture:IsShown() and p.crest.texture._tex:match("guild_crest$"), "declared crest not shown")
+local own, received
+for _, memory in ipairs(p.memories) do
+  assert(memory.seal.texture:IsShown() and memory.seal.texture._tex:match("guild_quill$"), "declared author seal not shown")
+  assert(memory.icon.texture:IsShown() and memory.icon.texture._tex:match("guild_state$"), "declared state strip not shown")
+  if memory.author:GetText() == G.AUTHORS[1] then own = memory else received = memory end
+end
+assert(own and received, "author states not distinguishable")
+local coords, divider = {}, false
+for _, texture in ipairs(TEXTURES) do
+  local file = rawget(texture,"_tex")
+  if type(file)=="string" and file:match("guild_divider$") and texture:IsShown() then divider=true end
+  if type(file)=="string" and file:match("guild_state$") then
+    texture.SetTexCoord=function(self,left,right,top,bottom) coords[self]={left,right,top,bottom} end
+  end
+end
+assert(divider, "declared divider not shown")
+local function cell(texture,left,right)
+  local uv=coords[texture]
+  assert(uv and uv[1]==left and uv[2]==right and uv[3]==0 and uv[4]==1, "wrong state-strip cell")
+  assert(uv[1] < .75 and uv[2] <= .75, "reserved fourth cell was used")
+end
+G.Refresh()
+cell(own.icon.texture,0,.25)
+cell(received.icon.texture,.5,.75)
+p.actions.share._OnClick(p.actions.share)
+cell(own.icon.texture,.25,.5)
+cell(received.icon.texture,.5,.75)
+p.actions.private._OnClick(p.actions.private)
+cell(own.icon.texture,0,.25)
+p.actions.dismiss._OnClick(p.actions.dismiss)
+assert(not own.icon.frame:IsShown(), "dismissed preview kept a state icon visible")
+assert(received.icon.frame:IsShown(), "dismissing own preview hid the received contribution")
+C_AddOns=nil
+assert(G.ArtAvailable("crest") and not G.ArtAvailable("missing"), "legacy metadata fallback ignored the art manifest")
+G.Refresh()
+assert(p.crest.texture:IsShown(), "legacy metadata path hid the declared crest")
+unchanged()
+RES="ok"`,
+});
+
+run('Chronicle G2: dark mode updates the preview without losing the note or local decision and restores light colours', {
+  body: `SlashCmdList.SKALD("chronicle demo")
+local G, p = ns.ChronicleTab, ns.ChronicleTab.panel
+p.noteBox:SetText("Guardei esta lembrança.")
+p.actions.private._OnClick(p.actions.private)
+local note, status = G.state.note, G.state.status
+local original = { p.status:GetTextColor() }
+local background = p.noteFrame._backdropColor
+ns.SetDarkMode(true)
+local r,g,b = p.status:GetTextColor()
+assert(r > original[1] and g > original[2], "preview lettering stayed dark")
+assert(p.noteFrame._backdropColor[1] < background[1], "note box retained the light background")
+assert(G.state.note == note and G.state.status == status, "theme reset local preview state")
+ns.SetDarkMode(false)
+r,g,b = p.status:GetTextColor()
+assert(r == original[1] and g == original[2] and b == original[3], "light lettering not restored")
+assert(p.noteFrame._backdropColor[1] == background[1], "light note box not restored")
+assert(G.state.note == note and G.state.status == status, "return to light reset the note or decision")
+RES = "ok"`,
+});
+
+run('Chronicle G2: the dense tab column puts the chronicle between PvP and Saga and keeps every visible tab above the foot', {
+  body: `SlashCmdList.SKALD("pvp demo")
+SlashCmdList.SKALD("chronicle demo")
+local guild = assert(btn(ns.LOCALES.enUS.CHRONICLE.TAB))
+local pvp, saga = assert(btn("PvP")), assert(btn("Saga"))
+assert(pvp.top > guild.top and guild.top > saga.top, "chronicle tab rank is not 4.4")
+local shown, positions = 0, {}
+for _, f in ipairs(frames) do
+  local top, label = rawget(f,"top"), rawget(f,"text")
+  if type(top)=="number" and label and f:IsShown() then
+    shown = shown + 1
+    assert(not positions[top], "visible tabs share a vertical position")
+    positions[top] = true
+    assert(-top + f:GetHeight() <= 524, "tab ran beyond the book footer")
+  end
+end
+assert(shown >= 11, "dense tab fixture did not include enough tabs")
+SlashCmdList.SKALD("chronicle off")
+assert(not guild:IsShown() and pvp:IsShown() and saga:IsShown(), "hiding chronicle hid another tab")
 RES = "ok"`,
 });
 
