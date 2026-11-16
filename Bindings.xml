@@ -1,0 +1,5 @@
+<Bindings>
+	<Binding name="SKALD_TOGGLE" header="SKALD" category="ADDONS">
+		if SkaldAPI and SkaldAPI.ToggleBook then SkaldAPI.ToggleBook() end
+	</Binding>
+</Bindings>

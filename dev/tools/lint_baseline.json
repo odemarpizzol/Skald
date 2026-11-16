@@ -2,6 +2,7 @@
  "Skald/Skald.lua": [
   "C_AddOns",
   "C_ChatInfo",
+  "C_Container",
   "C_GossipInfo",
   "C_Item",
   "C_Map",
@@ -37,12 +38,14 @@
   "GetCategoryNumAchievements",
   "GetCoinTextureString",
   "GetCompanionInfo",
+  "GetContainerNumSlots",
   "GetCursorPosition",
   "GetFactionInfo",
   "GetGameTime",
   "GetGossipText",
   "GetGuildInfo",
   "GetInstanceInfo",
+  "GetInventoryItemQuality",
   "GetItemInfo",
   "GetItemInfoInstant",
   "GetLocale",
@@ -113,7 +116,10 @@
   "UnitFactionGroup",
   "UnitFullName",
   "UnitGUID",
+  "UnitHealth",
+  "UnitHealthMax",
   "UnitIsDead",
+  "UnitIsDeadOrGhost",
   "UnitIsGhost",
   "UnitIsInMyGuild",
   "UnitIsUnit",
@@ -162,8 +168,8 @@
   "SkaldAPI",
   "SkaldAtlasDB",
   "SlashCmdList",
-  "WorldMapFrame",
   "UIParent",
+  "WorldMapFrame",
   "_G",
   "date",
   "hooksecurefunc",
@@ -394,14 +400,6 @@
   "tostring",
   "type"
  ],
- "Skald/Locales.lua": [
-  "GetLocale"
- ],
- "Skald/Curated.lua": [
-  "ipairs",
-  "pairs"
- ],
- "Skald/XPTiers.lua": [],
  "Skald/ChronicleTab.lua": [
   "C_AddOns",
   "CreateFrame",
@@ -418,5 +416,13 @@
   "table",
   "tostring",
   "type"
- ]
+ ],
+ "Skald/Locales.lua": [
+  "GetLocale"
+ ],
+ "Skald/Curated.lua": [
+  "ipairs",
+  "pairs"
+ ],
+ "Skald/XPTiers.lua": []
 }

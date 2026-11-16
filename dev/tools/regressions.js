@@ -5985,5 +5985,279 @@ assert(e.voice=="humor" and e.fl=="tone_humor_weather" and e.idx==1,"render muta
 RES="ok"`,
 });
 
+// ---- Moments taken from a look at another diary addon: by a thread, revived by a player, the run summed up, the long hunt,
+// ---- the firsts of gear, the campfire, duels, the open world. None of them was seen in the game: these are the simulation.
+const LASTOF = `local function lastOf(k) for i = #SkaldCharDB.entries, 1, -1 do local e = SkaldCharDB.entries[i]; if e.kind == k then return e end end end`;
+const HEALTH = `HP, HPMAX, FIGHTING = 1000, 1000, true
+function UnitHealth() return HP end; function UnitHealthMax() return HPMAX end
+function UnitAffectingCombat() return FIGHTING end; DEAD = false; function UnitIsDeadOrGhost() return DEAD end`;
+
+run('a fight survived under a tenth of health is a page once it is over; not again within the quarter hour, not after a duel', {
+  pre: HEALTH + `
+DUEL_WINNER_KNOCKOUT = "%1$s has defeated %2$s in a duel"`,
+  body: `${LASTOF}
+HP = 500; fire("UNIT_HEALTH", "player"); fire("PLAYER_REGEN_ENABLED"); runTimers()
+assert(count("closecall") == 0, "a scratch is not a close call")
+HP = 60; fire("UNIT_HEALTH", "player"); HP = 30; fire("UNIT_HEALTH", "player"); HP = 400; fire("UNIT_HEALTH", "player")
+assert(count("closecall") == 0, "written during the fight")
+fire("PLAYER_REGEN_ENABLED"); runTimers()
+local e = lastOf("closecall")
+assert(e and e.low == 3, "no page or wrong low: " .. tostring(e and e.low))
+local text = SkaldAPI.Render(e)
+assert(text:find("Darkshore", 1, true) and not text:find("{", 1, true), text)
+NOW = NOW + 300; HP = 20; fire("UNIT_HEALTH", "player"); fire("PLAYER_REGEN_ENABLED"); runTimers()
+assert(count("closecall") == 1, "told again within the gap")
+NOW = NOW + 3600; HP = 1; fire("UNIT_HEALTH", "player")
+fire("CHAT_MSG_SYSTEM", "Rival has defeated Tester in a duel"); fire("PLAYER_REGEN_ENABLED"); runTimers()
+assert(count("closecall") == 1, "a duel lost at a breath of health is no close call")
+NOW = NOW + 3600; HP = 5; fire("UNIT_HEALTH", "player"); DEAD = true; fire("PLAYER_DEAD"); fire("PLAYER_REGEN_ENABLED"); runTimers()
+assert(count("closecall") == 1, "a fall is not a close call")
+UnitHealth = function() return nil end
+DEAD = false; NOW = NOW + 3600; fire("UNIT_HEALTH", "player"); fire("PLAYER_REGEN_ENABLED"); runTimers()
+assert(count("closecall") == 1, "a withheld health wrote something")
+RES = "ok"`,
+});
+
+run('brought back by a player: the page names who (on the spot or as a spirit), once', {
+  pre: HEALTH,
+  body: `${LASTOF}
+DEAD = true; fire("PLAYER_DEAD")
+fire("RESURRECT_REQUEST", "Mender-Silvermoon")
+DEAD = false; fire("PLAYER_ALIVE"); fire("PLAYER_UNGHOST")
+assert(count("revive") == 1, "revive pages: " .. count("revive"))
+local e = lastOf("revive")
+assert(e.sub == "player" and e.by == "Mender-Silvermoon", tostring(e.sub) .. " " .. tostring(e.by))
+local text = SkaldAPI.Render(e)
+assert(text:find("Mender", 1, true) and not text:find("Silvermoon", 1, true) and not text:find("{", 1, true), text)
+-- released, then a player's offer reaches the spirit
+NOW = NOW + 600; DEAD = true; fire("PLAYER_DEAD"); fire("PLAYER_ALIVE")
+assert(count("revive") == 1, "releasing the spirit wrote a page")
+fire("RESURRECT_REQUEST", "Priestess"); DEAD = false; fire("PLAYER_UNGHOST")
+assert(count("revive") == 2 and lastOf("revive").by == "Priestess", "the spirit's revival")
+-- an old offer, then the walk back to the body: no name
+NOW = NOW + 600; DEAD = true; fire("PLAYER_DEAD"); fire("RESURRECT_REQUEST", "Late"); NOW = NOW + 300
+DEAD = false; fire("PLAYER_UNGHOST")
+assert(count("revive") == 3 and lastOf("revive").sub == "corpse" and lastOf("revive").by == nil, "a stale offer named someone")
+-- alive with no offer at all (a soulstone): nothing, as before
+NOW = NOW + 600; DEAD = true; fire("PLAYER_DEAD"); DEAD = false; fire("PLAYER_ALIVE")
+assert(count("revive") == 3, "a page without an offer")
+RES = "ok"`,
+});
+
+run('a run through a dungeon is summed up after leaving it: bosses, falls, wipes, time; the walk of a spirit does not end it', {
+  pre: HEALTH + `
+INSIDE, IZONE = false, "Elwynn Forest"
+function IsInInstance() if INSIDE then return true, "party" end return false, "none" end
+function GetInstanceInfo() return "The Deadmines", "party", 1, "Normal", 5, 0, false, 36 end
+function GetZoneText() return IZONE end
+function IsInGroup() return true end
+function UnitExists(u) return u == "party1" end
+local name0 = UnitName
+function UnitName(u) if u == "party1" then return "Brann", "Bronze" end return "Tester" end`,
+  body: `${LASTOF}
+INSIDE, IZONE = true, "The Deadmines"; fire("ZONE_CHANGED_NEW_AREA")
+assert(SkaldCharDB.run and SkaldCharDB.run.iid == 36, "no run started")
+NOW = NOW + 600; fire("BOSS_KILL", 1, "Rhahk'Zor")
+NOW = NOW + 300; DEAD = true; fire("PLAYER_DEAD")
+-- the spirit walks out and back in
+INSIDE, IZONE = false, "Westfall"; fire("ZONE_CHANGED_NEW_AREA")
+NOW = NOW + 120; DEAD = false; INSIDE, IZONE = true, "The Deadmines"; fire("ZONE_CHANGED_NEW_AREA")
+assert(SkaldCharDB.run and SkaldCharDB.run.b == 1, "the spirit's walk ended the run")
+NOW = NOW + 400; fire("ENCOUNTER_START", 2, "Sneed"); fire("ENCOUNTER_END", 2, "Sneed", 1, 5, 0)
+NOW = NOW + 500; fire("BOSS_KILL", 3, "Edwin VanCleef")
+NOW = NOW + 60; INSIDE, IZONE = false, "Westfall"; fire("ZONE_CHANGED_NEW_AREA")
+assert(count("recap") == 0, "summed up at the door")
+NOW = NOW + 700; IZONE = "Elwynn Forest"; fire("ZONE_CHANGED_NEW_AREA")
+local e = lastOf("recap")
+assert(e, "no page of the run")
+assert(e.b == 2 and e.d == 1 and e.wp == 1 and e.dur == 1980 and e.iid == 36, "b=" .. tostring(e.b) .. " d=" .. tostring(e.d) .. " wp=" .. tostring(e.wp) .. " dur=" .. tostring(e.dur))
+assert(type(e.with) == "table" and e.with[1] == "Brann-Bronze", "the group was not kept")
+local text = SkaldAPI.Render(e)
+assert(text:find("2 bosses felled", 1, true) and text:find("1 fall", 1, true) and text:find("1 time the whole group fell", 1, true)
+  and text:find("0h 33m", 1, true) and text:find("Brann", 1, true) and not text:find("{", 1, true), text)
+assert(SkaldCharDB.run == nil, "the run was kept")
+-- a short visit with no boss writes nothing
+INSIDE, IZONE = true, "The Deadmines"; fire("ZONE_CHANGED_NEW_AREA"); NOW = NOW + 200
+INSIDE, IZONE = false, "Westfall"; fire("ZONE_CHANGED_NEW_AREA"); NOW = NOW + 700; IZONE = "Duskwood"; fire("ZONE_CHANGED_NEW_AREA")
+assert(count("recap") == 1, "a visit with no boss was summed up")
+RES = "ok"`,
+});
+
+for (const locale of ['ptBR', 'frFR', 'esES']) run('the summary of a run is told in every language: ' + locale, {
+  pre: `__locale="${locale}"`,
+  body: `local e = { kind = "recap", arg = "Les Mortemines", zone = "Les Mortemines", idx = 3, b = 3, d = 0, wp = 0, dur = 3720, t = NOW }
+local text = SkaldAPI.Render(e)
+assert(not text:find("{", 1, true) and not text:find("%%") and text:find("3", 1, true) and text:find("1h 02", 1, true), text)
+e.d, e.wp = 6, 2
+local hard = SkaldAPI.Render(e)
+assert(SkaldAPI.PoolFor(e) == ns.LOCALES[GetLocale()].phrases.recapHard and hard:find("6", 1, true), hard)
+RES = "ok"`,
+});
+
+run('a long hunt for the things a quest asks for is told on its page', {
+  pre: `KILLS = 500
+function GetStatistic(id) if id == 107 then return tostring(KILLS) end return "--" end
+LibStub = function(name) if name ~= "LibQuestDB-1.0" then return nil end return { GetQuest = function(_, id)
+  if id == 300 or id == 301 then return { questLevel = 22, objectives = { items = { { 1 } } } } end
+end } end`,
+  body: `${LASTOF}
+fire("QUEST_ACCEPTED", 1, 300); KILLS = KILLS + 41; NOW = NOW + 1800
+fire("QUEST_TURNED_IN", 300, 5000, 0); runTimers()
+local q = lastOf("quest")
+assert(q and q.hk == 41, "kills not kept: " .. tostring(q and q.hk))
+local text = SkaldAPI.Render(q)
+assert(q.xk == "hunt" and text:find("41", 1, true) and not text:find("{", 1, true), tostring(q.xk) .. " " .. text)
+assert(not (SkaldCharDB.questKills or {})[300], "the count of a quest handed in was kept")
+-- a short hunt says nothing of it
+fire("QUEST_ACCEPTED", 1, 301); KILLS = KILLS + 3; NOW = NOW + 600
+fire("QUEST_TURNED_IN", 301, 5000, 0); runTimers()
+assert(lastOf("quest").xk ~= "hunt", "a short hunt was told")
+RES = "ok"`,
+});
+
+const FIRSTS_PRE = `LOOT_ITEM_SELF = "You receive loot: %s."; LOOT_ITEM_PUSHED_SELF = "You receive item: %s."
+LEVEL = 3
+function UnitLevel() return LEVEL end
+GetItemInfoInstant = function(ref)
+  local id = tonumber(tostring(ref):match("item:(%d+)"))
+  if id == 801 then return id, "Container", "Bag", "INVTYPE_BAG", 133622, 1, 0 end
+  return id, "Armor", "Leather", "INVTYPE_CHEST", 134400, 4, 2
+end`;
+run('the first bag and the first green, blue and epic piece have a page each, whatever the filters', {
+  pre: FIRSTS_PRE,
+  body: `${LASTOF}
+local function loot(id, color, name) fire("CHAT_MSG_LOOT", "You receive loot: |cff" .. color .. "|Hitem:" .. id .. "::::::::15:::::|h[" .. name .. "]|h|r."); runTimers() end
+loot(801, "ffffff", "Small Brown Pouch")
+local bag = lastOf("loot")
+assert(bag and bag.first == "bag", "no first bag")
+assert(SkaldAPI.PoolFor(bag) == ns.LOCALES.enUS.phrases.lootFirstBag and SkaldAPI.Render(bag):find("Small Brown Pouch", 1, true), SkaldAPI.Render(bag))
+loot(801, "ffffff", "Small Brown Pouch")
+assert(count("loot") == 1, "a second bag of plain quality wrote a page")
+loot(810, "1eff00", "Green Vest"); loot(811, "1eff00", "Another Green Vest")
+assert(count("loot") == 3 and lastOf("loot").first == nil, "the second green is not a first")
+loot(812, "0070dd", "Blue Vest"); assert(lastOf("loot").first == "q3", "no first blue")
+loot(813, "a335ee", "Epic Vest"); assert(lastOf("loot").first == "q4", "no first epic")
+assert(not SkaldAPI.Render(lastOf("loot")):find("{", 1, true))
+RES = "ok"`,
+});
+
+run('an old hero is not told of a first green: what is worn and carried says what came before', {
+  pre: FIRSTS_PRE + `
+LEVEL = 30
+function GetInventoryItemQuality(unit, slot) if slot == 5 then return 3 end return nil end`,
+  body: `${LASTOF}
+local function loot(id, color, name) fire("CHAT_MSG_LOOT", "You receive loot: |cff" .. color .. "|Hitem:" .. id .. "::::::::15:::::|h[" .. name .. "]|h|r."); runTimers() end
+loot(810, "1eff00", "Green Vest"); loot(812, "0070dd", "Blue Vest")
+local firsts = 0
+for _, e in ipairs(SkaldCharDB.entries) do if e.first then firsts = firsts + 1 end end
+assert(firsts == 0, "an old hero was told of a first")
+loot(813, "a335ee", "Epic Vest")
+assert(lastOf("loot").first == "q4", "the first epic of an old hero is still a first")
+RES = "ok"`,
+});
+
+run('a campfire is a page (with who sat at it), once in six hours', {
+  pre: `function IsInGroup() return true end
+function UnitExists(u) return u == "party1" end
+function UnitName(u) if u == "party1" then return "Mira" end return "Tester" end`,
+  body: `${LASTOF}
+fire("UNIT_SPELLCAST_SUCCEEDED", "player", "cast", 818)
+local e = lastOf("campfire")
+assert(e and e.with and e.with[1] == "Mira", "no page of the fire, or no company")
+assert(SkaldAPI.PoolFor(e) == ns.LOCALES.enUS.phrases.campfireWith, "the fire with company has its own lines")
+local text = SkaldAPI.Render(e)
+assert(text:find("Darkshore", 1, true) and text:find("Mira", 1, true) and not text:find("{", 1, true), text)
+NOW = NOW + 3600; fire("UNIT_SPELLCAST_SUCCEEDED", "player", "cast", 818)
+assert(count("campfire") == 1, "a second fire within the hour")
+NOW = NOW + 6 * 3600; fire("UNIT_SPELLCAST_SUCCEEDED", "player", "cast", 818)
+assert(count("campfire") == 2, "a fire on another day")
+RES = "ok"`,
+});
+
+run('duels: won and lost, only those of the player, a series with the same one is one page that counts them', {
+  pre: `DUEL_WINNER_KNOCKOUT = "%1$s has defeated %2$s in a duel"; DUEL_WINNER_RETREAT = "%2$s has fled from %1$s in a duel"`,
+  body: `${LASTOF}
+fire("CHAT_MSG_SYSTEM", "Alpha has defeated Beta in a duel")
+assert(count("duel") == 0, "a duel of others was written")
+fire("CHAT_MSG_SYSTEM", "Tester has defeated Rival-Stormrage in a duel")
+local e = lastOf("duel")
+assert(e and e.won == true and e.arg == "Rival-Stormrage", "a won duel")
+assert(SkaldAPI.Render(e):find("Rival", 1, true) and not SkaldAPI.Render(e):find("{", 1, true), SkaldAPI.Render(e))
+NOW = NOW + 120; fire("CHAT_MSG_SYSTEM", "Rival-Stormrage has defeated Tester in a duel")
+NOW = NOW + 120; fire("CHAT_MSG_SYSTEM", "Tester has fled from Rival-Stormrage in a duel")
+assert(count("duel") == 1 and e.n == 3 and e.w == 1 and e.l == 2, "the series: n=" .. tostring(e.n) .. " w=" .. tostring(e.w) .. " l=" .. tostring(e.l))
+local text = SkaldAPI.Render(e)
+assert(SkaldAPI.PoolFor(e) == ns.LOCALES.enUS.phrases.duelSeries and text:find("1", 1, true) and text:find("2", 1, true) and not text:find("{", 1, true), text)
+NOW = NOW + 7200; fire("CHAT_MSG_SYSTEM", "Other has fled from Tester in a duel")
+assert(count("duel") == 2 and lastOf("duel").won == true and lastOf("duel").arg == "Other", "a fled foe is a win")
+assert(SkaldCharDB.stats.duelW == 2 and SkaldCharDB.stats.duelL == 2, "duel tally")
+RES = "ok"`,
+});
+
+run('players struck down in the open world: a page, several nearby are one page that counts them; none in a battleground', {
+  pre: `COMBATLOG_HONORGAIN = "%s dies, honorable kill Rank: %s (Estimated Honor Points: %d)"
+BG = false; function IsInInstance() if BG then return true, "pvp" end return false, "none" end`,
+  body: `${LASTOF}
+fire("CHAT_MSG_COMBAT_HONOR_GAIN", "Grunt dies, honorable kill Rank: Scout (Estimated Honor Points: 12)")
+local e = lastOf("wpvp")
+assert(e and e.arg == "Grunt" and SkaldAPI.Render(e):find("Grunt", 1, true), "no page of the kill")
+NOW = NOW + 60; fire("CHAT_MSG_COMBAT_HONOR_GAIN", "Brute dies, honorable kill Rank: Grunt (Estimated Honor Points: 14)")
+assert(count("wpvp") == 1 and e.n == 2, "two kills nearby")
+local text = SkaldAPI.Render(e)
+assert(text:find("Darkshore", 1, true) and text:find("2", 1, true) and not text:find("{", 1, true), text)
+BG = true; NOW = NOW + 60; fire("CHAT_MSG_COMBAT_HONOR_GAIN", "Other dies, honorable kill Rank: Scout (Estimated Honor Points: 12)")
+assert(count("wpvp") == 1 and e.n == 2, "a kill in a battleground counted")
+RES = "ok"`,
+});
+
+run('a fall to another player names who struck the blow (from the combat log, where the client gives it)', {
+  pre: `BLOW = nil
+function CombatLogGetCurrentEventInfo() return table.unpack(BLOW) end`,
+  body: `${LASTOF}
+BLOW = { 0, "SPELL_DAMAGE", false, "P2", "Ganker-Realm", 0x548, 0, "P1", "Tester", 0x511 }
+fire("COMBAT_LOG_EVENT_UNFILTERED")
+fire("PLAYER_DEAD")
+local e = lastOf("death")
+assert(e and e.foe == "Ganker-Realm", "no foe: " .. tostring(e and e.foe))
+local text = SkaldAPI.Render(e)
+assert(SkaldAPI.PoolFor(e) == ns.LOCALES.enUS.phrases.deathPvp and text:find("Ganker", 1, true) and not text:find("Realm", 1, true) and not text:find("{", 1, true), text)
+-- a creature's blow, or a friend's, names no one
+BLOW = { 0, "SWING_DAMAGE", false, "C1", "Kobold", 0xa48, 0, "P1", "Tester", 0x511 }
+fire("COMBAT_LOG_EVENT_UNFILTERED"); NOW = NOW + 600; fire("PLAYER_DEAD")
+assert(lastOf("death").foe == nil, "a creature was named as a foe")
+-- a blow too long before the fall
+BLOW = { 0, "SPELL_DAMAGE", false, "P2", "Ganker-Realm", 0x548, 0, "P1", "Tester", 0x511 }
+fire("COMBAT_LOG_EVENT_UNFILTERED"); NOW = NOW + 60; fire("PLAYER_DEAD")
+assert(lastOf("death").foe == nil, "an old blow was named")
+RES = "ok"`,
+});
+
+run('/skald news tells what is new; an update tells it once', {
+  pre: `SkaldDB = { tone = "epic" }
+SAID = {}; function print(m) SAID[#SAID + 1] = tostring(m) end`,
+  body: `local function told() local n = 0 for _, m in ipairs(SAID) do if m:find("what is new", 1, true) then n = n + 1 end end return n end
+assert(told() == 1 and SkaldDB.newsRev == 1, "the update was not told once: " .. told())
+fire("PLAYER_LOGIN"); runTimers(); finishStartup()
+assert(told() == 1, "told again at the next login")
+SlashCmdList.SKALD("news")
+assert(told() == 2, "/skald news said nothing")
+RES = "ok"`,
+});
+
+run('a first install hears no news', {
+  pre: `SkaldDB = nil
+SAID = {}; function print(m) SAID[#SAID + 1] = tostring(m) end`,
+  body: `for _, m in ipairs(SAID) do assert(not m:find("what is new", 1, true), "a first install was told the news") end
+assert(SkaldDB.newsRev == 1)
+RES = "ok"`,
+});
+
+run('a key opens the book, and the grain of the paper can be softened', {
+  body: `assert(type(SkaldAPI.ToggleBook) == "function" and BINDING_HEADER_SKALD == "Skald" and type(BINDING_NAME_SKALD_TOGGLE) == "string")
+SkaldAPI.ToggleBook()
+SkaldDB.paperStrength = "soft"
+RES = "ok"`,
+});
+
 console.log(failed ? `\n${failed} regression(s) FAILED` : '\nAll regressions passed');
 process.exit(failed ? 1 : 0);

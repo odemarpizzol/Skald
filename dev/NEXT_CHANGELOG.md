@@ -1,3 +1,12 @@
-- World-map markers keep their size with OpenMap (counter-scale while the map is stitched, grouping by the zoom, above the OpenMap art, a switch in its menu); nothing changes without OpenMap.
-- A crowded map marker opens a compact wheel: event types with counts, then the memories of a type (short title and time, full memory on hover, a click opens the page).
-- Local Guild Chronicle preview with a made-up chapter, signed memories and new art; `/skald chronicle demo` opens it and `off` hides it. No sharing or network communication is enabled.
+- **By a thread**: a fight survived with less than a tenth of your health becomes a page once it is over (not after a duel, not in a battleground, at most one every quarter of an hour). The client may withhold your health in a fight (Forever): then nothing is written
+- **A run through a dungeon, summed up**: when you leave a dungeon or raid, a page tells how it went: the bosses felled, your falls, the times the whole group fell, the time inside and who was with you. Walking out as a spirit and back in does not end the run; it ends ten minutes after you left alive, or at the next instance
+- **Who brought you back**: a revival by another player names them, whether you took it where you fell or as a spirit
+- **Who struck you down**: a fall to another player names them, where the client's combat log gives it (outside battlegrounds)
+- **Duels and the open world**: a duel you fought is a page, won or lost; a series with the same player within the hour is one page with the tally. Players of the other side struck down in the open world have a page; several in the same land are one page that counts them
+- **A campfire** you light (Basic Campfire) is a page, with whoever sat at it, at most one every six hours
+- **Firsts of gear**: your first bag and your first green, blue and epic piece have a page each, whatever the loot filters say. A character that is not new is not told of "firsts" it already had (the pages of loot, what is worn and the bags say what came before)
+- **A long hunt** for the things a quest asks for is told on the quest's page (the creatures slain between taking it and handing it in, from 25 up, within four hours)
+- **A key to open the book**: Key Bindings, AddOns, Skald
+- **Grain of the paper**: Settings, Notices: soft, medium or full
+- **What is new** is told once in the chat after an update; `/skald news` tells it again
+- None of these was seen in the game yet: only in the simulation. New icons for these pages are still to be drawn; they borrow the nearest ones for now

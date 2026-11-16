@@ -82,6 +82,7 @@ local KIND_TIER = {
     zone = 1, level = 2, milestone = 4, death = 1, dungeon = 3, boss = 4,
     mount = 3, guild = 3, guildleave = 1, party = 2, reunion = 2, achievement = 5,
     skill = 2, profession = 2, quest = 1, tame = 2,
+    closecall = 2, campfire = 1, duel = 2, wpvp = 2,
 }
 
 -- Which symbol sits inside the medallion.
@@ -90,6 +91,8 @@ local GLYPH = {
     boss = "boss", dungeon = "dungeon", zone = "zone", mount = "mount",
     guild = "guild", guildleave = "guild", party = "party", reunion = "party", tame = "pet",
     achievement = "achievement", skill = "profession", profession = "profession",
+    -- (no medallion of their own yet: by a thread with the falls, the fire with the lands, duels and the open world with the foes)
+    closecall = "death", campfire = "zone", duel = "boss", wpvp = "boss",
 }
 
 -- The picture on a medallion: the book's own icon of the kind; a trade page has the picture of its trade (the generic

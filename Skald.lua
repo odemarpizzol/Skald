@@ -149,8 +149,9 @@ K.FLAVOR_KINDS = { quest = true, level = true, death = true, boss = true, zone =
 local AddContext
 do
 local CONTEXT_KINDS = { dungeon = true, boss = true, death = true, zone = true, level = true,
-    hearth = true, revive = true, flight = true, home = true, mount = true, bg = true }   -- the hour of the day, for the line that sets the scene
-local WITH_KINDS = { dungeon = true, boss = true, death = true }
+    hearth = true, revive = true, flight = true, home = true, mount = true, bg = true,
+    closecall = true, campfire = true, recap = true, duel = true, wpvp = true }   -- the hour of the day, for the line that sets the scene
+local WITH_KINDS = { dungeon = true, boss = true, death = true, closecall = true, campfire = true }
 -- Another player is told apart by name and by the second part the client gives (the realm in the classic game;
 -- in the realmless Forever it comes back as the surname, even for players of one's own world): the key kept in
 -- the diary is "Name-Surname", the page tells only the name (K.WhoShort).
@@ -167,20 +168,25 @@ K.WhoShort = function(key)
     return key:match("^([^%-]+)%-") or key
 end
 ns.WhoShort = K.WhoShort
+-- The others of the group (party1..4), by the key kept in the diary.
+K.GroupNames = function()
+    local names = {}
+    if IsInGroup and IsInGroup() then
+        for i = 1, 4 do
+            local who = (not UnitExists or UnitExists("party" .. i)) and K.WhoKey("party" .. i) or nil
+            if who then names[#names + 1] = who end
+        end
+    end
+    return names
+end
 
 -- What surrounded the moment: the hour of the game, the names in the group, the pet.
 AddContext = function(kind, entry)
     if not CONTEXT_KINDS[kind] then return end
     local okTime, hour = pcall(GetGameTime)
     if okTime and type(hour) == "number" then entry.hr = hour end
-    if WITH_KINDS[kind] then
-        local names = {}
-        if IsInGroup and IsInGroup() then
-            for i = 1, 4 do
-                local who = (not UnitExists or UnitExists("party" .. i)) and K.WhoKey("party" .. i) or nil
-                if who then names[#names + 1] = who end
-            end
-        end
+    if WITH_KINDS[kind] and entry.with == nil then
+        local names = K.GroupNames()
         if #names > 0 then entry.with = names end
         local pet = Safe(UnitName and UnitExists and UnitExists("pet") and UnitName("pet"))
         if type(pet) == "string" and pet ~= "" then entry.pet = pet end
@@ -308,7 +314,7 @@ K.RECORD_FLAG = {
     quest = "quest", level = "level", milestone = "level", death = "death",
     boss = "boss", dungeon = "boss", zone = "zone", skill = "profession", profession = "profession",
     loot = "loot", mark = "mark", home = "mark", rep = "mark", flight = "zone", tame = "mark", revive = "death", hearth = "mark", weather = "zone",
-    bg = "boss",
+    bg = "boss", closecall = "death", recap = "boss", campfire = "mark", duel = "boss", wpvp = "boss",
 }
 
 -- Entries store the event type, its argument and which phrase was drawn;
@@ -813,6 +819,8 @@ end
 function PoolFor(e)
     local kin = K.KinPool(e)
     if kin then return kin end
+    -- a fall to another player has lines of its own, whatever voice or race tells the others
+    if e.kind == "death" and e.foe and PHRASES.deathPvp then return PHRASES.deathPvp end
     local tone = (SkaldDB and SkaldDB.tone) or "epic"
     local storedTone = type(e.fl) == "string" and e.fl:match("^tone_([^_]+)_")
     local original = e.voice or storedTone or "epic"
@@ -840,10 +848,22 @@ function PoolFor(e)
     -- A hunter's pet: the first one has lines of its own, and so has the day it grows to the hunter's level.
     -- Back from the dead: at the spirit healer, or on the way back to one's own body.
     if e.kind == "revive" then
+        if e.sub == "player" and e.by and PHRASES.reviveBy then return PHRASES.reviveBy end
         if e.sub == "healer" and PHRASES.reviveHealer then return PHRASES.reviveHealer end
         return PHRASES.revive
     end
     if e.kind == "bg" then return (e.won and PHRASES.bgWin) or PHRASES.bgLoss end
+    if e.kind == "recap" then
+        if (e.d or 0) == 0 and PHRASES.recapClean then return PHRASES.recapClean end
+        if ((e.wp or 0) >= 2 or (e.d or 0) >= 5) and PHRASES.recapHard then return PHRASES.recapHard end
+        return PHRASES.recap
+    end
+    if e.kind == "campfire" then return (type(e.with) == "table" and #e.with > 0 and PHRASES.campfireWith) or PHRASES.campfire end
+    if e.kind == "duel" then
+        if (e.n or 1) >= 2 and PHRASES.duelSeries then return PHRASES.duelSeries end
+        return (e.won and PHRASES.duel) or PHRASES.duelLoss or PHRASES.duel
+    end
+    if e.kind == "wpvp" then return ((e.n or 1) >= 2 and PHRASES.wpvpMany) or PHRASES.wpvp end
     if e.kind == "weather" then return PHRASES["weather_" .. tostring(e.wk)] or PHRASES.weather end
     if e.kind == "tame" then
         if e.sub == "first" and PHRASES.tameFirst then return PHRASES.tameFirst end
@@ -851,6 +871,8 @@ function PoolFor(e)
         return PHRASES.tame
     end
     if e.kind == "loot" then
+        local firstPool = e.first and K.FIRST_POOL[e.first]
+        if firstPool and PHRASES[firstPool] then return PHRASES[firstPool] end
         if e.src == "craft" and (e.n or 1) >= 2 and PHRASES.lootCraftMany then return PHRASES.lootCraftMany end
         if (e.tier or 0) >= 4 and PHRASES.lootEpic then return PHRASES.lootEpic end
         if e.src == "craft" and PHRASES.lootCraft then return PHRASES.lootCraft end
@@ -985,6 +1007,28 @@ local function DayText(e)
     return ns.Gendered(text .. " " .. L.DAY_CLOSE[mood])
 end
 
+-- After the page of a run through a dungeon: the bosses, the falls, the times the group fell, and the time it took.
+K.RecapLine = function(e)
+    local P = L.RECAP_PARTS
+    if not P then return "" end
+    local parts = {}
+    for _, item in ipairs({ { "bosses", e.b }, { "falls", e.d }, { "wipes", e.wp } }) do
+        local words, n = P[item[1]], item[2]
+        if words and type(n) == "number" and n > 0 then parts[#parts + 1] = string.format(n == 1 and words[1] or words[2], n) end
+    end
+    local out = ""
+    if #parts > 0 then
+        local joined = parts[1]
+        if #parts > 1 then joined = table.concat(parts, ", ", 1, #parts - 1) .. L.DAY_AND .. parts[#parts] end
+        out = " " .. string.format(L.RECAP_LEAD, joined)
+    end
+    local seconds = tonumber(e.dur) or 0
+    if seconds >= 60 then
+        out = out .. " " .. string.format(L.RECAP_TIME, string.format(L.DURATION, math.floor(seconds / 3600), math.floor(seconds % 3600 / 60)))
+    end
+    return ns.Gendered(out)
+end
+
 K.QUALITY_COLOR = {
     [0] = "9d9d9d", [1] = "ffffff", [2] = "1eff00", [3] = "0070dd", [4] = "a335ee", [5] = "ff8000", [6] = "e6cc80",
     [7] = "00ccff", [8] = "00ccff",
@@ -1037,7 +1081,8 @@ end
 -- a fall just before, a long absence, the first quest of the day, the tenth, a fat purse, a quest far above or
 -- far below one's level. The page keeps the key (xk), the phrase number (xi) and the number the phrase names
 -- (xv); the text is built live, as for everything else. A key is not told again within the last three quests.
-K.FACT_ORDER = { "fallen", "back", "first", "milestone", "rich", "above", "below" }
+K.FACT_ORDER = { "fallen", "hunt", "back", "first", "milestone", "rich", "above", "below" }
+K.HUNT_MIN, K.HUNT_MAX, K.HUNT_WINDOW = 25, 400, 14400   -- creatures slain while a quest of gathering was open; told within four hours
 K.FACT_RECENT = 3
 K.PickFact = function(db, e)
     local day = db.days and db.days[db.today or ""]
@@ -1063,12 +1108,14 @@ K.PickFact = function(db, e)
         rich = type(e.mr) == "number" and e.mr >= 10000,
         above = type(e.ql) == "number" and type(e.pl) == "number" and e.ql - e.pl >= 3,
         below = type(e.ql) == "number" and type(e.pl) == "number" and e.pl - e.ql >= 8,
+        hunt = type(e.hk) == "number" and e.hk >= K.HUNT_MIN and e.hk <= K.HUNT_MAX,
     }
     local value = {
         milestone = before + 1,
         rich = type(e.mr) == "number" and math.floor(e.mr / 10000) or nil,
         above = type(e.ql) == "number" and type(e.pl) == "number" and e.ql - e.pl or nil,
         below = type(e.ql) == "number" and type(e.pl) == "number" and e.pl - e.ql or nil,
+        hunt = e.hk,
     }
     for _, key in ipairs(K.FACT_ORDER) do
         local list = PHRASES["fact_" .. key]
@@ -1099,6 +1146,7 @@ K.FactText = function(e)
     text = text:gsub("{diff}", function() return tostring(e.xv or "") end)
     text = text:gsub("{gold}", function() return tostring(e.xv or "") end)
     text = text:gsub("{nth}", function() return tostring(e.xv or "") end)
+    text = text:gsub("{kills}", function() return tostring(e.xv or "") end)
     return " " .. ns.Gendered(text)
 end
 -- A phrase that already names a time of the day ("this morning", "tonight", "hoje de manhã", "ce soir") does not get the line
@@ -1201,7 +1249,7 @@ ns.InstanceName = function(e)
     return (GetLocale() == "esMX" and C.INSTANCE_NAMES_ESMX and C.INSTANCE_NAMES_ESMX[id]) or list[idx]
 end
 ns.PlaceName = function(e)
-    if e.kind == "dungeon" then return ns.InstanceName(e) or e.zone end
+    if e.kind == "dungeon" or e.kind == "recap" then return ns.InstanceName(e) or e.zone end
     if e.kind == "day" then return e.zone end
     local id = (e.zone == "" and e.zm) or (type(e.m) == "number" and e.m) or e.zm
     return (id and ns.ZoneNameOfMap(id)) or e.zone
@@ -1253,7 +1301,8 @@ K.PLACE_FORMS = {   -- the article, and its contractions with em, de, a and por
     fp = { art = "as", em = "nas", de = "das", a = "às", por = "pelas" },
     mp = { art = "os", em = "nos", de = "dos", a = "aos", por = "pelos" },
 }
-K.PLACE_KINDS = { weather = true, zone = true, death = true, revive = true, hearth = true, home = true, dungeon = true }   -- the pages whose %s is a place
+K.PLACE_KINDS = { weather = true, zone = true, death = true, revive = true, hearth = true, home = true, dungeon = true,
+    closecall = true, campfire = true, recap = true }   -- the pages whose %s is a place
 -- `phrase` with the article put where `token` (the %s, or a {tag} of the Saga) stands for `name`: em, de, a and por become
 -- na/no, da/do, à/ao and pela/pelo; after any other word, or at the start, the article comes before the name.
 -- French: the same, for à and de (au, à la, aux, à l'; du, de la, des, de l', and d' before a bare name that starts with a
@@ -1394,7 +1443,13 @@ local function RenderEntry(e)
     local list = PoolFor(e)
     if not list then return "" end
     local shown = tostring(e.kind == "quest" and QuestTitleNow(e) or e.arg)
-    if (e.kind == "zone" or e.kind == "death" or e.kind == "revive" or e.kind == "dungeon") and e.arg == e.zone then shown = tostring(ns.PlaceName(e) or e.arg) end
+    if (e.kind == "zone" or e.kind == "death" or e.kind == "revive" or e.kind == "dungeon" or e.kind == "closecall"
+        or e.kind == "campfire" or e.kind == "recap") and e.arg == e.zone then shown = tostring(ns.PlaceName(e) or e.arg) end
+    -- several players struck down in one stretch: the page tells the land, not the first name
+    local placeShown = K.PLACE_KINDS[e.kind]
+    if e.kind == "wpvp" and (e.n or 1) >= 2 then
+        shown, placeShown = tostring(ns.PlaceName(e) or e.zone or L.UNKNOWN_ZONE), true
+    end
     if e.kind == "home" then
         -- the inn is told by the name the client gave that day; in another language the city of the page tells it instead
         local now = GetLocale and GetLocale() or "enUS"
@@ -1420,20 +1475,28 @@ local function RenderEntry(e)
         end
     end
     local phrase = list[((e.idx or 1) - 1) % #list + 1]
-    if K.PLACE_KINDS[e.kind] or (e.kind == "flight" and GetLocale() == "ptBR") then phrase = K.PlaceArticles(phrase, shown, "%s") end
+    if placeShown or (e.kind == "flight" and GetLocale() == "ptBR") then phrase = K.PlaceArticles(phrase, shown, "%s") end
     local text = string.format(phrase, shown)
-    text = text:gsub("{weather}", function()
-        return tostring((L.WEATHER_WORDS and L.WEATHER_WORDS[e.wk]) or "")
-    end)
-    text = text:gsub("{steps}", function() return tostring(e.cend or "") end)
-    text = text:gsub("{tries}", function() return tostring(e.tries or "") end)
-    text = text:gsub("{days}", function() return tostring(e.since or "") end)
-    text = text:gsub("{count}", function() return tostring(e.n or "") end)
-    local place = tostring((e.pz and ns.ZoneNameOfMap and ns.ZoneNameOfMap(e.pz)) or e.pn or L.UNKNOWN_ZONE)
-    if GetLocale() == "ptBR" then text = K.PlaceArticles(text, place, "{place}") end
-    text = text:gsub("{place}", function() return place end)
-    text = text:gsub("{standing}", function() return tostring(e.st or "") end)
-    text = text:gsub("{npc}", function() return npc end)
+    -- the tags of a phrase ({place}, {npc}, {who}...): most phrases have none, and a big diary tells thousands of pages
+    if text:find("{", 1, true) then
+        text = text:gsub("{weather}", function()
+            return tostring((L.WEATHER_WORDS and L.WEATHER_WORDS[e.wk]) or "")
+        end)
+        text = text:gsub("{steps}", function() return tostring(e.cend or "") end)
+        text = text:gsub("{tries}", function() return tostring(e.tries or "") end)
+        text = text:gsub("{days}", function() return tostring(e.since or "") end)
+        text = text:gsub("{count}", function() return tostring(e.n or "") end)
+        local place = tostring((e.pz and ns.ZoneNameOfMap and ns.ZoneNameOfMap(e.pz)) or e.pn or L.UNKNOWN_ZONE)
+        if GetLocale() == "ptBR" then text = K.PlaceArticles(text, place, "{place}") end
+        text = text:gsub("{place}", function() return place end)
+        text = text:gsub("{standing}", function() return tostring(e.st or "") end)
+        text = text:gsub("{npc}", function() return npc end)
+        text = text:gsub("{who}", function() return K.WhoShort(e.by or "") end)
+        text = text:gsub("{foe}", function() return K.WhoShort(e.foe or "") end)
+        text = text:gsub("{wins}", function() return tostring(e.w or 0) end)
+        text = text:gsub("{losses}", function() return tostring(e.l or 0) end)
+    end
+    if e.kind == "recap" and K.RecapLine then text = text .. K.RecapLine(e) end
     -- Weather pages keep race and class as data, so their personal aside can be retold in the current language too.
     -- The main weather line still carries the rain/snow/sand and the zone; these short lines add the character's own lens.
     if e.kind == "weather" then
@@ -1574,7 +1637,7 @@ K.SOUND_CANDIDATES = {
 -- character with an old name never inherits it.
 K.DIARY_STATE = { "retentionAccepted", "retentionWarned", "pets", "petNow", "companions", "questObj", "questStart", "visitedMaps", "resume", "attempts",
     "taxi", "marks", "goals", "goalsInit", "goalsVer", "collInit", "rep", "memoryAt", "recentIdx", "recentPh", "anniv", "zoneKills", "killBase", "zoneKillsUnassigned",
-    "birthMap", "mountSpells", "visitedInstances", "wxAt" }
+    "birthMap", "mountSpells", "visitedInstances", "wxAt", "run", "firsts", "questKills", "lastFire" }
 
 local function TakeState(db)
     local state = {}
@@ -1722,6 +1785,8 @@ K.EVENT_ICON = {
     tame = "pet",
     revive = "revive", hearth = "st_hearth",
     bg = "bg",
+    -- (pictures of their own still to be drawn: these borrow the nearest one)
+    closecall = "revive", recap = "dungeon", campfire = "st_camp", duel = "bg", wpvp = "bg",
 }
 -- Professions: the game's skill line id says which one it is whatever the language; the
 -- name is the fallback (and how pages written before this existed are recognised).
@@ -2108,6 +2173,10 @@ K.PAPER_STYLE_ORDER = { "clean", "travel", "war", "old" }
 K.PAPER_TEXTURES = {
     clean = "parchment", travel = "parchment_travel", war = "parchment_war", old = "parchment_old",
 }
+-- How strong the grain of the paper is drawn (Style), and the few pixels of it that give the plain tone beneath.
+K.PAPER_STRENGTH_ORDER = { "soft", "medium", "full" }
+K.PAPER_STRENGTH = { soft = 0.4, medium = 0.7, full = 1 }
+K.PAPER_PLAIN = { 120 / 256, 124 / 256 }
 -- The looks of the tabs (Style tab). Every picture is 256x128 shown at half size, the same leather 110x31 inside, so a
 -- look changes the picture and the writing only: where the letters go (x, width) and their colour, shut and open.
 K.TAB_STYLE_ORDER = { "leather", "ribbon", "brass", "parchment", "wood" }
@@ -2162,6 +2231,7 @@ K.DOODLE_OF = {
     quest = "scroll", level = "star", milestone = "star", death = "skull", boss = "sword", dungeon = "sword",
     zone = "map", flight = "boots", mount = "boots", tame = "paw", skill = "anvil", profession = "anvil",
     hearth = "camp", home = "camp", guild = "mug", rep = "mug", bg = "banner",
+    campfire = "camp", closecall = "skull", recap = "sword", duel = "sword", wpvp = "banner",
 }
 K.DOODLE_ORDER = { "sword", "banner", "skull", "map", "star", "camp", "boots", "paw", "anvil", "mug", "scroll" }
 K.DOODLE_WEIGHT = { scroll = 0.3 }
@@ -2977,6 +3047,15 @@ local function CreateWindow()
         local ox, oy = (i == 1) and 0 or 120, (i == 1) and 0 or 80
         paper:SetTexCoord(ox / 256, (ox + K.PAGE_SW) / 256, oy / 256, (oy + K.PAGE_SH) / 256)
         s.paper, s.paperOx, s.paperOy = paper, ox, oy
+        -- Under the paper, the same paper smoothed to one tone (a few of its pixels stretched): a fainter grain (Style:
+        -- strength of the paper) lets this show, so the page keeps its colour, in the dark mode too.
+        local plain = fr:CreateTexture(nil, "BACKGROUND", nil, -1)
+        plain:SetPoint("TOPLEFT", paper, "TOPLEFT")
+        plain:SetPoint("BOTTOMRIGHT", paper, "BOTTOMRIGHT")
+        plain:SetTexture(K.TEX .. "parchment")
+        plain:SetTexCoord(K.PAPER_PLAIN[1], K.PAPER_PLAIN[2], K.PAPER_PLAIN[1], K.PAPER_PLAIN[2])
+        ns.ThemeTint(plain, "paper")
+        s.paperPlain = plain
 
         -- Burnt edges on three sides (the side next to the spine stays clean).
         local BURN = 48
@@ -3089,7 +3168,10 @@ local function CreateWindow()
     function f:ApplyPaper()
         local choice = (SkaldDB and SkaldDB.paperStyle) or "clean"
         local texture = K.PAPER_TEXTURES[choice] or K.PAPER_TEXTURES.clean
+        local strength = K.PAPER_STRENGTH[(SkaldDB and SkaldDB.paperStrength) or "full"] or 1
         for _, side in ipairs(sides) do
+            if side.paperPlain then side.paperPlain:SetTexture(K.TEX .. texture) end
+            side.paper:SetAlpha(strength)
             side.paper:SetTexture(K.TEX .. texture, "REPEAT", "REPEAT")
             side.paper:SetTexCoord(side.paperOx / 256, (side.paperOx + K.PAGE_SW) / 256,
                 side.paperOy / 256, (side.paperOy + K.PAGE_SH) / 256)
@@ -5033,13 +5115,14 @@ K.OPTIONAL_EVENTS = {
     "LEARNED_SPELL_IN_TAB", "QUEST_ACCEPTED", "CHAT_MSG_ADDON", "VOICE_CHAT_TTS_PLAYBACK_FINISHED",
     "PLAYER_UNGHOST", "PLAYER_ALIVE", "CONFIRM_XP_LOSS", "RESURRECT_REQUEST",
     "UPDATE_BATTLEFIELD_STATUS", "PVP_MATCH_COMPLETE", "COMPANION_LEARNED",
+    "PLAYER_REGEN_ENABLED", "DUEL_REQUESTED", "CHAT_MSG_SYSTEM", "CHAT_MSG_COMBAT_HONOR_GAIN",
 }
 for _, ev in ipairs(K.OPTIONAL_EVENTS) do
     pcall(frame.RegisterEvent, frame, ev)
 end
 -- Spell casts and pet changes fire for every unit in sight (a raid sends hundreds a second): only the
 -- player's own are asked for, so the game does not even call this addon for the others.
-for _, ev in ipairs({ "UNIT_PET", "UNIT_SPELLCAST_SUCCEEDED" }) do
+for _, ev in ipairs({ "UNIT_PET", "UNIT_SPELLCAST_SUCCEEDED", "UNIT_HEALTH" }) do
     if not pcall(frame.RegisterUnitEvent, frame, ev, "player") then pcall(frame.RegisterEvent, frame, ev) end
 end
 pcall(frame.RegisterUnitEvent, frame, "UNIT_NAME_UPDATE", "pet")   -- a pet that is renamed
@@ -5331,6 +5414,7 @@ local function BossDown(name, encounterID)
     -- The ids of the encounter and of the instance, when the client gave them: a boss page is text in the language it was
     -- written in; these are what a shared chronicle can compare across languages. Pages written before have neither.
     AddEntry("boss", name, nil, { tries = tries, tier = math.max(2, math.min(5, tier)), enc = encounterID, iid = id })
+    pcall(K.RunNote, "b")
 end
 
 -- The quest is already gone from the log when QUEST_TURNED_IN fires, so fall
@@ -5550,9 +5634,15 @@ local function OnLoot(text)
     local ref, name, quality = ItemParts(link)
     if not ref then return end
     local item = "|cff" .. (K.QUALITY_COLOR[quality] or "ffffff") .. "|H" .. ref .. "|h[" .. name .. "]|h|r"
-    if quality < (s.lootTier or K.LOOT_MIN_TIER) then return end
-
     local cat, icon, mat = ItemInfo(ref)
+    -- the first bag, the first green, blue or epic piece: a page whatever the filters and the day's count say
+    local first = K.FirstOf(db, cat, quality)
+    if first then
+        AddEntry("loot", item, nil, { iid = tonumber(tostring(item):match("item:(%d+)")), tier = quality, cat = cat, src = src,
+            ic = icon, mat = mat, first = first, m = false, x = false, y = false })
+        return
+    end
+    if quality < (s.lootTier or K.LOOT_MIN_TIER) then return end
 
     if s.lootGear ~= false and not IsGear(cat) then
         local need = (cat == "material" or cat == "gem") and K.LOOT_TRADE_TIER or K.LOOT_RARE_TIER
@@ -5787,6 +5877,7 @@ local function CheckZone()
         VisitZone(zone)
         if ns.CheckMemory then pcall(ns.CheckMemory) end
         if ns.CheckAnniversary then pcall(ns.CheckAnniversary) end
+        if K.RunTick then pcall(K.RunTick) end
     end
 end
 ns.CheckZoneForTest = function() return CheckZone() end
@@ -7130,6 +7221,341 @@ SkaldAPI.EditFavNote = ns.EditFavNote
 end
 
 -- One function per event, looked up by name (instead of a long chain of comparisons).
+-- Moments the diary tells besides the usual pages: a fight survived by a thread, a run through a dungeon summed up when it is
+-- over, a fire made on the road, a duel, players struck down in the open world. (None of these was seen in the game yet.)
+K.CLOSECALL_PCT, K.CLOSECALL_GAP = 0.10, 900   -- health left that makes a fight a close call; seconds before another one is told
+K.RUN_MIN, K.RUN_GRACE, K.RUN_STALE = 300, 600, 7200   -- a run shorter than this is not summed up; out of the door this long ends it; inside, this long without a sign starts another
+K.CAMPFIRE_SPELL, K.CAMPFIRE_GAP = 818, 21600   -- Basic Campfire (Cooking); one page of a fire every six hours at most
+K.DUEL_MERGE, K.WPVP_MERGE = 3600, 900   -- a duel with the same one, a kill in the same land, within this time adds to the page before
+K.FOE_HIT_RECENT = 5   -- a player's blow this many seconds before a fall is the blow that felled
+-- The first bag, the first green, blue and epic piece of gear: a page of their own, whatever the filters of loot say.
+K.FIRST_POOL = { bag = "lootFirstBag", q2 = "lootFirstGreen", q3 = "lootFirstBlue", q4 = "lootFirstEpic" }
+
+K.PlayerShort = function()
+    local ok, name = pcall(UnitName, "player")
+    name = ok and Safe(name) or nil
+    return type(name) == "string" and K.WhoShort(name) or nil
+end
+K.InPvpInstance = function()
+    if not IsInInstance then return false end
+    local ok, inside, kind = pcall(IsInInstance)
+    return ok and inside and (kind == "pvp" or kind == "arena") or false
+end
+K.DeadOrGhost = function()
+    if not UnitIsDeadOrGhost then return false end
+    local ok, dead = pcall(UnitIsDeadOrGhost, "player")
+    return ok and Safe(dead) and true or false
+end
+K.KillTotal = function()
+    local total = KillStat()
+    if not total then
+        local byId = GameStat(107)
+        if byId and byId > 0 then total = byId end
+    end
+    return total
+end
+-- A page written a moment ago that a new deed of the same sort adds to (a duel with the same player, another kill nearby).
+K.RecentPage = function(kind, within, match)
+    local db = Journal()
+    local entries = db and db.entries
+    if not entries then return nil end
+    for i = #entries, math.max(1, #entries - 40), -1 do
+        local e = entries[i]
+        if e.kind == kind and time() - (e.t2 or e.t or 0) <= within and match(e) then return e end
+    end
+    return nil
+end
+K.Retold = function(e, pool)
+    -- the page changes its pool (one duel became a series): a line of the new pool, and the book lays it out again
+    if pool and PHRASES[pool] then e.idx = math.random(#PHRASES[pool]) end
+    e.t2 = time()
+    ns.layoutRev = (ns.layoutRev or 0) + 1
+    if window and window:IsShown() then window:Refresh() end
+end
+
+-- A run through a dungeon or a raid, summed up once it is over: how long, the bosses, the falls, the times the whole group fell
+-- (an encounter that ends without a victory). Kept in the diary (db.run), so a reload or a logout inside does not lose it. The
+-- door is not the end: a spirit walks out to the graveyard and back in, so the run ends only after K.RUN_GRACE outside alive,
+-- at another instance, or when the one inside has had no sign for K.RUN_STALE (a logout overnight).
+K.RunFinish = function(db, run)
+    db.run = nil
+    if type(run) ~= "table" or (run.b or 0) < 1 then return end
+    local dur = (run.last or run.t0 or 0) - (run.t0 or 0)
+    if dur < K.RUN_MIN then return end
+    local with = (type(run.with) == "table" and #run.with > 0) and run.with or nil
+    AddEntry("recap", run.n, run.n, { iid = run.iid, dur = dur, b = run.b, d = run.d or 0, wp = run.wp or 0, with = with,
+        m = false, x = false, y = false })
+end
+K.RunTick = function()
+    local db = Journal()
+    if not db or not ready then return end
+    local run, now = db.run, time()
+    local iid = K.InstanceNow()
+    if iid then
+        if run and (run.iid ~= iid or now - (run.last or 0) > K.RUN_STALE) then K.RunFinish(db, run); run = nil end
+        if not run then
+            local name = GetZoneText()
+            if not name or name == "" then name = L.UNKNOWN_ZONE end
+            db.run = { iid = iid, n = name, t0 = now, last = now, b = 0, d = 0, wp = 0 }
+        else
+            run.last, run.out = now, nil
+        end
+    elseif run then
+        if K.DeadOrGhost() then return end   -- a spirit on the way back in
+        if not run.out then
+            run.out = now
+            -- just out of the door (the last sign is a tick of the clock old, not a logout): the run lasted until now
+            if now - (run.last or 0) <= 120 then run.last = now end
+        elseif now - run.out >= K.RUN_GRACE then K.RunFinish(db, run) end
+    end
+end
+K.RunNote = function(field)
+    local db = Journal()
+    local run = db and db.run
+    if not run or run.iid ~= K.InstanceNow() then return end
+    run[field] = (run[field] or 0) + 1
+    run.last = time()
+    if field == "b" then
+        run.with = run.with or {}
+        local have = {}
+        for _, who in ipairs(run.with) do have[who] = true end
+        for _, who in ipairs(K.GroupNames()) do
+            if not have[who] and #run.with < 8 then run.with[#run.with + 1] = who; have[who] = true end
+        end
+    end
+end
+
+-- By a thread: the health fell under a tenth in a fight that was then survived. Told when the fight is over (and not after a
+-- duel, which stops at a breath of health on purpose, nor in a battleground). The client may withhold the health (Forever, in a
+-- fight): then nothing is told.
+K.NoteHealth = function()
+    if not (UnitHealth and UnitHealthMax) then return end
+    local okH, hp = pcall(UnitHealth, "player")
+    local okM, max = pcall(UnitHealthMax, "player")
+    hp, max = okH and Safe(hp) or nil, okM and Safe(max) or nil
+    if type(hp) ~= "number" or type(max) ~= "number" or max <= 0 or hp <= 0 then return end
+    local share = hp / max
+    if share > K.CLOSECALL_PCT then return end
+    if UnitAffectingCombat then
+        local okC, fighting = pcall(UnitAffectingCombat, "player")
+        if not (okC and Safe(fighting)) then return end
+    end
+    local b = Mile.brink
+    if not b then Mile.brink = { low = share, at = time() } elseif share < b.low then b.low = share end
+end
+K.CloseCallWrite = function(b)
+    if not b or K.DeadOrGhost() or K.InPvpInstance() then return end
+    if Mile.duelAt and time() - Mile.duelAt < 20 then return end
+    if Mile.closeCallAt and time() - Mile.closeCallAt < K.CLOSECALL_GAP then return end
+    Mile.closeCallAt = time()
+    local where = GetZoneText()
+    if not where or where == "" then where = L.UNKNOWN_ZONE end
+    AddEntry("closecall", where, nil, { low = math.max(1, math.floor((b.low or 0) * 100 + 0.5)) })
+end
+
+-- Brought back by another player: RESURRECT_REQUEST names who offers it; it is accepted on the spot (PLAYER_ALIVE, alive again
+-- without having been a spirit) or as a spirit (PLAYER_UNGHOST).
+K.REZ_OFFER_KEPT = 120
+K.ReviveBy = function()
+    local r = Mile.rezBy
+    if r and time() - (r.at or 0) <= K.REZ_OFFER_KEPT and type(r.name) == "string" and r.name ~= "" then return r.name end
+    return nil
+end
+K.WriteRevive = function(sub, by)
+    if Mile.revivedAt and time() - Mile.revivedAt < 5 then return end
+    Mile.revivedAt, Mile.rezBy = time(), nil
+    local where = GetZoneText()
+    if not where or where == "" then where = L.UNKNOWN_ZONE end
+    AddEntry("revive", where, nil, { sub = sub, by = by })
+end
+
+-- Duels, read from the game's own line ("%1$s has defeated %2$s in a duel", "%2$s has fled from %1$s in a duel"): only those
+-- the player fought. A series with the same one within the hour is one page that counts them.
+K.PositionalPattern = function(fmt)
+    if type(fmt) ~= "string" or fmt == "" then return nil end
+    local order = {}
+    local s = fmt:gsub("%%(%d)%$s", function(d) order[#order + 1] = tonumber(d); return "\1" end)
+    s = s:gsub("%%s", function() order[#order + 1] = #order + 1; return "\1" end)
+    s = s:gsub("([%^%$%(%)%%%.%[%]%*%+%-%?])", "%%%1")
+    s = s:gsub("\1", "(.-)")
+    return "^" .. s .. "$", order
+end
+K.DuelPatterns = function()
+    if K.duelPatterns then return K.duelPatterns end
+    K.duelPatterns = {}
+    for _, def in ipairs({ { "DUEL_WINNER_KNOCKOUT", false }, { "DUEL_WINNER_RETREAT", true } }) do
+        local pattern, order = K.PositionalPattern(_G[def[1]])
+        if pattern and #order == 2 then K.duelPatterns[#K.duelPatterns + 1] = { pattern, order, def[2] } end
+    end
+    return K.duelPatterns
+end
+K.OnSystemLine = function(text)
+    text = Safe(text)
+    if type(text) ~= "string" then return end
+    local me = K.PlayerShort()
+    if not me then return end
+    for _, def in ipairs(K.DuelPatterns()) do
+        local a, b = text:match(def[1])
+        if a then
+            local got = { a, b }
+            local winner, loser = got[def[2][1]], got[def[2][2]]   -- %1 is the winner, %2 the one who lost or fled
+            local won
+            if K.WhoShort(winner) == me then won = true elseif K.WhoShort(loser) == me then won = false else return end
+            Mile.duelAt = time()
+            K.WriteDuel(won and loser or winner, won, def[3])
+            return
+        end
+    end
+end
+K.WriteDuel = function(foe, won, fled)
+    local db = Journal()
+    if not db or type(foe) ~= "string" or foe == "" then return end
+    local stats = db.stats
+    if stats then
+        if won then stats.duelW = (stats.duelW or 0) + 1 else stats.duelL = (stats.duelL or 0) + 1 end
+    end
+    local last = K.RecentPage("duel", K.DUEL_MERGE, function(e) return e.arg == foe end)
+    if last then
+        last.n = (last.n or 1) + 1
+        if won then last.w = (last.w or 0) + 1 else last.l = (last.l or 0) + 1 end
+        last.won = won
+        K.Retold(last, last.n == 2 and "duelSeries" or nil)
+        return
+    end
+    AddEntry("duel", foe, nil, { won = won, fled = fled or nil, w = won and 1 or 0, l = won and 0 or 1 })
+end
+
+-- Players struck down in the open world (an honourable kill outside a battleground): the game's line names the one who fell.
+-- Several in the same land within a quarter of an hour are one page that counts them.
+K.HonorPatterns = function()
+    if K.honorPatterns then return K.honorPatterns end
+    K.honorPatterns = {}
+    for _, key in ipairs({ "COMBATLOG_HONORGAIN", "COMBATLOG_HONORGAIN_NO_RANK", "COMBATLOG_HONORGAIN_EXHAUSTION1" }) do
+        local pattern = LootPattern(_G[key])
+        if pattern then K.honorPatterns[#K.honorPatterns + 1] = pattern end
+    end
+    return K.honorPatterns
+end
+K.OnHonorLine = function(text)
+    text = Safe(text)
+    if type(text) ~= "string" or K.InPvpInstance() then return end
+    local victim
+    for _, pattern in ipairs(K.HonorPatterns()) do
+        victim = text:match(pattern)
+        if victim then break end
+    end
+    if type(victim) ~= "string" or victim == "" then return end
+    local db = Journal()
+    if not db then return end
+    if db.stats then db.stats.wpvp = (db.stats.wpvp or 0) + 1 end
+    local here = GetZoneText()
+    local last = K.RecentPage("wpvp", K.WPVP_MERGE, function(e) return e.zone == here end)
+    if last then
+        last.n = (last.n or 1) + 1
+        K.Retold(last, last.n == 2 and "wpvpMany" or nil)
+        return
+    end
+    AddEntry("wpvp", victim)
+end
+
+-- Who struck the blow that felled me, when it was another player: the combat log, where the client still gives it (it is a
+-- frame of its own, which looks at nothing but the blows that land on the player). Forever may give nothing: then the fall is
+-- told as any other.
+K.WatchBlows = function()
+    if Mile.blowFrame or not (CombatLogGetCurrentEventInfo and CreateFrame) then return end
+    local f = CreateFrame("Frame")
+    if not pcall(f.RegisterEvent, f, "COMBAT_LOG_EVENT_UNFILTERED") then return end
+    Mile.blowFrame = f
+    f:SetScript("OnEvent", function()
+        local ok, _, sub, _, _, srcName, srcFlags, _, dstGUID = pcall(CombatLogGetCurrentEventInfo)
+        if not ok then return end
+        dstGUID, sub, srcFlags, srcName = Safe(dstGUID), Safe(sub), Safe(srcFlags), Safe(srcName)
+        if not Mile.myGUID or dstGUID ~= Mile.myGUID or type(sub) ~= "string" or not sub:find("_DAMAGE$") then return end
+        if type(srcFlags) ~= "number" or type(srcName) ~= "string" then return end
+        local isPlayer = math.floor(srcFlags / 0x400) % 2 == 1
+        local hostile = math.floor(srcFlags / 0x40) % 2 == 1
+        if isPlayer and hostile then Mile.lastBlow = { name = srcName, at = time() } end
+    end)
+end
+K.FoeOfFall = function()
+    local b = Mile.lastBlow
+    Mile.lastBlow = nil
+    if not b or time() - (b.at or 0) > K.FOE_HIT_RECENT or K.InPvpInstance() then return nil end
+    return b.name
+end
+
+-- A fire made on the road (Basic Campfire): who sat at it is told after the page.
+K.WriteCampfire = function()
+    local db = Journal()
+    if not db or (db.lastFire and time() - db.lastFire < K.CAMPFIRE_GAP) then return end
+    db.lastFire = time()
+    local where = GetZoneText()
+    if not where or where == "" then where = L.UNKNOWN_ZONE end
+    AddEntry("campfire", where)
+end
+
+-- The first bag and the first green, blue and epic piece. A diary that is not new learns, once, what the character already
+-- carries (the pages of loot, what is worn, the bags in their slots), so an old hero is not told of a "first" green at level 40.
+K.SeedFirsts = function(db)
+    local firsts = {}
+    local function Up(q)
+        if q >= 2 then firsts.q2 = true end
+        if q >= 3 then firsts.q3 = true end
+        if q >= 4 then firsts.q4 = true end
+    end
+    for _, e in ipairs(db.entries or {}) do
+        if e.kind == "loot" then
+            if e.cat == "bag" then firsts.bag = true end
+            if type(e.tier) == "number" and IsGear(e.cat) then Up(e.tier) end
+        end
+    end
+    if GetInventoryItemQuality then
+        for slot = 1, 19 do
+            local ok, q = pcall(GetInventoryItemQuality, "player", slot)
+            q = ok and Safe(q) or nil
+            if type(q) == "number" then Up(q) end
+        end
+    end
+    local slots = (C_Container and C_Container.GetContainerNumSlots) or GetContainerNumSlots
+    if slots then
+        for bag = 1, 4 do
+            local ok, n = pcall(slots, bag)
+            if ok and type(n) == "number" and n > 0 then firsts.bag = true end
+        end
+    end
+    local okL, level = pcall(UnitLevel, "player")
+    if okL and type(level) == "number" and level >= 10 then firsts.bag, firsts.q2 = true, true end
+    db.firsts = firsts
+end
+K.FirstOf = function(db, cat, quality)
+    if db.firsts == nil then K.SeedFirsts(db) end
+    local key
+    if cat == "bag" then key = "bag"
+    elseif IsGear(cat) and type(quality) == "number" then
+        key = (quality >= 4 and "q4") or (quality == 3 and "q3") or (quality == 2 and "q2") or nil
+    end
+    if not key or db.firsts[key] then return nil end
+    db.firsts[key] = true
+    return key
+end
+
+-- What is new in this version, told once in the chat after an update (and again with /skald news). K.NEWS_REV goes up with
+-- each release whose lines in L.NEWS are new; a first install hears nothing.
+K.NEWS_REV = 1
+K.TellNews = function(force)
+    if not L.NEWS then return end
+    if not force then
+        if not SkaldDB then return end
+        local seen = SkaldDB.newsRev or 0   -- a first install starts with the number of now (ADDON_LOADED)
+        SkaldDB.newsRev = K.NEWS_REV
+        if seen >= K.NEWS_REV then return end
+    end
+    local fn = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
+    local okV, version = pcall(fn, ADDON_NAME, "Version")
+    Say(string.format(L.NEWS_TITLE, okV and tostring(version or "") or ""))
+    for _, line in ipairs(L.NEWS) do Say("  - " .. line) end
+end
+
 local EVENT_HANDLERS = {}
 do
 local H = EVENT_HANDLERS
@@ -7137,7 +7563,7 @@ H.ADDON_LOADED = function(self, event, ...)
     local name = ...
     if name ~= ADDON_NAME then return end
     -- a first install speaks in the voice "Of My People"; whoever had Skald before keeps the voice they had (nil is epic)
-    if SkaldDB == nil then SkaldDB = { tone = "kin" } end
+    if SkaldDB == nil then SkaldDB = { tone = "kin", newsRev = K.NEWS_REV } end
     SkaldDB.version = SkaldDB.version or 1
     ApplyFonts()   -- the saved text size (the files ran before the saved variables loaded)
     SkaldCharDB = SkaldCharDB or {}
@@ -7186,6 +7612,11 @@ H.PLAYER_LOGIN = function(self, event, ...)
     -- Event capture must not wait for optional maintenance (or for combat to end).
     lastXP, lastXPLevel = ReadXP()
     ready = true
+    do
+        local okG, guid = pcall(UnitGUID, "player")
+        Mile.myGUID = okG and Safe(guid) or nil
+    end
+    pcall(K.WatchBlows)
     if Settings().probeAll then pcall(Mile.ProbeAllEvents, true) end
     if Settings().probeLore then pcall(Mile.ProbeLore, true) end
     local jobs = {
@@ -7194,7 +7625,7 @@ H.PLAYER_LOGIN = function(self, event, ...)
         { "CheckPet", Mile.CheckPet }, { "CatchUpLevels", Mile.CatchUpLevels },
         { "NoteBirthplace", Mile.NoteBirthplace }, { "CheckMounts", Mile.CheckMounts },
         { "CheckGoals", ns.CheckGoals }, { "MergeCrafts", Mile.MergeCrafts },
-        { "Relocalize", Mile.Relocalize },
+        { "Relocalize", Mile.Relocalize }, { "RunTick", K.RunTick },
     }
     for _, job in ipairs(jobs) do ns.QueueMaintenance(job[1], job[2]) end
     local work = K.maintenance
@@ -7206,6 +7637,7 @@ H.PLAYER_LOGIN = function(self, event, ...)
     Later(33, "NoteBirthplace", Mile.NoteBirthplace)
     Later(18, "Relocalize 2", Mile.Relocalize)   -- retry names after the client's item cache warms
     Later(10, "ShowResume", Mile.ShowResume)
+    Later(14, "TellNews", K.TellNews)
     if ns.ZoneCard then
         Later(11, "WarmQuests", ns.ZoneCard.WarmQuests)
         Later(13, "Preload", ns.ZoneCard.Preload)
@@ -7220,6 +7652,7 @@ H.PLAYER_LOGIN = function(self, event, ...)
             ns.QueueMaintenance("TrackKills", Mile.TrackKills)
             ns.QueueMaintenance("NoteBirthplace", Mile.NoteBirthplace)
             ns.QueueMaintenance("CheckWeather", K.CheckWeather)
+            ns.QueueMaintenance("RunTick", K.RunTick)
         end)
     end
     if not Settings().quiet then
@@ -7326,11 +7759,14 @@ H.QUEST_ACCEPTED = function(self, event, a, b)
     db.questStart = db.questStart or {}
     if db.questStart[id] then return end
     db.questStart[id] = time()
+    local kills = K.KillTotal()
+    if kills then db.questKills = db.questKills or {}; db.questKills[id] = kills end
     local n = 0
     for _ in pairs(db.questStart) do n = n + 1 end
     if n > K.QUEST_START_MAX then
         local cut = time() - K.QUEST_START_DAYS * 86400
         for k, t in pairs(db.questStart) do if t < cut then db.questStart[k] = nil end end
+        for k in pairs(db.questKills or {}) do if not db.questStart[k] then db.questKills[k] = nil end end
     end
 end
 
@@ -7396,8 +7832,17 @@ H.QUEST_TURNED_IN = function(self, event, ...)
             if first then since = math.floor((time() - first) / 86400) end
             if since and since < 1 then since = nil end
         end
+        -- creatures slain between taking a quest of gathering and handing it in (the same day): told when it was a long hunt
+        local hunt
+        do
+            local db = Journal()
+            local k0 = db and db.questKills and db.questKills[questID]
+            local t0 = db and db.questStart and db.questStart[questID]
+            local now = (qtype == "gather" and k0 and t0 and time() - t0 <= K.HUNT_WINDOW) and K.KillTotal() or nil
+            if now and now >= k0 then hunt = now - k0 end
+        end
         AddEntry("quest", QuestName(questID), nil,
-            { tier = tier, q = questID, npc = pendingNPC, qtype = qtype or false, cend = cend, since = since,
+            { tier = tier, hk = hunt, q = questID, npc = pendingNPC, qtype = qtype or false, cend = cend, since = since,
               ot = (tier >= K.OBJECTIVE_MIN_TIER) and ((type(ns.pendingObjective) == "string" and ns.pendingObjective ~= "" and ns.pendingObjective)
                   or (Journal() and Journal().questObj and Journal().questObj[questID])) or nil,
               ql = pendingQuestLevel, pl = UnitLevel and UnitLevel("player"), nid = Mile.npcId,
@@ -7410,6 +7855,7 @@ H.QUEST_TURNED_IN = function(self, event, ...)
     pendingQuestTitle, pendingNPC, pendingQuestLevel = nil, nil, nil
     ns.pendingObjective = nil
     if Journal() and Journal().questObj then Journal().questObj[questID] = nil end
+    if Journal() and Journal().questKills then Journal().questKills[questID] = nil end
     pendingObjectiveTypes = nil
     Mile.npcId = nil
 end
@@ -7489,6 +7935,7 @@ H.UNIT_SPELLCAST_SUCCEEDED = function(self, event, ...)
     -- The Hearthstone (item 6948) casts spell 8690. A page only when it takes the character
     -- somewhere else: using it while already at the inn's place writes nothing.
     local unit, _, spellID = ...
+    if ready and unit == "player" and Safe(spellID) == K.CAMPFIRE_SPELL then pcall(K.WriteCampfire) end
     if ready and unit == "player" and Safe(spellID) == 8690 then
         local okBind, bind = pcall(GetBindLocation)
         bind = okBind and Safe(bind) or nil
@@ -7509,16 +7956,23 @@ H.PLAYER_UNGHOST = function(self, event, ...)
     if ready then
         local fromHealer = Mile.healerAt and (time() - Mile.healerAt) < 120
         Mile.healerAt = nil
-        local where = GetZoneText()
-        if not where or where == "" then where = L.UNKNOWN_ZONE end
-        AddEntry("revive", where, nil, { sub = fromHealer and "healer" or "corpse" })
+        local by = not fromHealer and K.ReviveBy() or nil
+        K.WriteRevive(by and "player" or (fromHealer and "healer" or "corpse"), by)
     end
 end
 
+-- Alive again without having been a spirit: another player's offer was taken where the body fell (a soulstone, a totem and
+-- the like come with no offer and write nothing, as before).
 H.PLAYER_ALIVE = function(self, event, ...)
-    -- only recorded by the probe (above)
+    if ready and not K.DeadOrGhost() then
+        local by = K.ReviveBy()
+        if by then K.WriteRevive("player", by) end
+    end
 end
-H.RESURRECT_REQUEST = H.PLAYER_ALIVE
+H.RESURRECT_REQUEST = function(self, event, ...)
+    local name = Safe((...))
+    if type(name) == "string" and name ~= "" then Mile.rezBy = { name = name, at = time() } end
+end
 
 H.UNIT_PET = function(self, event, ...)
     if ready and (...) == "player" then C_Timer.After(1.5, function() pcall(Mile.CheckPet) end) end
@@ -7541,8 +7995,11 @@ H.PLAYER_DEAD = function(self, event, ...)
     local where = GetZoneText()
     if not where or where == "" then where = GetMinimapZoneText and GetMinimapZoneText() end
     if not where or where == "" then where = L.UNKNOWN_ZONE end
-    AddEntry("death", where)
+    Mile.brink = nil
+    local foe = K.FoeOfFall()
+    AddEntry("death", where, nil, foe and { foe = foe } or nil)
     pcall(NoteFall)
+    pcall(K.RunNote, "d")
 end
 
 H.PLAYER_GUILD_UPDATE = function(self, event, ...)
@@ -7831,7 +8288,8 @@ end
 H.ENCOUNTER_END = function(self, event, ...)
     local id, name, _, _, success = ...
     if ns.encounter then ns.encounter.ended = true end
-    if Safe(success) == 1 then BossDown(name, tonumber(Safe(id))) end
+    if Safe(success) == 1 then BossDown(name, tonumber(Safe(id)))
+    elseif Safe(success) == 0 and ready then pcall(K.RunNote, "wp") end
 end
 
 H.BOSS_KILL = function(self, event, ...)
@@ -7846,6 +8304,23 @@ H.PVP_MATCH_COMPLETE = function(self, event, ...)
 end
 H.UPDATE_BATTLEFIELD_STATUS = function(self, event, ...)
     if ready then pcall(Mile.CheckBattleground) end
+end
+
+H.UNIT_HEALTH = function(self, event, unit)
+    if ready and unit == "player" then K.NoteHealth() end
+end
+H.PLAYER_REGEN_ENABLED = function(self, event, ...)
+    local b = Mile.brink
+    Mile.brink = nil
+    -- a moment later: the line of a duel that ended this fight comes about now
+    if ready and b then C_Timer.After(1.5, function() pcall(K.CloseCallWrite, b) end) end
+end
+H.DUEL_REQUESTED = function(self, event, ...) Mile.duelAt = time() end
+H.CHAT_MSG_SYSTEM = function(self, event, ...)
+    if ready then pcall(K.OnSystemLine, ...) end
+end
+H.CHAT_MSG_COMBAT_HONOR_GAIN = function(self, event, ...)
+    if ready then pcall(K.OnHonorLine, ...) end
 end
 
 H.HEARTHSTONE_BOUND = function(self, event, ...)
@@ -7959,6 +8434,10 @@ local function ToggleWindow()
         window:Show()
     end
 end
+-- A key to open and close the book (Bindings.xml; the game's Key Bindings, under AddOns).
+SkaldAPI.ToggleBook = ToggleWindow
+_G["BINDING_HEADER_SKALD"] = "Skald"
+_G["BINDING_NAME_SKALD_TOGGLE"] = L.BINDING_TOGGLE
 
 -- Adds "Skald" to Spoken's minimap button menu. Spoken lists an unknown
 -- source with its own on/off switch, so this registers a silent source.
@@ -9096,6 +9575,21 @@ local function BuildNotices(panel)
         paperButtons[key] = b
     end
     panel.paperButtons = paperButtons   -- for the tests
+    -- How strong the grain of the paper is.
+    SectionLabel(panel, L.OPT_PAPER_STRENGTH, K.RIGHT_X, -444)
+    PlateGroup(panel, K.RIGHT_X, -464, 336, 26)
+    local strengthButtons = {}
+    for i, key in ipairs(K.PAPER_STRENGTH_ORDER) do
+        local b = MakeFlatButton(panel, 112, 26, L.PAPER_STRENGTH_NAMES[key])
+        b:SetPoint("TOPLEFT", K.RIGHT_X + (i - 1) * 112, -464)
+        b:SetScript("OnClick", function()
+            Settings().paperStrength = (key ~= "full") and key or nil
+            if window then window:ApplyPaper() end
+            refresh()
+        end)
+        strengthButtons[key] = b
+    end
+    panel.paperStrengthButtons = strengthButtons
 
     refresh = function()
         local s = Settings()
@@ -9105,6 +9599,9 @@ local function BuildNotices(panel)
         local paperStyle = s.paperStyle or "clean"
         if not K.PAPER_TEXTURES[paperStyle] then paperStyle = "clean" end
         for key, b in pairs(paperButtons) do b:SetActive(key == paperStyle) end
+        local strength = s.paperStrength or "full"
+        if not K.PAPER_STRENGTH[strength] then strength = "full" end
+        for key, b in pairs(strengthButtons) do b:SetActive(key == strength) end
     end
     return refresh
 end
@@ -9624,6 +10121,8 @@ SlashCmdList["SKALD"] = function(msg)
         -- the whole diary in the form the web Reader takes, ready to copy
         Settings().exportFormat, Settings().exportScope = "reader", "all"
         ShowExport()
+    elseif msg == "news" then
+        K.TellNews(true)
     elseif msg == "help" or msg == "?" then
         Say(L.HELP)
     else

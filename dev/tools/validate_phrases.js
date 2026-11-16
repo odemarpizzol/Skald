@@ -68,7 +68,8 @@ if "${loc}" == "esES" then
     end
 end
 local NO_NAME = { party = true, day = true, anniv7 = true, anniv30 = true, anniv100 = true, anniv365 = true }
-local KNOWN = { ["{diff}"] = true, ["{gold}"] = true, ["{nth}"] = true, ["{npc}"] = true, ["{steps}"] = true, ["{standing}"] = true, ["{tries}"] = true, ["{days}"] = true, ["{place}"] = true, ["{count}"] = true, ["{weather}"] = true }
+local KNOWN = { ["{diff}"] = true, ["{gold}"] = true, ["{nth}"] = true, ["{npc}"] = true, ["{steps}"] = true, ["{standing}"] = true, ["{tries}"] = true, ["{days}"] = true, ["{place}"] = true, ["{count}"] = true, ["{weather}"] = true,
+  ["{who}"] = true, ["{foe}"] = true, ["{wins}"] = true, ["{losses}"] = true, ["{kills}"] = true }
 for kind, list in pairs(P) do
   for i, ph in ipairs(list) do
     if "${loc}" == "esES" then
