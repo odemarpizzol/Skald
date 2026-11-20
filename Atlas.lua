@@ -5,6 +5,14 @@
 local ADDON_NAME, ns = ...
 
 local L = ({
+    deDE = {
+        LOADED = "geladen. Seiten erscheinen auf der Weltkarte. |cffffffff/skatlas|r blendet die Marker ein oder aus.",
+        ON = "Marker eingeblendet.",
+        OFF = "Marker ausgeblendet.",
+        NEED = "Skald wird benötigt.",
+        TIER_SET = "Seiten ab Seltenheit %d werden angezeigt.",
+        TIER_HELP = "Verwende |cffffffff/skatlas tier 0-5|r (0 zeigt alles, 5 nur Legendäres). Aktuell: %d.",
+    },
     enUS = {
         LOADED = "loaded. Pages appear on the world map. |cffffffff/skatlas|r toggles pins.",
         ON = "pins shown.",
@@ -125,6 +133,51 @@ end
 
 -- Strings and order for the Map tab (it lives inside the Skald window).
 local UI_TEXT = {
+    deDE = {
+        TAB = "Atlas",
+        SHOW = "Marker auf der Weltkarte anzeigen",
+        OPEN = "Weltkarte öffnen",
+        SUMMARY = "%s: %d %s, %d %s.",
+        PAGE = "Seite",
+        PAGES = "Seiten",
+        PIN = "Marker",
+        PINS = "Marker",
+        HIDDEN = "%d durch Filter verborgen.",
+        HIDDEN_ONE = "1 durch Filter verborgen.",
+        NONE = "Hier wurden noch keine Seiten aufgezeichnet.",
+        WHEN = "Zeitraum",
+        RANGE_ALL = "Alles",
+        RANGE_SESSION = "Diese Sitzung",
+        RANGE_TODAY = "Heute",
+        FAVONLY = "Nur Lieblingserinnerungen",
+        REGION = "Dieses Gebiet",
+        FIRST_VISIT = "Erster Besuch: %s",
+        R_LINE1 = "Quests: %d   Stürze: %d   Gegner: %d",
+        R_LINE2 = "Stufen: %d   Gegenstände: %d   Favoriten: %d",
+        CLICK_OPEN = "Klicken, um die Seite im Buch zu öffnen",
+        NOT_SHOWN = "Diese Seite wird im Buch nicht angezeigt.",
+        STATUS = "%d von %d Seiten dieses Orts werden angezeigt.",
+        STATUS_NONE = "Keine Seite dieses Orts passt zu den Filtern.",
+        OPACITY = "Deckkraft der Marker",
+        OPACITY_HINT = "Blassere Marker lassen die Questmarker des Spiels besser erkennen.",
+        RARITY = "Niedrigste angezeigte Seltenheit",
+        KINDS = "Angezeigte Seiten",
+        KIND = {
+            quest = "Quests",
+            level = "Stufen",
+            milestone = "Meilensteine",
+            death = "Tode",
+            boss = "Gegner",
+            dungeon = "Dungeons",
+            zone = "Lande",
+            mount = "Reittiere",
+            guild = "Gilde",
+            party = "Gruppe",
+            pet = "Gefährten",
+            achievement = "Erfolge",
+            profession = "Handwerk",
+        },
+    },
     enUS = {
         TAB = "Atlas", SHOW = "Show pins on the world map", OPEN = "Open the world map",
         SUMMARY = "%s: %d %s, %d %s.", PAGE = "page", PAGES = "pages", PIN = "pin", PINS = "pins",

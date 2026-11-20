@@ -9,8 +9,10 @@
 ## Notes-esES: Escribe automáticamente la crónica de tu viaje por Azeroth, con tu propia voz. Usa /skald.
 ## Title-esMX: Skald
 ## Notes-esMX: Escribe automáticamente la crónica de tu viaje por Azeroth, con tu propia voz. Usa /skald.
+## Title-deDE: Skald
+## Notes-deDE: Schreibt die Chronik deiner Reise durch Azeroth automatisch in deiner eigenen Stimme. Mit /skald öffnest du das Buch.
 ## Author: Oddynho
-## Version: 1.0.8
+## Version: 1.1.0
 ## OptionalDeps: Spoken, QuestDB
 ## X-Skald-Chronicle-Art: crest,divider,quill,state
 ## Category: Roleplay

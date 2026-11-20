@@ -23,7 +23,8 @@ function UnitXPMax() return 100000 end; function UnitXP() return 0 end
 function UnitLevel() return 20 end; function UnitName() return "Tester" end; function UnitExists() return false end
 function GetQuestID() return 0 end; function UnitGUID() return "P1" end
 function UnitFactionGroup() return "Alliance" end
-function UnitClass() return "Mage","MAGE" end; function UnitRace() return "Night Elf","NightElf" end
+function UnitClass() return __locale=="deDE" and "Magierin" or "Mage","MAGE" end
+function UnitRace() return __locale=="deDE" and "Nachtelfe" or "Night Elf","NightElf" end
 function SetPortraitTexture() end; function GetZoneText() return "Elwynn Forest" end
 function time(t) if t then return os.time(t) end return os.time() end
 function GetStatisticsCategoryList() return {} end; function GetStatistic() return "--" end; function GetMoney() return 0 end

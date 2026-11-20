@@ -50,6 +50,7 @@ check(model.saga.every(c => /^ui_saga_(camp_alliance|camp_horde|walker|scroll|wa
 check(R.sagaArtFor({ key: 'prologue', art: 'ui_saga_camp_horde' }, { race: 'Night Elf' }) === 'ui_saga_camp_horde', 'explicit chapter art preserves the exported faction');
 check(R.sagaArtFor({ key: 'prologue' }, { race: 'Elfo Noturno' }) === 'ui_saga_camp_alliance' && R.sagaArtFor({ key: 'prologue' }, { race: 'Mort-vivant' }) === 'ui_saga_camp_horde', 'legacy chapters infer known factions from localized races');
 check(R.sagaArtFor({ key: 'prologue' }, { race: 'Unknown' }) === 'ui_saga_walker', 'unknown legacy races use a neutral illustration');
+check(R.sagaArtFor({ key: 'prologue' }, { race: 'Nachtelfe' }) === 'ui_saga_camp_alliance' && R.sagaArtFor({ key: 'prologue' }, { race: 'Untote' }) === 'ui_saga_camp_horde', 'German legacy race names preserve the faction artwork');
 check(R.sagaArtFor({ key: 'epilogue', art: '../../external' }, {}) === 'ui_saga_epilogue' && R.sagaArtFor({ key: 'unknown', art: 'https://example.com/image.png' }, {}) === null, 'only bundled Saga artwork can be selected');
 
 // New metadata is optional; the same parser still reads exports made before it existed.
@@ -108,13 +109,13 @@ SkaldCharDB.entries[2].favNote = string.rep("margin ", 60) .. "END"
   }
 } finally { fs.rmSync(temp, { recursive: true, force: true }); }
 
-for (const locale of ['esES', 'esMX']) {
+for (const locale of ['esES', 'esMX', 'deDE']) {
   const file = path.join(os.tmpdir(), 'skald_reader_' + locale + '_fixture.txt');
   const result = spawnSync(process.execPath, [path.join(__dirname, 'reader_sample.js'), path.join(__dirname, 'fixtures/reader_saved.lua'), file, locale], { encoding: 'utf8' });
   if (require('./check_helpers').toolFailure(result, /written/)) { fail(locale + ': exporter failed: ' + (result.stderr || result.stdout)); continue; }
   const parsed = R.build(R.readParts(fs.readFileSync(file, 'utf8')));
   check(parsed.locale === locale && parsed.pages.length >= 5 && parsed.saga.length >= 3, locale + ': export/import keeps the client locale and all content');
-  check(parsed.saga.some(c => c.title === 'Epílogo') && parsed.saga.every(c => !/[{}]/.test(c.text)), locale + ': actual Spanish Saga survives export');
+  check(parsed.saga.some(c => c.title === (locale === 'deDE' ? 'Epilog' : 'Epílogo')) && parsed.saga.every(c => !/[{}]/.test(c.text)), locale + ': localized Saga survives export');
   fs.unlinkSync(file);
 }
 

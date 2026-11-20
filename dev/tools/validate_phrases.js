@@ -15,6 +15,7 @@ const FORBID = {
   en: ['battle', 'blade', 'steel', 'fight', 'fought', 'slain', 'blood', 'sweat', 'sword', 'enemy', 'foe', 'kill', 'war'],
   pt: ['batalha', 'lâmina', 'lamina', 'aço', 'luta', 'sangue', 'suor', 'espada', 'inimigo', 'matar', 'guerra'],
   es: ['batalla', 'espada', 'acero', 'combate', 'sangre', 'enemigo', 'matar', 'guerra'],
+  de: ['schlacht', 'klinge', 'stahl', 'kampf', 'kämpf', 'blut', 'schwert', 'feind', 'krieg', 'töten'],
 };
 // phrases that name a forbidden word only to deny it
 const ALLOW = [/not every deed needs a sword/, /no blood was spilled/, /nem todo feito pede uma espada/, /nenhum sangue foi derramado/,
@@ -23,8 +24,8 @@ const QUEST_POOLS = ['questDelivery', 'questDeliveryNotable', 'questGather', 'qu
   'questExplore', 'questExploreNotable', 'questSeek', 'questSeekNotable', 'questChain',
   'fact_above', 'fact_below', 'fact_rich', 'fact_first', 'fact_milestone', 'fact_back', 'fact_fallen'];
 
-for (const loc of ['enUS', 'ptBR', 'frFR', 'esES']) {
-  const vocabulary = FORBID[loc === 'enUS' ? 'en' : loc === 'esES' ? 'es' : 'pt'];
+for (const loc of ['enUS', 'ptBR', 'frFR', 'esES', 'deDE']) {
+  const vocabulary = FORBID[loc === 'enUS' ? 'en' : loc === 'esES' ? 'es' : loc === 'deDE' ? 'de' : 'pt'];
   run(`__locale="${loc}"; frames={}; SkaldDB=nil; SkaldCharDB=nil
 TIMERS={}; C_Timer={After=function(t,fn) table.insert(TIMERS,fn) end}
 function GetGuildInfo() return nil end; function IsInInstance() return false,"none" end
@@ -58,12 +59,12 @@ local function CheckUI(base, translated, path)
     end
 end
 CheckUI(ns.LOCALES.enUS, ns.LOCALES["${loc}"], "${loc}")
-if "${loc}" == "esES" then
+if "${loc}" == "esES" or "${loc}" == "deDE" then
     if ns.LOCALES.esMX ~= ns.LOCALES.esES then problems[#problems+1] = "SPANISH ALIAS" end
     for kind, original in pairs(ns.LOCALES.enUS.phrases) do
         local translated = P[kind]
         if type(translated) ~= "table" or #translated < math.max(${POOL_AIM}, #original) then
-            problems[#problems+1] = "SPANISH POOL COVERAGE " .. kind
+            problems[#problems+1] = "POOL COVERAGE " .. kind
         end
     end
 end
@@ -71,6 +72,9 @@ local NO_NAME = { party = true, day = true, anniv7 = true, anniv30 = true, anniv
 local KNOWN = { ["{diff}"] = true, ["{gold}"] = true, ["{nth}"] = true, ["{npc}"] = true, ["{steps}"] = true, ["{standing}"] = true, ["{tries}"] = true, ["{days}"] = true, ["{place}"] = true, ["{count}"] = true, ["{weather}"] = true }
 for kind, list in pairs(P) do
   for i, ph in ipairs(list) do
+    if "${loc}" == "deDE" then
+      for j = 1, i - 1 do if ph == list[j] then problems[#problems+1] = "GERMAN REPEAT " .. kind .. "#" .. i end end
+    end
     if "${loc}" == "esES" then
       if ph:find(string.char(194, 160), 1, true) then problems[#problems+1] = "SPANISH NBSP " .. kind .. "#" .. i end
       local plain = ph:gsub("{[^}]*}", "")
@@ -206,11 +210,12 @@ POOLTEXT = table.concat(dump, string.char(10))`);
     'cavaleiro da morte', 'chevalier de la mort', 'demon hunter', 'caçador de demônios', 'chasseur de démons', 'evoker',
     'évocateur', 'dracthyr', 'shadowlands', 'terras sombrias', 'ombreterre', 'azerite', 'azerita', 'azérite', 'argus',
     'teldrassil burn', 'queima de teldrassil', 'incendie de teldrassil', 'caballero de la muerte', 'cazador de demonios',
-    'evocador', 'tierras sombrías', 'quema de teldrassil'];
+    'evocador', 'tierras sombrías', 'quema de teldrassil', 'todesritter', 'dämonenjäger', 'rufer', 'schattenlande'];
   const TBC = ['outland', 'terralém', 'outreterre', 'shattrath', 'exodar', 'naaru', 'sunwell', 'poço do sol', 'puits de soleil',
     'draenei', 'elfo sangrento', 'elfos sangrentos', 'elfe de sang', 'elfes de sang', 'blood elf', 'velen', 'draenor',
     'legião ardente', 'légion ardente', 'burning legion', 'silvermoon', 'luaprata', "lune-d'argent", 'terrallende',
-    'fuente del sol', 'elfo de sangre', 'elfa de sangre', 'elfos de sangre', 'elfas de sangre', 'legión ardiente', 'lunargenta'];
+    'fuente del sol', 'elfo de sangre', 'elfa de sangre', 'elfos de sangre', 'elfas de sangre', 'legión ardiente', 'lunargenta',
+    'scherbenwelt', 'sonnenbrunnen', 'blutelf', 'brennende legion', 'silbermond'];
   const found = [];
   for (const f of ['Locales.lua', 'Saga.lua', 'Curated.lua', 'Goals.lua']) {
     let pool = null;

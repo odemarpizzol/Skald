@@ -1105,7 +1105,8 @@ end
 -- that sets the scene after it: the light of the line could be another one than the one the phrase says.
 K.TIME_WORDS = { "morning", "tonight", "evening", "afternoon", "dawn", "dusk", "night", "midday", "noon", "sunrise", "sunset",
     "manhã", "madrugada", "tarde", "noite", "amanhecer", "entardecer", "anoitecer", "crepúsculo", "meio-dia",
-    "matin", "soir", "nuit", "après-midi", "aube", "crépuscule", "midi", "lever du", "coucher du" }
+    "matin", "soir", "nuit", "après-midi", "aube", "crépuscule", "midi", "lever du", "coucher du",
+    "morgen", "abend", "nacht", "mittag", "dämmerung", "sonnenaufgang", "sonnenuntergang" }
 K.NamesTimeOfDay = function(text)
     if type(text) ~= "string" then return false end
     local lower = text:lower()
@@ -1192,13 +1193,17 @@ ns.InstanceName = function(e)
             if C.INSTANCE_NAMES_ESMX then
                 for iid, name in pairs(C.INSTANCE_NAMES_ESMX) do K.InstanceByName[name] = iid end
             end
+            if C.INSTANCE_NAMES_DE_TBC then
+                for iid, name in pairs(C.INSTANCE_NAMES_DE_TBC) do K.InstanceByName[name] = iid end
+            end
         end
         id = K.InstanceByName[e.zone]
     end
     local list = id and names[id]
     if not list then return nil end
-    local idx = ({ ptBR = 2, frFR = 3, esES = 4, esMX = 4 })[GetLocale and GetLocale() or "enUS"] or 1
-    return (GetLocale() == "esMX" and C.INSTANCE_NAMES_ESMX and C.INSTANCE_NAMES_ESMX[id]) or list[idx]
+    local idx = ({ ptBR = 2, frFR = 3, esES = 4, esMX = 4, deDE = 5 })[GetLocale and GetLocale() or "enUS"] or 1
+    return (GetLocale() == "esMX" and C.INSTANCE_NAMES_ESMX and C.INSTANCE_NAMES_ESMX[id])
+        or (GetLocale() == "deDE" and not ns.IsForever() and C.INSTANCE_NAMES_DE_TBC and C.INSTANCE_NAMES_DE_TBC[id]) or list[idx]
 end
 ns.PlaceName = function(e)
     if e.kind == "dungeon" then return ns.InstanceName(e) or e.zone end
@@ -1238,10 +1243,10 @@ end
 -- Durotar and wrong for "Ilha Névoa Lazúli" ("Na Ilha...", "A Ilha ... me recebeu"). The first word of the name says its gender
 -- and number when it is a noun of a place; any other name (Durotar, Orgrimmar, Ventobravo, "As Minas Mortas") is left as it is.
 K.PLACE_NOUNS = {
-    f = "Ilha Floresta Costa Planície Península Baía Ponte Cidade Fortaleza Aldeia Vila Torre Caverna Gruta Cratera Praia Região Passagem Garganta Bacia Clareira Estrada Colina Montanha Serra Cordilheira Terra Mina Cripta Ruína Selva Fonte Nascente Ravina Abadia Praça Câmara Ponta Enseada Represa Savana Tundra Pradaria Baixada Encosta Escarpa Lagoa Geleira Caldeira",
-    m = "Terraço Vale Lago Pântano Deserto Monte Bosque Porto Forte Ponto Campo Rio Mar Passo Covil Acampamento Posto Santuário Templo Palácio Castelo Reduto Entreposto Mirante Barranco Desfiladeiro Abismo Altiplano Planalto Cânion Poço Jardim Cemitério Mosteiro Salão Pico Bastião Cume Istmo Rochedo Penhasco Túnel Orfanato Vulcão Lamaçal",
-    fp = "Planícies Colinas Montanhas Terras Ruínas Cavernas Minas Catacumbas Profundezas Cataratas Ilhas Florestas Costas Cordilheiras Pradarias Gargantas Fontes Torres Passagens Savanas Geleiras Clareiras",
-    mp = "Pântanos Montes Campos Picos Bosques Vales Lagos Desertos Salões Túneis Penhascos Bastiões Desfiladeiros",
+    f = "Ilha Floresta Costa Planície Península Baía Ponte Cidade Fortaleza Aldeia Vila Torre Caverna Gruta Cratera Praia Região Passagem Garganta Bacia Clareira Estrada Colina Montanha Serra Cordilheira Terra Mina Cripta Ruína Selva Fonte Nascente Ravina Abadia Praça Câmara Ponta Enseada Represa Savana Tundra Pradaria Baixada Encosta Escarpa Lagoa Geleira Caldeira Barreira Bastilha Cidadela Espiral Fornalha Mata Muralha Trilha Arena",
+    m = "Terraço Vale Lago Pântano Deserto Monte Bosque Porto Forte Ponto Campo Rio Mar Passo Covil Acampamento Posto Santuário Templo Palácio Castelo Reduto Entreposto Mirante Barranco Desfiladeiro Abismo Altiplano Planalto Cânion Poço Jardim Cemitério Mosteiro Salão Pico Bastião Cume Istmo Rochedo Penhasco Túnel Orfanato Vulcão Lamaçal Contraforte Antigo Cerro Espelho Gládio Labirinto Metrô Monastério Núcleo Olho Platô Pátio Urzal Brejo Pantanal",
+    fp = "Planícies Colinas Montanhas Terras Ruínas Cavernas Minas Catacumbas Profundezas Cataratas Ilhas Florestas Costas Cordilheiras Pradarias Gargantas Fontes Torres Passagens Savanas Geleiras Clareiras Estepes Tumbas",
+    mp = "Pântanos Montes Campos Picos Bosques Vales Lagos Desertos Salões Túneis Penhascos Bastiões Desfiladeiros Sertões Ermos Portões",
 }
 K.PLACE_GENDER = {}
 for gender, words in pairs(K.PLACE_NOUNS) do
@@ -1253,16 +1258,16 @@ K.PLACE_FORMS = {   -- the article, and its contractions with em, de, a and por
     fp = { art = "as", em = "nas", de = "das", a = "às", por = "pelas" },
     mp = { art = "os", em = "nos", de = "dos", a = "aos", por = "pelos" },
 }
-K.PLACE_KINDS = { weather = true, zone = true, death = true, revive = true, hearth = true, home = true, dungeon = true }   -- the pages whose %s is a place
+K.PLACE_KINDS = { weather = true, zone = true, death = true, revive = true, hearth = true, home = true, dungeon = true, bg = true }   -- the pages whose %s is a place
 -- `phrase` with the article put where `token` (the %s, or a {tag} of the Saga) stands for `name`: em, de, a and por become
 -- na/no, da/do, à/ao and pela/pelo; after any other word, or at the start, the article comes before the name.
 -- French: the same, for à and de (au, à la, aux, à l'; du, de la, des, de l', and d' before a bare name that starts with a
 -- vowel: d'Elwynn), and the article put after dans, sur, vers, depuis and devant. A name that carries its own article ("Les
 -- Tarides") loses it where the preposition takes it ("aux Tarides"). A name no noun below tells is left as it was.
 K.PLACE_NOUNS_FR = {
-    f = "Forêt Vallée Île Baie Côte Plaine Colline Montagne Grotte Caverne Mine Tour Forteresse Cité Ville Terre Crique Falaise Passe Route Rivière Source Prairie Savane Jungle Lande Citadelle Abbaye Cathédrale Chapelle Salle Crypte Fosse Gorge Brèche Cascade Péninsule Région Zone Frontière Marche Steppe Toundra Dune Oasis Cime Clairière Auberge Taverne Mer Rive Presqu'île Gorge Voie",
-    m = "Mont Marais Désert Plateau Lac Pic Cap Gouffre Ravin Bois Fleuve Détroit Camp Village Port Refuge Poste Pont Temple Palais Château Repaire Sanctuaire Bastion Fort Domaine Cimetière Canyon Défilé Rivage Littoral Territoire Quartier Donjon Cratère Glacier Récif Archipel Continent Royaume Havre Bourg Hameau Belvédère Océan Val Col Sentier Chemin Marché",
-    p = "Plaines Collines Montagnes Terres Ruines Cavernes Mines Catacombes Profondeurs Cascades Îles Forêts Côtes Clairières Prairies Gorges Falaises Salles Tours Sources Landes Steppes Dunes Marches Monts Pics Bois Lacs Déserts Canyons Défilés Bastions Récifs Vallées Marécages Champs",
+    f = "Forêt Vallée Île Baie Côte Plaine Colline Montagne Grotte Caverne Mine Tour Forteresse Cité Ville Terre Crique Falaise Passe Route Rivière Source Prairie Savane Jungle Lande Citadelle Abbaye Cathédrale Chapelle Salle Crypte Fosse Gorge Brèche Cascade Péninsule Région Zone Frontière Marche Steppe Toundra Dune Oasis Cime Clairière Auberge Taverne Mer Rive Presqu'île Gorge Voie Ile Arène Terrasse",
+    m = "Mont Marais Désert Plateau Lac Pic Cap Gouffre Ravin Bois Fleuve Détroit Camp Village Port Refuge Poste Pont Temple Palais Château Repaire Sanctuaire Bastion Fort Domaine Cimetière Canyon Défilé Rivage Littoral Territoire Quartier Donjon Cratère Glacier Récif Archipel Continent Royaume Havre Bourg Hameau Belvédère Océan Val Col Sentier Chemin Marché Bassin Berceau-de-l'Hiver Cœur Goulet Hall Kraal Labyrinthe Marécage Monastère Mur Sommet Tram Viaduc",
+    p = "Plaines Collines Montagnes Terres Ruines Cavernes Mines Catacombes Profondeurs Cascades Îles Forêts Côtes Clairières Prairies Gorges Falaises Salles Tours Sources Landes Steppes Dunes Marches Monts Pics Lacs Déserts Canyons Défilés Bastions Récifs Vallées Marécages Champs Contreforts Cryptes Grottes Hautes-terres Maleterres Portes Remparts Souilles Tombes-mana",
 }
 K.PLACE_GENDER_FR = {}
 for gender, words in pairs(K.PLACE_NOUNS_FR) do
@@ -1313,13 +1318,175 @@ K.PlaceArticlesFr = function(phrase, name, token)
             before = before:sub(1, #before - #word - 1)
             head = word:match("^%u") and "D'" or "d'"
             if before ~= "" and not before:match("%s$") then before = before .. " " end
+        elseif (word == "que" or word == "Que") and bare then   -- "que Onyxia" -> "qu'Onyxia"
+            before = before:sub(1, #before - #word - 1)
+            head = word == "Que" and "Qu'" or "qu'"
+            if before ~= "" and not before:match("%s$") then before = before .. " " end
         end
         result = before .. head .. literal
         from = at + #token
     end
     return result .. phrase:sub(from)
 end
+-- German: a land named by a common noun takes its article and its case from the word before it ("im Brachland",
+-- "von den Sümpfen des Elends", "nach Die Todesminen" -> "in die Todesminen", "im Scharlachroten Kloster"); a proper name
+-- (Westfall, Durotar, Sturmwind, Burg Schattenfang, Onyxias Hort) is left as it is. The head noun of the name (the last
+-- word before "von", "der", "des"...) tells the gender by its ending; an article the client gives ("Die Todesminen")
+-- wins over the ending. After a colon, a quote or a word that names ("heißt", "namens") the name is left as given.
+K.DE_PLACE_WORDS = { ["hügel"] = "p", ["exodar"] = "f", ["mechanar"] = "f", ["botanika"] = "f", ["arkatraz"] = "f", ["auge"] = "n",
+    ["unterstadt"] = false, ["beutebucht"] = false }
+K.DE_PLACE_ENDS = {   -- longest first, so "tiefen" is tried before "tiefe" and "hochland" before "land"
+    { "unterkünfte", "p" }, { "königreiche", "p" }, { "lichtungen", "p" }, { "marschen", "p" }, { "pestländer", "p" },
+    { "halbinsel", "f" }, { "labyrinth", "n" }, { "bollwerk", "n" }, { "heiligtum", "n" }, { "terrasse", "f" },
+    { "schlucht", "f" }, { "festung", "f" }, { "lichtung", "f" }, { "gebirge", "n" }, { "kloster", "n" }, { "verlies", "n" },
+    { "hochland", "n" }, { "plateau", "n" }, { "abgrund", "m" }, { "schlund", "m" }, { "brunnen", "m" }, { "enklave", "f" },
+    { "schlacht", "f" }, { "gefängnis", "n" }, { "kammer", "f" }, { "krypta", "f" }, { "gruften", "p" }, { "höhlen", "p" },
+    { "hallen", "p" }, { "ruinen", "p" }, { "inseln", "p" }, { "felder", "p" }, { "wälder", "p" }, { "länder", "p" },
+    { "sümpfe", "p" }, { "tiefen", "p" }, { "minen", "p" }, { "lande", "p" }, { "steppe", "f" }, { "grotte", "f" },
+    { "spitze", "f" }, { "küste", "f" }, { "insel", "f" }, { "halle", "f" }, { "höhle", "f" }, { "feste", "f" }, { "gruft", "f" },
+    { "flucht", "f" }, { "narbe", "f" }, { "stadt", "f" }, { "wacht", "f" }, { "ebene", "f" }, { "wüste", "f" }, { "tiefe", "f" },
+    { "höhe", "f" }, { "bahn", "f" }, { "welt", "f" }, { "krater", "m" }, { "kessel", "m" }, { "morast", "m" }, { "tempel", "m" },
+    { "gipfel", "m" }, { "canyon", "m" }, { "hügel", "m" }, { "hafen", "m" }, { "platz", "m" }, { "sturm", "m" }, { "strom", "m" },
+    { "brand", "m" }, { "sumpf", "m" }, { "wald", "m" }, { "kral", "m" }, { "kern", "m" }, { "hort", "m" }, { "pass", "m" },
+    { "grat", "m" }, { "turm", "m" }, { "see", "m" }, { "becken", "n" }, { "kreuz", "n" }, { "lager", "n" }, { "dorf", "n" },
+    { "land", "n" }, { "meer", "n" }, { "moor", "n" }, { "tal", "n" },
+}
+K.DE_TAIL = { von = true, der = true, des = true, am = true, im = true, um = true, aus = true, bei = true, zu = true, ["über"] = true, unter = true }
+K.DE_ART = {
+    m = { nom = "der", acc = "den", dat = "dem" }, f = { nom = "die", acc = "die", dat = "der" },
+    n = { nom = "das", acc = "das", dat = "dem" }, p = { nom = "die", acc = "die", dat = "den" },
+}
+K.DE_DAT = { ["in"] = true, an = true, auf = true, bei = true, von = true, aus = true, mit = true, zu = true, seit = true, vor = true,
+    unter = true, ["über"] = true, ["Über"] = true, hinter = true, neben = true, zwischen = true, ["gegenüber"] = true, nahe = true,
+    ["außer"] = true }
+K.DE_ACC = { durch = true, ["für"] = true, ["Für"] = true, gegen = true, ohne = true, um = true }
+K.DE_BARE_AFTER = { namens = true, Namen = true, Ortsnamen = true, ["heißt"] = true, ["hieß"] = true, ["heißen"] = true,
+    ["hießen"] = true, lautet = true, lautete = true, und = true }   -- "und": the second of two names told side by side
+K.DE_NAMING = { namens = true, Namen = true, Ortsnamen = true }
+K.DE_JOIN = { ["in dem"] = "im", ["an dem"] = "am", ["bei dem"] = "beim", ["von dem"] = "vom", ["zu dem"] = "zum",
+    ["zu der"] = "zur", ["in das"] = "ins" }
+-- The parts of a German name of a land: gender ("m", "f", "n", "p"), the adjectives before the head, the head and the rest.
+K.DePlaceParts = function(name)
+    if name:find(":", 1, true) then return nil end
+    local words = {}
+    for word in name:gmatch("%S+") do words[#words + 1] = word end
+    local article = ({ Der = "m", Die = "d", Das = "n" })[words[1]]
+    local first = article and 2 or 1
+    if not words[first] then return nil end
+    local last = #words
+    for i = first + 1, #words do
+        if K.DE_TAIL[words[i]] then last = i - 1; break end
+    end
+    if last < first then return nil end
+    -- "Onyxias Hort", "Gruuls Unterschlupf", "Tarrens Mühle": a name that belongs to someone takes no article
+    if last > first and words[first]:find("[^e]s$") then return nil end
+    local head = words[last]
+    local lower = head:lower()
+    local gender = K.DE_PLACE_WORDS[lower]
+    if gender == false then return nil end
+    if gender == nil then
+        for _, pair in ipairs(K.DE_PLACE_ENDS) do
+            if #lower >= #pair[1] and lower:sub(-#pair[1]) == pair[1] then gender = pair[2]; break end
+        end
+    end
+    if article == "m" or article == "n" then gender = article
+    elseif article == "d" then gender = (gender == "f") and "f" or (gender == "p" and "p") or (gender and "p") or "f" end
+    if not gender then return nil end
+    local adjectives = {}
+    for i = first, last - 1 do adjectives[#adjectives + 1] = words[i] end
+    local rest = {}
+    for i = last + 1, #words do rest[#rest + 1] = words[i] end
+    return gender, adjectives, head, table.concat(rest, " ")
+end
+-- The name with its article in a case: "nom", "acc" or "dat".
+K.DePlaceForm = function(name, case)
+    local gender, adjectives, head, rest = K.DePlaceParts(name)
+    if not gender then return nil end
+    local out = { K.DE_ART[gender][case] }
+    local weak = (gender ~= "p") and (case == "nom" or (case == "acc" and gender ~= "m"))
+    for _, word in ipairs(adjectives) do
+        local stem = word:match("^(.-)en$") or word:match("^(.-)er$") or word:match("^(.-)es$") or word:match("^(.-)e$")
+        if stem and #stem > 1 then word = stem .. (weak and "e" or "en") end
+        out[#out + 1] = word
+    end
+    if gender == "p" and case == "dat" and not head:find("[ns]$") then head = head .. "n" end
+    out[#out + 1] = head
+    if rest ~= "" then out[#out + 1] = rest end
+    return table.concat(out, " "), gender, head
+end
+K.PlaceArticlesDe = function(phrase, name, token)
+    if not K.DePlaceParts(name) then return phrase end
+    local result, from = "", 1
+    while true do
+        local at = phrase:find(token, from, true)
+        if not at then break end
+        local before = result .. phrase:sub(from, at - 1)
+        local literal = token
+        local word = before:match("(%S+) $")
+        local case, prep
+        if before == "" or before:match("[%.!?] $") then case = "nom"
+        elseif word and not word:find("[%p\226]$") and not K.DE_BARE_AFTER[word] then
+            local lowerWord = word:lower()
+            if K.DE_DAT[word] or K.DE_DAT[lowerWord] then case, prep = "dat", word
+            elseif lowerWord == "nach" then case, prep = "acc", (word:find("^N") and "In" or "in")
+            elseif K.DE_ACC[word] or K.DE_ACC[lowerWord] then case = "acc"
+            else case = "acc" end
+        end
+        -- left as given, but its own article is written small inside the sentence: "Mein Ziel: die Todesminen."
+        local own = name:match("^(%a+) ")
+        if not case and word and (word:find(":$") or K.DE_BARE_AFTER[word]) and (own == "Der" or own == "Die" or own == "Das") then
+            -- after "namens" / "den Namen" a bare name reads best: "eine Geschichte namens Todesminen"
+            literal = K.DE_NAMING[word] and name:sub(#own + 2) or ("d" .. name:sub(2))
+            if token == "%s" then literal = literal:gsub("%%", "%%%%") end
+        end
+        if case then
+            local form, _, head = K.DePlaceForm(name, case)
+            if form then
+                if prep then
+                    before = before:sub(1, #before - #word - 1)
+                    local joined = form:match("^(%S+)")
+                    local lowerPrep = (prep:find("^[\195]") and prep) or prep:lower()
+                    -- one is on an island, not in it: "auf der Azurmythosinsel", "auf die Höllenfeuerhalbinsel"
+                    if lowerPrep == "in" and (head:lower():find("inseln?$") or name:find("^%S* ?Insel ")) then lowerPrep = "auf" end
+                    local short = K.DE_JOIN[lowerPrep .. " " .. joined]
+                    if short then
+                        form = short .. form:sub(#joined + 1)
+                    else
+                        form = lowerPrep .. " " .. form
+                    end
+                    if prep:find("^%u") or prep:find("^\195\156") then
+                        form = (form:sub(1, 2) == "\195\188" and "\195\156" .. form:sub(3)) or (form:sub(1, 1):upper() .. form:sub(2))
+                    end
+                elseif case == "nom" then
+                    form = form:sub(1, 1):upper() .. form:sub(2)
+                end
+                literal = token == "%s" and form:gsub("%%", "%%%%") or form
+            end
+        end
+        result = before .. literal
+        from = at + #token
+    end
+    return result .. phrase:sub(from)
+end
+-- English: a land the client names with its article ("The Barrens", "The Deadmines") takes a small "the" inside a sentence.
+K.PlaceArticlesEn = function(phrase, name, token)
+    if name:sub(1, 4) ~= "The " then return phrase end
+    local small = "the" .. name:sub(4)
+    if token == "%s" then small = small:gsub("%%", "%%%%") end
+    local result, from = "", 1
+    while true do
+        local at = phrase:find(token, from, true)
+        if not at then break end
+        local before = result .. phrase:sub(from, at - 1)
+        local inside = before ~= "" and not before:match("[%.!?]%s*$") and not before:match("[\"\226]$")
+        result = before .. (inside and small or token)
+        from = at + #token
+    end
+    return result .. phrase:sub(from)
+end
 K.PlaceArticles = function(phrase, name, token)
+    if type(phrase) == "string" and type(name) == "string" and ns.LocaleKey() == "deDE" then return K.PlaceArticlesDe(phrase, name, token) end
+    if type(phrase) == "string" and type(name) == "string" and (GetLocale() == "enUS" or GetLocale() == "enGB") then return K.PlaceArticlesEn(phrase, name, token) end
     if type(phrase) == "string" and type(name) == "string" and ns.LocaleKey() == "esES" and name:sub(1, 3) == "El " then
         local result, from = "", 1
         while true do
@@ -1343,8 +1510,12 @@ K.PlaceArticles = function(phrase, name, token)
     end
     if type(phrase) == "string" and type(name) == "string" and GetLocale() == "frFR" then return K.PlaceArticlesFr(phrase, name, token) end
     if type(phrase) ~= "string" or type(name) ~= "string" or GetLocale() ~= "ptBR" then return phrase end
-    local forms = K.PLACE_FORMS[K.PLACE_GENDER[name:match("^(%S+)") or ""] or ""]
+    -- a name the client gives with its own article ("O Cárcere", "O Grande Oceano") loses it where the phrase puts one
+    local own = ({ O = "m", A = "f", Os = "mp", As = "fp" })[name:match("^(%S+) ") or ""]
+    local forms = K.PLACE_FORMS[own or K.PLACE_GENDER[name:match("^(%S+)") or ""] or ""]
     if not forms then return phrase end
+    local bare = own and name:gsub("^%S+ ", "", 1)
+    if bare and token == "%s" then bare = bare:gsub("%%", "%%%%") end
     local result, from = "", 1
     while true do
         local at = phrase:find(token, from, true)
@@ -1369,7 +1540,7 @@ K.PlaceArticles = function(phrase, name, token)
                 end
             end   -- after a quote or a bracket the name is left as it is
         end
-        result = before .. head .. token
+        result = before .. head .. ((head ~= "" and bare) or token)
         from = at + #token
     end
     return result .. phrase:sub(from)
@@ -1403,7 +1574,7 @@ local function RenderEntry(e)
         if city then shown = tostring(city) end
     end
     if e.kind == "goal" and ns.GoalName then shown = ns.GoalName(e.arg) end
-    if ns.ProfessionNameEs then shown = ns.ProfessionNameEs(e) or shown end
+    if ns.ProfessionNameLocalized then shown = ns.ProfessionNameLocalized(e) or shown end
     if e.kind == "loot" then
         local ref, name, quality = ItemParts(e.arg)
         if ref then
@@ -1420,7 +1591,9 @@ local function RenderEntry(e)
         end
     end
     local phrase = list[((e.idx or 1) - 1) % #list + 1]
-    if K.PLACE_KINDS[e.kind] or (e.kind == "flight" and GetLocale() == "ptBR") then phrase = K.PlaceArticles(phrase, shown, "%s") end
+    if K.PLACE_KINDS[e.kind] or (e.kind == "flight" and GetLocale() == "ptBR") then phrase = K.PlaceArticles(phrase, shown, "%s")
+    -- French: a foe or a pet whose name starts with a vowel is elided like a land ("la chute d'Edwin VanCleef", "qu'Onyxia")
+    elseif (e.kind == "boss" or e.kind == "tame") and GetLocale() == "frFR" then phrase = K.PlaceArticlesFr(phrase, tostring(shown), "%s") end
     local text = string.format(phrase, shown)
     text = text:gsub("{weather}", function()
         return tostring((L.WEATHER_WORDS and L.WEATHER_WORDS[e.wk]) or "")
@@ -1430,7 +1603,7 @@ local function RenderEntry(e)
     text = text:gsub("{days}", function() return tostring(e.since or "") end)
     text = text:gsub("{count}", function() return tostring(e.n or "") end)
     local place = tostring((e.pz and ns.ZoneNameOfMap and ns.ZoneNameOfMap(e.pz)) or e.pn or L.UNKNOWN_ZONE)
-    if GetLocale() == "ptBR" then text = K.PlaceArticles(text, place, "{place}") end
+    text = K.PlaceArticles(text, place, "{place}")
     text = text:gsub("{place}", function() return place end)
     text = text:gsub("{standing}", function() return tostring(e.st or "") end)
     text = text:gsub("{npc}", function() return npc end)
@@ -1750,6 +1923,11 @@ K.PROFESSION_BY_NAME = {
     ["ingénierie"] = "engineering", ["herboristerie"] = "herbalism", ["travail du cuir"] = "leatherworking",
     ["minage"] = "mining", ["dépeçage"] = "skinning", ["couture"] = "tailoring",
     ["cuisine"] = "cooking", ["secourisme"] = "firstaid", ["pêche"] = "fishing", ["joaillerie"] = "jewelcrafting",
+    -- deDE (client SkillLine names; lower-case lookup keeps the original spelling for display)
+    ["alchimie"] = "alchemy", ["schmiedekunst"] = "blacksmithing", ["verzauberkunst"] = "enchanting",
+    ["ingenieurskunst"] = "engineering", ["kräuterkunde"] = "herbalism", ["lederverarbeitung"] = "leatherworking",
+    ["bergbau"] = "mining", ["kürschnerei"] = "skinning", ["schneiderei"] = "tailoring",
+    ["kochkunst"] = "cooking", ["erste hilfe"] = "firstaid", ["angeln"] = "fishing", ["juwelenschleifen"] = "jewelcrafting",
 }
 K.PROFESSION_ES = {
     firstaid = "Primeros auxilios",
@@ -1795,11 +1973,18 @@ local function ProfessionKey(skillLine, name)
     end
 end
 
--- Older pages can have a profession's old-language label; Spanish resolves its stable key at read time.
-ns.ProfessionNameEs = function(e)
-    if ns.LocaleKey() ~= "esES" or (e.kind ~= "profession" and e.kind ~= "skill") then return nil end
+K.PROFESSION_DE = {
+    alchemy = "Alchimie", blacksmithing = "Schmiedekunst", enchanting = "Verzauberkunst",
+    engineering = "Ingenieurskunst", herbalism = "Kräuterkunde", leatherworking = "Lederverarbeitung",
+    mining = "Bergbau", skinning = "Kürschnerei", tailoring = "Schneiderei", cooking = "Kochkunst",
+    firstaid = "Erste Hilfe", fishing = "Angeln", jewelcrafting = "Juwelenschleifen",
+}
+-- Resolve old-language profession labels through stable keys, without rewriting stored pages.
+ns.ProfessionNameLocalized = function(e)
+    local locale = ns.LocaleKey()
+    if (locale ~= "esES" and locale ~= "deDE") or (e.kind ~= "profession" and e.kind ~= "skill") then return nil end
     local key = e.pf or ProfessionKey(e.skillLine, e.arg)
-    local names = ns.IsForever() and K.PROFESSION_ES or K.PROFESSION_ES_TBC
+    local names = locale == "deDE" and K.PROFESSION_DE or (ns.IsForever() and K.PROFESSION_ES or K.PROFESSION_ES_TBC)
     local name = key and names[key]
     if not name then return nil end
     local suffix = e.kind == "skill" and type(e.arg) == "string" and e.arg:match("(%s+%d+)$") or ""
@@ -6613,6 +6798,10 @@ for i, name in ipairs({ "murci\195\169lago", "oso", "jabal\195\173", "carro\195\
     K.FAMILY_ICONS[i][#K.FAMILY_ICONS[i] + 1] = name
 end
 K.FAMILY_ICONS[14][#K.FAMILY_ICONS[14] + 1] = "zancaalta" -- esMX CreatureFamily 12
+-- German CreatureFamily names in the same icon order; these are also used for old pet records.
+for i, name in ipairs({ "fledermaus", "bär", "eber", "aasvogel", "krokilisk", "katze", "krebs", "gorilla", "hyäne", "raubvogel", "raptor", "skorpid", "spinne", "weitschreiter", "schildkröte", "windnatter", "wolf" }) do
+    K.FAMILY_ICONS[i][#K.FAMILY_ICONS[i] + 1] = name
+end
 
 -- Our own pet art (Textures\\pet_<family>.tga) is used once it is in the style of the book; until then, the game's icons.
 K.OWN_PET_ART = true
@@ -6638,16 +6827,23 @@ K.FAMILY_BOX = {
 -- Portuguese one. A name we know in any of the three languages is shown in the language of now; any other (the game's
 -- own word for a family we do not list) is shown as saved.
 K.FAMILY_NAMES = {
-    { enUS = "Bat", esES = "Murci\195\169lago", ptBR = "Morcego", frFR = "Chauve-souris" }, { enUS = "Bear", esES = "Oso", ptBR = "Urso", frFR = "Ours" },
-    { enUS = "Boar", esES = "Jabal\195\173", ptBR = "Javali", frFR = "Sanglier" }, { enUS = "Carrion Bird", esES = "Carro\195\177ero", ptBR = "Ave de Carni\195\167a", frFR = "Charognard" },
-    { enUS = "Crab", esES = "Cangrejo", ptBR = "Caranguejo", frFR = "Crabe" }, { enUS = "Crocolisk", esES = "Crocolisco", ptBR = "Crocolisco", frFR = "Crocolisque" },
-    { enUS = "Cat", esES = "Felino", ptBR = "Gato", frFR = "F\195\169lin" }, { enUS = "Gorilla", esES = "Gorila", ptBR = "Gorila", frFR = "Gorille" },
-    { enUS = "Hyena", esES = "Hiena", ptBR = "Hiena", frFR = "Hy\195\168ne" }, { enUS = "Owl", esES = "Ave rapaz", ptBR = "Coruja", frFR = "Chouette" },
-    { enUS = "Raptor", esES = "Raptor", ptBR = "Raptor", frFR = "Raptor" }, { enUS = "Scorpid", esES = "Esc\195\179rpido", ptBR = "Escorpi\195\173deo", frFR = "Scorpide" },
-    { enUS = "Spider", esES = "Ara\195\177a", ptBR = "Aranha", frFR = "Araign\195\169e" }, { enUS = "Wolf", esES = "Lobo", ptBR = "Lobo", frFR = "Loup" },
-    { enUS = "Turtle", esES = "Tortuga", ptBR = "Tartaruga", frFR = "Tortue" },
-    { enUS = "Tallstrider", esES = "Zancudo", esMX = "Zancaalta" },
-    { enUS = "Wind Serpent", esES = "Serpiente alada", esMX = "Serpiente alada" },
+    { enUS = "Bat", esES = "Murci\195\169lago", ptBR = "Morcego", frFR = "Chauve-souris", deDE = "Fledermaus" },
+    { enUS = "Bear", esES = "Oso", ptBR = "Urso", frFR = "Ours", deDE = "Bär" },
+    { enUS = "Boar", esES = "Jabal\195\173", ptBR = "Javali", frFR = "Sanglier", deDE = "Eber" },
+    { enUS = "Carrion Bird", esES = "Carro\195\177ero", ptBR = "Ave de Carni\195\167a", frFR = "Charognard", deDE = "Aasvogel" },
+    { enUS = "Crab", esES = "Cangrejo", ptBR = "Caranguejo", frFR = "Crabe", deDE = "Krebs" },
+    { enUS = "Crocolisk", esES = "Crocolisco", ptBR = "Crocolisco", frFR = "Crocolisque", deDE = "Krokilisk" },
+    { enUS = "Cat", esES = "Felino", ptBR = "Gato", frFR = "F\195\169lin", deDE = "Katze" },
+    { enUS = "Gorilla", esES = "Gorila", ptBR = "Gorila", frFR = "Gorille", deDE = "Gorilla" },
+    { enUS = "Hyena", esES = "Hiena", ptBR = "Hiena", frFR = "Hy\195\168ne", deDE = "Hyäne" },
+    { enUS = "Owl", esES = "Ave rapaz", ptBR = "Coruja", frFR = "Chouette", deDE = "Raubvogel" },
+    { enUS = "Raptor", esES = "Raptor", ptBR = "Raptor", frFR = "Raptor", deDE = "Raptor" },
+    { enUS = "Scorpid", esES = "Esc\195\179rpido", ptBR = "Escorpi\195\173deo", frFR = "Scorpide", deDE = "Skorpid" },
+    { enUS = "Spider", esES = "Ara\195\177a", ptBR = "Aranha", frFR = "Araign\195\169e", deDE = "Spinne" },
+    { enUS = "Wolf", esES = "Lobo", ptBR = "Lobo", frFR = "Loup", deDE = "Wolf" },
+    { enUS = "Turtle", esES = "Tortuga", ptBR = "Tartaruga", frFR = "Tortue", deDE = "Schildkröte" },
+    { enUS = "Tallstrider", esES = "Zancudo", esMX = "Zancaalta", deDE = "Weitschreiter" },
+    { enUS = "Wind Serpent", esES = "Serpiente alada", esMX = "Serpiente alada", deDE = "Windnatter" },
 }
 Mile.FamilyLabel = function(fam)
     if type(fam) ~= "string" or fam == "" then return fam end
@@ -7591,7 +7787,7 @@ ns.CheckMemory = function()
         Mile.memoryIdx[bestPool] = idx
         local place = tostring(ns.ZoneNameOfMap(zid) or best.zone or L.UNKNOWN_ZONE)
         local phrase = list[idx]
-        if GetLocale() == "ptBR" then phrase = K.PlaceArticles(phrase, place, "%s") end
+        phrase = K.PlaceArticles(phrase, place, "%s")
         text = string.format(phrase, place)
     end
     ns.ShowNotice(L.MEMORY_TITLE, text, 3, 9, best)

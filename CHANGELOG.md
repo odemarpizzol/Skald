@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.0
+
+- **German** (deDE): the whole diary, the Saga, the quest stories, every tab and the web Reader, with 2,630 lines for the pages. German place names take their article and case ("im Brachland", "in den Sümpfen des Elends", "auf der Höllenfeuerhalbinsel", "im Scharlachroten Kloster"); professions and pet families are recognised on old pages, and instance names follow the client (Forever or Burning Crusade). Checked with a grammar tool, not yet by a native speaker nor seen in the German client: please report what reads wrong
+- **Places take the right article in every language**: Portuguese and French now know the zone names the client really uses ("nos Sertões", "no Cárcere", "au Bois de la Pénombre", "à l'Ile de Brume-azur"), English writes "in the Barrens", battlegrounds and reunions are told with their articles too, and French elides names ("la chute d'Edwin VanCleef", "qu'Onyxia")
+- **Lands in the plural read right**: Portuguese and French place lines no longer make the land the subject of a verb ("Os Sertões: ali eu caí" instead of "Os Sertões me levou")
+- Language fixes found with a grammar checker in all five languages: French feminine forms ("craintive", "maligne") and spacing, Portuguese Bard titles and two quest stories that still had English names, a Spanish agreement
+
 ## 1.0.8
 
 - **World-map markers keep their size with OpenMap**: OpenMap zooms by scaling the whole map, so the Skald markers grew into giant medallions. They now keep their size on the screen at any zoom, stay where they were, group by what is under the zoom, and sit above the OpenMap art. OpenMap's menu has a "Show markers on the world map" switch for them. Without OpenMap nothing changes. Only seen in a simulation so far: please report what looks wrong

@@ -135,7 +135,7 @@ SkaldAPI.GameFacts=function() return {} end
 assert(ns.GoalFacts().kills==113,"missing fallback")
 RES="ok"`,
 });
-for (const [loc,word] of [['ptBR','estimativa'],['enUS','estimate'],['frFR','estimation'],['esES','estimación'],['esMX','estimación']]) {
+for (const [loc,word] of [['ptBR','estimativa'],['enUS','estimate'],['frFR','estimation'],['esES','estimación'],['esMX','estimación'],['deDE','geschätzt']]) {
   run('daily kill estimates are identified, including legacy pages: '+loc, {
     pre: `__locale="${loc}"`,
     body: `local e={kind="day",arg="2020-01-01",idx=1,day={k=113}}
@@ -188,7 +188,7 @@ RES="ok"`,
 
 
 // Real diary findings: Aelyndra, Forever, 2026-11-05. No private saved data in fixtures.
-for (const loc of ['ptBR', 'enUS', 'frFR', 'esES', 'esMX']) {
+for (const loc of ['ptBR', 'enUS', 'frFR', 'esES', 'esMX', 'deDE']) {
   run('Aelyndra quest stories override old misleading types and racial flavours: ' + loc, {
     pre: `__locale="${loc}"; function UnitSex() return 3 end`,
     body: `local expected = {
@@ -196,7 +196,8 @@ for (const loc of ['ptBR', 'enUS', 'frFR', 'esES', 'esMX']) {
       enUS = { [5621]="healed", [99053]="rescue", [922]="seed", [6342]="hippogryph" },
       frFR = { [5621]="soigné", [99053]="secours", [922]="graine", [6342]="hippogriffe" },
       esES = { [5621]="sanar", [99053]="rescatar", [922]="semilla", [6342]="hipogrifo" },
-      esMX = { [5621]="sanar", [99053]="rescatar", [922]="semilla", [6342]="hipogrifo" }
+      esMX = { [5621]="sanar", [99053]="rescatar", [922]="semilla", [6342]="hipogrifo" },
+      deDE = { [5621]="heilte", [99053]="Rettung", [922]="Samen", [6342]="Hippogryph" }
     }
     for id, word in pairs(expected[GetLocale()]) do
       for _, flavour in ipairs({false, "race_NightElf_quest"}) do
@@ -413,7 +414,8 @@ RES = (#goals >= 40 and repeated == 0) and "ok" or ("goals " .. #goals .. ", a p
 
 run('the voice of each old race has its lines for a quest in every supported locale: at least eight, one title each, no number, nothing of a later time', {
   body: `local bad, count = {}, 0
-for _, loc in ipairs({ "enUS", "ptBR", "frFR", "esES", "esMX" }) do
+local locales={ "enUS", "ptBR", "frFR", "esES", "esMX", "deDE" }
+for _, loc in ipairs(locales) do
   local P = ns.LOCALES[loc].phrases
   for _, race in ipairs({ "Human", "Dwarf", "NightElf", "Gnome", "Orc", "Scourge", "Tauren", "Troll" }) do
     local pool = P["race_" .. race .. "_quest"]
@@ -427,7 +429,7 @@ for _, loc in ipairs({ "enUS", "ptBR", "frFR", "esES", "esMX" }) do
     end
   end
 end
-RES = (#bad == 0 and count == 40) and "ok" or table.concat(bad, " ; ")`,
+RES = (#bad == 0 and count == 8 * #locales) and "ok" or ("pools=" .. count .. "; " .. table.concat(bad, " ; "))`,
 });
 
 run('the voice "Of My People": a quest of a race with lines of its own is told with them, a quest of the highest seals keeps its own telling, and a race without lines raises no error', {
@@ -558,7 +560,7 @@ for _, e in ipairs(SkaldCharDB.entries) do if e.kind == "zone" and e ~= first th
 local ok2 = late and late.fl ~= "race_Orc_start"
 -- every line holds the place once, and none holds a digit
 local bad = {}
-for _, loc in ipairs({ "enUS", "ptBR", "frFR", "esES", "esMX" }) do
+for _, loc in ipairs({ "enUS", "ptBR", "frFR", "esES", "esMX", "deDE" }) do
   for _, race in ipairs({ "Orc", "Human", "Dwarf", "Gnome", "NightElf", "Tauren", "Troll", "Scourge", "Draenei", "BloodElf" }) do
     local pool = ns.LOCALES[loc].phrases["race_" .. race .. "_start"]
     if type(pool) ~= "table" or #pool < 8 then bad[#bad + 1] = loc .. " " .. race .. " size" else
@@ -569,10 +571,11 @@ end
 RES = (ok1 and ok2 and #bad == 0 and SkaldDB.errors == nil) and "ok" or ("first=" .. tostring(first and first.fl) .. " late=" .. tostring(late and late.fl) .. " bad=" .. table.concat(bad, ","))`,
 });
 
-run('the Draenei and the Blood Elves have lines of their own in the three languages: for a land, a fall, a rising level and a quest', {
+run('the Draenei and the Blood Elves have lines of their own in every supported locale: for a land, a fall, a rising level and a quest', {
   body: `local bad, count = {}, 0
 local kinds = { zone = 1, death = 1, quest = 1, kinLevel = 0 }   -- how many titles or places each line holds
-for _, loc in ipairs({ "enUS", "ptBR", "frFR", "esES", "esMX" }) do
+local locales={ "enUS", "ptBR", "frFR", "esES", "esMX", "deDE" }
+for _, loc in ipairs(locales) do
   local P = ns.LOCALES[loc].phrases
   for _, race in ipairs({ "Draenei", "BloodElf" }) do
     for kind, names in pairs(kinds) do
@@ -588,7 +591,7 @@ for _, loc in ipairs({ "enUS", "ptBR", "frFR", "esES", "esMX" }) do
     end
   end
 end
-RES = (#bad == 0 and count == 40) and "ok" or table.concat(bad, " ; ")`,
+RES = (#bad == 0 and count == 8 * #locales) and "ok" or ("pools=" .. count .. "; " .. table.concat(bad, " ; "))`,
 });
 
 run('a Draenei or a Blood Elf in the voice "Of My People": the level, the land, the fall and the quest are told with the lines of the race', {
@@ -629,7 +632,7 @@ function GetProfessionInfo(i) if i == 1 then return "Cooking", nil, 1, nil, nil,
   body: `local byLine = SkaldAPI.ProfessionKey(755, nil)
 local byName = SkaldAPI.ProfessionKey(nil, "Joalheria") == "jewelcrafting" and SkaldAPI.ProfessionKey(nil, "Joaillerie") == "jewelcrafting" and SkaldAPI.ProfessionKey(nil, "Jewelcrafting 150") == "jewelcrafting"
 local pools = true
-for _, loc in ipairs({ "enUS", "ptBR", "frFR", "esES", "esMX" }) do local P = ns.LOCALES[loc].phrases.profession_jewelcrafting; if type(P) ~= "table" or #P < 8 then pools = false end end
+for _, loc in ipairs({ "enUS", "ptBR", "frFR", "esES", "esMX", "deDE" }) do local P = ns.LOCALES[loc].phrases.profession_jewelcrafting; if type(P) ~= "table" or #P < 8 then pools = false end end
 fire("SKILL_LINES_CHANGED"); runTimers()
 local page, n = nil, 0
 for _, e in ipairs(SkaldCharDB.entries) do if e.kind == "profession" and e.pf == "jewelcrafting" then page = e; n = n + 1 end end
@@ -671,7 +674,7 @@ local noTop = not at65:lower():find("top of the world", 1, true)
 local sevenNotSixty = at70:find("70", 1, true) and not at70:lower():find("sixty", 1, true)
 local oldTop = at60:lower():find("top of the world", 1, true)
 local pools = true
-for _, loc in ipairs({ "enUS", "ptBR", "frFR", "esES", "esMX" }) do
+for _, loc in ipairs({ "enUS", "ptBR", "frFR", "esES", "esMX", "deDE" }) do
   for _, ph in ipairs(ns.SagaTexts[loc].POOLS.epilogueTop) do
     local low = ph:lower()
     if low:find("sixty", 1, true) or low:find("sessenta", 1, true) or low:find("soixante", 1, true) then pools = false end
@@ -1281,7 +1284,7 @@ assert(not W.owner, "closing the map keeps the wheel")
 RES = "ok"`,
 });
 
-for (const locale of ['enUS', 'ptBR', 'frFR', 'esES', 'esMX']) run('Atlas wheel: localized controls and theme changes keep the selected group in ' + locale, {
+for (const locale of ['enUS', 'ptBR', 'frFR', 'esES', 'esMX', 'deDE']) run('Atlas wheel: localized controls and theme changes keep the selected group in ' + locale, {
   pre: `__locale = "${locale}"`,
   body: `${ATLAS_WHEEL_FIXTURE}
 local pin = setup(3)
@@ -2468,7 +2471,7 @@ for _, phrase in ipairs(T.epilogue) do
   assert(not phrase:find("{level}",1,true) and not phrase:find("{name}",1,true), "closing repeats level or changes person")
   assert(phrase:find("{#pages:",1,true) or phrase:find("{pages}",1,true), "closing lost page count")
 end
-for _, loc in ipairs({ "ptBR", "enUS", "frFR", "esES", "esMX" }) do
+for _, loc in ipairs({ "ptBR", "enUS", "frFR", "esES", "esMX", "deDE" }) do
   for _, phrase in ipairs(ns.SagaTexts[loc].POOLS.falls) do
     assert(not phrase:lower():find("curandeiro",1,true) and not phrase:lower():find("spirit healer",1,true)
       and not phrase:lower():find("guérisseur",1,true), "death count claimed spirit healer visits")
@@ -4051,7 +4054,7 @@ p.rows[1]._OnClick(p.rows[1])
 local offSaid = B.playing == nil and rawget(p.off, "_text") == ns.LOCALES.enUS.BARD_MUSIC_OFF
 MUSIC.cvars.Sound_EnableMusic = "1"
 local miss = {}
-for _, loc in ipairs({ "enUS", "ptBR", "frFR", "esES", "esMX" }) do
+for _, loc in ipairs({ "enUS", "ptBR", "frFR", "esES", "esMX", "deDE" }) do
   local L = ns.LOCALES[loc]
   for _, k in ipairs({ "BARD_TAB", "BARD_LEFT", "BARD_RIGHT", "BARD_PLAYING", "BARD_STOPPED", "BARD_PICK", "BARD_VOLUME", "BARD_VOL_NOTE", "BARD_MUSIC_OFF", "BARD_TIP_PLAY", "BARD_TIP_STOP", "BARD_TIP_PREV", "BARD_TIP_NEXT", "BARD_GAME_VOLUME", "BARD_FOOTNOTE", "BARD_HUD_CLOSED", "BARD_HUD_TIP" }) do
     if type(L[k]) ~= "string" or L[k] == "" then miss[#miss + 1] = loc .. "." .. k end
@@ -4197,7 +4200,7 @@ local skipPrev = B.playing == 4
 p.miniStopArt._OnClick(p.miniStopArt)
 local stopped = B.playing == nil and skipNext and skipPrev
 local miss = {}
-for _, loc in ipairs({ "enUS", "ptBR", "frFR", "esES", "esMX" }) do
+for _, loc in ipairs({ "enUS", "ptBR", "frFR", "esES", "esMX", "deDE" }) do
   local L = ns.LOCALES[loc]
   if type(L.BARD_HUD_LABEL) ~= "string" or not L.BARD_HUD_LABEL:find("%s", 1, true) or type(L.BARD_HUDS) ~= "table" or #L.BARD_HUDS ~= 4 then miss[#miss + 1] = loc end
 end
@@ -4372,7 +4375,7 @@ local round = SkaldDB.tabStyle == "leather" and pic(days):find("tab_idle", 1, tr
 p.lookBack._OnClick(p.lookBack)
 local back = SkaldDB.tabStyle == "wood" and pic(days):find("tab_wood_idle", 1, true) ~= nil
 local miss = {}
-for _, loc in ipairs({ "enUS", "ptBR", "frFR", "esES", "esMX" }) do
+for _, loc in ipairs({ "enUS", "ptBR", "frFR", "esES", "esMX", "deDE" }) do
   local L = ns.LOCALES[loc]
   if type(L.OPT_TABLOOK) ~= "string" or type(L.TAB_LOOKS) ~= "table" or #L.TAB_LOOKS ~= 5 then miss[#miss + 1] = loc end
 end
@@ -4624,7 +4627,7 @@ assert(unknown.map._desaturated and not unknown.stamp:IsShown() and visited.stam
 RES = "ok"`,
 });
 
-for (const locale of ['enUS', 'ptBR', 'frFR', 'esES', 'esMX']) run('dark mode: saved night appearance loads in ' + locale, {
+for (const locale of ['enUS', 'ptBR', 'frFR', 'esES', 'esMX', 'deDE']) run('dark mode: saved night appearance loads in ' + locale, {
   pre: `__locale = "${locale}"; SkaldDB = { darkMode = true }`,
   body: `assert(ns.IsDarkMode(), "saved mode ignored")
 local switch
@@ -4665,7 +4668,7 @@ local old = SkaldDB.paperStyle == "old"
 pb.clean._OnClick(pb.clean)
 local clean = SkaldDB.paperStyle == nil
 local miss = {}
-for _, loc in ipairs({ "enUS", "ptBR", "frFR", "esES", "esMX" }) do
+for _, loc in ipairs({ "enUS", "ptBR", "frFR", "esES", "esMX", "deDE" }) do
   local L = ns.LOCALES[loc]
   if type(L.OPT_PAPER) ~= "string" or type(L.PAPER_NAMES) ~= "table" or not (L.PAPER_NAMES.clean and L.PAPER_NAMES.travel and L.PAPER_NAMES.war and L.PAPER_NAMES.old) then miss[#miss + 1] = loc end
 end
@@ -4727,7 +4730,7 @@ local flavored = 0
 for lv = 2, 60 do function UnitLevel() return lv end; fire("PLAYER_LEVEL_UP", lv); runTimers()
   local e = SkaldCharDB.entries[#SkaldCharDB.entries]
   if e.kind == "level" and e.fl == "race_Skyborne_level" then flavored = flavored + 1 end end
-RES = (kept == 2001 and text:find("Zephras Isle", 1, true) and text:find("The Skyreach", 1, true) and flavored > 0) and "ok"
+RES = (kept == 2001 and text:find("Zephras Isle", 1, true) and text:find("the Skyreach", 1, true) and flavored > 0) and "ok"
   or ("birthMap=" .. tostring(kept) .. " flavored=" .. flavored .. " saga: " .. text:sub(1, 200))`,
 });
 
@@ -4866,7 +4869,7 @@ RES = (before == false and on and sample and clean and off and SkaldDB.errors ==
 
 run('the PvP tab line of the diary: ten or more lines in each language, none with a number, and it moves on with each match but holds still between them', {
   body: `local bad = {}
-for _, loc in ipairs({ "enUS", "ptBR", "frFR", "esES", "esMX" }) do
+for _, loc in ipairs({ "enUS", "ptBR", "frFR", "esES", "esMX", "deDE" }) do
   local ok, UI = pcall(function() return ns.Pvp.TEXTS[loc] end)
   local list = ok and UI and UI.LINES
   if not list or #list < 10 then bad[#bad + 1] = loc .. " pool " .. tostring(list and #list) else
@@ -5014,7 +5017,7 @@ assert(p.orderItems.shuffle.active, "refresh lost shuffle selection")
 p.orderItems.sequential._OnClick(p.orderItems.sequential)
 assert(SkaldDB.bardShuffle == false and not B.Shuffle(), "sequential not saved")
 assert(p.orderItems.sequential.active and not p.orderItems.shuffle.active, "sequential not marked")
-for _, loc in ipairs({ "enUS", "ptBR", "frFR", "esES", "esMX" }) do
+for _, loc in ipairs({ "enUS", "ptBR", "frFR", "esES", "esMX", "deDE" }) do
   for _, key in ipairs({ "BARD_REPERTOIRE", "BARD_PLAY_ORDER", "BARD_SEQUENTIAL" }) do
     assert(type(ns.LOCALES[loc][key]) == "string" and ns.LOCALES[loc][key] ~= "", "missing playback label")
   end
@@ -5027,8 +5030,53 @@ run('Spanish clients share one complete locale and Saga table; unknown locale ke
   body: `assert(ns.LOCALES.esES == ns.LOCALES.esMX, "Spanish prose duplicated")
 assert(ns.SagaTexts.esES == ns.SagaTexts.esMX, "Spanish Saga duplicated")
 assert(ns.LocaleKey("esMX") == "esES" and ns.LocaleKey("deDE") == "deDE", "locale normalization changed fallback")
-assert((ns.LOCALES.deDE or ns.LOCALES.enUS) == ns.LOCALES.enUS, "unknown locale lost English")
+assert((ns.LOCALES.xxXX or ns.LOCALES.enUS) == ns.LOCALES.enUS, "unknown locale lost English")
 RES = "ok"`,
+});
+
+for (const [profile, label, name] of [['', 'Classic/TBC', 'Burg Schattenfang'], [FOREVER, 'Forever', 'Burg Shadowfang']]) {
+  run('German ' + label + ': old entries localize instances, professions and pet families without changing saved values', {
+    pre: profile + `\n__locale="deDE"; function UnitSex() return 3 end
+function UnitClass() return "Jägerin","HUNTER" end
+function UnitRace() return "Nachtelfe","NightElf" end`,
+    body: `local e={kind="dungeon",iid=33,zone="Shadowfang Keep",arg="Shadowfang Keep",idx=1}
+assert(ns.LocaleKey()=="deDE" and ns.LOCALES.deDE~=ns.LOCALES.enUS,"German fallback")
+assert(ns.InstanceName(e)=="${name}","wrong client instance name")
+assert(ns.InstanceName({zone="Burg Schattenfang"})=="${name}","old German TBC name not recognized")
+assert(SkaldAPI.Render(e):find("${name}",1,true),"instance not rendered")
+assert(e.zone=="Shadowfang Keep" and e.arg=="Shadowfang Keep" and e.idx==1,"entry rewritten")
+for key,name in pairs({alchemy="Alchimie",blacksmithing="Schmiedekunst",enchanting="Verzauberkunst",engineering="Ingenieurskunst",herbalism="Kräuterkunde",leatherworking="Lederverarbeitung",mining="Bergbau",skinning="Kürschnerei",tailoring="Schneiderei",cooking="Kochkunst",firstaid="Erste Hilfe",fishing="Angeln",jewelcrafting="Juwelenschleifen"}) do
+  assert(SkaldAPI.ProfessionKey(nil,name)==key,"profession lookup: "..name)
+end
+local p={kind="skill",pf="herbalism",arg="Herbalism 150",idx=1}
+assert(SkaldAPI.Render(p):find("Kräuterkunde 150",1,true),"historical profession label")
+assert(p.arg=="Herbalism 150","profession rewritten")
+assert(ns.FamilyLabel("Bear")=="Bär" and ns.FamilyLabel("Crab")=="Krebs" and ns.FamilyLabel("Owl")=="Raubvogel","pet family lookup")
+assert(ns.Search.Fold("ÄÖÜ äöü ß ẞ")=="aou aou ss ss","German Unicode folding")
+local found=false
+for _,g in ipairs(ns.Cartographer.Places()) do for _,item in ipairs(g.items) do
+  if item.id==33 then assert(item.name=="${name}","Cartographer disagrees"); found=true end
+end end
+assert(found,"instance missing")
+local L=ns.LOCALES.deDE
+assert(btn(L.BARD_TAB) and btn(L.SEARCH_TAB) and btn(L.TAB_SETTINGS),"German tabs unavailable")
+RES="ok"`,
+  });
+}
+
+for (const sex of [2,3]) run('German Saga uses localized identity and complete chapters for sex ' + sex, {
+  pre: `__locale="deDE"; function UnitSex() return ${sex} end
+function UnitClass() return "${sex === 3 ? 'Jägerin' : 'Jäger'}","HUNTER" end
+function UnitRace() return "${sex === 3 ? 'Nachtelfe' : 'Nachtelf'}","NightElf" end`,
+  body: `SkaldCharDB.entries={{kind="zone",arg="Teldrassil",zone="Teldrassil",t=NOW-86400,idx=1},{kind="level",arg=20,zone="Dunkelküste",t=NOW,idx=1}}
+SkaldCharDB.stats.first=NOW-86400
+local chapters=ns.BuildSaga(); local text={}; local titles={}
+for _,c in ipairs(chapters) do text[#text+1]=c.text; titles[c.title]=true end
+local full=table.concat(text," ")
+assert(titles["Prolog"] and titles["Der Weg"] and titles["Epilog"],"English Saga fallback")
+assert(not full:find("[{}]"),"unresolved Saga variable")
+assert(full:find("Stufe",1,true),"German narrative missing")
+RES="ok"`,
 });
 
 for (const locale of ['esES','esMX']) {
@@ -5069,8 +5117,105 @@ RES="ok"`,
   });
 }
 
+// Found in the German review: "in Sümpfe des Elends", "von Die Todesminen", "Verwüstete Lande ist ...". German lands named by
+// a common noun take article and case from the word before them; every German place line must read right with a plural name.
+run('German place articles: case from the preposition, adjectives declined, proper names untouched', {
+  pre: `__locale="deDE"`,
+  body: `local function say(phrase, name) return (ns.PlaceArticles(phrase, name, "%s"):format(name)) end
+local cases = {
+  {"Ich starb in %s.", "Brachland", "Ich starb im Brachland."},
+  {"Ich starb in %s.", "Sümpfe des Elends", "Ich starb in den Sümpfen des Elends."},
+  {"Ich starb in %s.", "Die Todesminen", "Ich starb in den Todesminen."},
+  {"Der Wind von %s.", "Scharlachrotes Kloster", "Der Wind vom Scharlachroten Kloster."},
+  {"Unser Weg führte nach %s.", "Die Todesminen", "Unser Weg führte in die Todesminen."},
+  {"Unser Weg führte nach %s.", "Versunkener Tempel", "Unser Weg führte in den Versunkenen Tempel."},
+  {"Unser Weg führte nach %s.", "Westfall", "Unser Weg führte nach Westfall."},
+  {"Ich starb in %s.", "Höllenfeuerhalbinsel", "Ich starb auf der Höllenfeuerhalbinsel."},
+  {"Über %s regte sich etwas.", "Verwüstete Lande", "Über den Verwüsteten Landen regte sich etwas."},
+  {"Wer %s betritt.", "Dämmerwald", "Wer den Dämmerwald betritt."},
+  {"%s! Ein Wegweiser.", "Brennende Steppe", "Die Brennende Steppe! Ein Wegweiser."},
+  {"Mein Ort: %s.", "Die Todesminen", "Mein Ort: die Todesminen."},
+  {"Eine Geschichte namens %s.", "Die Todesminen", "Eine Geschichte namens Todesminen."},
+  {"%s: Dort fiel ich.", "Die Todesminen", "Die Todesminen: Dort fiel ich."},
+  {"Mein Anfang heißt %s.", "Wald von Elwynn", "Mein Anfang heißt Wald von Elwynn."},
+  {"Ich starb in %s.", "Onyxias Hort", "Ich starb in Onyxias Hort."},
+  {"Ich starb in %s.", "Burg Schattenfang", "Ich starb in Burg Schattenfang."},
+  {"Ich starb in %s.", "Unterstadt", "Ich starb in Unterstadt."},
+  {"Ich starb in %s.", "100%-Land", "Ich starb im 100%-Land."},
+}
+for _, c in ipairs(cases) do
+  local got = say(c[1], c[2])
+  assert(got == c[3], "German article: " .. c[1] .. " / " .. c[2] .. " -> " .. got)
+end
+assert(ns.PlaceArticles("Schon damals führte unser Weg nach {place}.", "Todesminen", "{place}") == "Schon damals führte unser Weg in die Todesminen.", "{place} tag")
+-- every German line of a place, told with a plural land: no bare name after a preposition, no plural name as the subject of a verb
+local preps = { "in", "im", "von", "vom", "über", "vor", "nach", "bei", "aus", "mit", "zu", "auf", "unter", "hinter", "durch", "für", "wie" }
+for key, pool in pairs(ns.LOCALES.deDE.phrases) do
+  local isPlace = key:find("_zone$") or key:find("_death$") or key:find("_hearth$") or key:find("_dungeon$") or key:find("_start$")
+    or key:find("^weather") or key:find("_weather$") or key:find("^memory") or ({ zone = 1, death = 1, hearth = 1, home = 1, dungeon = 1, revive = 1, reviveHealer = 1 })[key]
+  if isPlace then
+    for _, line in ipairs(pool) do
+      local got = say(line, "Sümpfe des Elends")
+      for _, p in ipairs(preps) do
+        assert(not got:find(" " .. p .. " Sümpfe", 1, true) and not got:find("^" .. p:gsub("^%l", string.upper) .. " Sümpfe"), "bare name after a preposition in " .. key .. ": " .. got)
+      end
+      assert(not got:find("Sümpfe des Elends %l") or got:find("[%a] die Sümpfe des Elends %l"), "plural land as a singular subject in " .. key .. ": " .. got)
+    end
+  end
+end
+-- the same through the page renderer: a fall, a dungeon and a reunion ({place})
+for i = 1, #ns.LOCALES.deDE.phrases.death do
+  local text = SkaldAPI.Render({ kind = "death", arg = "Sümpfe des Elends", zone = "Sümpfe des Elends", idx = i })
+  assert(text:find("Sümpfe", 1, true) and not text:find(" in Sümpfe", 1, true) and not text:find(" von Sümpfe", 1, true), "death page: " .. text)
+end
+for i = 1, #ns.LOCALES.deDE.phrases.reunion do
+  local text = SkaldAPI.Render({ kind = "reunion", arg = "Thalia", pn = "Die Todesminen", idx = i })
+  for _, p in ipairs({ " in ", " nach ", " von ", " bei ", " seit ", " und " }) do
+    assert(not text:find(p .. "Die Todesminen", 1, true), "reunion page: " .. text)
+  end
+end
+RES="ok"`,
+});
+
+// Found with LanguageTool: names of the client the article tables did not know, or knew wrongly.
+for (const [locale, cases] of [
+  ['ptBR', [['Caí em %s.', 'Sertões', 'Caí nos Sertões.'], ['Caí em %s.', 'Ermos', 'Caí nos Ermos.'], ['Caí em %s.', 'O Cárcere', 'Caí no Cárcere.'],
+    ['%s me esperava.', 'O Cárcere', 'O Cárcere me esperava.'], ['Voltei a %s.', 'Mata Terokkar', 'Voltei à Mata Terokkar.']]],
+  ['frFR', [['Je suis tombé dans %s.', 'Bois de la Pénombre', 'Je suis tombé dans le Bois de la Pénombre.'],
+    ['Je suis tombé à %s.', 'Bois de la Pénombre', 'Je suis tombé au Bois de la Pénombre.'], ['Je suis arrivé à %s.', 'Ile de Brume-azur', "Je suis arrivé à l'Ile de Brume-azur."],
+    ['La chute de %s.', 'Edwin VanCleef', "La chute d'Edwin VanCleef."], ['Je savais que %s tomberait.', 'Onyxia', "Je savais qu'Onyxia tomberait."]]],
+  ['enUS', [['I fell in %s.', 'The Barrens', 'I fell in the Barrens.'], ['%s took me.', 'The Barrens', 'The Barrens took me.'],
+    ['My place: %s.', 'The Deadmines', 'My place: the Deadmines.']]],
+]) run('place articles of the client names in ' + locale, {
+  pre: `__locale="${locale}"`,
+  body: `for _, c in ipairs({ ${cases.map(c => '{' + c.map(x => JSON.stringify(x)).join(',') + '}').join(',')} }) do
+  local got = (ns.PlaceArticles(c[1], c[2], "%s"):format(c[2]))
+  assert(got == c[3], c[1] .. " / " .. c[2] .. " -> " .. got)
+end
+${locale === 'frFR' ? `local e = SkaldAPI.Render({ kind = "reunion", arg = "Thalia", pn = "Les Mortemines", idx = 1 })
+assert(not e:find(" Les Mortemines", 1, true), "French {place} left bare: " .. e)` : ''}
+RES="ok"`,
+});
+
+// Found with LanguageTool: a land as the subject of a verb broke with a plural name ("Os Sertões me levou",
+// "Les Tarides m'a achevé"); in Portuguese and French a place line names the land as a label, never as the subject.
+for (const locale of ['ptBR', 'frFR']) run('no land as the subject of a verb in the ' + locale + ' place lines', {
+  pre: `__locale="${locale}"`,
+  body: `for key, pool in pairs(ns.LOCALES["${locale}"].phrases) do
+  local isPlace = key:find("_zone$") or key:find("_death$") or key:find("_hearth$") or key:find("_dungeon$") or key:find("_start$")
+    or key:find("^weather") or key:find("_weather$") or key:find("^memory") or key:find("^bg")
+    or ({ zone = 1, death = 1, hearth = 1, home = 1, dungeon = 1, revive = 1, reviveHealer = 1 })[key]
+  if isPlace then
+    for _, line in ipairs(pool) do
+      assert(not line:find("^%%s %l") and not line:find("[%.!?] %%s %l"), "land as a subject in " .. key .. ": " .. line)
+    end
+  end
+end
+RES="ok"`,
+});
+
 run('an unknown client locale builds the book and its auxiliary tabs in English', {
-  pre: '__locale="deDE"',
+  pre: '__locale="xxXX"',
   body: `assert(btn(ns.LOCALES.enUS.TAB_SETTINGS),"English settings fallback missing")
 assert(btn("Charts") and btn("Deeds") and btn("Saga"),"auxiliary fallback missing")
 assert(SkaldAPI.Render({kind="zone",arg="Elsewhere",idx=1}):find("Elsewhere",1,true),"English renderer failed")
@@ -5397,7 +5542,7 @@ assert(btn(UI.TAB) and btn(UI.TAB):IsShown(), "explicit command failed with a sa
 RES = "ok"`,
 });
 
-for (const loc of ['enUS', 'ptBR', 'frFR', 'esES', 'esMX']) run('Chronicle G2: localized controls and empty art fallback in ' + loc, {
+for (const loc of ['enUS', 'ptBR', 'frFR', 'esES', 'esMX', 'deDE']) run('Chronicle G2: localized controls and empty art fallback in ' + loc, {
   pre: `__locale = "${loc}"
 GetAddOnMetadata = function() return nil end
 C_AddOns = { GetAddOnMetadata = GetAddOnMetadata }`,
@@ -5970,7 +6115,7 @@ assert(B.Undo())
 assert(next(SkaldCharDB.flags)==nil and SkaldCharDB.days==nil and SkaldCharDB.skills==nil)
 RES="ok"`,
 });
-for (const locale of ['enUS','ptBR','frFR','esES','esMX']) run('old pages follow the current voice and restore original wording: '+locale, {
+for (const locale of ['enUS','ptBR','frFR','esES','esMX','deDE']) run('old pages follow the current voice and restore original wording: '+locale, {
   pre: `__locale="${locale}"`,
   body: `local P=ns.LOCALES[GetLocale()].phrases
 local e={kind="weather",wk="rain",arg="Teldrassil",zone="Teldrassil",idx=1,fl="tone_humor_weather",voice="humor"}

@@ -67,13 +67,28 @@
     tip: { level: 'Nivel %1', giver: 'Encargo de %1', falls: 'Después de %1 caídas', stack: '%1 fabricados', open: 'Haz clic para buscar en Wowhead' }
   };
   T.esMX = T.esES;
+  T.deDE = {
+    title: 'Skald Reader',
+    intro: 'Lies das Tagebuch deines World-of-Warcraft-Charakters als Buch außerhalb des Spiels.',
+    steps: ['Gib im Spiel /skald reader ein.', 'Kopiere jeden Textteil: anklicken, Strg+A, Strg+C.', 'Füge die Teile unten ein. Du kannst sie nacheinander einfügen.'],
+    label: 'Füge hier den Text deines Tagebuchs ein', language: 'Sprache', jumpLabel: 'Tag', open: 'Buch öffnen', clear: 'Leeren', back: 'Erneut einfügen', print: 'Als PDF speichern', sound: 'Geräusch beim Umblättern', turnBack: 'Vorherige Seite', turnOn: 'Nächste Seite',
+    privacy: 'Nichts verlässt diese Seite. Dein Browser liest den Text, ohne ihn irgendwohin zu senden.',
+    part: 'Teil %1 von %2', partBad: 'Teil %1: unvollständig kopiert', waiting: 'Teil %1 fehlt',
+    ready: 'Alle Teile sind da. Du kannst das Buch öffnen.', mixed: 'Diese Teile gehören zu verschiedenen Tagebüchern. Leere das Feld und füge sie erneut ein.',
+    empty: 'Füge den Text aus dem Spiel ein.', diaryOf: 'Tagebuch von %1', level: 'Stufe %1 · %2', story: 'Was bisher geschah', saga: 'Die Saga', days: 'Tage', index: 'Inhalt',
+    day: 'Tag %1', page: 'Seite %1 von %2', pages: 'Seiten %1–%2 von %3', cover: 'Einband', first: 'Erste geschriebene Seite', played: 'Zeit unterwegs', goals: 'Erreichte Ziele', points: 'Zielpunkte',
+    stat: { quest: 'Abgeschlossene Quests', level: 'Gewonnene Stufen', death: 'Stürze', dungeon: 'Besuchte Dungeons', boss: 'Bezwungene Bosse', kill: 'Besiegte Kreaturen' },
+    date: function (d) { return d.toLocaleDateString('de-DE'); }, hours: '%1 Std. %2 Min.', minutes: '%1 Min.', tier: ['Trivial', 'Gewöhnlich', 'Ungewöhnlich', 'Selten', 'Episch', 'Legendär'],
+    truncated: 'Das Tagebuch enthält mehr Seiten als die eingefügten Teile.',
+    tip: { level: 'Stufe %1', giver: 'Vergeben von %1', falls: 'Nach %1 Stürzen', stack: '%1 hergestellt', open: 'Klicken, um auf Wowhead nachzuschlagen' }
+  };
   function languageKey(locale) { return locale === 'esMX' ? 'esES' : locale; }
   var lang = 'ptBR';
   function L() { return T[lang] || T.ptBR; }
   function fmt(s) { var a = arguments; return String(s).replace(/%(\d)/g, function (_, n) { return a[+n] !== undefined ? a[+n] : ''; }); }
   (function pickLanguage() {
     var n = (navigator.language || 'pt-BR').toLowerCase();
-    lang = n.indexOf('es') === 0 ? 'esES' : n.indexOf('fr') === 0 ? 'frFR' : n.indexOf('en') === 0 ? 'enUS' : 'ptBR';
+    lang = n.indexOf('de') === 0 ? 'deDE' : n.indexOf('es') === 0 ? 'esES' : n.indexOf('fr') === 0 ? 'frFR' : n.indexOf('en') === 0 ? 'enUS' : 'ptBR';
   })();
 
   // ---- reading the text ----------------------------------------------------------------------------------------
@@ -382,8 +397,8 @@
     if (chapter.key === 'prologue') {
       // Only legacy exports need this fallback: new exports include the actual faction's art.
       var race = String(book.race || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[\s-]/g, '');
-      var alliance = ['human', 'humano', 'humain', 'dwarf', 'anao', 'nain', 'gnome', 'gnomo', 'nightelf', 'elfonoturno', 'elfedelanuit', 'draenei'];
-      var horde = ['orc', 'orco', 'tauren', 'troll', 'undead', 'mortovivo', 'mortvivant', 'bloodelf', 'elfosangrento', 'elfedesang'];
+      var alliance = ['human', 'humano', 'humain', 'dwarf', 'anao', 'nain', 'gnome', 'gnomo', 'nightelf', 'elfonoturno', 'elfedelanuit', 'draenei', 'mensch', 'zwerg', 'zwergin', 'gnom', 'gnomin', 'nachtelf', 'nachtelfe', 'draeneiin'];
+      var horde = ['orc', 'orco', 'tauren', 'troll', 'undead', 'mortovivo', 'mortvivant', 'bloodelf', 'elfosangrento', 'elfedesang', 'ork', 'orcin', 'trollin', 'untoter', 'untote', 'blutelf', 'blutelfe'];
       if (alliance.indexOf(race) >= 0) return 'ui_saga_camp_alliance';
       if (horde.indexOf(race) >= 0) return 'ui_saga_camp_horde';
       return 'ui_saga_walker';
@@ -672,7 +687,7 @@
     var t = L();
     $('lang').value = languageKey(lang);
     $('lang').setAttribute('aria-label', t.language || 'Language');
-    document.documentElement.lang = lang === 'ptBR' ? 'pt-BR' : lang === 'frFR' ? 'fr' : lang === 'esES' ? 'es' : 'en';
+    document.documentElement.lang = lang === 'ptBR' ? 'pt-BR' : lang === 'frFR' ? 'fr' : lang === 'esES' ? 'es' : lang === 'deDE' ? 'de' : 'en';
     document.title = t.title;
     $('t-title').textContent = t.title;
     $('t-intro').textContent = t.intro;

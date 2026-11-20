@@ -6,6 +6,24 @@
 local _, ns = ...
 
 local UI_TEXT = {
+    deDE = {
+        TAB = "Karten",
+        TITLE = "Kartograf",
+        CHARTED = "%d von %d Gebieten kartiert",
+        OF = "%d von %d",
+        WALKED = "Hier warst du bereits. Klicken, um mehr zu sehen.",
+        NOT_YET = "Noch nicht bereist.",
+        EMPTY = "Noch keine Karten.",
+        BACK = "Zurück zu den Karten",
+        PLACES = "%s: %d von %d besucht",
+        DUNGEONS = "Dungeons",
+        RAIDS = "Schlachtzüge",
+        BGS = "Schlachtfelder",
+        BEEN = "Hier warst du bereits.",
+        HERE = "Hier geschriebene Seiten",
+        NONE_HERE = "An diesem Ort wurden noch keine Seiten geschrieben.",
+        DATE = "%d.%m.%Y",
+    },
     enUS = {
         TAB = "Charts", TITLE = "Cartographer", CHARTED = "%d of %d lands charted", OF = "%d of %d",
         WALKED = "You have walked here. Click for more.", NOT_YET = "Not yet walked.", EMPTY = "No maps yet.",
@@ -59,6 +77,7 @@ C.CELL_W, C.CELL_H = 170, 96   -- four rows from y 46 end at 430, inside the 440
 -- The maps of this client with a drawing: the map must exist in the game (a Burning Crusade land does not on an
 -- older client), sorted by the name the game gives it, accents and case folded so the order is natural.
 local function Fold(s)
+    if ns.LocaleKey() == "deDE" and ns.Search and ns.Search.Fold then return ns.Search.Fold(s) end
     s = string.lower(tostring(s or ""))
     local map = { ["\195\161"] = "a", ["\195\160"] = "a", ["\195\162"] = "a", ["\195\163"] = "a", ["\195\164"] = "a",
         ["\195\169"] = "e", ["\195\168"] = "e", ["\195\170"] = "e", ["\195\173"] = "i", ["\195\174"] = "i",
@@ -83,53 +102,66 @@ function C.List()
 end
 
 -- Places with a map of their own that are not lands: dungeons, raids and battlegrounds, told by the id of the instance
--- (they have no map id in the game). { English, Portuguese, French }
+-- (they have no map id in the game). { English, Portuguese, French, Spanish, German }
 C.INSTANCE_NAMES = {
-    [389] = { "Ragefire Chasm", "Cavernas \195\141gneas", "Gouffre de Ragefeu" , "Sima \195\141gnea" },
-    [36] = { "Deadmines", "Minas Mortas", "Mortemines" , "Minas de la Muerte" },
-    [43] = { "Wailing Caverns", "Caverna Ululante", "Cavernes des Lamentations" , "Cuevas de los Lamentos" },
-    [33] = { "Shadowfang Keep", "Bastilha da Presa Negra", "Donjon d'Ombrecroc" , "Castillo de Colmillo Oscuro" },
-    [48] = { "Blackfathom Deeps", "Profundezas Negras", "Profondeurs de Brassenoire" , "Cavernas de Brazanegra" },
-    [34] = { "Stormwind Stockade", "C\195\161rcere de Ventobravo", "Prison de Stormwind" , "Mazmorras de Ventormenta" },
-    [90] = { "Gnomeregan", "Gnomeregan", "Gnomeregan" , "Gnomeregan" },
-    [47] = { "Razorfen Kraul", "Urzal dos Tuscos", "Kraal de Tranchebauge" , "Horado Rajacieno" },
-    [189] = { "Scarlet Monastery", "Monast\195\169rio Escarlate", "Monast\195\168re \195\169carlate" , "Monasterio Escarlata" },
-    [129] = { "Razorfen Downs", "Urzal dos Mortos", "Souilles de Tranchebauge" , "Zah\195\186rda Rajacieno" },
-    [70] = { "Uldaman", "Uldaman", "Uldaman" , "Uldaman" },
-    [209] = { "Zul'Farrak", "Zul'Farrak", "Zul'Farrak" , "Zul'Farrak" },
-    [349] = { "Maraudon", "Maraudon", "Maraudon" , "Maraudon" },
-    [109] = { "Sunken Temple", "Templo Submerso", "Temple englouti" , "Templo Sumergido" },
-    [230] = { "Blackrock Depths", "Abismo Rocha Negra", "Profondeurs de Rochenoire" , "Profundidades de Roca Negra" },
-    [229] = { "Blackrock Spire", "Pico da Rocha Negra", "Pic Rochenoire" , "Cumbre de Roca Negra" },
-    [329] = { "Stratholme", "Stratholme", "Stratholme" , "Stratholme" },
-    [289] = { "Scholomance", "Scolom\195\162ntia", "Scholomance" , "Scholomance" },
-    [429] = { "Dire Maul", "Gl\195\161dio Cruel", "Hache-tripes" , "La Masacre" },
-    [409] = { "Molten Core", "N\195\186cleo Derretido", "C\197\147ur du Magma" , "N\195\186cleo de Magma" },
-    [249] = { "Onyxia's Lair", "Covil de Onyxia", "Repaire d'Onyxia" , "Guarida de Onyxia" },
-    [469] = { "Blackwing Lair", "Covil Asa Negra", "Repaire de l'Aile noire" , "Guarida Alanegra" },
-    [309] = { "Zul'Gurub", "Zul'Gurub", "Zul'Gurub" , "Zul'Gurub" },
-    [509] = { "Ruins of Ahn'Qiraj", "Ru\195\173nas de Ahn'Qiraj", "Ruines d'Ahn'Qiraj" , "Ruinas de Ahn'Qiraj" },
-    [531] = { "Ahn'Qiraj Temple", "Templo de Ahn'Qiraj", "Temple d'Ahn'Qiraj" , "Templo de Ahn'Qiraj" },
-    [533] = { "Naxxramas", "Naxxramas", "Naxxramas" , "Naxxramas" },
-    [3065] = { "The Hall of Thanes", "Sal\195\163o dos Thanes", "La salle des Thanes" , "El Sal\195\179n de los Feudales" },
-    [2999] = { "Ruins of Lordaeron", "Ru\195\173nas de Lordaeron", "Ruines de Lordaeron" , "Ruinas de Lordaeron" },
-    [2998] = { "Excavation Site: Wetlands", "S\195\173tio de Escava\195\167\195\163o: Pantanal", "Excavations\194\160: les Paluns" , "Excavaci\195\179n: Los Humedales" },
-    [2959] = { "City of Dalaran", "Dalaran", "Cit\195\169 de Dalaran" , "Ciudad de Dalaran" },
-    [2970] = { "The Drowned City", "A Cidade Afogada", "La cit\195\169 engloutie" , "La Ciudad Sumergida" },
-    [3039] = { "Krol'dok Stronghold", "Fortaleza de Krol'Dok", "Forteresse de Krol'dok" , "Basti\195\179n Krol'dok" },
-    [2994] = { "Alcaz Prison", "Pris\195\163o de Alcaz", "Prison d'Alcaz" , "Prisi\195\179n de Alcaz" },
-    [2974] = { "Blackmaw Hold", "Gruta Bocanera", "Blackmaw Hold" , "Basti\195\179n Faucenegra" },
-    [3001] = { "The Shaper's Terrace", "O Terra\195\167o do Moldador", "La terrasse du Fa\195\167onneur" , "El Bancal del Creador" },
-    [3005] = { "Battle for Gilneas", "Batalha por Guiln\195\169as", "Bataille de Giln\195\169as" , "Batalla por Gilneas" },
-    [2997] = { "Darkspear Islands", "Ilhas Lan\195\167anegra", "\195\142les des Sombrelances" , "Islas Lanza Negra" },
-    [2784] = { "Demon Fall Canyon", "C\195\162nion do Dem\195\180nio Ca\195\173do", "Canyon de la Malechute" , "Barranco del Demonio" },
-    [2875] = { "Karazhan Crypts", "Criptas de Karazhan", "Cryptes de Karazhan" , "Criptas de Karazhan" },
-    [2856] = { "Scarlet Enclave", "Enclave Escarlate", "L\226\128\153enclave \195\137carlate" , "Enclave Escarlata" },
-    [489] = { "Warsong Gulch", "Garganta Brado-Guerreiro", "Goulet des Chanteguerres" , "Garganta Grito de Guerra" },
-    [529] = { "Arathi Basin", "Bacia Arathi", "Bassin d'Arathi" , "Cuenca de Arathi" },
-    [30] = { "Alterac Valley", "Vale de Alterac", "Vall\195\169e d'Alterac" , "Valle de Alterac" },
-    [566] = { "Eye of the Storm", "Olho da Tormenta", "\197\146il du cyclone" , "El Ojo de la Tormenta" },
+    [389] = { "Ragefire Chasm", "Cavernas \195\141gneas", "Gouffre de Ragefeu" , "Sima \195\141gnea" , "Ragefireabgrund" },
+    [36] = { "Deadmines", "Minas Mortas", "Mortemines" , "Minas de la Muerte" , "Todesminen" },
+    [43] = { "Wailing Caverns", "Caverna Ululante", "Cavernes des Lamentations" , "Cuevas de los Lamentos" , "Höhlen des Wehklagens" },
+    [33] = { "Shadowfang Keep", "Bastilha da Presa Negra", "Donjon d'Ombrecroc" , "Castillo de Colmillo Oscuro" , "Burg Shadowfang" },
+    [48] = { "Blackfathom Deeps", "Profundezas Negras", "Profondeurs de Brassenoire" , "Cavernas de Brazanegra" , "Blackfathom-Tiefe" },
+    [34] = { "Stormwind Stockade", "C\195\161rcere de Ventobravo", "Prison de Stormwind" , "Mazmorras de Ventormenta" , "Verlies von Stormwind" },
+    [90] = { "Gnomeregan", "Gnomeregan", "Gnomeregan" , "Gnomeregan" , "Gnomeregan" },
+    [47] = { "Razorfen Kraul", "Urzal dos Tuscos", "Kraal de Tranchebauge" , "Horado Rajacieno" , "Kral von Razorfen" },
+    [189] = { "Scarlet Monastery", "Monast\195\169rio Escarlate", "Monast\195\168re \195\169carlate" , "Monasterio Escarlata" , "Scharlachrotes Kloster" },
+    [129] = { "Razorfen Downs", "Urzal dos Mortos", "Souilles de Tranchebauge" , "Zah\195\186rda Rajacieno" , "Hügel von Razorfen" },
+    [70] = { "Uldaman", "Uldaman", "Uldaman" , "Uldaman" , "Uldaman" },
+    [209] = { "Zul'Farrak", "Zul'Farrak", "Zul'Farrak" , "Zul'Farrak" , "Zul'Farrak" },
+    [349] = { "Maraudon", "Maraudon", "Maraudon" , "Maraudon" , "Maraudon" },
+    [109] = { "Sunken Temple", "Templo Submerso", "Temple englouti" , "Templo Sumergido" , "Versunkener Tempel" },
+    [230] = { "Blackrock Depths", "Abismo Rocha Negra", "Profondeurs de Rochenoire" , "Profundidades de Roca Negra" , "Blackrocktiefen" },
+    [229] = { "Blackrock Spire", "Pico da Rocha Negra", "Pic Rochenoire" , "Cumbre de Roca Negra" , "Blackrockspitze" },
+    [329] = { "Stratholme", "Stratholme", "Stratholme" , "Stratholme" , "Stratholme" },
+    [289] = { "Scholomance", "Scolom\195\162ntia", "Scholomance" , "Scholomance" , "Scholomance" },
+    [429] = { "Dire Maul", "Gl\195\161dio Cruel", "Hache-tripes" , "La Masacre" , "Düsterbruch" },
+    [409] = { "Molten Core", "N\195\186cleo Derretido", "C\197\147ur du Magma" , "N\195\186cleo de Magma" , "Geschmolzener Kern" },
+    [249] = { "Onyxia's Lair", "Covil de Onyxia", "Repaire d'Onyxia" , "Guarida de Onyxia" , "Onyxias Hort" },
+    [469] = { "Blackwing Lair", "Covil Asa Negra", "Repaire de l'Aile noire" , "Guarida Alanegra" , "Pechschwingenhort" },
+    [309] = { "Zul'Gurub", "Zul'Gurub", "Zul'Gurub" , "Zul'Gurub" , "Zul'Gurub" },
+    [509] = { "Ruins of Ahn'Qiraj", "Ru\195\173nas de Ahn'Qiraj", "Ruines d'Ahn'Qiraj" , "Ruinas de Ahn'Qiraj" , "Ruinen von Ahn'Qiraj" },
+    [531] = { "Ahn'Qiraj Temple", "Templo de Ahn'Qiraj", "Temple d'Ahn'Qiraj" , "Templo de Ahn'Qiraj" , "Tempel von Ahn'Qiraj" },
+    [533] = { "Naxxramas", "Naxxramas", "Naxxramas" , "Naxxramas" , "Naxxramas" },
+    [3065] = { "The Hall of Thanes", "Sal\195\163o dos Thanes", "La salle des Thanes" , "El Sal\195\179n de los Feudales" , "Die Halle der Thanen" },
+    [2999] = { "Ruins of Lordaeron", "Ru\195\173nas de Lordaeron", "Ruines de Lordaeron" , "Ruinas de Lordaeron" , "Ruinen von Lordaeron" },
+    [2998] = { "Excavation Site: Wetlands", "S\195\173tio de Escava\195\167\195\163o: Pantanal", "Excavations\194\160: les Paluns" , "Excavaci\195\179n: Los Humedales" , "Ausgrabungsstätte: Sumpfland" },
+    [2959] = { "City of Dalaran", "Dalaran", "Cit\195\169 de Dalaran" , "Ciudad de Dalaran" , "Dalaran" },
+    [2970] = { "The Drowned City", "A Cidade Afogada", "La cit\195\169 engloutie" , "La Ciudad Sumergida" , "Die Versunkene Stadt" },
+    [3039] = { "Krol'dok Stronghold", "Fortaleza de Krol'Dok", "Forteresse de Krol'dok" , "Basti\195\179n Krol'dok" , "Feste Krol'dok" },
+    [2994] = { "Alcaz Prison", "Pris\195\163o de Alcaz", "Prison d'Alcaz" , "Prisi\195\179n de Alcaz" , "Gefängnis von Alcaz" },
+    [2974] = { "Blackmaw Hold", "Gruta Bocanera", "Blackmaw Hold" , "Basti\195\179n Faucenegra" , "Die Schwarzschlundfeste" },
+    [3001] = { "The Shaper's Terrace", "O Terra\195\167o do Moldador", "La terrasse du Fa\195\167onneur" , "El Bancal del Creador" , "Die Terrasse des Formers" },
+    [3005] = { "Battle for Gilneas", "Batalha por Guiln\195\169as", "Bataille de Giln\195\169as" , "Batalla por Gilneas" , "Die Schlacht um Gilneas" },
+    [2997] = { "Darkspear Islands", "Ilhas Lan\195\167anegra", "\195\142les des Sombrelances" , "Islas Lanza Negra" , "Darkspear-Inseln" },
+    [2784] = { "Demon Fall Canyon", "C\195\162nion do Dem\195\180nio Ca\195\173do", "Canyon de la Malechute" , "Barranco del Demonio" , "Demonfall-Canyon" },
+    [2875] = { "Karazhan Crypts", "Criptas de Karazhan", "Cryptes de Karazhan" , "Criptas de Karazhan" , "Karazhangruften" },
+    [2856] = { "Scarlet Enclave", "Enclave Escarlate", "L\226\128\153enclave \195\137carlate" , "Enclave Escarlata" , "Scharlachrote Enklave" },
+    [489] = { "Warsong Gulch", "Garganta Brado-Guerreiro", "Goulet des Chanteguerres" , "Garganta Grito de Guerra" , "Warsongschlucht" },
+    [529] = { "Arathi Basin", "Bacia Arathi", "Bassin d'Arathi" , "Cuenca de Arathi" , "Arathibecken" },
+    [30] = { "Alterac Valley", "Vale de Alterac", "Vall\195\169e d'Alterac" , "Valle de Alterac" , "Alteractal" },
+    [566] = { "Eye of the Storm", "Olho da Tormenta", "\197\146il du cyclone" , "El Ojo de la Tormenta" , "Auge des Sturms" },
 }
+-- German Map names differ by client era; the base column is Forever 1.60.1.70862.
+C.INSTANCE_NAMES_DE_TBC = {
+    [33] = "Burg Schattenfang",
+    [34] = "Verlies von Sturmwind",
+    [47] = "Kral der Klingenhauer",
+    [48] = "Tiefschwarze Grotte",
+    [129] = "Hügel der Klingenhauer",
+    [229] = "Schwarzfelsspitze",
+    [230] = "Schwarzfelstiefen",
+    [389] = "Der Flammenschlund",
+    [489] = "Kriegshymnenschlucht",
+}
+
 -- Prose is shared; official client names may differ between Spanish regions.
 C.INSTANCE_NAMES_ESMX = {
     [469] = "Guarida de Alanegra",
@@ -147,12 +179,13 @@ C.BGS = { [489] = true, [529] = true, [30] = true, [566] = true, [3005] = true, 
 function C.Places()
     local zc = ns.ZoneCard
     local art = zc and zc.INSTANCE_ART or {}
-    local idx = ({ ptBR = 2, frFR = 3, esES = 4, esMX = 4 })[GetLocale and GetLocale() or "enUS"] or 1
+    local idx = ({ ptBR = 2, frFR = 3, esES = 4, esMX = 4, deDE = 5 })[GetLocale and GetLocale() or "enUS"] or 1
     local groups = { { key = "dungeons", label = UI.DUNGEONS, items = {} }, { key = "raids", label = UI.RAIDS, items = {} },
         { key = "bgs", label = UI.BGS, items = {} } }
     for id, picture in pairs(art) do
         local names = C.INSTANCE_NAMES[id]
-        local name = (GetLocale() == "esMX" and C.INSTANCE_NAMES_ESMX[id]) or (names and names[idx]) or picture
+        local name = (GetLocale() == "esMX" and C.INSTANCE_NAMES_ESMX[id])
+            or (GetLocale() == "deDE" and not ns.IsForever() and C.INSTANCE_NAMES_DE_TBC[id]) or (names and names[idx]) or picture
         local g = C.BGS[id] and 3 or (C.RAIDS[id] and 2 or 1)
         table.insert(groups[g].items, { id = id, art = picture, name = name, key = Fold(name), instance = true })
     end

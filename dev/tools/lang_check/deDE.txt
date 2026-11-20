@@ -1,0 +1,192 @@
+# Names of the game and of the addon, and words the German speller does not know but that are right (one per line).
+# Lines starting with "!" accept a reviewed finding: "!RULE text-id" (the id as the report prints it, without the name in brackets).
+Aldor
+Arthas
+Azeroth
+Azeroths
+Azurmythosinsel
+Bansheekönigin
+Bren
+Burgunderrot
+Cairne
+Cenarius
+Cleef
+Darnassus
+Darrowehr
+Defias
+Draenei
+Draenor
+Draenors
+Dreihundertfünfundsechzig
+Dughan
+Dun
+Durotar
+Durotars
+Eldre
+Elune
+Elunes
+Elwynn
+Exodar
+Furbolgs
+Fährtenkundigen
+Gefährtenbuch
+Gefährtschaft
+Gnomenrüstung
+Gnomeregan
+Hippogryph
+Hyjal
+Immersang
+Khaz
+Kodos
+Leylinien
+Lich
+Lichkönig
+Lichkönigs
+Loa
+Loaschreine
+Lordaeron
+Lordaerons
+Mana
+Marris
+Modan
+Moroghs
+Mu'sha
+Mulgore
+Naaru
+Naga
+Nathanos
+Nefarian
+Nether
+Onyxia
+Orcs
+Orgrimmars
+PvP
+PvP-Seite
+PvP-Status
+Quel
+Questdaten
+Questlog
+Questmarker
+Questreihen
+Realm
+Rhahk
+Sen
+Shen
+Silithiden
+Sin
+Skald
+Skald-Reader-Seite
+Skald-Sicherung
+Skald-Version
+Skorpide
+Skyborne
+Sneed
+Spoken
+Stalvan
+Sylvanas
+Tauren
+Taurenart
+Teldrassil
+Teldrassils
+Thalas
+Thrall
+Titanenstein
+Totems
+Trogg
+Troggs
+Tyrande
+Verheerers
+Verzauberkunst
+Vol
+Voodooflüstern
+Warsongschlucht
+Windshaper
+Windshapers
+Zangarmarschen
+Zor
+Zwergenschädel
+Zwergische
+airy
+backup
+clear
+comfy
+comms
+dahinterzusehen
+demo
+detail
+dorei
+dschungelgrün
+events
+falschherum
+forgetpet
+fremdere
+guild
+jin
+list
+lore
+low
+maps
+perf
+pvp
+realm
+reload
+report
+restore
+retention
+ruleset
+skald
+skatlas
+spells
+tar
+tier
+undo
+vorwärtsgewandt
+# reviewed findings that are right German (LanguageTool false positives)
+!DE_VERBAGREEMENT phrases.race_Dwarf_hearth[3]
+!DE_VERBAGREEMENT phrases.race_Gnome_hearth[3]
+!DE_VERBAGREEMENT phrases.race_Human_hearth[3]
+!DE_VERBAGREEMENT phrases.race_NightElf_hearth[3]
+!DE_VERBAGREEMENT phrases.race_Orc_hearth[3]
+!DE_VERBAGREEMENT phrases.race_Scourge_hearth[3]
+!DE_VERBAGREEMENT phrases.race_Tauren_hearth[3]
+!DE_VERBAGREEMENT phrases.race_Troll_hearth[3]
+!DE_VERBAGREEMENT L.WEATHER_PROBE_RESULT
+!FEHLERHAFTES_KOMMA_ALLG phrases.anniv100[4]
+!FEHLERHAFTES_KOMMA_ALLG phrases.anniv30[4]
+!FEHLERHAFTES_KOMMA_ALLG phrases.anniv365[4]
+!FEHLERHAFTES_KOMMA_ALLG phrases.anniv7[4]
+!FEHLERHAFTES_KOMMA_ALLG phrases.fact_fallen[2]
+!FEHLERHAFTES_KOMMA_ALLG phrases.fact_first[1]
+!FEHLERHAFTES_KOMMA_ALLG Curated[5168]
+!DE_CASE phrases.mount[2]
+!DE_CASE phrases.mount[8]
+!DE_CASE phrases.race_Draenei_death[5]
+!DE_CASE phrases.race_Draenei_zone[6]
+!DE_CASE phrases.race_Scourge_death[16]
+!DE_CASE L.BK_CONFIRM
+!DE_CASE L.BK_UNDO_CONFIRM
+!WHITESPACE_RULE L.BK_CONFIRM
+!WHITESPACE_RULE L.BK_UNDO_CONFIRM
+!WHITESPACE_RULE L.NOTE_KEYS
+!WHITESPACE_RULE L.RESUME_LAST_VALUE
+!WHITESPACE_RULE Atlas.lua:136.R_LINE1
+!WHITESPACE_RULE Atlas.lua:136.R_LINE2
+!DOPPELTES_LEERZEICHEN L.BK_CONFIRM
+!DOPPELTES_LEERZEICHEN L.BK_UNDO_CONFIRM
+!UPPERCASE_SENTENCE_START L.LOADED
+!UPPERCASE_SENTENCE_START L.WEATHER_RACE_MEMORY.BloodElf
+!UPPERCASE_SENTENCE_START Atlas.lua:8.LOADED
+!UPPERCASE_SENTENCE_START Pvp.lua:17.YES
+!KOMMA_NACH_DIREKTER_REDE phrases.achievement[5]
+!KOMMA_NACH_DIREKTER_REDE phrases.quest[30]
+!KOMMA_NACH_DIREKTER_REDE phrases.questRare[14]
+!ANS_OHNE_APOSTROPH phrases.race_Tauren_kinLevel[2]
+!ANS_OHNE_APOSTROPH phrases.race_Tauren_quest[7]
+!ICH_NOMEN phrases.level[2]
+!DER_ERSTE phrases.questChainYesterday[5]
+!VER_DOPPELUNG phrases.questFight[13]
+!ALS_OHNE_KOMPARATIV phrases.race_Dwarf_boss[3]
+!GERMAN_WORD_REPEAT_RULE phrases.race_Dwarf_kinLevel[10]
+!SO_WIE_KEIN_KOMMA phrases.race_Tauren_quest[1]
+!DE_AGREEMENT phrases.tone_humor_quest[4]
+!BISSTRICH Atlas.lua:8.TIER_HELP

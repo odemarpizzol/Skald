@@ -98,6 +98,7 @@ console.log('Lint');
 
 // 2. phrases
 console.log('Phrases');
+if (runTool('validate_locales.js', /all keys and format arguments covered/).valid) ok('German auxiliary locale tables complete');
 {
   const r = runTool('validate_phrases.js', /names of a later time \(lore\): none/);
   const lines = (r.stdout || '').split('\n').filter(l => /phrase problems|combat words/.test(l));
@@ -153,7 +154,7 @@ local win=_G.SkaldFrame; win:Show(); if win._OnShow then win._OnShow(win) end
 out.book = win ~= nil
 local settingsBtn = btn(ns.LOCALES["${locale}"].TAB_SETTINGS)
 out.tabStyle = settingsBtn ~= nil and select(1, pcall(settingsBtn._OnClick, settingsBtn))
-local mapLabel = ({enUS="Atlas",ptBR="Atlas",frFR="Atlas",esES="Atlas",esMX="Atlas"})["${locale}"]
+local mapLabel = ({enUS="Atlas",ptBR="Atlas",frFR="Atlas",esES="Atlas",esMX="Atlas",deDE="Atlas"})["${locale}"]
 out.tabJourney = false
 for _, f in ipairs(frames) do local subs = rawget(f, "subs"); if type(subs) == "table" and #subs == 3 then out.tabJourney = true end end
 local mapBtn = btn(mapLabel)
@@ -185,7 +186,7 @@ RES=string.format("%s|%s|%s|%d|%d|%d|%d|%d|%s|%s|%s", tostring(out.book), tostri
 // The Forever client is of the Mainline family: the functions of the Classic clients are gone (only their C_ forms
 // are there) and some payloads can be secret. The same session runs again with that profile.
 const FOREVER = fs.readFileSync(path.join(__dirname, 'forever.lua'), 'utf8');
-for (const [loc, profile, label] of [['enUS', '', 'enUS'], ['ptBR', '', 'ptBR'], ['frFR', '', 'frFR'], ['esES', '', 'esES'], ['esMX', '', 'esMX'], ['enUS', FOREVER, 'Forever profile (enUS)'], ['ptBR', FOREVER, 'Forever profile (ptBR)'], ['esES', FOREVER, 'Forever profile (esES)'], ['esMX', FOREVER, 'Forever profile (esMX)']]) {
+for (const [loc, profile, label] of [['enUS', '', 'enUS'], ['ptBR', '', 'ptBR'], ['frFR', '', 'frFR'], ['esES', '', 'esES'], ['esMX', '', 'esMX'], ['deDE', '', 'deDE'], ['enUS', FOREVER, 'Forever profile (enUS)'], ['ptBR', FOREVER, 'Forever profile (ptBR)'], ['esES', FOREVER, 'Forever profile (esES)'], ['esMX', FOREVER, 'Forever profile (esMX)'], ['deDE', FOREVER, 'Forever profile (deDE)']]) {
   try {
     const [book, style, mapTab, qa, pet, hearth, revive, texts, journey, minimap, petsTab] = session(loc, profile);
     const problems = [];

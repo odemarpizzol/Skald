@@ -1,0 +1,539 @@
+# Names of the game and of the addon, and words the speller does not know but that are right (one per line).
+# Lines starting with "!" accept a reviewed finding: "!RULE text-id" (the id as the report prints it, without the name in brackets).
+Aldor
+An'she
+Arthas
+Ayla
+Azeroth
+Cairne
+Cenarius
+Chanteguerres
+Darnassus
+Darrowshire
+Draenor
+Dughan
+Durotar
+Eldre'Thalas
+Elune
+Elwynn
+Exodar
+Forgefer
+Foudrefuria
+Gnomeregan
+Hurlevent
+Hyjal
+JcJ
+Khaz
+Lok'tar
+Lordaeron
+Mekkanivelle
+Modan
+Morogh
+Mortemines
+Mu'sha
+Mulgore
+Murmevent
+Naaru
+Nagrand
+Nathanos
+Nefarian
+NomDuJoueur
+Ombrelune
+Onyxia
+Orfroide
+Orgrimmar
+Quel'Thalas
+Rhahk'Zor
+Sen'jin
+Skald
+Skyborne
+Sneed
+Sombrelance
+Sombrevallon
+Spoken
+Stalvan
+Sylvanas
+Tarides
+Teldrassil
+Thalia
+Thrall
+Tyrande
+VanCleef
+Velen
+Vol'jin
+Zangar
+addon
+airy
+book
+clear
+comfy
+comms
+contre fer
+demo
+detail
+draenei
+draeneï
+events
+forgetpet
+furbolgs
+guild
+kodos
+l'Or
+libram
+list
+loa
+loas
+lore
+maps
+nagas
+pvp
+quilboars
+realm
+reload
+restore
+retention
+ruleset
+shen'dorei
+silithides
+sin'dorei
+skald
+skatlas
+spells
+tauren
+tier
+times
+troggs
+undo
+Échap
+Élune
+# reviewed findings judged right or a matter of style (LanguageTool false positives, optional commas, repetition across texts)
+!ACCORD_DET_ADJ_NEUTRE_NOM Curated[253]
+!ACCORD_SUJET_VERBE phrases.tone_kin_milestone[10]
+!AGREEMENT_NUMERAL_PLURAL L.DAY_PARTS.achievements.1
+!AGREEMENT_NUMERAL_PLURAL L.DAY_PARTS.dungeons.1
+!AGREEMENT_NUMERAL_PLURAL L.DAY_PARTS.levels.1
+!AGREEMENT_NUMERAL_PLURAL L.DAY_PARTS.zones.1
+!AGREEMENT_PARTICULAR phrases.lootJewel[1]
+!AUX_AVOIR Saga.epilogue[2]
+!AUX_AVOIR phrases.race_BloodElf_boss[8]
+!A_A_ACCENT2 phrases.class_WARRIOR_boss[10]
+!COND_VS_FUTUR Saga.fallsPlace[7]
+!COND_VS_FUTUR Saga.stories[3]
+!COND_VS_FUTUR phrases.anniv30[3]
+!COND_VS_FUTUR phrases.day[8]
+!COND_VS_FUTUR phrases.questChainDays[10]
+!COND_VS_FUTUR phrases.questRare[10]
+!CONFUSION_E_ER phrases.death[10]
+!DE_A phrases.race_Tauren_boss[4]
+!DOUBLES_ESPACES L.BK_CONFIRM
+!DOUBLES_ESPACES L.BK_UNDO_CONFIRM
+!DOUBLE_NEG phrases.quest[25]
+!D_N Saga.prologue[5]
+!D_N phrases.race_BloodElf_kinLevel[1]
+!D_N phrases.race_BloodElf_start[5]
+!D_N_E_OU_E Pvp.lua:168.LINES.7
+!D_N_E_OU_E phrases.lootAxe[2]
+!ESPACE_UNITES Saga.epilogueTop[2]
+!EST_CE_QUE Curated[8447]
+!FR_SPLIT_WORDS_HYPHEN L.WEATHER_RACE_MEMORY.BloodElf
+!FR_SPLIT_WORDS_HYPHEN phrases.race_BloodElf_boss[3]
+!FR_SPLIT_WORDS_HYPHEN phrases.race_BloodElf_death[10]
+!FR_SPLIT_WORDS_HYPHEN phrases.race_BloodElf_hearth[1]
+!FR_SPLIT_WORDS_HYPHEN phrases.race_BloodElf_kinLevel[10]
+!FR_SPLIT_WORDS_HYPHEN phrases.race_BloodElf_kinLevel[8]
+!FR_SPLIT_WORDS_HYPHEN phrases.race_BloodElf_quest[12]
+!FR_SPLIT_WORDS_HYPHEN phrases.race_BloodElf_quest[7]
+!FR_SPLIT_WORDS_HYPHEN phrases.race_BloodElf_start[6]
+!FR_SPLIT_WORDS_HYPHEN phrases.race_BloodElf_zone[2]
+!FR_SPLIT_WORDS_HYPHEN phrases.race_BloodElf_zone[8]
+!IL_FAUT Goals.lua:413.WORTH
+!IL_FAUT phrases.questGatherNotable[4]
+!IL_FAUT phrases.questSeekNotable[6]
+!IL_FAUT phrases.race_BloodElf_death[12]
+!J_N L.PROBE_SPELLS_OFF
+!NOMBRES_EN_LETTRES Saga.stories[3]
+!NOMBRES_EN_LETTRES Saga.war[8]
+!NOMBRES_EN_LETTRES_2 Atlas.lua:39.TIER_HELP
+!NOMBRES_EN_LETTRES_2 Atlas.lua:39.TIER_SET
+!NOMBRES_EN_LETTRES_2 Goals.lua:413.EVID.chain
+!NOMBRES_EN_LETTRES_2 Goals.lua:413.FACT.flights
+!NOMBRES_EN_LETTRES_2 Goals.lua:413.FACT.gold
+!NOMBRES_EN_LETTRES_2 Goals.lua:413.FACT.quests
+!NOMBRES_EN_LETTRES_2 Goals.lua:413.FACT.skillStep
+!NOMBRES_EN_LETTRES_2 Goals.lua:413.FACT.zones
+!NOMBRES_EN_LETTRES_2 L.BK_READY
+!NOMBRES_EN_LETTRES_2 L.COMMS_RESULT
+!NOMBRES_EN_LETTRES_2 L.GUILDGROUP_RESULT
+!NOMBRES_EN_LETTRES_2 L.SEARCH_SHOWN
+!NOMBRES_EN_LETTRES_2 Saga.company[6]
+!NOMBRES_EN_LETTRES_2 Saga.falls[1]
+!NOMBRES_EN_LETTRES_2 Saga.falls[2]
+!NOMBRES_EN_LETTRES_2 Saga.falls[3]
+!NOMBRES_EN_LETTRES_2 Saga.falls[4]
+!NOMBRES_EN_LETTRES_2 Saga.falls[6]
+!NOMBRES_EN_LETTRES_2 Saga.falls[7]
+!NOMBRES_EN_LETTRES_2 Saga.falls[8]
+!NOMBRES_EN_LETTRES_2 Saga.marks[1]
+!NOMBRES_EN_LETTRES_2 Saga.marks[2]
+!NOMBRES_EN_LETTRES_2 Saga.marks[3]
+!NOMBRES_EN_LETTRES_2 Saga.marks[6]
+!NOMBRES_EN_LETTRES_2 Saga.marks[8]
+!NOMBRES_EN_LETTRES_2 Saga.stories[1]
+!NOMBRES_EN_LETTRES_2 Saga.stories[2]
+!NOMBRES_EN_LETTRES_2 Saga.stories[4]
+!NOMBRES_EN_LETTRES_2 Saga.stories[5]
+!NOMBRES_EN_LETTRES_2 Saga.stories[7]
+!NOMBRES_EN_LETTRES_2 Saga.stories[8]
+!NOMBRES_EN_LETTRES_2 Saga.warHard[1]
+!NOMBRES_EN_LETTRES_2 Saga.warHard[2]
+!NOMBRES_EN_LETTRES_2 Saga.warHard[3]
+!NOMBRES_EN_LETTRES_2 Saga.warHard[4]
+!NOMBRES_EN_LETTRES_2 Saga.warHard[5]
+!NOMBRES_EN_LETTRES_2 Saga.warHard[6]
+!NOMBRES_EN_LETTRES_2 Saga.warHard[7]
+!NOMBRES_EN_LETTRES_2 Saga.warHard[8]
+!NOMBRES_EN_LETTRES_2 Saga.war[3]
+!NOMBRES_EN_LETTRES_2 Saga.war[7]
+!NOMBRES_EN_LETTRES_2 phrases.bossHardMany[4]
+!NOMBRES_EN_LETTRES_2 phrases.bossHardMany[5]
+!NOMBRES_EN_LETTRES_2 phrases.bossHardMany[6]
+!NOMBRES_EN_LETTRES_2 phrases.bossHardMany[7]
+!NOMBRES_EN_LETTRES_2 phrases.bossHard[1]
+!NOMBRES_EN_LETTRES_2 phrases.bossHard[3]
+!NOMBRES_EN_LETTRES_2 phrases.bossHard[4]
+!NOMBRES_EN_LETTRES_2 phrases.bossHard[5]
+!NOMBRES_EN_LETTRES_2 phrases.bossHard[7]
+!NOMBRES_EN_LETTRES_2 phrases.bossHard[8]
+!NOMBRES_EN_LETTRES_2 phrases.lootCraftMany[2]
+!NOMBRES_EN_LETTRES_2 phrases.lootCraftMany[3]
+!NOMBRES_EN_LETTRES_2 phrases.lootCraftMany[5]
+!NOMBRES_EN_LETTRES_2 phrases.lootCraftMany[6]
+!NOMBRES_EN_LETTRES_2 phrases.lootCraftMany[7]
+!NOMBRES_EN_LETTRES_2 phrases.lootCraftMany[8]
+!NOMBRES_EN_LETTRES_2 phrases.questChain[3]
+!NOMBRES_EN_LETTRES_2 phrases.questChain[4]
+!NOMBRES_EN_LETTRES_2 phrases.questChain[7]
+!NOMBRES_EN_LETTRES_2_IMPROVED Goals.lua:413.FACT.days
+!NOMBRES_EN_LETTRES_2_IMPROVED L.PROBE_LORE_FULL
+!NOMBRES_EN_LETTRES_2_IMPROVED Saga.company[1]
+!NOMBRES_EN_LETTRES_2_IMPROVED Saga.company[2]
+!NOMBRES_EN_LETTRES_2_IMPROVED Saga.company[3]
+!NOMBRES_EN_LETTRES_2_IMPROVED Saga.company[4]
+!NOMBRES_EN_LETTRES_2_IMPROVED Saga.company[5]
+!NOMBRES_EN_LETTRES_2_IMPROVED Saga.company[6]
+!NOMBRES_EN_LETTRES_2_IMPROVED Saga.company[7]
+!NOMBRES_EN_LETTRES_2_IMPROVED Saga.company[8]
+!NOMBRES_EN_LETTRES_2_IMPROVED Saga.falls[1]
+!NOMBRES_EN_LETTRES_2_IMPROVED Saga.falls[2]
+!NOMBRES_EN_LETTRES_2_IMPROVED Saga.falls[3]
+!NOMBRES_EN_LETTRES_2_IMPROVED Saga.falls[4]
+!NOMBRES_EN_LETTRES_2_IMPROVED Saga.falls[6]
+!NOMBRES_EN_LETTRES_2_IMPROVED Saga.falls[7]
+!NOMBRES_EN_LETTRES_2_IMPROVED Saga.falls[8]
+!NOMBRES_EN_LETTRES_2_IMPROVED Saga.road[2]
+!NOMBRES_EN_LETTRES_2_IMPROVED Saga.road[6]
+!NOMBRES_EN_LETTRES_2_IMPROVED Saga.road[8]
+!NOMBRES_EN_LETTRES_2_IMPROVED Saga.stories[1]
+!NOMBRES_EN_LETTRES_2_IMPROVED Saga.stories[2]
+!NOMBRES_EN_LETTRES_2_IMPROVED Saga.stories[4]
+!NOMBRES_EN_LETTRES_2_IMPROVED Saga.stories[5]
+!NOMBRES_EN_LETTRES_2_IMPROVED Saga.stories[7]
+!NOMBRES_EN_LETTRES_2_IMPROVED Saga.stories[8]
+!NOMBRES_EN_LETTRES_2_IMPROVED Saga.warHard[1]
+!NOMBRES_EN_LETTRES_2_IMPROVED Saga.warHard[2]
+!NOMBRES_EN_LETTRES_2_IMPROVED Saga.warHard[3]
+!NOMBRES_EN_LETTRES_2_IMPROVED Saga.warHard[4]
+!NOMBRES_EN_LETTRES_2_IMPROVED Saga.warHard[5]
+!NOMBRES_EN_LETTRES_2_IMPROVED Saga.warHard[6]
+!NOMBRES_EN_LETTRES_2_IMPROVED Saga.warHard[7]
+!NOMBRES_EN_LETTRES_2_IMPROVED Saga.warHard[8]
+!NOMBRES_EN_LETTRES_2_IMPROVED Saga.war[1]
+!NOMBRES_EN_LETTRES_2_IMPROVED Saga.war[2]
+!NOMBRES_EN_LETTRES_2_IMPROVED Saga.war[3]
+!NOMBRES_EN_LETTRES_2_IMPROVED Saga.war[4]
+!NOMBRES_EN_LETTRES_2_IMPROVED Saga.war[6]
+!NOMBRES_EN_LETTRES_2_IMPROVED Saga.war[7]
+!NOMBRES_EN_LETTRES_2_IMPROVED phrases.fact_above[1]
+!NOMBRES_EN_LETTRES_2_IMPROVED phrases.fact_above[2]
+!NOMBRES_EN_LETTRES_2_IMPROVED phrases.fact_above[4]
+!NOMBRES_EN_LETTRES_2_IMPROVED phrases.fact_above[5]
+!NOMBRES_EN_LETTRES_2_IMPROVED phrases.fact_above[6]
+!NOMBRES_EN_LETTRES_2_IMPROVED phrases.fact_below[1]
+!NOMBRES_EN_LETTRES_2_IMPROVED phrases.fact_below[2]
+!NOMBRES_EN_LETTRES_2_IMPROVED phrases.fact_below[3]
+!NOMBRES_EN_LETTRES_2_IMPROVED phrases.fact_below[4]
+!NOMBRES_EN_LETTRES_2_IMPROVED phrases.fact_below[5]
+!NOMBRES_EN_LETTRES_2_IMPROVED phrases.fact_below[6]
+!NOMBRES_EN_LETTRES_2_IMPROVED phrases.questChainDays[10]
+!NOMBRES_EN_LETTRES_2_IMPROVED phrases.questChainDays[1]
+!NOMBRES_EN_LETTRES_2_IMPROVED phrases.questChainDays[2]
+!NOMBRES_EN_LETTRES_2_IMPROVED phrases.questChainDays[3]
+!NOMBRES_EN_LETTRES_2_IMPROVED phrases.questChainDays[5]
+!NOMBRES_EN_LETTRES_2_IMPROVED phrases.questChainDays[6]
+!NOMBRES_EN_LETTRES_2_IMPROVED phrases.questChainDays[8]
+!NOMBRES_EN_LETTRES_2_IMPROVED phrases.questChainDays[9]
+!OU_LEQUEL Pvp.lua:168.LINES.7
+!OU_LEQUEL phrases.race_Dwarf_hearth[2]
+!OU_LEQUEL phrases.race_Human_zone[1]
+!OU_LEQUEL phrases.race_Orc_zone[4]
+!PAS_DE_VERBE_APRES_POSSESSIF_DEMONSTRATIF phrases.race_Gnome_boss[1]
+!PAS_DE_VIRGULE Curated[4786]
+!PAS_DE_VIRGULE Curated[5218]
+!PAS_DE_VIRGULE Curated[5221]
+!PAS_DE_VIRGULE Curated[5224]
+!PAS_DE_VIRGULE Curated[5227]
+!PAS_DE_VIRGULE Curated[5242]
+!PAS_DE_VIRGULE Curated[9250]
+!PAS_DE_VIRGULE Saga.epilogueTop[1]
+!PAS_DE_VIRGULE phrases.bgLoss[2]
+!PAS_DE_VIRGULE phrases.class_DRUID_death[4]
+!PAS_DE_VIRGULE phrases.class_HUNTER_boss[14]
+!PAS_DE_VIRGULE phrases.class_HUNTER_death[8]
+!PAS_DE_VIRGULE phrases.class_MAGE_death[7]
+!PAS_DE_VIRGULE phrases.class_ROGUE_boss[8]
+!PAS_DE_VIRGULE phrases.class_ROGUE_death[6]
+!PAS_DE_VIRGULE phrases.class_SHAMAN_death[5]
+!PAS_DE_VIRGULE phrases.class_WARLOCK_death[7]
+!PAS_DE_VIRGULE phrases.fact_first[1]
+!PAS_DE_VIRGULE phrases.hearth[11]
+!PAS_DE_VIRGULE phrases.hearth[14]
+!PAS_DE_VIRGULE phrases.hearth[19]
+!PAS_DE_VIRGULE phrases.hearth[8]
+!PAS_DE_VIRGULE phrases.hearth[9]
+!PAS_DE_VIRGULE phrases.home[2]
+!PAS_DE_VIRGULE phrases.lootDagger[1]
+!PAS_DE_VIRGULE phrases.lootRecipe[2]
+!PAS_DE_VIRGULE phrases.loot[6]
+!PAS_DE_VIRGULE phrases.memoryFav[1]
+!PAS_DE_VIRGULE phrases.mount[3]
+!PAS_DE_VIRGULE phrases.profession_mining[3]
+!PAS_DE_VIRGULE phrases.questChainYesterday[2]
+!PAS_DE_VIRGULE phrases.questSeek[3]
+!PAS_DE_VIRGULE phrases.race_BloodElf_death[4]
+!PAS_DE_VIRGULE phrases.race_BloodElf_hearth[4]
+!PAS_DE_VIRGULE phrases.race_BloodElf_start[1]
+!PAS_DE_VIRGULE phrases.race_BloodElf_zone[4]
+!PAS_DE_VIRGULE phrases.race_Draenei_death[16]
+!PAS_DE_VIRGULE phrases.race_Draenei_hearth[1]
+!PAS_DE_VIRGULE phrases.race_Draenei_hearth[6]
+!PAS_DE_VIRGULE phrases.race_Dwarf_death[11]
+!PAS_DE_VIRGULE phrases.race_Dwarf_death[12]
+!PAS_DE_VIRGULE phrases.race_Dwarf_death[16]
+!PAS_DE_VIRGULE phrases.race_Dwarf_hearth[4]
+!PAS_DE_VIRGULE phrases.race_Gnome_death[15]
+!PAS_DE_VIRGULE phrases.race_Gnome_death[6]
+!PAS_DE_VIRGULE phrases.race_Gnome_hearth[6]
+!PAS_DE_VIRGULE phrases.race_Human_death[8]
+!PAS_DE_VIRGULE phrases.race_Human_hearth[1]
+!PAS_DE_VIRGULE phrases.race_NightElf_death[13]
+!PAS_DE_VIRGULE phrases.race_NightElf_death[6]
+!PAS_DE_VIRGULE phrases.race_NightElf_hearth[1]
+!PAS_DE_VIRGULE phrases.race_NightElf_kinLevel[16]
+!PAS_DE_VIRGULE phrases.race_Orc_death[12]
+!PAS_DE_VIRGULE phrases.race_Orc_hearth[1]
+!PAS_DE_VIRGULE phrases.race_Scourge_death[15]
+!PAS_DE_VIRGULE phrases.race_Scourge_zone[1]
+!PAS_DE_VIRGULE phrases.race_SkyborneAlliance_death[6]
+!PAS_DE_VIRGULE phrases.race_Tauren_death[14]
+!PAS_DE_VIRGULE phrases.race_Tauren_death[9]
+!PAS_DE_VIRGULE phrases.race_Tauren_hearth[1]
+!PAS_DE_VIRGULE phrases.race_Troll_death[11]
+!PAS_DE_VIRGULE phrases.race_Troll_hearth[1]
+!PAS_DE_VIRGULE phrases.race_Troll_hearth[8]
+!PAS_DE_VIRGULE phrases.race_Troll_level[7]
+!PAS_DE_VIRGULE phrases.tone_humble_death[11]
+!PAS_DE_VIRGULE phrases.tone_humble_death[5]
+!PAS_DE_VIRGULE phrases.weather[2]
+!PAS_DE_VIRGULE phrases.weather_rain[3]
+!PAS_DE_VIRGULE phrases.weather_sand[3]
+!PAS_DE_VIRGULE phrases.weather_snow[12]
+!PAS_DE_VIRGULE phrases.weather_snow[2]
+!PAS_DE_VIRGULE phrases.weather_snow[4]
+!PAS_DE_VIRGULE phrases.weather_snow[5]
+!PLACE_ADJ Saga.prologue[8]
+!PLACE_ADJ phrases.level[8]
+!PLACE_ADJ phrases.lootDagger[1]
+!PLACE_ADJ phrases.questExplore[2]
+!PLACE_ADJ phrases.questSeekNotable[3]
+!PLACE_ADJ phrases.race_BloodElf_zone[3]
+!PLACE_ADJ phrases.race_Gnome_hearth[3]
+!PLACE_ADJ phrases.race_NightElf_zone[4]
+!PLACE_ADJ phrases.race_SkyborneAlliance_zone[7]
+!PLACE_DE_LA_VIRGULE Saga.epilogueTop[6]
+!PLACE_DE_LA_VIRGULE Saga.road[4]
+!PLACE_DE_LA_VIRGULE phrases.memoryFav[7]
+!PLACE_DE_LA_VIRGULE phrases.race_BloodElf_hearth[1]
+!PLACE_DE_LA_VIRGULE phrases.race_BloodElf_kinLevel[1]
+!PLACE_DE_LA_VIRGULE phrases.race_Orc_kinLevel[13]
+!PLACE_DE_LA_VIRGULE phrases.tone_humor_zone[1]
+!POINT Goals.lua:413.NAMES.companions1
+!POINTS_2 L.OPT_TOAST
+!POINTS_2 L.TOAST_TITLE
+!QUE_AVOIR Saga.road[1]
+!QUE_AVOIR Saga.road[7]
+!QUE_V_IND Saga.road[5]
+!QUOIQUE_QUOI_QUE Saga.birth[8]
+!QUOIQUE_QUOI_QUE phrases.questDeliveryNotable[14]
+!RAPPELER_DE phrases.reviveHealer[6]
+!REP_AUTREMENT Saga.warHard[6]
+!REP_A_PEINE L.AMBIENT.dawn.3
+!REP_A_PEINE phrases.fact_fallen[2]
+!REP_A_PEINE phrases.tone_kin_milestone[2]
+!REP_BIEN_SUR phrases.tone_humor_weather[2]
+!REP_CAR Saga.epilogueTop[2]
+!REP_CAR Saga.warHard[4]
+!REP_CONTENT Saga.epilogue[3]
+!REP_CONTENT phrases.class_WARRIOR_boss[9]
+!REP_CONTENT phrases.fact_above[4]
+!REP_CONTENT phrases.memoryFav[6]
+!REP_CONTENT phrases.questDelivery[13]
+!REP_CONTENT phrases.tone_humble_dungeon[9]
+!REP_CONTENT phrases.tone_humble_quest[9]
+!REP_CONTRAIRE Saga.falls[1]
+!REP_D_ABORD phrases.race_Dwarf_start[5]
+!REP_D_ABORD phrases.race_Dwarf_start[6]
+!REP_D_ABORD phrases.race_Dwarf_zone[4]
+!REP_D_ABORD phrases.race_NightElf_start[4]
+!REP_D_ABORD phrases.race_SkyborneAlliance_zone[2]
+!REP_D_APRES Saga.road[6]
+!REP_ENSEMBLE phrases.reunion[8]
+!REP_ENSEMBLE phrases.tone_humble_boss[9]
+!REP_PENDANT phrases.boss[7]
+!REP_PENDANT phrases.race_BloodElf_hearth[1]
+!REP_PENDANT phrases.tone_kin_weather[3]
+!REP_QUAND_MEME phrases.questRare[2]
+!REP_QUAND_MEME phrases.race_BloodElf_zone[4]
+!REP_QUAND_MEME phrases.race_Dwarf_death[5]
+!REP_QUAND_MEME phrases.race_Human_start[1]
+!REP_QUAND_MEME phrases.race_Scourge_death[6]
+!REP_QUAND_MEME phrases.race_SkyborneHorde_zone[3]
+!REP_QUAND_MEME phrases.tone_humble_dungeon[4]
+!REP_QUAND_MEME phrases.tone_humble_dungeon[7]
+!REP_QUAND_MEME phrases.tone_humor_dungeon[11]
+!REP_QUEL_QUE_SOIT phrases.race_NightElf_zone[2]
+!REP_SEULEMENT Atlas.lua:263.FAVONLY
+!REP_SEULEMENT Curated[5238]
+!REP_SEULEMENT L.BARD_SIDE_TIP
+!REP_SEULEMENT L.DETAIL_HINT.normal
+!REP_SEULEMENT Saga.epilogue[1]
+!REP_SEULEMENT Saga.prologue[4]
+!REP_SEULEMENT phrases.class_DRUID_boss[15]
+!REP_SEULEMENT phrases.class_PALADIN_boss[10]
+!REP_SEULEMENT phrases.class_PRIEST_boss[11]
+!REP_SEULEMENT phrases.death[4]
+!REP_SEULEMENT phrases.race_Human_kinLevel[13]
+!REP_SEULEMENT phrases.race_Orc_kinLevel[12]
+!REP_SEULEMENT phrases.race_Scourge_death[12]
+!REP_SEULEMENT phrases.race_Tauren_boss[5]
+!REP_SEULEMENT phrases.tone_humble_boss[6]
+!REP_SEULEMENT phrases.tone_humble_zone[2]
+!REP_SEULEMENT phrases.tone_humble_zone[9]
+!REP_TOUJOURS phrases.hearth[20]
+!REP_TOUJOURS phrases.race_Draenei_death[11]
+!REP_TOUJOURS phrases.race_Draenei_death[1]
+!REP_TOUJOURS phrases.race_Dwarf_death[16]
+!REP_TOUJOURS phrases.race_Dwarf_hearth[7]
+!REP_TOUJOURS phrases.race_Scourge_death[8]
+!REP_TOUJOURS phrases.race_Skyborne_death[7]
+!REP_TOUJOURS phrases.race_Tauren_hearth[3]
+!REP_TOUJOURS phrases.race_Tauren_zone[7]
+!REP_TOUJOURS phrases.race_Troll_start[2]
+!REP_TOUJOURS phrases.tone_humble_dungeon[11]
+!REP_TOUJOURS phrases.tone_humble_level[4]
+!REP_TOUJOURS phrases.tone_humor_zone[4]
+!REP_TOUJOURS phrases.tone_kin_weather[11]
+!REP_TOUJOURS phrases.tone_kin_weather[4]
+!REP_TRES phrases.tone_humor_dungeon[9]
+!SON_SONT L.OPT_SOUND
+!TIRET L.RESUME_LAST_VALUE
+!UPPERCASE_SENTENCE_START Atlas.lua:39.LOADED
+!UPPERCASE_SENTENCE_START Atlas.lua:39.OFF
+!UPPERCASE_SENTENCE_START Atlas.lua:39.ON
+!UPPERCASE_SENTENCE_START Atlas.lua:39.TIER_HELP
+!UPPERCASE_SENTENCE_START Atlas.lua:39.TIER_SET
+!UPPERCASE_SENTENCE_START L.ARCHIVE_DISCARDED
+!UPPERCASE_SENTENCE_START L.ARCHIVE_RESTORED
+!UPPERCASE_SENTENCE_START L.CLEARED
+!UPPERCASE_SENTENCE_START L.CMD_COMPANIONS_FORGOTTEN
+!UPPERCASE_SENTENCE_START L.CMD_PET_NONE
+!UPPERCASE_SENTENCE_START L.CMD_SIZE_DONE
+!UPPERCASE_SENTENCE_START L.CMD_SIZE_HINT
+!UPPERCASE_SENTENCE_START L.COMMS_NONE
+!UPPERCASE_SENTENCE_START L.COMMS_RESULT
+!UPPERCASE_SENTENCE_START L.COMMS_SENT
+!UPPERCASE_SENTENCE_START L.DAY_PARTS.achievements.1
+!UPPERCASE_SENTENCE_START L.DETAIL_BAD
+!UPPERCASE_SENTENCE_START L.DETAIL_SET
+!UPPERCASE_SENTENCE_START L.ERROR_PREFIX
+!UPPERCASE_SENTENCE_START L.GUILDGROUP_RESULT
+!UPPERCASE_SENTENCE_START L.GUILDGROUP_SENT
+!UPPERCASE_SENTENCE_START L.LOADED
+!UPPERCASE_SENTENCE_START L.MINIMAP_NONE
+!UPPERCASE_SENTENCE_START L.MINIMAP_OFF
+!UPPERCASE_SENTENCE_START L.MINIMAP_ON
+!UPPERCASE_SENTENCE_START L.NEW_CHARACTER
+!UPPERCASE_SENTENCE_START L.NEXT_CLEARED
+!UPPERCASE_SENTENCE_START L.NEXT_SAVED
+!UPPERCASE_SENTENCE_START L.PROBE_CLEARED
+!UPPERCASE_SENTENCE_START L.PROBE_EVENTS_NONE
+!UPPERCASE_SENTENCE_START L.PROBE_EVENTS_OFF
+!UPPERCASE_SENTENCE_START L.PROBE_EVENTS_ON
+!UPPERCASE_SENTENCE_START L.PROBE_HELP
+!UPPERCASE_SENTENCE_START L.PROBE_LORE_CLEARED
+!UPPERCASE_SENTENCE_START L.PROBE_LORE_FULL
+!UPPERCASE_SENTENCE_START L.PROBE_LORE_NONE
+!UPPERCASE_SENTENCE_START L.PROBE_LORE_OFF
+!UPPERCASE_SENTENCE_START L.PROBE_LORE_ON
+!UPPERCASE_SENTENCE_START L.PROBE_OFF
+!UPPERCASE_SENTENCE_START L.PROBE_ON
+!UPPERCASE_SENTENCE_START L.PROBE_SPELLS_OFF
+!UPPERCASE_SENTENCE_START L.PROBE_SPELLS_ON
+!UPPERCASE_SENTENCE_START L.QUIET_OFF
+!UPPERCASE_SENTENCE_START L.QUIET_ON
+!UPPERCASE_SENTENCE_START L.WEATHER_CLASS_PATH.DRUID
+!UPPERCASE_SENTENCE_START L.WEATHER_PROBE_RESULT
+!UPPERCASE_SENTENCE_START L.WEATHER_RACE_MEMORY.BloodElf
+!UPPERCASE_SENTENCE_START Pvp.lua:168.AUTO
+!UPPERCASE_SENTENCE_START Pvp.lua:168.DEMO_OFF
+!UPPERCASE_SENTENCE_START Pvp.lua:168.DEMO_ON
+!UPPERCASE_SENTENCE_START Pvp.lua:168.OFF
+!UPPERCASE_SENTENCE_START Pvp.lua:168.ON
+!UPPERCASE_SENTENCE_START Pvp.lua:168.PROBE_FLAG
+!UPPERCASE_SENTENCE_START Pvp.lua:168.YES
+!VIEUX L.PROBE_EVENTS_NONE
+!VIRGULE_DEBUT_DE_PHRASE Saga.epilogue[2]
+!VIRGULE_DEBUT_DE_PHRASE phrases.class_SHAMAN_death[8]
+!VIRGULE_DEBUT_DE_PHRASE phrases.class_WARRIOR_death[7]
+!VIRGULE_DEBUT_DE_PHRASE phrases.reunion[5]
+!VIRG_NON_TROUVEE Saga.war[3]
+!VIRG_NON_TROUVEE phrases.achievement[3]
+!VIRG_NON_TROUVEE phrases.class_HUNTER_boss[10]
+!VIRG_NON_TROUVEE phrases.lootCraft[5]
+!VIRG_NON_TROUVEE phrases.race_BloodElf_kinLevel[15]
+!VIRG_NON_TROUVEE phrases.race_Draenei_start[2]
+!VIRG_NON_TROUVEE phrases.race_NightElf_kinLevel[5]
+!VIRG_NON_TROUVEE phrases.race_Orc_kinLevel[1]
+!VIRG_NON_TROUVEE phrases.race_Scourge_kinLevel[2]
+!VIRG_NON_TROUVEE phrases.race_SkyborneHorde_death[8]
+!VIRG_NON_TROUVEE phrases.race_Tauren_death[2]
+!VIRG_NON_TROUVEE phrases.race_Tauren_death[6]
+!VIRG_NON_TROUVEE phrases.race_Tauren_level[7]
+!VIRG_NON_TROUVEE phrases.race_Troll_kinLevel[1]
+!VIRG_NON_TROUVEE phrases.tone_humor_weather[2]
+!VIRG_NON_TROUVEE phrases.tone_kin_level[8]
+!VOIR_REGARDER Goals.lua:413.FACT.petLevel
+!VOIR_REGARDER phrases.anniv7[3]
+!VOUS_NOUS_NON_VERBE phrases.race_SkyborneHorde_level[7]
+!WHITESPACE_RULE Atlas.lua:263.R_LINE1
+!WHITESPACE_RULE Atlas.lua:263.R_LINE2
+!WHITESPACE_RULE L.BK_CONFIRM
+!WHITESPACE_RULE L.BK_UNDO_CONFIRM
+!WHITESPACE_RULE L.NOTE_KEYS
+!WHITESPACE_RULE L.RESUME_LAST_VALUE
+!WRONG_ETRE_VPPA L.AMBIENT.morning.5
+!WRONG_ETRE_VPPA phrases.class_DRUID_boss[8]
+!WRONG_ETRE_VPPA phrases.class_PALADIN_quest[5]
+!WRONG_ETRE_VPPA phrases.race_Gnome_hearth[1]
+!WRONG_ETRE_VPPA phrases.race_Gnome_level[3]
+!WRONG_ETRE_VPPA phrases.race_NightElf_kinLevel[1]
+!WRONG_ETRE_VPPA phrases.tone_humble_dungeon[2]

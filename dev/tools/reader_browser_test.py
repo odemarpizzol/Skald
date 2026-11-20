@@ -72,7 +72,17 @@ with sync_playwright() as p:
         context.close()
     print('ok Spanish browser language detection: es-ES and es-MX')
 
-    for locale, paper, size, density in [('enUS', 'clean', 1, 'comfy'), ('ptBR', 'travel', 2, 'airy'), ('frFR', 'war', 0, 'compact'), ('esES', 'clean', 1, 'comfy'), ('esMX', 'old', 2, 'airy'), ('enUS', 'old', 2, 'comfy')]:
+    for browser_locale in ('de-DE', 'de-AT', 'de-CH'):
+        context = browser.new_context(locale=browser_locale)
+        localized = context.new_page()
+        localized.goto(URL)
+        assert localized.locator('html').get_attribute('lang') == 'de'
+        assert localized.locator('#lang').input_value() == 'deDE'
+        assert localized.locator('#open').inner_text() == 'Buch öffnen'
+        context.close()
+    print('ok German browser language detection: de-DE, de-AT and de-CH')
+
+    for locale, paper, size, density in [('enUS', 'clean', 1, 'comfy'), ('ptBR', 'travel', 2, 'airy'), ('frFR', 'war', 0, 'compact'), ('esES', 'clean', 1, 'comfy'), ('esMX', 'old', 2, 'airy'), ('deDE', 'travel', 2, 'comfy'), ('enUS', 'old', 2, 'comfy')]:
         text, expected, notes, story = export(locale, paper, size, density, entries=30, long=True)
         open_export(text)
         if locale in ('esES', 'esMX'):
@@ -80,6 +90,11 @@ with sync_playwright() as p:
             assert page.locator('#lang').input_value() == 'esES', 'regional locale did not select Español'
             assert page.locator('#print').inner_text() == 'Guardar como PDF'
             assert page.locator('#jump').get_attribute('aria-label') == 'Día'
+        if locale == 'deDE':
+            assert page.locator('html').get_attribute('lang') == 'de'
+            assert page.locator('#lang').input_value() == 'deDE'
+            assert page.locator('#print').inner_text() == 'Als PDF speichern'
+            assert page.locator('#jump').get_attribute('aria-label') == 'Tag'
         assert page.locator('html').get_attribute('data-paper') == paper
         assert len(page.locator('#jump option').all()) == 3, 'session groups merged'
         assert page.locator('#left .cover h2').text_content() == 'Memories of Azeroth'

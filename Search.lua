@@ -36,9 +36,11 @@ do
     Set("o", 146, 150); Set("u", 153, 156); Set("y", 157, 157)
     Set("a", 160, 165); Set("c", 167, 167); Set("e", 168, 171); Set("i", 172, 175); Set("n", 177, 177)
     Set("o", 178, 182); Set("u", 185, 188); Set("y", 189, 189); Set("y", 191, 191)
+    FOLD[159] = "ss" -- German sharp s (ß)
 end
 local function Fold(s)
     s = tostring(s or "")
+    s = s:gsub("ẞ", "ss")
     s = s:gsub("\195([\128-\191])", function(c) return FOLD[c:byte()] end)
     return (s:lower())
 end

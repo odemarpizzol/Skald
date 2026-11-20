@@ -7,6 +7,13 @@
 local _, ns = ...
 
 local TEXTS = {
+    deDE = {
+        TITLE = "%s in Zahlen",
+        REGIONS = "Entdeckte Regionen",
+        QUESTS = "Örtliche Quests",
+        KILLS = "Hier besiegte Kreaturen",
+        NONE = "Noch kein Land.",
+    },
     enUS = { TITLE = "%s in numbers", REGIONS = "Regions found", QUESTS = "Local quests", KILLS = "Creatures slain here", NONE = "No land yet." }, esES = {
             TITLE = "%s en cifras",
             REGIONS = "Regiones descubiertas",
@@ -664,6 +671,15 @@ local DC = {}
 ns.DayCard = DC
 
 local DAY_TEXTS = {
+    deDE = {
+        TITLE = "Der Tag in Zahlen",
+        LEVEL = "Erreichte Stufe",
+        QUESTS = "Erledigte Quests",
+        ZONES = "Entdeckte Lande",
+        FALLS = "Stürze",
+        GOALS = "Erreichte Ziele",
+        PAGES = "Geschriebene Seiten",
+    },
     enUS = { TITLE = "The day in numbers", LEVEL = "Level reached", QUESTS = "Quests done", ZONES = "Lands found", FALLS = "Falls", GOALS = "Goals reached", PAGES = "Pages written" }, esES = {
             TITLE = "El día en cifras",
             LEVEL = "Nivel alcanzado",

@@ -1,3 +1,0 @@
-- World-map markers keep their size with OpenMap (counter-scale while the map is stitched, grouping by the zoom, above the OpenMap art, a switch in its menu); nothing changes without OpenMap.
-- A crowded map marker opens a compact wheel: event types with counts, then the memories of a type (short title and time, full memory on hover, a click opens the page).
-- Local Guild Chronicle preview with a made-up chapter, signed memories and new art; `/skald chronicle demo` opens it and `off` hides it. No sharing or network communication is enabled.

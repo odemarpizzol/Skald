@@ -1,0 +1,255 @@
+# Names of the game and of the addon, and words the speller does not know but that are right (one per line).
+# Lines starting with "!" accept a reviewed finding: "!RULE text-id" (the id as the report prints it, without the name in brackets).
+Aldor
+An
+Arthas
+Azeroth
+Azuremyst
+Bren
+Cairne
+Cenarius
+Ctrl+M
+Darkspear
+Darnassus
+Darrowshire
+Deadmines
+Defense
+Defias
+Draenei
+Draenor
+Dughan
+Durotar
+Duskwood
+Eldre
+Elune
+Elwynn
+Eversong
+Exodar
+Gnomeregan
+Goldshire
+Greysnout
+Gryphon
+Gulch
+Highborne
+Honorable
+Honored
+Hyjal
+Ironforge
+Jewelcrafting
+Khaz
+Leatherworking
+Lich
+Lok
+Lordaeron
+Marris
+Mekkatorque
+Modan
+Morogh
+Mulgore
+Naaru
+Nagrand
+Nathanos
+Nefarian
+Onyxia
+Orgrimmar
+PlayerName
+PvP
+Quel
+Rhahk
+Scorpids
+Shadowglen
+Shadowmoon
+Shortsword
+Silvermoon
+Skald
+Soulflayer
+Stalvan
+Stormwind
+Sunstrider
+Sunwell
+Sylvanas
+Teldrassil
+Thalas
+Thunderfury
+Troggs
+Tyrande
+Undercity
+VanCleef
+Velen
+Warsong
+Whisperwind
+Windshaper
+Windshapers
+Winterfall
+Zangarmarsh
+Zor
+addon
+armor
+comms
+doorframe
+dorei
+draenei
+favors
+forgetpet
+furbolg
+greatstaff
+gryphon
+hippogryph
+homeworld
+honor
+jin
+kodos
+libram
+lich
+loa
+minimap
+mon
+naga
+pvp
+quiet
+quilboar
+sha
+shen
+silithid
+skald
+skatlas
+skysight
+tauren
+traveler
+troggs
+us
+woodsmoke
+# reviewed findings judged right or a matter of style (LanguageTool false positives, optional commas, repetition across texts)
+!ADVERB_WORD_ORDER phrases.race_Troll_level[4]
+!AGREEMENT_SENT_START phrases.class_PRIEST_death[6]
+!AGREEMENT_SENT_START phrases.death[9]
+!AGREEMENT_SENT_START phrases.dungeon[8]
+!AGREEMENT_SENT_START phrases.race_BloodElf_hearth[6]
+!AGREEMENT_SENT_START phrases.race_BloodElf_zone[1]
+!AGREEMENT_SENT_START phrases.race_Draenei_zone[1]
+!AGREEMENT_SENT_START phrases.race_Draenei_zone[3]
+!AGREEMENT_SENT_START phrases.race_Draenei_zone[4]
+!AGREEMENT_SENT_START phrases.race_Dwarf_hearth[5]
+!AGREEMENT_SENT_START phrases.race_Dwarf_zone[6]
+!AGREEMENT_SENT_START phrases.race_Gnome_hearth[7]
+!AGREEMENT_SENT_START phrases.race_Gnome_zone[1]
+!AGREEMENT_SENT_START phrases.race_Gnome_zone[6]
+!AGREEMENT_SENT_START phrases.race_Human_death[13]
+!AGREEMENT_SENT_START phrases.race_Human_hearth[6]
+!AGREEMENT_SENT_START phrases.race_Human_start[3]
+!AGREEMENT_SENT_START phrases.race_NightElf_death[12]
+!AGREEMENT_SENT_START phrases.race_NightElf_hearth[5]
+!AGREEMENT_SENT_START phrases.race_NightElf_zone[4]
+!AGREEMENT_SENT_START phrases.race_Orc_death[13]
+!AGREEMENT_SENT_START phrases.race_Orc_zone[7]
+!AGREEMENT_SENT_START phrases.race_Scourge_hearth[6]
+!AGREEMENT_SENT_START phrases.race_Scourge_zone[6]
+!AGREEMENT_SENT_START phrases.race_SkyborneAlliance_zone[5]
+!AGREEMENT_SENT_START phrases.race_SkyborneHorde_zone[6]
+!AGREEMENT_SENT_START phrases.race_Skyborne_zone[5]
+!AGREEMENT_SENT_START phrases.race_Tauren_death[16]
+!AGREEMENT_SENT_START phrases.race_Tauren_hearth[6]
+!AGREEMENT_SENT_START phrases.race_Tauren_zone[7]
+!AGREEMENT_SENT_START phrases.race_Troll_hearth[6]
+!AGREEMENT_SENT_START phrases.race_Troll_start[1]
+!AGREEMENT_SENT_START phrases.race_Troll_zone[7]
+!AGREEMENT_SENT_START phrases.tone_humble_death[3]
+!AGREEMENT_SENT_START phrases.tone_humble_death[7]
+!AGREEMENT_SENT_START phrases.tone_humble_dungeon[10]
+!AGREEMENT_SENT_START phrases.tone_humble_zone[5]
+!AGREEMENT_SENT_START phrases.tone_humor_dungeon[9]
+!ANYMORE phrases.anniv7[4]
+!CD_NN L.DAY_PARTS.achievements.1
+!CD_NN L.DAY_PARTS.dungeons.1
+!CD_NN L.DAY_PARTS.kills.1
+!COMMA_COMPOUND_SENTENCE phrases.boss[2]
+!COMMA_COMPOUND_SENTENCE phrases.questGatherNotable[11]
+!COMMA_COMPOUND_SENTENCE phrases.race_BloodElf_death[6]
+!COMMA_COMPOUND_SENTENCE phrases.race_Draenei_kinLevel[6]
+!COMMA_COMPOUND_SENTENCE phrases.race_NightElf_kinLevel[9]
+!COMMA_COMPOUND_SENTENCE_2 Curated[8730]
+!COMMA_COMPOUND_SENTENCE_2 L.AMBIENT.morning.5
+!COMMA_COMPOUND_SENTENCE_2 L.AMBIENT.night.2
+!COMMA_COMPOUND_SENTENCE_2 phrases.class_HUNTER_death[5]
+!COMMA_COMPOUND_SENTENCE_2 phrases.day[6]
+!COMMA_COMPOUND_SENTENCE_2 phrases.questGather[17]
+!COMMA_COMPOUND_SENTENCE_2 phrases.questGather[30]
+!COMMA_COMPOUND_SENTENCE_2 phrases.questGather[7]
+!COMMA_COMPOUND_SENTENCE_2 phrases.race_Orc_zone[7]
+!CONSECUTIVE_SPACES L.BK_CONFIRM
+!CONSECUTIVE_SPACES L.BK_UNDO_CONFIRM
+!DOUBLE_NEGATIVE phrases.quest[25]
+!EXTREME_ADJECTIVES phrases.skill[7]
+!FINAL_ADVERB_COMMA phrases.race_Tauren_level[5]
+!IN_AT_A_PARTY phrases.party[5]
+!MISSING_HYPHEN phrases.class_ROGUE_boss[12]
+!OXFORD_SPELLING_Z_NOT_S L.BK_EXPORT_HINT
+!OXFORD_SPELLING_Z_NOT_S phrases.class_WARLOCK_quest[6]
+!OXFORD_SPELLING_Z_NOT_S phrases.lootPlate[2]
+!OXFORD_SPELLING_Z_NOT_S phrases.milestone[2]
+!OXFORD_SPELLING_Z_NOT_S phrases.milestone[9]
+!OXFORD_SPELLING_Z_NOT_S phrases.race_Gnome_zone[1]
+!OXFORD_SPELLING_Z_NOT_S phrases.race_Scourge_death[7]
+!PEOPLE_VBZ Saga.birth[3]
+!PEOPLE_VBZ phrases.race_Draenei_kinLevel[2]
+!REP_THANK_YOU_FOR Saga.companyNames[6]
+!SENT_START_CONJUNCTIVE_LINKING_ADVERB_COMMA phrases.race_Gnome_death[3]
+!STARS_AND_STEPS Saga.epilogueTop[6]
+!THERE_S_MANY phrases.tone_humble_zone[8]
+!TRUNK_BOOT phrases.race_NightElf_start[1]
+!UNNECESSARY_COMMA Curated[4786]
+!UNNECESSARY_COMMA phrases.class_HUNTER_death[8]
+!UPPERCASE_SENTENCE_START Atlas.lua:16.LOADED
+!UPPERCASE_SENTENCE_START Atlas.lua:16.OFF
+!UPPERCASE_SENTENCE_START Atlas.lua:16.ON
+!UPPERCASE_SENTENCE_START Atlas.lua:16.TIER_HELP
+!UPPERCASE_SENTENCE_START Atlas.lua:16.TIER_SET
+!UPPERCASE_SENTENCE_START L.ARCHIVE_DISCARDED
+!UPPERCASE_SENTENCE_START L.ARCHIVE_RESTORED
+!UPPERCASE_SENTENCE_START L.CLEARED
+!UPPERCASE_SENTENCE_START L.CMD_COMPANIONS_FORGOTTEN
+!UPPERCASE_SENTENCE_START L.CMD_PET_NONE
+!UPPERCASE_SENTENCE_START L.CMD_SIZE_DONE
+!UPPERCASE_SENTENCE_START L.CMD_SIZE_HINT
+!UPPERCASE_SENTENCE_START L.COMMS_NONE
+!UPPERCASE_SENTENCE_START L.DAY_PARTS.achievements.1
+!UPPERCASE_SENTENCE_START L.DETAIL_BAD
+!UPPERCASE_SENTENCE_START L.DETAIL_SET
+!UPPERCASE_SENTENCE_START L.ERROR_PREFIX
+!UPPERCASE_SENTENCE_START L.GUILDGROUP_RESULT
+!UPPERCASE_SENTENCE_START L.GUILDGROUP_SENT
+!UPPERCASE_SENTENCE_START L.LOADED
+!UPPERCASE_SENTENCE_START L.MINIMAP_NONE
+!UPPERCASE_SENTENCE_START L.NEW_CHARACTER
+!UPPERCASE_SENTENCE_START L.NEXT_CLEARED
+!UPPERCASE_SENTENCE_START L.NEXT_SAVED
+!UPPERCASE_SENTENCE_START L.PROBE_CLEARED
+!UPPERCASE_SENTENCE_START L.PROBE_EVENTS_NONE
+!UPPERCASE_SENTENCE_START L.PROBE_EVENTS_OFF
+!UPPERCASE_SENTENCE_START L.PROBE_EVENTS_ON
+!UPPERCASE_SENTENCE_START L.PROBE_HELP
+!UPPERCASE_SENTENCE_START L.PROBE_LORE_CLEARED
+!UPPERCASE_SENTENCE_START L.PROBE_LORE_FULL
+!UPPERCASE_SENTENCE_START L.PROBE_LORE_NONE
+!UPPERCASE_SENTENCE_START L.PROBE_LORE_OFF
+!UPPERCASE_SENTENCE_START L.PROBE_LORE_ON
+!UPPERCASE_SENTENCE_START L.PROBE_OFF
+!UPPERCASE_SENTENCE_START L.PROBE_ON
+!UPPERCASE_SENTENCE_START L.PROBE_SPELLS_OFF
+!UPPERCASE_SENTENCE_START L.PROBE_SPELLS_ON
+!UPPERCASE_SENTENCE_START L.QUIET_OFF
+!UPPERCASE_SENTENCE_START L.QUIET_ON
+!UPPERCASE_SENTENCE_START L.WEATHER_CLASS_PATH.DRUID
+!UPPERCASE_SENTENCE_START L.WEATHER_PROBE_RESULT
+!UPPERCASE_SENTENCE_START L.WEATHER_RACE_MEMORY.BloodElf
+!UPPERCASE_SENTENCE_START Pvp.lua:65.AUTO
+!UPPERCASE_SENTENCE_START Pvp.lua:65.DEMO_OFF
+!UPPERCASE_SENTENCE_START Pvp.lua:65.DEMO_ON
+!UPPERCASE_SENTENCE_START Pvp.lua:65.OFF
+!UPPERCASE_SENTENCE_START Pvp.lua:65.ON
+!UPPERCASE_SENTENCE_START Pvp.lua:65.PROBE_FLAG
+!UPPERCASE_SENTENCE_START Pvp.lua:65.YES
+!WHITESPACE_RULE Atlas.lua:181.R_LINE1
+!WHITESPACE_RULE Atlas.lua:181.R_LINE2
+!WHITESPACE_RULE L.NOTE_KEYS
+!WHITESPACE_RULE L.RESUME_LAST_VALUE
