@@ -56,6 +56,11 @@ local UI_TEXT = {
         PROBE_HEAD = "Realm und PvP laut diesem Client (auf dem zu prüfenden Realm ausführen):",
         PROBE_FLAG = "Für PvP markiert: %s",
         PROBE_ZONE = "PvP-Status dieses Gebiets: %s",
+        PROBE_WANT = "PvP selbst eingeschaltet: %s; PvP-Timer läuft: %s",
+        PROBE_WAR = "Kriegsmodus: gibt es %s, gewünscht %s, aktiv %s; C_PvP dazu: %s",
+        KPROBE_ON = "Sonde für PvP-Siege an: Besiege einen Spieler der anderen Fraktion, dann /reload. Bisher gespeichert: %d.",
+        KPROBE_OFF = "Sonde für PvP-Siege aus (%d gespeichert).",
+        KPROBE_SEEN = "Sonde: %s gesehen (%d gespeichert).",
         PROBE_NAMES = "Clientfunktionen und Tabellen mit realm, pvp oder ruleset im Namen: %s",
         PROBE_NONE = "keine gefunden",
         YES = "ja",
@@ -87,6 +92,10 @@ local UI_TEXT = {
         DEMO_ON = "preview with example numbers: nothing is written in the diary. Type /skald pvp demo again to leave it.", DEMO_OFF = "preview ended.", DEMO_NOTE = "Example numbers, not yours",
         PROBE_HEAD = "Realm and PvP, as this client answers (run it on the realm you want to know):",
         PROBE_FLAG = "marked for PvP: %s", PROBE_ZONE = "this land's PvP status: %s",
+        PROBE_WANT = "PvP switched on by you: %s; leaving timer running: %s",
+        PROBE_WAR = "War Mode: exists %s, wanted %s, active %s; C_PvP about it: %s",
+        KPROBE_ON = "PvP kill probe on: slay a player of the other faction, then /reload. Kept so far: %d.",
+        KPROBE_OFF = "PvP kill probe off (%d kept).", KPROBE_SEEN = "probe: %s seen (%d kept).",
         PROBE_NAMES = "calls and tables of the client with realm, pvp or ruleset in the name: %s",
         PROBE_NONE = "none found", YES = "yes", NO = "no", UNKNOWN = "unknown",
     }, esES = {
@@ -131,6 +140,11 @@ local UI_TEXT = {
             PROBE_HEAD = "Reino y JcJ según este cliente (ejecuta la prueba en el reino que quieras comprobar):",
             PROBE_FLAG = "marcado para JcJ: %s",
             PROBE_ZONE = "estado JcJ de esta zona: %s",
+            PROBE_WANT = "JcJ activado por ti: %s; temporizador de salida en marcha: %s",
+            PROBE_WAR = "Modo Guerra: existe %s, deseado %s, activo %s; C_PvP al respecto: %s",
+            KPROBE_ON = "sonda de muertes JcJ activada: mata a un jugador de la otra facción y luego /reload. Guardados hasta ahora: %d.",
+            KPROBE_OFF = "sonda de muertes JcJ desactivada (%d guardados).",
+            KPROBE_SEEN = "sonda: %s visto (%d guardados).",
             PROBE_NAMES = "funciones y tablas del cliente con realm, pvp o ruleset en el nombre: %s",
             PROBE_NONE = "no se encontró ninguna",
             YES = "sí",
@@ -162,6 +176,10 @@ local UI_TEXT = {
         DEMO_ON = "prévia com números de exemplo: nada é escrito no diário. Digite /skald pvp demo de novo para sair.", DEMO_OFF = "prévia encerrada.", DEMO_NOTE = "Números de exemplo, não são seus",
         PROBE_HEAD = "Reino e JxJ, como este cliente responde (rode no reino que você quer conhecer):",
         PROBE_FLAG = "marcado para JxJ: %s", PROBE_ZONE = "estado de JxJ desta terra: %s",
+        PROBE_WANT = "JxJ ligado por você: %s; contador de saída correndo: %s",
+        PROBE_WAR = "Modo Guerra: existe %s, desejado %s, ativo %s; C_PvP sobre isso: %s",
+        KPROBE_ON = "sonda de abates JxJ ligada: mate um jogador da outra facção e depois /reload. Guardados até agora: %d.",
+        KPROBE_OFF = "sonda de abates JxJ desligada (%d guardados).", KPROBE_SEEN = "sonda: %s visto (%d guardados).",
         PROBE_NAMES = "chamadas e tabelas do cliente com realm, pvp ou ruleset no nome: %s",
         PROBE_NONE = "nenhuma encontrada", YES = "sim", NO = "não", UNKNOWN = "desconhecido",
     },
@@ -190,6 +208,10 @@ local UI_TEXT = {
         DEMO_ON = "aper\195\167u avec des chiffres d'exemple\194\160: rien n'est \195\169crit dans le journal. Tapez /skald pvp demo \195\160 nouveau pour le quitter.", DEMO_OFF = "aper\195\167u termin\195\169.", DEMO_NOTE = "Chiffres d'exemple, pas les v\195\180tres",
         PROBE_HEAD = "Royaume et JcJ, comme ce client r\195\169pond (lancez-le sur le royaume que vous voulez conna\195\174tre)\194\160:",
         PROBE_FLAG = "marqu\195\169 pour le JcJ\194\160: %s", PROBE_ZONE = "\195\169tat JcJ de cette terre\194\160: %s",
+        PROBE_WANT = "JcJ activ\195\169 par vous\194\160: %s\194\160; minuteur de sortie en cours\194\160: %s",
+        PROBE_WAR = "Mode Guerre\194\160: existe %s, souhait\195\169 %s, actif %s\194\160; C_PvP \195\160 ce sujet\194\160: %s",
+        KPROBE_ON = "sonde des victoires JcJ activ\195\169e\194\160: tuez un joueur de l'autre faction, puis /reload. Gard\195\169s jusqu'ici\194\160: %d.",
+        KPROBE_OFF = "sonde des victoires JcJ arr\195\170t\195\169e (%d gard\195\169s).", KPROBE_SEEN = "sonde\194\160: %s vu (%d gard\195\169s).",
         PROBE_NAMES = "appels et tables du client avec realm, pvp ou ruleset dans le nom\194\160: %s",
         PROBE_NONE = "aucun trouv\195\169", YES = "oui", NO = "non", UNKNOWN = "inconnu",
     },
@@ -308,7 +330,8 @@ function P.HonorableKills()
     return nil
 end
 
--- Wanted: a battleground is recorded (the permanent count, or an old page of the diary), or the player asked for it.
+-- Wanted: the client says the server is PvP, a battleground is recorded (the permanent count, or an old page of the
+-- diary), or the player asked for it.
 -- The switch is kept by realm (account-wide, so a diary cleared keeps it): "the realm where I fight" is the user's
 -- own word, and an alt on a Normal realm is not shown a tab it did not ask for.
 local function Realm()
@@ -317,17 +340,33 @@ local function Realm()
 end
 local function Setting()
     local all = SkaldDB and SkaldDB.pvpTab
-    return type(all) == "table" and all[Realm()] or nil
+    if type(all) ~= "table" then return nil end
+    return all[Realm()]   -- false is kept as false: "off" must win over a match recorded or a PvP server
 end
 local function SetSetting(v)
     if type(SkaldDB.pvpTab) ~= "table" then SkaldDB.pvpTab = {} end
     SkaldDB.pvpTab[Realm()] = v
+end
+-- The kind of server, where the client says it: the Forever client keeps it among its game rules (Enum.GameRule.PvPRuleset,
+-- read on a PvP realm as active with the value 1; /skald probe server shows it). A client without the rule says nothing
+-- and the tab waits for a battleground as before; the realm's name is never used to guess.
+function P.PvPRealm()
+    local rule = type(Enum) == "table" and type(Enum.GameRule) == "table" and Enum.GameRule.PvPRuleset
+    local rules = type(C_GameRules) == "table" and C_GameRules
+    if not (rule and rules and type(rules.IsGameRuleActive) == "function" and type(rules.GetGameRuleAsFloat) == "function") then
+        return false
+    end
+    local okA, active = pcall(rules.IsGameRuleActive, rule)
+    if not (okA and active) then return false end
+    local okV, v = pcall(rules.GetGameRuleAsFloat, rule)
+    return okV and v == 1
 end
 function P.Wanted()
     if P.demo then return true end
     local setting = Setting()
     if setting == false then return false end
     if setting == true then return true end
+    if P.PvPRealm() then return true end
     local db = SkaldCharDB
     local stats = db and db.stats
     if not stats then return false end
@@ -335,8 +374,95 @@ function P.Wanted()
     return (tonumber(stats.bgWins) or 0) > 0
 end
 
+-- /skald probe kills [off]: what the client says when the player slays someone in the open world, kept in
+-- SkaldDB.probeKills (at most 30 records) to be read from the saved file. While it is on, its own frame listens to the
+-- combat log (only PARTY_KILL, and UNIT_DIED of a player), PLAYER_PVP_KILLS_CHANGED and the honour line of the chat;
+-- each record says which fields the client withheld (secret), the land, the PvP flag and the game's honorable kills.
+-- Nothing of this writes a page: it is to learn which source to trust before the diary uses one.
+local KP_MAX = 30
+local kpFrame
+local function KpSay(msg) print("|cffffd100Skald|r: " .. msg) end
+local function Secret(v) return _G.issecretvalue and issecretvalue(v) or false end
+local function LifetimeHK()
+    if not GetPVPLifetimeStats then return nil end
+    local ok, hk = pcall(GetPVPLifetimeStats)
+    if ok and not Secret(hk) then return hk end
+end
+local function KpRecord(rec)
+    local list = SkaldDB.probeKills
+    if type(list) ~= "table" then list = {}; SkaldDB.probeKills = list end
+    rec.t = time and time() or nil
+    rec.hk = LifetimeHK()
+    local okZ, zone = pcall(GetRealZoneText); rec.zone = okZ and not Secret(zone) and zone or nil
+    local okS, sub = pcall(GetSubZoneText); rec.sub = okS and not Secret(sub) and sub ~= "" and sub or nil
+    if UnitIsPVP then local okF, f = pcall(UnitIsPVP, "player"); if okF and not Secret(f) then rec.flagged = f and true or false end end
+    list[#list + 1] = rec
+    while #list > KP_MAX do table.remove(list, 1) end
+    KpSay(string.format(UI.KPROBE_SEEN, tostring(rec.sub_ or rec.ev), #list))
+end
+local function KpCombatLog()
+    if not CombatLogGetCurrentEventInfo then return end
+    local ok, _, sub, _, srcGUID, _, srcFlags, _, destGUID, _, destFlags = pcall(CombatLogGetCurrentEventInfo)
+    if not ok then return end
+    if Secret(sub) then
+        -- the client hides even the kind of event: kept once in a while, to know that it does
+        local list = SkaldDB.probeKills
+        if not (type(list) == "table" and list.secretSeen) then
+            KpRecord({ ev = "CLEU", sub_ = "CLEU (secret)", secret = "sub" })
+            SkaldDB.probeKills.secretSeen = true
+        end
+        return
+    end
+    if sub ~= "PARTY_KILL" and sub ~= "UNIT_DIED" then return end
+    local destPlayer = (not Secret(destGUID)) and type(destGUID) == "string" and destGUID:find("^Player%-") ~= nil or nil
+    if sub == "UNIT_DIED" and not destPlayer then return end
+    local me = UnitGUID and UnitGUID("player")
+    local hidden = {}
+    for name, v in pairs({ src = srcGUID, srcFlags = srcFlags, dest = destGUID, destFlags = destFlags }) do
+        if Secret(v) then hidden[#hidden + 1] = name end
+    end
+    table.sort(hidden)
+    local rec = { ev = "CLEU", sub_ = sub, destPlayer = destPlayer, secret = #hidden > 0 and table.concat(hidden, ",") or nil }
+    if not Secret(srcGUID) then rec.mine = (srcGUID == me) end
+    if not Secret(destFlags) and type(destFlags) == "number" and bit and bit.band then
+        rec.hostile = bit.band(destFlags, 0x40) ~= 0          -- COMBATLOG_OBJECT_REACTION_HOSTILE
+        rec.destIsPlayerType = bit.band(destFlags, 0x400) ~= 0 -- COMBATLOG_OBJECT_TYPE_PLAYER
+        rec.destFlags = string.format("0x%X", destFlags)
+    end
+    if not Secret(srcFlags) and type(srcFlags) == "number" then rec.srcFlags = string.format("0x%X", srcFlags) end
+    KpRecord(rec)
+end
+local function KpOnEvent(_, event, ...)
+    if event == "COMBAT_LOG_EVENT_UNFILTERED" then return KpCombatLog() end
+    local args = {}
+    for i = 1, select("#", ...) do
+        local v = select(i, ...)
+        args[i] = Secret(v) and "(secret)" or tostring(v)
+    end
+    KpRecord({ ev = event, sub_ = event, args = table.concat(args, " | ") })
+end
+local KP_EVENTS = { "COMBAT_LOG_EVENT_UNFILTERED", "PLAYER_PVP_KILLS_CHANGED", "CHAT_MSG_COMBAT_HONOR_GAIN" }
+function P.KillProbeSync()
+    local on = SkaldDB and SkaldDB.probeKillsOn and true or false
+    if on and not kpFrame and CreateFrame then
+        kpFrame = CreateFrame("Frame")
+        kpFrame:SetScript("OnEvent", function(...) pcall(KpOnEvent, ...) end)
+    end
+    if not kpFrame then return end
+    for _, ev in ipairs(KP_EVENTS) do
+        if on then pcall(kpFrame.RegisterEvent, kpFrame, ev) else pcall(kpFrame.UnregisterEvent, kpFrame, ev) end
+    end
+end
+function P.KillProbe(arg)
+    if arg == "off" then SkaldDB.probeKillsOn = nil else SkaldDB.probeKillsOn = true end
+    P.KillProbeSync()
+    local n = type(SkaldDB.probeKills) == "table" and #SkaldDB.probeKills or 0
+    return SkaldDB.probeKillsOn and string.format(UI.KPROBE_ON, n) or string.format(UI.KPROBE_OFF, n)
+end
+
 -- The tab is added when it is wanted: at the login, when the first match is written and when /skald pvp on is typed.
 function P.Ensure()
+    pcall(P.KillProbeSync)   -- a kill probe left on goes on listening after a /reload
     if not (SkaldAPI and SkaldAPI.AddTab) then return end
     if P.Wanted() then
         SkaldAPI.AddTab(P.TAB_ID, UI.TAB, P.Build)
@@ -369,15 +495,11 @@ end
 function P.ProbeLines()
     local lines = { UI.PROBE_HEAD }
     local function Yn(v) if v == nil then return UI.UNKNOWN end return v and UI.YES or UI.NO end
-    local ok, flagged = false, nil
-    if UnitIsPVP then ok, flagged = pcall(UnitIsPVP, "player") end
-    lines[#lines + 1] = string.format(UI.PROBE_FLAG, Yn(ok and flagged or nil))
-    local status
-    if GetZonePVPInfo then local okZ, s = pcall(GetZonePVPInfo); if okZ and type(s) == "string" then status = s end end
-    lines[#lines + 1] = string.format(UI.PROBE_ZONE, status or UI.UNKNOWN)
+    -- the names first and the readings last, so the readings are the lines left in sight at the foot of the chat;
+    -- frames (tables that are not a C_ namespace) are left out, they are windows of the interface, not answers
     local names = {}
     for k, v in pairs(_G) do
-        if type(k) == "string" and (type(v) == "function" or type(v) == "table") then
+        if type(k) == "string" and (type(v) == "function" or (type(v) == "table" and k:find("^C_"))) then
             local low = k:lower()
             if (low:find("realm", 1, true) or low:find("pvp", 1, true) or low:find("ruleset", 1, true)) and not low:find("^skald") then
                 names[#names + 1] = k
@@ -386,8 +508,148 @@ function P.ProbeLines()
     end
     table.sort(names)
     local shown = {}
-    for i = 1, math.min(#names, 40) do shown[i] = names[i] end
-    lines[#lines + 1] = string.format(UI.PROBE_NAMES, #names > 0 and (table.concat(shown, ", ") .. (#names > 40 and " ..." or "")) or UI.PROBE_NONE)
+    for i = 1, math.min(#names, 60) do shown[i] = names[i] end
+    lines[#lines + 1] = string.format(UI.PROBE_NAMES, #names > 0 and (table.concat(shown, ", ") .. (#names > 60 and " ..." or "")) or UI.PROBE_NONE)
+    local flagged
+    if UnitIsPVP then local ok, f = pcall(UnitIsPVP, "player"); if ok then flagged = f and true or false end end
+    lines[#lines + 1] = string.format(UI.PROBE_FLAG, Yn(flagged))
+    -- the land's status with the place it was read in (and the faction the client names, if any)
+    local status, place = UI.UNKNOWN, {}
+    if GetZonePVPInfo then
+        local okZ, st, _, faction = pcall(GetZonePVPInfo)
+        if okZ and type(st) == "string" then status = st end
+        if okZ and type(faction) == "string" and faction ~= "" then place[#place + 1] = faction end
+    end
+    for _, fn in ipairs({ GetRealZoneText, GetSubZoneText }) do
+        local okN, n = pcall(fn)
+        if okN and type(n) == "string" and n ~= "" then place[#place + 1] = n end
+    end
+    if #place > 0 then status = status .. " (" .. table.concat(place, ", ") .. ")" end
+    lines[#lines + 1] = string.format(UI.PROBE_ZONE, status)
+    -- a PvP realm marks the player in a contested land without asking: flagged, not desired, no timer running
+    local desired, timer
+    if GetPVPDesired then local okD, d = pcall(GetPVPDesired); if okD and d ~= nil then desired = d and true or false end end
+    if IsPVPTimerRunning then local okT, t = pcall(IsPVPTimerRunning); if okT and t ~= nil then timer = t and true or false end end
+    lines[#lines + 1] = string.format(UI.PROBE_WANT, Yn(desired), Yn(timer))
+    -- a modern client may have War Mode in place of realm types: whether it exists, is wanted and is on, and the
+    -- names of C_PvP that speak of war, realms, rules or flags (names only, nothing else is called)
+    local pvp = type(C_PvP) == "table" and C_PvP or {}
+    local function Ask(name)
+        if type(pvp[name]) ~= "function" then return nil end
+        local okA, v = pcall(pvp[name])
+        if okA and v ~= nil then return v and true or false end
+    end
+    local warNames = {}
+    for k, v in pairs(pvp) do
+        if type(k) == "string" and type(v) == "function" then
+            local low = k:lower()
+            if low:find("war", 1, true) or low:find("realm", 1, true) or low:find("rule", 1, true) or low:find("flag", 1, true) or low:find("inactive", 1, true) then
+                warNames[#warNames + 1] = k
+            end
+        end
+    end
+    table.sort(warNames)
+    lines[#lines + 1] = string.format(UI.PROBE_WAR, Yn(Ask("IsWarModeFeatureEnabled")), Yn(Ask("IsWarModeDesired")),
+        Yn(Ask("IsWarModeActive")), #warNames > 0 and table.concat(warNames, ", ") or UI.PROBE_NONE)
+    return lines
+end
+
+-- /skald probe server: every call of the client with realm, server or ruleset in its name (C_ namespaces too), and
+-- the answers of those that only read (Get/Is/Can with no argument), to look for the type of the realm.
+local function Show(v)
+    if type(v) == "table" then
+        local parts = {}
+        for k, x in pairs(v) do
+            if #parts >= 12 then parts[#parts + 1] = "..."; break end
+            parts[#parts + 1] = tostring(k) .. "=" .. (type(x) == "table" and "{...}" or tostring(x))
+        end
+        return "{" .. table.concat(parts, " ") .. "}"
+    end
+    return tostring(v)
+end
+local function Answer(fn)
+    local res = { pcall(fn) }
+    if not res[1] then return "(erro)" end
+    local out = {}
+    for i = 2, math.max(#res, 2) do out[#out + 1] = Show(res[i]) end
+    return table.concat(out, ", ")
+end
+local function Wanted(k)
+    local low = k:lower()
+    return low:find("realm", 1, true) or low:find("server", 1, true) or low:find("ruleset", 1, true)
+end
+function P.ServerLines()
+    local lines = { UI.PROBE_HEAD }
+    local found = {}
+    for k, v in pairs(_G) do
+        if type(k) == "string" and not k:lower():find("^skald") then
+            if type(v) == "function" and Wanted(k) then
+                found[#found + 1] = { k, v }
+            elseif type(v) == "table" and k:find("^C_") then
+                for fk, fv in pairs(v) do
+                    if type(fk) == "string" and type(fv) == "function" and (Wanted(k) or Wanted(fk)) then
+                        found[#found + 1] = { k .. "." .. fk, fv }
+                    end
+                end
+            end
+        end
+    end
+    table.sort(found, function(a, b) return a[1] < b[1] end)
+    for _, f in ipairs(found) do
+        local short = f[1]:match("([^%.]+)$")
+        if short:find("^Get") or short:find("^Is") or short:find("^Can") then
+            lines[#lines + 1] = f[1] .. "() = " .. Answer(f[2])
+        else
+            lines[#lines + 1] = f[1]
+        end
+    end
+    if #found == 0 then lines[#lines + 1] = UI.PROBE_NONE end
+    -- a modern client may say the kind of server through its game rules and game modes, not through the realm
+    local rules = type(C_GameRules) == "table" and C_GameRules or nil
+    if rules then
+        local names = {}
+        for k, v in pairs(rules) do if type(k) == "string" and type(v) == "function" then names[#names + 1] = k end end
+        table.sort(names)
+        for _, k in ipairs(names) do
+            if k:find("^Get") or k:find("^Is") or k:find("^Does") or k:find("^Has") then
+                lines[#lines + 1] = "C_GameRules." .. k .. "() = " .. Answer(rules[k])
+            else
+                lines[#lines + 1] = "C_GameRules." .. k
+            end
+        end
+    end
+    -- every enum about game rules or game modes: the keys that speak of PvP or of the realm, and what the rules say of them
+    local enum = type(Enum) == "table" and Enum or {}
+    local enums = {}
+    for k, v in pairs(enum) do
+        local low = type(k) == "string" and k:lower() or ""
+        if type(v) == "table" and (low:find("gamerule", 1, true) or low:find("gamemode", 1, true) or low:find("ruleset", 1, true) or low:find("realm", 1, true)) then
+            enums[#enums + 1] = k
+        end
+    end
+    table.sort(enums)
+    for _, en in ipairs(enums) do
+        local keys = {}
+        for k, v in pairs(enum[en]) do
+            local low = tostring(k):lower()
+            if low:find("pvp", 1, true) or low:find("war", 1, true) or low:find("realm", 1, true) or low:find("mode", 1, true) or low:find("flag", 1, true) then
+                local said = ""
+                if rules and en:lower():find("gamerule", 1, true) then
+                    for _, fn in ipairs({ "IsGameRuleActive", "GetGameRuleAsFloat" }) do
+                        if type(rules[fn]) == "function" then
+                            local okR, r = pcall(rules[fn], v)
+                            said = said .. " " .. fn .. "=" .. (okR and Show(r) or "(erro)")
+                        end
+                    end
+                end
+                keys[#keys + 1] = tostring(k) .. "=" .. tostring(v) .. said
+            end
+        end
+        table.sort(keys)
+        local count = 0
+        for _ in pairs(enum[en]) do count = count + 1 end
+        lines[#lines + 1] = "Enum." .. en .. " (" .. count .. "): " .. (#keys > 0 and table.concat(keys, "; ") or "-")
+    end
     return lines
 end
 

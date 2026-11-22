@@ -780,6 +780,47 @@ RES = (said:find("armed", 1, true) and not said:find("error", 1, true) and (Skal
 // Seen in the Anniversary client with the RestedXP Guides on the same map: the tooltip of a marker of the diary showed, the marker did
 // not. The frames of the map sit at level 2000 and over (the layers of the picture, the pins of the game); with none of the game's
 // small pins to go by the diary put its markers at 603, under the layers, where they are hit by the mouse and never seen.
+// Asked by a player on CurseForge: a pin of the diary on the same NPC as a delivery quest hid where to go.
+run('the markers of the diary give way to a marker of the game or of another addon under them: faded by default, hidden or kept as chosen', {
+  body: `local A = SkaldAPI.AtlasPure
+local function pin(x, y)
+  local p = { shown = true, alpha = 1 }
+  function p:GetCenter() return x, y end
+  function p:GetEffectiveScale() return 1 end
+  function p:GetWidth() return 24 end
+  function p:Show() self.shown = true end
+  function p:Hide() self.shown = false end
+  function p:SetAlpha(a) self.alpha = a end
+  return p
+end
+local function other(x, y, w, mouse, kids)
+  local o = {}
+  function o:GetCenter() return x, y end
+  function o:GetEffectiveScale() return 1 end
+  function o:GetWidth() return w end
+  function o:IsShown() return true end
+  function o:IsMouseEnabled() return mouse end
+  function o:GetChildren() if kids then return table.unpack(kids) end end
+  return o
+end
+-- a quest marker of the game at 100,100; a HereBeDragons holder (1 px, its 20 px icon takes the mouse) at 300,300;
+-- the map picture (wide) and a small frame that ignores the mouse are not markers
+local icon = other(300, 300, 20, true)
+local canvas = { GetChildren = function() return other(100, 100, 24, true), other(300, 300, 1, false, { icon }), other(0, 0, 1000, true), other(500, 500, 24, false) end }
+local others = A.OtherMarkers(canvas)
+local found = #others == 2
+local on, near, away = pin(104, 98), pin(296, 303), pin(200, 200)
+local list = { on, near, away }
+local faded = A.GiveWay(list, others, "fade") == 2 and on.alpha < 0.3 and near.alpha < 0.3 and on.shown and away.alpha > 0.3 and on.restAlpha
+local hidden = A.GiveWay(list, others, "hide") == 2 and not on.shown and not near.shown and away.shown
+local kept = A.GiveWay(list, others, "off") == 0 and on.shown and near.shown and on.alpha > 0.3 and on.restAlpha == nil
+local default = A.YieldMode() == "fade"
+SkaldAtlasDB.yield = "hide"; local chosen = A.YieldMode() == "hide"; SkaldAtlasDB.yield = nil
+A.Refresh()
+RES = (found and faded and hidden and kept and default and chosen and SkaldDB.errors == nil) and "ok"
+  or ("found=" .. #others .. " faded=" .. tostring(faded) .. " hidden=" .. tostring(hidden) .. " kept=" .. tostring(kept) .. " default=" .. tostring(default) .. " chosen=" .. tostring(chosen))`,
+});
+
 run('the markers of the diary are above the layers of the map and under its small pins', {
   body: `local PinLevel = SkaldAPI.AtlasPure.PinLevel
 local function child(level, width, mouse) return { GetFrameLevel = function() return level end, GetWidth = function() return width end,
@@ -4845,10 +4886,56 @@ fire("PVP_MATCH_COMPLETE", 1, 900); runTimers()
 local counted = ns.Pvp.Data().total == 1
 SlashCmdList.SKALD("pvp auto")
 local auto = ns.Pvp.Wanted() == true and tab:IsShown()
-SlashCmdList.SKALD("pvp"); SlashCmdList.SKALD("pvp nonsense"); SlashCmdList.SKALD("probe realm")
+SlashCmdList.SKALD("pvp"); SlashCmdList.SKALD("pvp nonsense"); SlashCmdList.SKALD("probe realm"); SlashCmdList.SKALD("probe server")
 local probe = #ns.Pvp.ProbeLines() >= 3
 RES = (none and shown and emptyOk and off and counted and auto and probe and SkaldDB.errors == nil) and "ok"
   or ("none=" .. tostring(none) .. " shown=" .. tostring(shown) .. " empty=" .. tostring(emptyOk) .. " off=" .. tostring(off) .. " counted=" .. tostring(counted) .. " auto=" .. tostring(auto) .. " probe=" .. tostring(probe) .. " err=" .. tostring(SkaldDB.errors and SkaldDB.errors[1]))`,
+});
+
+run('the PvP tab shows itself at the login on a server whose game rules say PvP (Forever: PvPRuleset active with 1), not with 0 nor without the rule, and off still wins', {
+  pre: `Enum = Enum or {}
+Enum.GameRule = { PvPRuleset = 213 }
+PVP_RULE = 1
+C_GameRules = { IsGameRuleActive = function(r) return r == 213 end, GetGameRuleAsFloat = function(r) if r == 213 then return PVP_RULE end return 0 end }`,
+  body: `local tab = btn("PvP")
+local atLogin = tab ~= nil and tab:IsShown() and ns.Pvp.PvPRealm() == true
+tab._OnClick(tab); ns.Pvp.refresh()
+PVP_RULE = 0
+local normal = ns.Pvp.PvPRealm() == false and ns.Pvp.Wanted() == false
+PVP_RULE = 1
+SlashCmdList.SKALD("pvp off")
+local off = ns.Pvp.Wanted() == false and not tab:IsShown()
+SlashCmdList.SKALD("pvp auto")
+local back = ns.Pvp.Wanted() == true and tab:IsShown()
+local saved = C_GameRules; C_GameRules = nil
+local without = ns.Pvp.PvPRealm() == false
+C_GameRules = saved
+RES = (atLogin and normal and off and back and without and SkaldDB.errors == nil) and "ok"
+  or ("login=" .. tostring(atLogin) .. " normal=" .. tostring(normal) .. " off=" .. tostring(off) .. " back=" .. tostring(back) .. " without=" .. tostring(without) .. " err=" .. tostring(SkaldDB.errors and SkaldDB.errors[1]))`,
+});
+
+run('/skald probe kills keeps what the client says of a kill (combat log, honour line), hides nothing it was not given, stays on after a reload and writes no page', {
+  pre: `function UnitGUID(u) return "Player-1-ME" end
+CLEU = { 0, "PARTY_KILL", false, "Player-1-ME", "Me", 0x511, 0, "Player-2-FOE", "Foe", 0x548, 0 }
+function CombatLogGetCurrentEventInfo() return unpack(CLEU) end
+function GetPVPLifetimeStats() return 7 end
+bit = bit or { band = function(a, b) return a & b end }`,
+  body: `local pages = #SkaldCharDB.entries
+SlashCmdList.SKALD("probe kills")
+fire("COMBAT_LOG_EVENT_UNFILTERED")
+CLEU[2] = "SPELL_DAMAGE"; fire("COMBAT_LOG_EVENT_UNFILTERED")
+fire("CHAT_MSG_COMBAT_HONOR_GAIN", "Foe dies, honorable kill")
+local list = SkaldDB.probeKills or {}
+local k = list[1] or {}
+local kill = #list == 2 and k.sub_ == "PARTY_KILL" and k.mine == true and k.destPlayer == true and k.hostile == true and k.hk == 7
+local chat = list[2] and list[2].ev == "CHAT_MSG_COMBAT_HONOR_GAIN"
+ns.Pvp.Ensure()
+local kept = SkaldDB.probeKillsOn == true
+SlashCmdList.SKALD("probe kills off")
+CLEU[2] = "PARTY_KILL"; fire("COMBAT_LOG_EVENT_UNFILTERED")
+local off = SkaldDB.probeKillsOn == nil
+RES = (kill and chat and kept and off and #SkaldCharDB.entries == pages and SkaldDB.errors == nil) and "ok"
+  or ("n=" .. #list .. " kill=" .. tostring(kill) .. " chat=" .. tostring(chat) .. " kept=" .. tostring(kept) .. " off=" .. tostring(off) .. " err=" .. tostring(SkaldDB.errors and SkaldDB.errors[1]))`,
 });
 
 run('/skald pvp demo draws the tab with example numbers, writes nothing in the diary, and leaving it puts the tab as it was', {

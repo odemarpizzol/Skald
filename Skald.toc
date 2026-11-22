@@ -12,7 +12,7 @@
 ## Title-deDE: Skald
 ## Notes-deDE: Schreibt die Chronik deiner Reise durch Azeroth automatisch in deiner eigenen Stimme. Mit /skald öffnest du das Buch.
 ## Author: Oddynho
-## Version: 1.1.0
+## Version: 1.1.1
 ## OptionalDeps: Spoken, QuestDB
 ## X-Skald-Chronicle-Art: crest,divider,quill,state
 ## Category: Roleplay

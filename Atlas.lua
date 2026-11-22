@@ -160,6 +160,8 @@ local UI_TEXT = {
         STATUS_NONE = "Keine Seite dieses Orts passt zu den Filtern.",
         OPACITY = "Deckkraft der Marker",
         OPACITY_HINT = "Blassere Marker lassen die Questmarker des Spiels besser erkennen.",
+        YIELD = "Auf einem anderen Marker", YIELD_FADE = "Verblassen", YIELD_HIDE = "Ausblenden", YIELD_OFF = "Bleiben",
+        YIELD_HINT = "Liegt ein Marker des Tagebuchs auf einem Marker des Spiels oder eines anderen Addons (eine Quest, ein Flugmeister), weicht er: blass darunter oder ausgeblendet. Mit der Maus darüber wird er wieder deutlich.",
         RARITY = "Niedrigste angezeigte Seltenheit",
         KINDS = "Angezeigte Seiten",
         KIND = {
@@ -190,6 +192,8 @@ local UI_TEXT = {
         STATUS = "Showing %d of %d pages here.", STATUS_NONE = "No page here matches the filters.",
         OPACITY = "Marker opacity",
         OPACITY_HINT = "Fainter markers let the game's own quest markers show through.",
+        YIELD = "Where another marker stands", YIELD_FADE = "Fade", YIELD_HIDE = "Hide", YIELD_OFF = "Stay",
+        YIELD_HINT = "When a pin of the diary sits on a marker of the game or of another addon (a quest, a flight master), the diary's gives way: faded under it, or hidden. The mouse over it brings it back.",
         RARITY = "Smallest rarity shown", KINDS = "Pages shown",
         KIND = {
             quest = "Quests", level = "Levels", milestone = "Milestones", death = "Deaths",
@@ -223,6 +227,8 @@ local UI_TEXT = {
             STATUS_NONE = "Ninguna página de aquí coincide con los filtros.",
             OPACITY = "Opacidad de los marcadores",
             OPACITY_HINT = "Los marcadores más tenues dejan ver los de las misiones del juego.",
+            YIELD = "Sobre otro marcador", YIELD_FADE = "Atenuar", YIELD_HIDE = "Ocultar", YIELD_OFF = "Mantener",
+            YIELD_HINT = "Cuando un marcador del diario queda sobre uno del juego o de otro addon (una misión, un maestro de vuelo), el del diario cede el paso: atenuado debajo, u oculto. Con el ratón encima vuelve a verse.",
             RARITY = "Rareza mínima mostrada",
             KINDS = "Páginas visibles",
             KIND = {
@@ -253,6 +259,8 @@ local UI_TEXT = {
         STATUS = "Mostrando %d de %d páginas aqui.", STATUS_NONE = "Nenhuma página daqui passa pelos filtros.",
         OPACITY = "Opacidade dos marcadores",
         OPACITY_HINT = "Marcadores mais fracos deixam ver os de missão do jogo por baixo.",
+        YIELD = "Sobre outro marcador", YIELD_FADE = "Apagar", YIELD_HIDE = "Esconder", YIELD_OFF = "Manter",
+        YIELD_HINT = "Quando um marcador do diário fica sobre um do jogo ou de outro addon (uma missão, um mestre de voo), o do diário dá passagem: apagado por baixo, ou escondido. Com o mouse em cima ele volta a aparecer.",
         RARITY = "Menor raridade mostrada", KINDS = "Páginas mostradas",
         KIND = {
             quest = "Missões", level = "Níveis", milestone = "Marcos", death = "Mortes",
@@ -272,6 +280,8 @@ local UI_TEXT = {
         STATUS = "%d pages sur %d affichées ici.", STATUS_NONE = "Aucune page d'ici ne passe les filtres.",
         OPACITY = "Opacité des marqueurs",
         OPACITY_HINT = "Des marqueurs plus pâles laissent voir ceux des quêtes du jeu en dessous.",
+        YIELD = "Sur un autre marqueur", YIELD_FADE = "Estomper", YIELD_HIDE = "Masquer", YIELD_OFF = "Garder",
+        YIELD_HINT = "Quand un marqueur du journal se trouve sur un marqueur du jeu ou d'un autre addon (une quête, un maître de vol), celui du journal s'efface\194\160: estompé dessous, ou masqué. La souris dessus le fait revenir.",
         RARITY = "Plus faible rareté affichée", KINDS = "Pages affichées",
         KIND = {
             quest = "Quêtes", level = "Niveaux", milestone = "Jalons", death = "Morts",
@@ -306,6 +316,10 @@ end
 -- How solid the medallions are (the game's own quest markers sit under or beside them).
 local function PinAlpha()
     return (SkaldAtlasDB and SkaldAtlasDB.alpha) or 0.75
+end
+-- The alpha a marker goes back to when the mouse leaves it: a marker giving way to another stays faint.
+local function RestAlpha(pin)
+    return (pin and rawget(pin, "restAlpha")) or PinAlpha()
 end
 
 -- Which pages a marker may show: the smallest rarity, the kinds, when they happened (all, this session,
@@ -397,7 +411,7 @@ function Wheel.Close()
     Wheel.HideTip()
     for _, b in ipairs(Wheel.buttons or {}) do b.entry, b.top, b.entries, b.group = nil, nil, nil, nil; b:Hide() end
     if Wheel.frame then Wheel.frame:Hide() end
-    if owner then owner:SetAlpha(PinAlpha()) end
+    if owner then owner:SetAlpha(RestAlpha(owner)) end
 end
 
 local function OpenPinEntry(entry)
@@ -715,7 +729,7 @@ local function GetPin(i, canvas)
     end)
     pin:SetScript("OnLeave", function(self)
         if Wheel.dismissed == self then Wheel.dismissed = nil end
-        if Wheel.owner == self then Wheel.Leave(self) else self:SetAlpha(PinAlpha()); Wheel.HideTip(self) end
+        if Wheel.owner == self then Wheel.Leave(self) else self:SetAlpha(RestAlpha(self)); Wheel.HideTip(self) end
     end)
 
     pins[i] = pin
@@ -892,6 +906,91 @@ local function PinLevel(canvas)
     return math.max(floor, base + 600)
 end
 
+-- Giving way: where a marker of the diary sits on a marker of the game or of another addon (a quest, a flight master,
+-- Questie...), the diary's steps back, so a player never loses the way to a quest under a memory. The others are found as
+-- PinLevel finds them: small frames on the canvas that take the mouse (or hold one that does: a pin of HereBeDragons is a
+-- tiny frame with its icon inside). Measured on the screen, so the zoom of the map or of OpenMap changes nothing.
+-- SkaldAtlasDB.yield: nil = fade (the default), "hide", "off".
+local YIELD_ALPHA = 0.15
+local function YieldMode()
+    local m = SkaldAtlasDB and SkaldAtlasDB.yield
+    if m == "hide" or m == "off" then return m end
+    return "fade"
+end
+local function Circle(f)
+    local okC, x, y = pcall(f.GetCenter, f)
+    local okS, s = pcall(f.GetEffectiveScale, f)
+    if not (okC and okS and type(x) == "number" and type(y) == "number" and type(s) == "number") then return nil end
+    return x * s, y * s, s
+end
+local function OtherMarkers(canvas)
+    local out = {}
+    for _, child in ipairs({ canvas:GetChildren() }) do
+        if not rawget(child, "skaldPin") and child ~= Wheel.frame and child:IsShown() then
+            local w = child:GetWidth() or 0
+            local mouse = child:IsMouseEnabled()
+            if w < 8 then
+                -- a holder smaller than its picture: the size and the mouse are its children's
+                for _, inner in ipairs({ child:GetChildren() }) do
+                    if inner:IsShown() then
+                        local iw = inner:GetWidth() or 0
+                        if iw > w and iw < 120 then w = iw end
+                        if inner:IsMouseEnabled() then mouse = true end
+                    end
+                end
+            end
+            if w > 0 and w < 120 and mouse then
+                local x, y, sc = Circle(child)
+                if x then out[#out + 1] = { x, y, w * sc / 2 } end
+            end
+        end
+    end
+    return out
+end
+-- pins: the markers of the diary placed now; others: circles on the screen ({ x, y, radius }).
+local function GiveWay(list, others, mode)
+    for _, pin in ipairs(list) do
+        if rawget(pin, "yieldHidden") then pin.yieldHidden = nil; pin:Show() end
+        pin.restAlpha = nil
+        pin.yielded = nil
+    end
+    if mode == "off" or #others == 0 then
+        for _, pin in ipairs(list) do pin:SetAlpha(PinAlpha()) end
+        return 0
+    end
+    local n = 0
+    for _, pin in ipairs(list) do
+        local x, y, sc = Circle(pin)
+        if x then
+            local r = (pin:GetWidth() or 0) * sc / 2
+            for _, o in ipairs(others) do
+                local dx, dy, reach = x - o[1], y - o[2], (r + o[3]) * 0.75
+                if dx * dx + dy * dy < reach * reach then pin.yielded = true; break end
+            end
+        end
+        if rawget(pin, "yielded") then
+            n = n + 1
+            if mode == "hide" then
+                pin.yieldHidden = true
+                pin:Hide()
+            else
+                pin.restAlpha = YIELD_ALPHA
+                pin:SetAlpha(YIELD_ALPHA)
+            end
+        else
+            pin:SetAlpha(PinAlpha())
+        end
+    end
+    return n
+end
+local function YieldAll(canvas)
+    local list = {}
+    for i = 1, activePins do if pins[i] then list[#list + 1] = pins[i] end end
+    if #list == 0 then return end
+    local mode = YieldMode()
+    pcall(GiveWay, list, mode == "off" and {} or OtherMarkers(canvas), mode)
+end
+
 local function Refresh()
     HideAll()
     activePins = 0
@@ -929,6 +1028,7 @@ local function Refresh()
         pin:Show()
     end
     activePins = n
+    YieldAll(canvas)
 end
 
 -- The zoom of OpenMap moves every frame it is dragged: the markers keep their size on the screen at once, and are grouped again
@@ -946,6 +1046,7 @@ local function Rescale()
         local pin = pins[i]
         if pin and pin.nx then PlacePin(pin, canvas, w, h, scale) end
     end
+    YieldAll(canvas)
     if C_Timer and C_Timer.After then
         settle = settle + 1
         local mine = settle
@@ -966,7 +1067,7 @@ end
 -- A star marked or unmarked in the book changes the pins at once.
 SkaldAPI.favHook = Refresh
 -- (kept reachable for the regression scenarios)
-SkaldAPI.AtlasPure = { Wheel = Wheel, Pins = function() return pins, activePins end, Refresh = Refresh, Rescale = Rescale, PinScale = PinScale, MakeFilter = MakeFilter, Cluster = Cluster, PinLevel = PinLevel, PinGlyph = PinGlyph, PinTargets = PinTargets, PinOrder = PinOrder }
+SkaldAPI.AtlasPure = { Wheel = Wheel, Pins = function() return pins, activePins end, Refresh = Refresh, Rescale = Rescale, PinScale = PinScale, MakeFilter = MakeFilter, Cluster = Cluster, PinLevel = PinLevel, PinGlyph = PinGlyph, PinTargets = PinTargets, PinOrder = PinOrder, GiveWay = GiveWay, OtherMarkers = OtherMarkers, YieldMode = YieldMode }
 
 -- The world map frame can load on demand, so hook it as soon as it exists.
 local hooked = false
@@ -1158,6 +1259,33 @@ local function BuildMapTab(panel)
                     SkaldAtlasDB.kinds[kind] = false
                 end
             end, kind)
+    end
+
+    -- Where another marker stands (a quest of the game or of another addon): fade, hide or stay.
+    SkaldAPI.SectionLabel(panel, UI.YIELD, RIGHT_X, -340)
+    if SkaldAPI.PlateGroup then SkaldAPI.PlateGroup(panel, RIGHT_X, -362, 342, 26) end
+    local yieldButtons, yieldModes = {}, { "fade", "hide", "off" }
+    local yieldLabels = { UI.YIELD_FADE, UI.YIELD_HIDE, UI.YIELD_OFF }
+    for i, mode in ipairs(yieldModes) do
+        local b = SkaldAPI.MakeButton(panel, 114, 26, yieldLabels[i])
+        b:SetPoint("TOPLEFT", RIGHT_X + (i - 1) * 114, -362)
+        b:SetScript("OnClick", function()
+            SkaldAtlasDB.yield = (mode ~= "fade") and mode or nil
+            SyncAll()
+            Refresh()
+        end)
+        b:HookScript("OnEnter", function(self)
+            GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
+            GameTooltip:AddLine(UI.YIELD, 1, 0.82, 0)
+            GameTooltip:AddLine(UI.YIELD_HINT, 1, 1, 1, true)
+            GameTooltip:Show()
+        end)
+        b:HookScript("OnLeave", function() GameTooltip:Hide() end)
+        yieldButtons[i] = b
+    end
+    syncs[#syncs + 1] = function()
+        local current = YieldMode()
+        for i, b in ipairs(yieldButtons) do b:SetActive(yieldModes[i] == current) end
     end
 
     -- The region: the land of the map open on screen (or the one you are in), what the diary holds

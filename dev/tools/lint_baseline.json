@@ -162,8 +162,8 @@
   "SkaldAPI",
   "SkaldAtlasDB",
   "SlashCmdList",
-  "WorldMapFrame",
   "UIParent",
+  "WorldMapFrame",
   "_G",
   "date",
   "hooksecurefunc",
@@ -272,23 +272,35 @@
   "type"
  ],
  "Skald/Pvp.lua": [
+  "C_GameRules",
+  "C_PvP",
+  "CombatLogGetCurrentEventInfo",
   "CreateFrame",
+  "Enum",
+  "GetPVPDesired",
   "GetPVPLifetimeStats",
   "GetRealZoneText",
   "GetRealmName",
+  "GetSubZoneText",
   "GetZonePVPInfo",
   "HONORABLE_KILLS",
+  "IsPVPTimerRunning",
   "SkaldAPI",
   "SkaldCharDB",
   "SkaldDB",
+  "UnitGUID",
   "UnitIsPVP",
   "_G",
+  "bit",
   "date",
   "ipairs",
+  "issecretvalue",
   "math",
   "next",
   "pairs",
   "pcall",
+  "print",
+  "select",
   "string",
   "table",
   "time",
@@ -394,14 +406,6 @@
   "tostring",
   "type"
  ],
- "Skald/Locales.lua": [
-  "GetLocale"
- ],
- "Skald/Curated.lua": [
-  "ipairs",
-  "pairs"
- ],
- "Skald/XPTiers.lua": [],
  "Skald/ChronicleTab.lua": [
   "C_AddOns",
   "CreateFrame",
@@ -418,5 +422,13 @@
   "table",
   "tostring",
   "type"
- ]
+ ],
+ "Skald/Locales.lua": [
+  "GetLocale"
+ ],
+ "Skald/Curated.lua": [
+  "ipairs",
+  "pairs"
+ ],
+ "Skald/XPTiers.lua": []
 }

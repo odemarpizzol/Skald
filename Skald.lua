@@ -9680,6 +9680,15 @@ SlashCmdList["SKALD"] = function(msg)
         if ns.Pvp then for _, line in ipairs(ns.Pvp.Command(msg:match("^pvp (%a+)$"))) do Say(line) end end
     elseif msg == "probe realm" then
         if ns.Pvp then for _, line in ipairs(ns.Pvp.ProbeLines()) do Say(line) end end
+    elseif msg == "probe kills" or msg == "probe kills off" then
+        if ns.Pvp then Say(ns.Pvp.KillProbe(msg:match("off$"))) end
+    elseif msg == "probe server" then
+        -- also kept in SkaldDB.probeServer (overwritten each time), to be read from the saved file after a /reload
+        if ns.Pvp then
+            local lines = ns.Pvp.ServerLines()
+            for _, line in ipairs(lines) do Say(line) end
+            Settings().probeServer = lines
+        end
     elseif msg == "sound" or msg:match("^sound %d+$") then
         -- candidates for the sound of the notice: a name of SOUNDKIT where it exists, else the number of the file
         local list = K.SOUND_CANDIDATES

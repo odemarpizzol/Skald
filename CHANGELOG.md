@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.1
+
+- **Map markers give way to quests**: when a Skald marker sits on a marker of the game or of another addon (a quest, a flight master, Questie...), the Skald one now steps back, faded underneath so the quest stays clear; hover it and it comes back. The Atlas tab has a new row, "Where another marker stands", to fade it (default), hide it, or keep it as before. Thanks to the player who asked for it. Only seen in a simulation so far: please report what looks wrong
+- **The PvP tab shows itself on a PvP server** in the Forever client, which tells addons the kind of server through its game rules; elsewhere it still appears with your first battleground or with `/skald pvp on`
+- `/skald pvp off` now hides the PvP tab even after a battleground has been recorded
+
 ## 1.1.0
 
 - **German** (deDE): the whole diary, the Saga, the quest stories, every tab and the web Reader, with 2,630 lines for the pages. German place names take their article and case ("im Brachland", "in den Sümpfen des Elends", "auf der Höllenfeuerhalbinsel", "im Scharlachroten Kloster"); professions and pet families are recognised on old pages, and instance names follow the client (Forever or Burning Crusade). Checked with a grammar tool, not yet by a native speaker nor seen in the German client: please report what reads wrong
