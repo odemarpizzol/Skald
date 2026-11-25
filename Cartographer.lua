@@ -248,10 +248,6 @@ local function BuildTab(panel)
     local TEX = "Interface\\AddOns\\Skald\\Textures\\skald2\\"
 
     SkaldAPI.PageHeading(panel, UI.TITLE, 0)
-    local seal = panel:CreateTexture(nil, "ARTWORK")
-    seal:SetSize(34, 34)
-    seal:SetPoint("TOPLEFT", panel, "TOPLEFT", 44, -2)
-    seal:SetTexture(TEX .. "map_title_seal")
     local count = panel:CreateFontString(nil, "OVERLAY", "SkaldSmall")
     count:SetPoint("TOPLEFT", RIGHT_X, -12)
     count:SetWidth(CW)
@@ -420,7 +416,7 @@ local function BuildTab(panel)
             local all, total = detail.list or {}, detail.total or 0
             local pagesOf = math.max(1, math.ceil(#all / #rows))
             detailPage = math.max(1, math.min(detailPage, pagesOf))
-            count:SetText(UI.HERE .. " (" .. total .. ")" .. (pagesOf > 1 and ("   " .. string.format(UI.OF, detailPage, pagesOf)) or ""))
+            count:SetText(UI.HERE .. " (" .. total .. ")")
             local pages = {}
             for i = 1, #rows do pages[i] = all[(detailPage - 1) * #rows + i] end
             for i, row in ipairs(rows) do
@@ -506,6 +502,11 @@ local function BuildTab(panel)
         end
     end
 
+    local baseRefresh = Refresh
+    Refresh = function()
+        baseRefresh()
+        if SkaldAPI.RefreshFooter then SkaldAPI.RefreshFooter() end
+    end
     local pager = {
         Turn = function(delta)
             if detail then
@@ -519,6 +520,8 @@ local function BuildTab(panel)
         end,
         CanPrev = function() return detail ~= nil or spread > 1 end,
         CanNext = function() if detail then return detailPage < math.ceil(#(detail.list or {}) / 7) end return spread < spreads end,
+        Current = function() return detail and detailPage or spread end,
+        Count = function() return detail and math.max(1, math.ceil(#(detail.list or {}) / 7)) or spreads end,
     }
     C.refresh = Refresh
     C.pager = pager

@@ -954,15 +954,6 @@ local function BuildGoalsTab(panel)
         goalRows[i] = row
     end
 
-    -- "2 of 3" under the last goal; the page corners and the wheel of the book turn the pages (see `pager` below)
-    local pageNote = CreateFrame("Frame", nil, panel)
-    pageNote:SetSize(CW, 28)
-    pageNote:SetPoint("TOPLEFT", panel, "TOPLEFT", RIGHT_X, -430)
-    local pageLabel = pageNote:CreateFontString(nil, "OVERLAY", "SkaldBody")
-    pageLabel:SetPoint("CENTER", 0, 0)
-    ns.ThemeText(pageLabel, body[1], body[2], body[3])
-    pageNote.label = pageLabel   -- for the tests
-
     refreshTab = function()
         local db = SkaldCharDB
         if not db then return end
@@ -1024,8 +1015,6 @@ local function BuildGoalsTab(panel)
         local pages = math.max(1, math.ceil(#list / perPage))
         goalPage = math.max(1, math.min(goalPage, pages))
         goalPages = pages
-        pageNote:SetShown(pages > 1)
-        pageLabel:SetText(string.format(UI.OF, goalPage, pages))
         for i, row in ipairs(goalRows) do
             local g = list[(goalPage - 1) * perPage + i]
             if not g then
@@ -1078,12 +1067,19 @@ local function BuildGoalsTab(panel)
             end
         end
     end
+    local baseRefresh = refreshTab
+    refreshTab = function()
+        baseRefresh()
+        if SkaldAPI.RefreshFooter then SkaldAPI.RefreshFooter() end
+    end
     pcall(Check)
     -- the corners and the wheel of the book turn the pages of the chosen category, as they do in the Saga
     local pager = {
         Turn = function(delta) goalPage = math.max(1, math.min(goalPages, goalPage + delta)) end,
         CanPrev = function() return goalPage > 1 end,
         CanNext = function() return goalPage < goalPages end,
+        Current = function() return goalPage end,
+        Count = function() return goalPages end,
     }
     return refreshTab, pager
 end

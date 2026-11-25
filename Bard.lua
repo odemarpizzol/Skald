@@ -206,8 +206,6 @@ end
 Bard.Clock = Clock
 
 local function BuildTab(panel)
-    -- The footer controls reach the paper's lower margin, beyond the usual text pane.
-    panel:SetPoint("BOTTOMRIGHT", panel:GetParent(), "BOTTOMRIGHT", -54, 28)
     local CW = SkaldAPI.CW or 342
     local RIGHT_X = SkaldAPI.RIGHT_X or 402
     -- The shared panes have 30/36-point pads; both Bard columns use 33 for a common page centre.
@@ -284,14 +282,9 @@ local function BuildTab(panel)
         rows[i] = row
     end
 
-    -- Repertoire above the songs; a handwritten line and folio below them.
-    local pageNote = panel:CreateFontString(nil, "OVERLAY", "SkaldSmall")
-    pageNote:SetPoint("TOPLEFT", LEFT_X, -455)
-    pageNote:SetWidth(CW)
-    pageNote:SetJustifyH("CENTER")
-    ns.ThemeText(pageNote, muted[1], muted[2], muted[3])
+    -- Repertoire above the songs; the handwritten line stays above the common book footer.
     local quote = panel:CreateFontString(nil, "OVERLAY", "SkaldNote")
-    quote:SetPoint("TOPLEFT", LEFT_X, -418)
+    quote:SetPoint("TOPLEFT", LEFT_X, -410)
     quote:SetSize(CW, 26)
     quote:SetJustifyH("CENTER")
     ns.ThemeText(quote, muted[1], muted[2], muted[3])
@@ -462,24 +455,24 @@ local function BuildTab(panel)
     local volLabel = panel:CreateFontString(nil, "OVERLAY", "SkaldSmall")
     local BAR_W = CW - 112
     local BAR_X = RIGHT_X + (CW - BAR_W) / 2
-    volLabel:SetPoint("TOPLEFT", BAR_X, -403)
+    volLabel:SetPoint("TOPLEFT", BAR_X, -367)
     volLabel:SetWidth(BAR_W)
     volLabel:SetJustifyH("LEFT")
     ns.ThemeText(volLabel, muted[1], muted[2], muted[3])
     volLabel:SetText(L.BARD_GAME_VOLUME)
     local volValue = panel:CreateFontString(nil, "OVERLAY", "SkaldSmall")
-    volValue:SetPoint("TOPLEFT", BAR_X, -403)
+    volValue:SetPoint("TOPLEFT", BAR_X, -367)
     volValue:SetWidth(BAR_W)
     volValue:SetJustifyH("RIGHT")
     ns.ThemeText(volValue, muted[1], muted[2], muted[3])
     local speaker = panel:CreateTexture(nil, "ARTWORK")
     speaker:SetSize(21, 21)
-    speaker:SetPoint("TOPLEFT", BAR_X - 28, -423)
+    speaker:SetPoint("TOPLEFT", BAR_X - 28, -387)
     speaker:SetTexture(TEX .. "bard_speaker")
     ns.ThemeTint(speaker, "metal")
     local bar = CreateFrame("Frame", nil, panel)
     bar:SetSize(BAR_W, 10)
-    bar:SetPoint("TOPLEFT", BAR_X, -429)
+    bar:SetPoint("TOPLEFT", BAR_X, -393)
     bar:EnableMouse(true)
     bar.frame = bar:CreateTexture(nil, "ARTWORK")
     bar.frame:SetSize(BAR_W * 512 / 434, 10)
@@ -723,7 +716,7 @@ local function BuildTab(panel)
     -- the look of the notice shown with the book shut: a step back, the name (a click goes on), a step forward
     local HUD_ORDER = { "bar", "scroll", "wood", "medal" }
     local caption = panel:CreateFontString(nil, "OVERLAY", "SkaldSmall")
-    caption:SetPoint("TOPLEFT", RIGHT_X + 44, -457)
+    caption:SetPoint("TOPLEFT", RIGHT_X + 44, -417)
     caption:SetSize(86, 20)
     caption:SetJustifyH("RIGHT")
     ns.ThemeText(caption, muted[1], muted[2], muted[3])
@@ -731,7 +724,7 @@ local function BuildTab(panel)
     local function HudChoice(text, x, width)
         local button = CreateFrame("Button", nil, panel)
         button:SetSize(width, 20)
-        button:SetPoint("TOPLEFT", RIGHT_X + x, -457)
+        button:SetPoint("TOPLEFT", RIGHT_X + x, -417)
         button.text = button:CreateFontString(nil, "OVERLAY", "SkaldSmall")
         button.text:SetAllPoints()
         button.text:SetJustifyH("CENTER")
@@ -808,7 +801,6 @@ local function BuildTab(panel)
                 row:Hide()
             end
         end
-        pageNote:SetText(string.format("%d / %d", Bard.page, Bard.Pages()))
         orderItems.sequential:SetActive(not Bard.Shuffle())
         orderItems.shuffle:SetActive(Bard.Shuffle())
         for _, key in ipairs({ "all", "A", "H" }) do sideItems[key]:SetActive(key == (Bard.Side() or "all")) end
@@ -820,6 +812,7 @@ local function BuildTab(panel)
         ShowHudName()
         Animate()
         ShowVolume(Bard.Volume())
+        if SkaldAPI.RefreshFooter then SkaldAPI.RefreshFooter() end
     end
     panel.rows, panel.state, panel.song, panel.clock, panel.mainButton = rows, state, song, clock, main   -- for the tests
     panel.prevButton, panel.nextButton, panel.off, panel.Refresh = prev, nextB, off, refresh
@@ -830,6 +823,8 @@ local function BuildTab(panel)
         Turn = function(delta) Bard.page = math.max(1, math.min(Bard.Pages(), (Bard.page or 1) + delta)) end,
         CanPrev = function() return (Bard.page or 1) > 1 end,
         CanNext = function() return (Bard.page or 1) < Bard.Pages() end,
+        Current = function() return Bard.page or 1 end,
+        Count = function() return Bard.Pages() end,
     }
     panel.pager = pager
     return refresh, pager

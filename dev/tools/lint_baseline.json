@@ -207,7 +207,6 @@
   "C_Map",
   "SkaldAPI",
   "SkaldCharDB",
-  "SkaldDB",
   "SkaldSaga",
   "UnitClass",
   "UnitFactionGroup",
@@ -272,8 +271,12 @@
   "type"
  ],
  "Skald/Pvp.lua": [
+  "GameTooltip",
+  "C_DeathInfo",
   "C_GameRules",
+  "C_Map",
   "C_PvP",
+  "C_Timer",
   "CombatLogGetCurrentEventInfo",
   "CreateFrame",
   "Enum",
@@ -284,12 +287,18 @@
   "GetSubZoneText",
   "GetZonePVPInfo",
   "HONORABLE_KILLS",
+  "IsInInstance",
   "IsPVPTimerRunning",
   "SkaldAPI",
   "SkaldCharDB",
   "SkaldDB",
+  "UnitCanAttack",
+  "UnitExists",
   "UnitGUID",
   "UnitIsPVP",
+  "UnitIsPlayer",
+  "UnitLevel",
+  "UnitName",
   "_G",
   "bit",
   "date",
@@ -424,6 +433,7 @@
   "type"
  ],
  "Skald/Locales.lua": [
+  "pairs",
   "GetLocale"
  ],
  "Skald/Curated.lua": [

@@ -3469,25 +3469,93 @@ RES = (newPages == 0 and quiet and not g.quests3000 and not g.days7 and f.days >
   and ns.GoalTitle(2300) ~= ns.GoalTitle(750)) and "ok" or ("newPages=" .. newPages .. " quiet=" .. tostring(quiet) .. " days=" .. tostring(f.days))`,
 });
 
+run('shared footers: only Journeys and Saga show Arabic folios and laurels, in both paper themes', {
+  body: `local cover=btn("Cover");cover._OnClick(cover)
+local win=_G.SkaldFrame
+win:Show()
+ns.Pvp.Command("demo");ns.ChronicleTab.Command("demo")
+local left,right=win.footers[1],win.footers[2]
+local pos=left._pt
+local function check(section)
+ win:ShowSection(section,true)
+ assert(win.footers[1]==left and win.footers[2]==right,"footer rebuilt for "..section)
+ local visible=section=="days" or section=="saga"
+ assert(left:IsShown()==visible and right:IsShown()==visible,"wrong footer visibility in "..section)
+ assert(left.number:GetText():match("^%d+$") and right.number:GetText():match("^%d+$"),"mixed numeral formats in "..section)
+ assert(tonumber(right.number:GetText())==tonumber(left.number:GetText())+1,"folios are not consecutive in "..section)
+ assert(left.page%2==1 and right.page%2==0 and left.total==right.total,"inconsistent page state in "..section)
+ assert(left._pt[1]==pos[1] and left._pt[2]==pos[2] and left._pt[3]==pos[3]
+   and right._pt[1]==pos[1] and right._pt[2]==pos[2] and right._pt[3]==pos[3],"footer height differs in "..section)
+ assert(left.laurelL._tex:find("ui_laurel_l",1,true) and right.laurelR._tex:find("ui_laurel_r",1,true),"ornament differs in "..section)
+end
+local sections={"cover","index","days","search","bard","goals","cartographer","pvp","chronicle","saga","pets","map","settings"}
+for _,section in ipairs(sections) do check(section) end
+local n=0
+for _,t in ipairs(TEXTURES) do if type(t._tex)=="string" and t._tex:find("ui_laurel_",1,true) then n=n+1 end end
+assert(n==4,"private footer ornaments remain: "..n)
+local light={left.number:GetTextColor()}
+ns.SetDarkMode(true)
+for _,section in ipairs(sections) do check(section) end
+local dark={left.number:GetTextColor()}
+assert(light[1]~=dark[1] or light[2]~=dark[2] or light[3]~=dark[3],"folio ink did not follow paper theme")
+ns.SetDarkMode(false);check("cover")
+assert(not left:IsShown() and not right:IsShown(),"cover retained decorative folios")
+assert(SkaldDB.errors==nil,tostring(SkaldDB.errors and SkaldDB.errors[1]))
+RES="ok"`,
+});
+
+run('shared footers: content filters and local page changes update folios and corners without reopening the section', {
+  body: `btn("Cover")._OnClick(btn("Cover"))
+local win=_G.SkaldFrame
+win:Show()
+local prev,nextB
+for _,f in ipairs(frames) do if rawget(f,"cornerSide")=="l" then prev=f elseif rawget(f,"cornerSide")=="r" then nextB=f end end
+win:ShowSection("map",true)
+assert(prev:IsShown() and nextB:IsShown() and not prev:IsEnabled() and not nextB:IsEnabled(),"single-spread corners differ")
+nextB._OnClick(nextB)
+assert(win:GetView()=="map","inactive corner left its section")
+win:ShowSection("settings",true);nextB._OnClick(nextB)
+assert(win.footers[1].number:GetText()=="3" and win.footers[2].number:GetText()=="4","settings use old Roman folios")
+assert(not win.footers[1]:IsShown(),"settings exposed decorative page numbers")
+win:ShowSection("bard",true);nextB._OnClick(nextB)
+assert(win.footers[1].page==3,"Bard page not reflected")
+assert(not win.footers[1]:IsShown(),"Bard exposed decorative page numbers")
+local bardPanel
+for _,f in ipairs(frames) do if rawget(f,"sideItems") then bardPanel=f end end
+bardPanel.sideItems.A._OnClick(bardPanel.sideItems.A)
+assert(win.footers[1].page==1 and not prev:IsEnabled(),"Bard filter left stale footer")
+SkaldCharDB.entries={}
+for i=1,18 do SkaldCharDB.entries[i]={t=NOW-i,kind="note",arg="unique footer needle",idx=1} end
+win:ShowSection("search",true)
+local p
+for _,f in ipairs(frames) do if rawget(f,"searchBox") then p=f end end
+p.searchBox:SetText("unique footer needle");p.searchBox._OnTextChanged(p.searchBox,true);runTimers()
+assert(nextB:IsEnabled() and win.footers[1].total==6,"search did not enable its next corner")
+assert(not win.footers[1]:IsShown(),"search exposed decorative page numbers")
+nextB._OnClick(nextB)
+assert(win.footers[1].page==3,"search did not advance common folios")
+p.searchBox:SetText("no such phrase at all");p.searchBox._OnTextChanged(p.searchBox,true);runTimers()
+assert(win.footers[1].page==1 and win.footers[1].total==2 and not nextB:IsEnabled() and not prev:IsEnabled(),"empty results retained old pagination")
+assert(SkaldDB.errors==nil,tostring(SkaldDB.errors and SkaldDB.errors[1]))
+RES="ok"`,
+});
+
 run('a long category of goals goes over more pages: the corners of the book turn them and stay inside the range', {
   body: `local tab = btn("Deeds")
 tab._OnClick(tab)
 for i = #frames, 1, -1 do local f = frames[i]; local c = rawget(f, "cat"); if c and c.key == "war" and f._OnClick then f._OnClick(f); break end end
-local pager
-for i = #frames, 1, -1 do if rawget(frames[i], "label") then pager = frames[i]; break end end
-local function label() return rawget(pager.label, "_text") end
+local win=_G.SkaldFrame
+local function label() return win.footers[1].number:GetText() end
 local first = label()
 local prev, nextB
 for _, f in ipairs(frames) do
-  if f._OnClick and rawget(f, "tex") and rawget(f, "_alpha") then
-    if f._alpha < 1 then prev = f else nextB = f end
-  end
+  if rawget(f,"cornerSide")=="l" then prev=f elseif rawget(f,"cornerSide")=="r" then nextB=f end
 end
 if not (prev and nextB) then RES = "corners not found" else
 nextB._OnClick(nextB); nextB._OnClick(nextB); nextB._OnClick(nextB)   -- past the last page: it stays on it
 local last = label()
 prev._OnClick(prev)
-RES = (first == "1 of 3" and last == "3 of 3" and label() == "2 of 3") and "ok" or ("first " .. tostring(first) .. " last " .. tostring(last) .. " back " .. tostring(label()))
+RES = (first == "1" and last == "5" and label() == "3" and win.footers[1].total==6) and "ok" or ("first " .. tostring(first) .. " last " .. tostring(last) .. " back " .. tostring(label()))
 end`,
 });
 
@@ -4914,7 +4982,7 @@ RES = (atLogin and normal and off and back and without and SkaldDB.errors == nil
   or ("login=" .. tostring(atLogin) .. " normal=" .. tostring(normal) .. " off=" .. tostring(off) .. " back=" .. tostring(back) .. " without=" .. tostring(without) .. " err=" .. tostring(SkaldDB.errors and SkaldDB.errors[1]))`,
 });
 
-run('/skald probe kills keeps what the client says of a kill (combat log, honour line), hides nothing it was not given, stays on after a reload and writes no page', {
+run('/skald probe kills silently keeps kill details, stays active through tab refreshes and writes no page', {
   pre: `function UnitGUID(u) return "Player-1-ME" end
 CLEU = { 0, "PARTY_KILL", false, "Player-1-ME", "Me", 0x511, 0, "Player-2-FOE", "Foe", 0x548, 0 }
 function CombatLogGetCurrentEventInfo() return unpack(CLEU) end
@@ -4922,6 +4990,7 @@ function GetPVPLifetimeStats() return 7 end
 bit = bit or { band = function(a, b) return a & b end }`,
   body: `local pages = #SkaldCharDB.entries
 SlashCmdList.SKALD("probe kills")
+local messages = #print_out
 fire("COMBAT_LOG_EVENT_UNFILTERED")
 CLEU[2] = "SPELL_DAMAGE"; fire("COMBAT_LOG_EVENT_UNFILTERED")
 fire("CHAT_MSG_COMBAT_HONOR_GAIN", "Foe dies, honorable kill")
@@ -4930,12 +4999,123 @@ local k = list[1] or {}
 local kill = #list == 2 and k.sub_ == "PARTY_KILL" and k.mine == true and k.destPlayer == true and k.hostile == true and k.hk == 7
 local chat = list[2] and list[2].ev == "CHAT_MSG_COMBAT_HONOR_GAIN"
 ns.Pvp.Ensure()
-local kept = SkaldDB.probeKillsOn == true
+local kept = #list == 2 and SkaldDB.probeKillsOn == nil
+local silent = #print_out == messages
 SlashCmdList.SKALD("probe kills off")
 CLEU[2] = "PARTY_KILL"; fire("COMBAT_LOG_EVENT_UNFILTERED")
-local off = SkaldDB.probeKillsOn == nil
-RES = (kill and chat and kept and off and #SkaldCharDB.entries == pages and SkaldDB.errors == nil) and "ok"
-  or ("n=" .. #list .. " kill=" .. tostring(kill) .. " chat=" .. tostring(chat) .. " kept=" .. tostring(kept) .. " off=" .. tostring(off) .. " err=" .. tostring(SkaldDB.errors and SkaldDB.errors[1]))`,
+local off = #list == 2 and SkaldDB.probeKillsOn == nil
+RES = (kill and chat and kept and silent and off and #SkaldCharDB.entries == pages and SkaldDB.errors == nil) and "ok"
+  or ("n=" .. #list .. " kill=" .. tostring(kill) .. " chat=" .. tostring(chat) .. " kept=" .. tostring(kept) .. " silent=" .. tostring(silent) .. " off=" .. tostring(off) .. " err=" .. tostring(SkaldDB.errors and SkaldDB.errors[1]))`,
+});
+
+run('/skald probe kills does not resume a saved switch on login and preserves existing diagnostic records', {
+  pre: FOREVER + `SkaldDB.probeKillsOn=true
+SkaldDB.probeKills={{ev="previous-session",t=NOW-10}}`,
+  body: `local messages=#print_out
+fire("PLAYER_PVP_KILLS_CHANGED");fire("CHAT_MSG_COMBAT_HONOR_GAIN","probe test");fire("PARTY_KILL","Player-1-ME","Player-2-FOE")
+ns.Pvp.Ensure();runTimers()
+assert(SkaldDB.probeKillsOn==nil,"persistent probe switch survived login")
+assert(#SkaldDB.probeKills==1 and SkaldDB.probeKills[1].ev=="previous-session","disabled probe collected or erased records")
+assert(#print_out==messages,"disabled probe printed in chat")
+assert(SkaldDB.errors==nil,tostring(SkaldDB.errors and SkaldDB.errors[1]))
+RES="ok"`,
+});
+
+run('/skald probe kills cancels delayed death samples on stop, including when immediately re-enabled, and caps silent records', {
+  pre: FOREVER,
+  body: `SlashCmdList.SKALD("probe kills")
+fire("PLAYER_DEAD")
+local records=SkaldDB.probeKills
+assert(#records==1,"death sample missing")
+SlashCmdList.SKALD("probe kills off")
+SlashCmdList.SKALD("probe kills")
+runTimers()
+assert(#records==1,"sample from stopped diagnostic session survived")
+local messages=#print_out
+for i=1,35 do fire("CHAT_MSG_COMBAT_HONOR_GAIN","probe test") end
+assert(#records==30,"diagnostic record cap changed")
+assert(#print_out==messages,"record collection printed in chat")
+SlashCmdList.SKALD("probe kills off")
+fire("PLAYER_DEAD");runTimers()
+assert(#records==30,"probe collected while disabled")
+assert(SkaldDB.errors==nil,tostring(SkaldDB.errors and SkaldDB.errors[1]))
+RES="ok"`,
+});
+
+// An error of 5 November was read on 21 November as a new one: the list had no date, no version and no end.
+run('errors are kept with the date and the version, the same one again is counted, at most twenty, and /skald errors clear forgets them', {
+  body: `SkaldDB.errors = { "CatchUpLevels: an old line without a stamp" }
+for i = 1, 30 do ns.NoteError("fault " .. i) end
+ns.NoteError("fault 30"); ns.NoteError("fault 30")
+local list = SkaldDB.errors
+local last = list[#list]
+local stamped = last:match("^%[%d%d%d%d%-%d%d%-%d%d %d%d:%d%d v[^%]]- x3%] fault 30$") ~= nil
+local capped = #list == ns.ERRORS_MAX
+local once = 0
+for _, l in ipairs(list) do if l:find("fault 30", 1, true) then once = once + 1 end end
+SlashCmdList.SKALD("errors")
+SlashCmdList.SKALD("errors clear")
+RES = (stamped and capped and once == 1 and SkaldDB.errors == nil) and "ok"
+  or ("last=" .. tostring(last) .. " n=" .. #list .. " once=" .. once)`,
+});
+
+// Seen in Forever on 2026-11-23: asking for COMBAT_LOG_EVENT_UNFILTERED raised the game's "action blocked" window.
+run('/skald probe kills never asks for the combat log in a client with secret values (Forever forbids it to addons)', {
+  pre: FOREVER + `
+ASKED = {}
+local make = CreateFrame
+CreateFrame = function(...) local f = make(...); local reg = f.RegisterEvent; f.RegisterEvent = function(self, ev) ASKED[ev] = true; if reg then return reg(self, ev) end end; return f end`,
+  body: `SlashCmdList.SKALD("probe kills")
+local honour = ASKED.CHAT_MSG_COMBAT_HONOR_GAIN and ASKED.PLAYER_PVP_KILLS_CHANGED
+SlashCmdList.SKALD("probe kills off")
+RES = (not ASKED.COMBAT_LOG_EVENT_UNFILTERED and honour and SkaldDB.errors == nil) and "ok"
+  or ("cleu=" .. tostring(ASKED.COMBAT_LOG_EVENT_UNFILTERED) .. " honour=" .. tostring(honour))`,
+});
+
+// Asked on 2026-11-25: a death to an Alliance player in the open world left nothing but the death page.
+run('/skald probe kills also keeps what the client says at the death of the player (target, hostile players near, death recap)', {
+  pre: FOREVER + `
+function UnitExists(u) return u == "target" or u == "nameplate3" end
+function UnitIsPlayer(u) return u == "target" or u == "nameplate3" end
+function UnitName(u) return u == "target" and "Foe" or "Other" end
+function UnitCanAttack(a, u) return true end
+function DeathRecap_HasEvents() return true end
+C_DeathInfo = { GetSelfResurrectOptions = function() return {} end }`,
+  body: `SlashCmdList.SKALD("probe kills")
+fire("PLAYER_DEAD")
+local r = (SkaldDB.probeKills or {})[1] or {}
+local seen = r.ev == "PLAYER_DEAD" and type(r.target) == "string" and r.target:find("^Foe") and r.target:find("hostile$")
+  and type(r.hostileNear) == "string" and r.hostileNear:find("Other", 1, true)
+  and type(r.recap) == "string" and r.recap:find("DeathRecap_HasEvents=true", 1, true) and r.recap:find("C_DeathInfo:", 1, true)
+SlashCmdList.SKALD("probe kills off")
+RES = (seen and SkaldDB.errors == nil) and "ok"
+  or ("target=" .. tostring(r.target) .. " near=" .. tostring(r.hostileNear) .. " recap=" .. tostring(r.recap) .. " err=" .. tostring(SkaldDB.errors and SkaldDB.errors[1]))`,
+});
+
+// Seen in Forever on 2026-11-25: one kill in Stonetalon fired PLAYER_PVP_KILLS_CHANGED twice and one honour line, and the
+// JxJ tab counted nothing of the open world.
+run('open-world kills and honour are counted by zone from the game\'s own count (two events of one kill count one), never inside a battleground', {
+  pre: FOREVER + `
+HK = 5
+function GetPVPLifetimeStats() return HK end
+INSIDE = false
+function IsInInstance() return INSIDE, INSIDE and "pvp" or "none" end`,
+  body: `ns.Pvp.Ensure()
+local base = SkaldCharDB.worldPvp and SkaldCharDB.worldPvp.base == 5
+HK = 6
+fire("PLAYER_PVP_KILLS_CHANGED", "player"); fire("PLAYER_PVP_KILLS_CHANGED", "player")
+fire("CHAT_MSG_COMBAT_HONOR_GAIN", "Você obteve 8 Pontos de Honra.")
+local w = ns.Pvp.World()
+local one = w.k == 1 and w.h == 8 and #w.rows == 1
+INSIDE = true; HK = 9
+fire("PLAYER_PVP_KILLS_CHANGED", "player"); fire("CHAT_MSG_COMBAT_HONOR_GAIN", "You have been awarded 30 honor points.")
+INSIDE = false
+local w2 = ns.Pvp.World()
+local bgOut = w2.k == 1 and w2.h == 8 and SkaldCharDB.worldPvp.base == 9
+local wanted = ns.Pvp.Wanted()
+SlashCmdList.SKALD("pvp demo"); local demo = ns.Pvp.World().k > 0; SlashCmdList.SKALD("pvp demo")
+RES = (base and one and bgOut and wanted and demo and SkaldDB.errors == nil) and "ok"
+  or ("base=" .. tostring(base) .. " one=" .. tostring(one) .. " k=" .. w.k .. " h=" .. w.h .. " rows=" .. #w.rows .. " bgOut=" .. tostring(bgOut) .. " wanted=" .. tostring(wanted) .. " demo=" .. tostring(demo) .. " err=" .. tostring(SkaldDB.errors and SkaldDB.errors[1]))`,
 });
 
 run('/skald pvp demo draws the tab with example numbers, writes nothing in the diary, and leaving it puts the tab as it was', {
@@ -4952,6 +5132,303 @@ SlashCmdList.SKALD("pvp demo")
 local off = ns.Pvp.demo == nil and ns.Pvp.Wanted() == before and not tab:IsShown() and ns.Pvp.Data().total == 0
 RES = (before == false and on and sample and clean and off and SkaldDB.errors == nil) and "ok"
   or ("before=" .. tostring(before) .. " on=" .. tostring(on) .. " sample=" .. tostring(sample) .. " clean=" .. tostring(clean) .. " off=" .. tostring(off) .. " err=" .. tostring(SkaldDB.errors and SkaldDB.errors[1]))`,
+});
+
+const RIVAL_API = `ME="Player-91-00000001"; FOE="Player-91-00000002"; OTHER="Player-92-00000002"
+RECAP_ID=1; RECAP_ROWS={}; UNITS={target={guid=FOE,name="Kyuse"}}
+function UnitGUID(u) return u=="player" and ME or (UNITS[u] and UNITS[u].guid) end
+function UnitName(u) if not u or u=="player" then return "Tester" end; local v=UNITS[u]; if v then return v.name,v.realm end end
+function UnitIsPlayer(u) return u=="player" or (UNITS[u]~=nil and UNITS[u].player~=false) end
+function UnitCanAttack(a,u) return UNITS[u]~=nil and UNITS[u].hostile~=false end
+function GetDeathRecapLink() return "|Hdeath:"..RECAP_ID.."|h[Death]|h" end
+function DeathRecap_GetEvents() return RECAP_ROWS end`;
+
+run('blood debts: Forever records the fatal identity, repeated falls stay open, only the player killing that GUID closes once and writes a page', {
+  pre: FOREVER + RIVAL_API,
+  body: `RECAP_ID=2; RECAP_ROWS={{event="SPELL_DAMAGE",sourceGUID=FOE,sourceName="Kyuse"}}
+fire("PLAYER_DEAD"); fire("PLAYER_DEAD"); runTimers()
+local w=SkaldCharDB.worldPvp
+assert(w.rivals[FOE] and w.rivals[FOE].pending and w.rivals[FOE].deaths==1, "missing or duplicate debt")
+assert(ns.Pvp.Wanted() and count("revenge")==0, "debt not visible or premature revenge")
+fire("PARTY_KILL",OTHER,FOE); fire("PARTY_KILL",ME,OTHER)
+assert(w.rivals[FOE].pending and count("revenge")==0, "a different player or homonym settled the debt")
+fire("PLAYER_UNGHOST"); NOW=NOW+60; RECAP_ID=3
+fire("PLAYER_DEAD");runTimers()
+assert(w.rivals[FOE].deaths==2 and ns.Pvp.RivalData().pending==1, "repeat fall opened another debt")
+fire("PLAYER_UNGHOST");NOW=NOW+60
+fire("PARTY_KILL",ME,FOE);fire("PARTY_KILL",ME,FOE)
+assert(not w.rivals[FOE].pending and w.rivals[FOE].revenges==1 and w.revengeTotal==1 and count("revenge")==1, "revenge duplicated or missing")
+local e=SkaldCharDB.entries[#SkaldCharDB.entries]
+assert(e.kind=="revenge" and e.rival==FOE and e.arg=="Kyuse" and SkaldAPI.Render(e):find("Kyuse",1,true), "diary omitted rival")
+local reader=table.concat(SkaldAPI.BuildExport("reader","all")," ")
+assert(reader:find("revenge",1,true) and reader:find("Kyuse",1,true),"Reader omitted revenge")
+assert(ns.Search.GROUPS[3].kinds.revenge, "revenge absent from battle search")
+assert(#ns.Search.Run(SkaldCharDB.entries,"Kyuse",{})==1, "revenge not searchable")
+assert(SkaldAPI.EventIconPath("revenge",e):find("ev_bg",1,true), "battle icon missing")
+NOW=NOW+60;RECAP_ID=4;fire("PLAYER_DEAD");runTimers()
+assert(w.rivals[FOE].pending and w.rivals[FOE].deaths==3, "rivalry did not reopen")
+fire("PLAYER_UNGHOST");NOW=NOW+60;fire("PARTY_KILL",ME,FOE)
+assert(w.revengeTotal==2 and count("revenge")==2, "second revenge lost")
+assert(SkaldDB.errors==nil,tostring(SkaldDB.errors and SkaldDB.errors[1]))
+RES="ok"`,
+});
+
+run('blood debts: recap names require one recent hostile-player identity; stale recaps, other names, ambiguous names and environmental deaths open no debt', {
+  pre: FOREVER + RIVAL_API,
+  body: `RECAP_ROWS={{event="SPELL_DAMAGE",sourceName="Kyuse"}}
+fire("PLAYER_DEAD");runTimers()
+assert(next(SkaldCharDB.worldPvp.rivals)==nil,"old recap attributed to current death")
+fire("PLAYER_UNGHOST");RECAP_ID=2;UNITS.nameplate1={guid=OTHER,name="Kyuse"}
+fire("PLAYER_DEAD");runTimers()
+assert(next(SkaldCharDB.worldPvp.rivals)==nil,"ambiguous name guessed")
+fire("PLAYER_UNGHOST");RECAP_ID=3;RECAP_ROWS[1].sourceName="Someone else"
+fire("PLAYER_DEAD");runTimers()
+assert(next(SkaldCharDB.worldPvp.rivals)==nil,"selected target guessed as killer")
+fire("PLAYER_UNGHOST");RECAP_ID=4;RECAP_ROWS[1]={event="ENVIRONMENTAL_DAMAGE",sourceGUID=FOE,sourceName="Kyuse"}
+fire("PLAYER_DEAD");runTimers()
+assert(next(SkaldCharDB.worldPvp.rivals)==nil,"environmental death became a debt")
+fire("PLAYER_UNGHOST");RECAP_ID=5;UNITS.nameplate1=nil;NOW=NOW+20
+RECAP_ROWS[1]={event="SPELL_DAMAGE",sourceName="Kyuse"}
+fire("PLAYER_DEAD");runTimers()
+assert(SkaldCharDB.worldPvp.rivals[FOE].pending,"unique fatal name was not resolved")
+assert(SkaldDB.errors==nil,tostring(SkaldDB.errors and SkaldDB.errors[1]))
+RES="ok"`,
+});
+
+run('blood debts: secret identifiers and names, arena/battleground deaths, other party kills and callbacks from a cleared diary never settle or invent debts', {
+  pre: FOREVER + RIVAL_API + `
+ASKED={}
+local make=CreateFrame
+CreateFrame=function(...) local f=make(...);f.RegisterEvent=function(self,event) ASKED[event]=true end;return f end`,
+  body: `assert(not ASKED.COMBAT_LOG_EVENT_UNFILTERED and ASKED.PARTY_KILL,"restricted combat log requested or own event omitted")
+local hidden={};FOREVER_SECRET[hidden]=true
+RECAP_ID=2;RECAP_ROWS={{event="SPELL_DAMAGE",sourceGUID=hidden,sourceName="Kyuse"}}
+fire("PLAYER_DEAD");fire("PARTY_KILL",hidden,FOE);fire("PARTY_KILL",ME,hidden);runTimers()
+assert(next(SkaldCharDB.worldPvp.rivals)==nil,"secret payload was used")
+fire("PLAYER_UNGHOST");RECAP_ID=3;RECAP_ROWS[1]={event="SPELL_DAMAGE",sourceName=hidden}
+fire("PLAYER_DEAD");runTimers()
+assert(next(SkaldCharDB.worldPvp.rivals)==nil,"secret name was used")
+fire("PLAYER_UNGHOST");RECAP_ID=4;RECAP_ROWS[1]={event="SPELL_DAMAGE",sourceGUID=FOE,sourceName="Kyuse"}
+function IsInInstance() return true,"arena" end
+fire("PLAYER_DEAD");runTimers()
+assert(next(SkaldCharDB.worldPvp.rivals)==nil,"arena debt recorded")
+function IsInInstance() return false,"none" end
+fire("PLAYER_UNGHOST");RECAP_ROWS={};fire("PLAYER_DEAD")
+SkaldCharDB.worldPvp={zones={},rivals={}};RECAP_ID=5
+RECAP_ROWS={{event="SPELL_DAMAGE",sourceGUID=FOE,sourceName="Kyuse"}};runTimers()
+assert(next(SkaldCharDB.worldPvp.rivals)==nil,"old callback polluted fresh diary")
+assert(count("revenge")==0 and SkaldDB.errors==nil,tostring(SkaldDB.errors and SkaldDB.errors[1]))
+RES="ok"`,
+});
+
+run('blood debts: the Classic combat log links a confirmed fatal blow to death and confirms the later kill without duplicates', {
+  pre: RIVAL_API + `
+CLEU={}
+function CombatLogGetCurrentEventInfo() return unpack(CLEU) end`,
+  body: `CLEU={0,"SWING_DAMAGE",false,FOE,"Kyuse",0x548,0,ME,"Tester",0x511,0,200,20}
+fire("COMBAT_LOG_EVENT_UNFILTERED")
+assert(ns.Pvp.RivalData().pending==0,"damage alone opened debt")
+CLEU={0,"UNIT_DIED",false,nil,nil,nil,nil,ME,"Tester",0x511,0}
+fire("COMBAT_LOG_EVENT_UNFILTERED");fire("PLAYER_DEAD");runTimers()
+assert(ns.Pvp.RivalData().pending==1,"fatal blow not attributed")
+fire("PLAYER_UNGHOST");NOW=NOW+60
+CLEU={0,"PARTY_KILL",false,ME,"Tester",0x511,0,FOE,"Kyuse",0x548,0}
+fire("COMBAT_LOG_EVENT_UNFILTERED");fire("PARTY_KILL",ME,FOE)
+assert(count("revenge")==1 and ns.Pvp.RivalData().total==1,"dual kill signals duplicated revenge")
+assert(SkaldDB.errors==nil,tostring(SkaldDB.errors and SkaldDB.errors[1]))
+RES="ok"`,
+});
+
+run('blood debts: persistence, diary archives and backups preserve pending/completed rivals; an empty new diary starts with no debt', {
+  pre: FOREVER + RIVAL_API,
+  body: `RECAP_ID=2;RECAP_ROWS={{event="SPELL_DAMAGE",sourceGUID=FOE,sourceName="Kyuse"}}
+fire("PLAYER_DEAD");runTimers()
+local saved=ns.Backup.Serialize(SkaldCharDB.worldPvp)
+local decoded=ns.Backup.Deserialize(saved)
+assert(decoded and decoded.rivals[FOE].pending and decoded.rivals[FOE].name=="Kyuse","backup omitted rival")
+local old=ns.Pvp.Rivals
+old.frame:SetScript("OnEvent",nil)
+assert(load(PV,"=reloaded PvP"))("Skald",ns);ns.Pvp.Ensure()
+assert(ns.Pvp.RivalData().pending==1,"reload lost pending debt")
+local db=SkaldCharDB
+db.previous={{guid=db.guid,t=NOW,entries=db.entries,visited=db.visited,stats=db.stats,state=ns.Backup.Capture(db)}}
+ns.ResetJournal(db)
+assert(ns.Pvp.RivalData().pending==0,"clear kept old debts")
+assert(ns.RestoreLatestArchive(),"archive not restored")
+assert(ns.Pvp.RivalData().pending==1,"archive lost debts")
+fire("PLAYER_UNGHOST");NOW=NOW+60;fire("PARTY_KILL",ME,FOE)
+assert(ns.Pvp.RivalData().total==1 and count("revenge")==1,"restored debt could not be settled")
+assert(SkaldDB.errors==nil,tostring(SkaldDB.errors and SkaldDB.errors[1]))
+RES="ok"`,
+});
+
+run('blood debts: modern recap APIs, a first recap with no baseline and the player\'s pet are handled without stale attribution', {
+  pre: FOREVER + RIVAL_API + `
+UPTIME=100
+function GetTime() return UPTIME end
+GetDeathRecapLink=nil;DeathRecap_GetEvents=nil
+READY_RECAP=false
+C_DeathRecap={GetRecapLink=function() if READY_RECAP then return "|Hdeath:"..RECAP_ID.."|h[x]|h" end end,
+ GetRecapEvents=function() return RECAP_ROWS end}`,
+  body: `READY_RECAP=true;RECAP_ID=2
+RECAP_ROWS={{event="SPELL_DAMAGE",sourceGUID=FOE,sourceName="Kyuse",timestamp=10}}
+fire("PLAYER_DEAD");runTimers()
+assert(ns.Pvp.RivalData().pending==0,"first old recap accepted without baseline")
+RECAP_ROWS[1].timestamp=100;runTimers()
+ns.Pvp.Rivals.TryRecap(ns.Pvp.Rivals.death)
+assert(ns.Pvp.RivalData().pending==1,"fresh first recap ignored")
+fire("PLAYER_UNGHOST");UNITS.pet={guid="Pet-91-00000001",name="Wolf",player=false}
+NOW=NOW+60;fire("PARTY_KILL",UNITS.pet.guid,FOE)
+assert(ns.Pvp.RivalData().total==1 and count("revenge")==1,"own pet kill did not settle debt")
+local p=CreateFrame("Frame");local refresh=ns.Pvp.Build(p)
+refresh();p.subs[1].rivalLink._OnClick(p.subs[1].rivalLink)
+assert(p.rivalPanel:IsShown() and p.rivalPanel.rows[1].rival.guid==FOE,"rival page missing")
+local chosen
+SkaldAPI.OpenEntry=function(e) chosen=e end
+p.rivalPanel.rows[1]._OnClick(p.rivalPanel.rows[1])
+assert(chosen and chosen.kind=="revenge" and chosen.rivalWin==1,"fulfilled debt did not open its diary page")
+assert(SkaldDB.errors==nil,tostring(SkaldDB.errors and SkaldDB.errors[1]))
+RES="ok"`,
+});
+
+run('blood debts: rival storage is bounded, completed records can leave while totals survive, and unresolved debts are retained', {
+  pre: FOREVER + RIVAL_API,
+  body: `local R=ns.Pvp.Rivals
+local w=SkaldCharDB.worldPvp
+w.revengeTotal=500
+for i=1,R.MAX_RIVALS do
+ local guid=string.format("Player-1-%08X",i)
+ w.rivals[guid]={guid=guid,name="Rival "..i,pending=true,lastDeath=NOW,deaths=1,revenges=0}
+end
+local first="Player-1-00000001"
+w.rivals[first].pending=false;w.rivals[first].wonAt=NOW-100
+RECAP_ID=2;RECAP_ROWS={{event="SPELL_DAMAGE",sourceGUID=FOE,sourceName="Kyuse"}}
+fire("PLAYER_DEAD");runTimers()
+assert(w.rivals[first]==nil and w.rivals[FOE] and #ns.Pvp.RivalData().rows==R.MAX_RIVALS,"closed entry not replaced")
+assert(w.revengeTotal==500,"aggregate history was lost with a row")
+fire("PLAYER_UNGHOST");RECAP_ID=3;RECAP_ROWS[1].sourceGUID=OTHER
+fire("PLAYER_DEAD");runTimers()
+assert(w.rivals[OTHER]==nil and w.rivals[FOE].pending and #ns.Pvp.RivalData().rows==R.MAX_RIVALS,"open debts evicted or limit exceeded")
+assert(SkaldDB.errors==nil,tostring(SkaldDB.errors and SkaldDB.errors[1]))
+RES="ok"`,
+});
+
+run('blood debts: a delayed recap reconciles an already confirmed posthumous kill once, including an older unresolved debt', {
+  pre: FOREVER + RIVAL_API,
+  body: `RECAP_ROWS={};RECAP_ID=2
+fire("PLAYER_DEAD");fire("PARTY_KILL",ME,FOE);fire("PARTY_KILL",ME,FOE)
+assert(count("revenge")==0,"unknown death prematurely attributed")
+RECAP_ROWS={{event="SPELL_DAMAGE",sourceGUID=FOE,sourceName="Kyuse"}};runTimers()
+assert(count("revenge")==1 and ns.Pvp.RivalData().pending==0,"posthumous revenge left a false debt")
+fire("PLAYER_UNGHOST");NOW=NOW+60;RECAP_ID=3;fire("PLAYER_DEAD");runTimers()
+assert(ns.Pvp.RivalData().pending==1,"new debt missing")
+fire("PLAYER_UNGHOST");NOW=NOW+60;RECAP_ID=4;RECAP_ROWS={}
+fire("PLAYER_DEAD");fire("PARTY_KILL",ME,FOE);fire("PARTY_KILL",ME,FOE)
+RECAP_ROWS={{event="SPELL_DAMAGE",sourceGUID=FOE,sourceName="Kyuse"}};runTimers()
+assert(count("revenge")==2 and ns.Pvp.RivalData().total==2 and ns.Pvp.RivalData().pending==0,"recap repaid one kill twice")
+assert(SkaldCharDB.worldPvp.rivals[FOE].deaths==3,"late death not preserved")
+assert(SkaldDB.errors==nil,tostring(SkaldDB.errors and SkaldDB.errors[1]))
+RES="ok"`,
+});
+
+run('war frontispiece: earlier lifetime kills are remembered without inventing territory history, and live records replace the empty composition', {
+  pre: `HK = 3
+function GetPVPLifetimeStats() return HK end`,
+  body: `local p=CreateFrame("Frame")
+local refresh=ns.Pvp.Build(p)
+refresh()
+local world=p.subs[1]
+assert(world.remembered:IsShown() and world.remembered:GetText()=="3", "lifetime history missing")
+for _,r in ipairs(world.summaryRegions) do assert(not r:IsShown(), "empty view contains scoreboard or map") end
+for _,r in ipairs(world.emptyRegions) do assert(r:IsShown(), "frontispiece region hidden") end
+assert(world.place:GetText()=="" and #ns.Pvp.World().rows==0, "past kills invented a territory")
+SkaldCharDB.worldPvp={zones={[1442]={k=1,h=8}}}
+refresh()
+assert(world.map:IsShown() and world.map._w==310 and world.map._h==170, "known map missing")
+assert(not world.remembered:IsShown(), "lifetime count mixed with world totals")
+for _,r in ipairs(world.emptyRegions) do assert(not r:IsShown(), "frontispiece overlaps recorded history") end
+SkaldCharDB.worldPvp.zones={[2]={k=1,h=8}}
+refresh()
+assert(world.map._w==100 and world.map._h==100, "fallback compass stretched")
+SkaldCharDB.worldPvp.zones={};HK=0;refresh()
+assert(not world.remembered:IsShown(), "empty chapter displays a zero score")
+GetPVPLifetimeStats=nil;refresh()
+assert(not world.remembered:IsShown() and #ns.Pvp.World().rows==0, "missing lifetime count invented history")
+assert(SkaldDB.errors==nil, tostring(SkaldDB.errors and SkaldDB.errors[1]))
+RES="ok"`,
+});
+
+run('war chapters: territory selection, overflowing world/field lists, chapter links and book corners preserve the diary', {
+  body: `local pages = #SkaldCharDB.entries
+SkaldCharDB.worldPvp = { base = 0, zones = {} }
+SkaldCharDB.stats.bgFields = {}
+for i = 1, 8 do
+  SkaldCharDB.worldPvp.zones[i] = { k = 10 - i, h = i }
+  SkaldCharDB.stats.bgFields["n:Field " .. i] = { n = "Field " .. i, w = 10 - i, l = i }
+end
+local p = CreateFrame("Frame")
+local refresh, pager = ns.Pvp.Build(p)
+refresh()
+assert(p.subs[1]:IsShown() and not p.subs[2]:IsShown() and not p.subs[3]:IsShown(), "initial spread")
+assert(not pager.CanPrev() and pager.CanNext(), "initial corners")
+local row = p.subs[1].rows[2]
+row._OnClick(row)
+assert(p.subs[1].place:GetText() == "#2" and row.dot:IsShown(), "territory selection")
+assert(p.subs[1].map._tex:find("map_compass", 1, true), "unknown art fallback")
+pager.Turn(1)
+local chapter, sheet = pager.Current()
+assert(chapter == 1 and sheet == 2 and p.subs[1].rows[1].zone.id == 7, "world overflow lost")
+assert(p.subs[1].rows[2]:IsShown() and not p.subs[1].rows[3]:IsShown(), "last sheet retained stale zones")
+pager.Turn(1)
+assert(p.rivalPanel:IsShown() and not p.subs[1]:IsShown(), "blood debts must follow the territories")
+pager.Turn(1)
+chapter, sheet = pager.Current()
+assert(chapter == 2 and sheet == 1 and p.subs[2]:IsShown() and not p.subs[1]:IsShown(), "world to battleground")
+pager.Turn(1)
+chapter, sheet = pager.Current()
+assert(chapter == 2 and sheet == 2, "field overflow lost")
+pager.Turn(1)
+assert(pager.Current() == 3 and not pager.CanNext() and p.subs[3]:IsShown(), "arena spread")
+pager.Turn(1)
+assert(pager.Current() == 3, "past last chapter")
+pager.Turn(-1)
+chapter, sheet = pager.Current()
+assert(chapter == 2 and sheet == 2, "back to last field sheet")
+p.chapterButtons[1]._OnClick(p.chapterButtons[1])
+chapter, sheet = pager.Current()
+assert(chapter == 1 and sheet == 1 and not pager.CanPrev(), "chapter link must reset sheet")
+SkaldCharDB.worldPvp.zones = {}
+refresh()
+assert(not p.subs[1].rows[1]:IsShown(), "cleared diary retained territory")
+local _, one = pager.Current()
+assert(one == 1 and #SkaldCharDB.entries == pages and SkaldCharDB.stats.bgFields["n:Field 8"].w == 2, "navigation changed records")
+assert(SkaldDB.errors == nil, tostring(SkaldDB.errors and SkaldDB.errors[1]))
+RES = "ok"`,
+});
+
+for (const locale of ['enUS', 'ptBR', 'frFR', 'esES', 'esMX', 'deDE']) run('war chapters: localized empty and demo spreads stay read-only in ' + locale, {
+  pre: `__locale = "${locale}"`,
+  body: `local texts = ns.PVP_CHAPTER_TEXT[ns.LocaleKey()]
+assert(texts, "missing chapter locale")
+for key in pairs(ns.PVP_CHAPTER_TEXT.enUS) do assert(type(texts[key]) == "string" and texts[key] ~= "", key) end
+local entries, fields, world = #SkaldCharDB.entries, SkaldCharDB.stats.bgFields, SkaldCharDB.worldPvp
+local p = CreateFrame("Frame")
+local refresh, pager = ns.Pvp.Build(p)
+for demo = 1, 2 do
+  ns.Pvp.demo = demo == 2 or nil
+  for i = 1, 3 do
+    p.chapterButtons[i]._OnClick(p.chapterButtons[i]); refresh()
+    assert(p.subs[i]:IsShown(), "chapter hidden")
+  end
+  p.chapterButtons[1]._OnClick(p.chapterButtons[1])
+  p.subs[1].rivalLink._OnClick(p.subs[1].rivalLink)
+  assert(p.rivalPanel:IsShown(), "localized blood debts hidden")
+  p.rivalPanel.worldLink._OnClick(p.rivalPanel.worldLink)
+  assert(p.subs[1]:IsShown(), "back to territories failed")
+end
+assert(#SkaldCharDB.entries == entries and SkaldCharDB.stats.bgFields == fields and SkaldCharDB.worldPvp == world, "preview wrote records")
+assert(SkaldDB.errors == nil, tostring(SkaldDB.errors and SkaldDB.errors[1]))
+RES = "ok"`,
 });
 
 run('the PvP tab line of the diary: ten or more lines in each language, none with a number, and it moves on with each match but holds still between them', {

@@ -98,6 +98,37 @@ local function Say(msg)
     print("|cffffd100" .. TITLE .. "|r: " .. msg)
 end
 
+-- Every error caught goes through here: stamped with the date and the version of Skald, so an error of weeks ago is not
+-- read as a new one; the same error again moves to the end with a new stamp and a count ("x3"); at most 20 are kept.
+-- /skald errors lists them, /skald errors clear forgets them. (A line kept before the stamps stays as it was.)
+ns.ERRORS_MAX = 20
+local function ErrBody(line)
+    local n, body = line:match("^%[[^%]]- x(%d+)%] (.*)$")
+    if body then return body, tonumber(n) or 1 end
+    body = line:match("^%[%d%d%d%d%-[^%]]-%] (.*)$")
+    if body then return body, 1 end
+    return line, 1
+end
+ns.NoteError = function(msg)
+    if type(SkaldDB) ~= "table" then return end
+    msg = tostring(msg)
+    local list = type(SkaldDB.errors) == "table" and SkaldDB.errors or {}
+    SkaldDB.errors = list
+    local times = 1
+    for i = #list, 1, -1 do
+        local body, n = ErrBody(tostring(list[i]))
+        if body == msg then times = n + 1; table.remove(list, i); break end
+    end
+    if not ns.versionText then
+        local fn = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
+        local ok, v = pcall(fn or function() end, ADDON_NAME, "Version")
+        ns.versionText = (ok and type(v) == "string" and v ~= "") and ("v" .. v) or "v?"
+    end
+    local okD, when = pcall(date, "%Y-%m-%d %H:%M")
+    list[#list + 1] = string.format("[%s %s%s] %s", okD and when or "?", ns.versionText, times > 1 and (" x" .. times) or "", msg)
+    while #list > ns.ERRORS_MAX do table.remove(list, 1) end
+end
+
 -- Event payloads can be withheld ("secret") by the client; skip those.
 local function Safe(v)
     if v == nil then return nil end
@@ -308,7 +339,7 @@ K.RECORD_FLAG = {
     quest = "quest", level = "level", milestone = "level", death = "death",
     boss = "boss", dungeon = "boss", zone = "zone", skill = "profession", profession = "profession",
     loot = "loot", mark = "mark", home = "mark", rep = "mark", flight = "zone", tame = "mark", revive = "death", hearth = "mark", weather = "zone",
-    bg = "boss",
+    bg = "boss", revenge = "death",
 }
 
 -- Entries store the event type, its argument and which phrase was drawn;
@@ -1590,6 +1621,7 @@ local function RenderEntry(e)
             shown = ColoredItem(ref, live or name, quality)
         end
     end
+    if e.kind == "revenge" and shown == "" then shown = L.REVENGE_UNKNOWN end
     local phrase = list[((e.idx or 1) - 1) % #list + 1]
     if K.PLACE_KINDS[e.kind] or (e.kind == "flight" and GetLocale() == "ptBR") then phrase = K.PlaceArticles(phrase, shown, "%s")
     -- French: a foe or a pet whose name starts with a vowel is elided like a land ("la chute d'Edwin VanCleef", "qu'Onyxia")
@@ -1747,7 +1779,7 @@ K.SOUND_CANDIDATES = {
 -- character with an old name never inherits it.
 K.DIARY_STATE = { "retentionAccepted", "retentionWarned", "pets", "petNow", "companions", "questObj", "questStart", "visitedMaps", "resume", "attempts",
     "taxi", "marks", "goals", "goalsInit", "goalsVer", "collInit", "rep", "memoryAt", "recentIdx", "recentPh", "anniv", "zoneKills", "killBase", "zoneKillsUnassigned",
-    "birthMap", "mountSpells", "visitedInstances", "wxAt" }
+    "birthMap", "mountSpells", "visitedInstances", "wxAt", "worldPvp" }
 
 local function TakeState(db)
     local state = {}
@@ -1894,7 +1926,7 @@ K.EVENT_ICON = {
 
     tame = "pet",
     revive = "revive", hearth = "st_hearth",
-    bg = "bg",
+    bg = "bg", revenge = "bg",
 }
 -- Professions: the game's skill line id says which one it is whatever the language; the
 -- name is the fallback (and how pages written before this existed are recognised).
@@ -2346,7 +2378,7 @@ end
 K.DOODLE_OF = {
     quest = "scroll", level = "star", milestone = "star", death = "skull", boss = "sword", dungeon = "sword",
     zone = "map", flight = "boots", mount = "boots", tame = "paw", skill = "anvil", profession = "anvil",
-    hearth = "camp", home = "camp", guild = "mug", rep = "mug", bg = "banner",
+    hearth = "camp", home = "camp", guild = "mug", rep = "mug", bg = "banner", revenge = "sword",
 }
 K.DOODLE_ORDER = { "sword", "banner", "skull", "map", "star", "camp", "boots", "paw", "anvil", "mug", "scroll" }
 K.DOODLE_WEIGHT = { scroll = 0.3 }
@@ -2551,14 +2583,7 @@ K.INDEX_ROW = 22
 K.INDEX_GAP = 12                         -- the space above a chapter that is not the first on its page
 
 K.ROMAN = { "I", "II", "III", "IV", "V", "VI", "VII" }
-K.TAB_FOLIO = { map = 5, style = 7, notices = 9, options = 11 }   -- the first folio of each settings tab
-local function RomanLower(n)
-    local out, map = "", { { 10, "x" }, { 9, "ix" }, { 5, "v" }, { 4, "iv" }, { 1, "i" } }
-    for _, m in ipairs(map) do
-        while n >= m[1] do out = out .. m[2]; n = n - m[1] end
-    end
-    return out
-end
+K.FOOTER = { width = 64, height = 32, bottom = 8, numberWidth = 44, artWidth = 56, artHeight = 28 }
 
 local function Hex(c)
     return ns.ThemeHex(c)
@@ -2707,7 +2732,7 @@ do
 local toastFrame, lastToast = nil, 0
 local NOTIFY_KINDS = {
     level = true, milestone = true, mark = true, boss = true, dungeon = true, achievement = true,
-    mount = true, home = true, rep = true, flight = true, guild = true, tame = true, goal = true, bg = true,
+    mount = true, home = true, rep = true, flight = true, guild = true, tame = true, goal = true, bg = true, revenge = true,
 }
 local function PlainLine(s)
     s = tostring(s or "")
@@ -2764,7 +2789,7 @@ end
 -- The rarity of a page that is not a quest, for the colour of its seal (as on the map).
 local TOAST_TIER = {
     zone = 1, level = 2, milestone = 4, death = 1, dungeon = 3, boss = 4, mount = 3, guild = 3,
-    party = 2, reunion = 2, goal = 3, achievement = 5, skill = 2, profession = 2, tame = 2, mark = 4, home = 1, rep = 3, flight = 1, hearth = 1, bg = 3,
+    party = 2, reunion = 2, goal = 3, achievement = 5, skill = 2, profession = 2, tame = 2, mark = 4, home = 1, rep = 3, flight = 1, hearth = 1, bg = 3, revenge = 3,
 }
 local TEXD = "Interface\\AddOns\\Skald\\Textures\\"
 
@@ -3221,19 +3246,37 @@ local function CreateWindow()
             rule:SetPoint("TOPRIGHT", -30, -(35 + (n - 1) * 3))
         end
 
-        s.quill = fr:CreateTexture(nil, "ARTWORK", nil, 3)
-        -- the page number between two sprigs of laurel (s.quill is the left one)
-        s.quill:SetSize(56, 28)
-        s.quill:SetTexture("Interface\\AddOns\\Skald\\Textures\\ui_laurel_l")
-        s.num = fr:CreateFontString(nil, "OVERLAY", "SkaldBody")
-        s.num:SetPoint("BOTTOM", 0, 16)
-        s.quill:SetPoint("RIGHT", s.num, "LEFT", 2, -1)
-        s.quill:Hide()
-        s.laurelR = fr:CreateTexture(nil, "ARTWORK", nil, 3)
-        s.laurelR:SetSize(56, 28)
-        s.laurelR:SetTexture("Interface\\AddOns\\Skald\\Textures\\ui_laurel_r")
-        s.laurelR:SetPoint("LEFT", s.num, "RIGHT", -2, -1)
-        s.laurelR:Hide()
+        -- Narrative pages share one folio style; utility sections leave this band clear.
+        local footer = CreateFrame("Frame", nil, fr)
+        footer:SetSize(K.FOOTER.width, K.FOOTER.height)
+        footer:SetPoint("BOTTOM", 0, K.FOOTER.bottom)
+        footer:SetFrameLevel(book:GetFrameLevel() + 7)
+        footer.number = footer:CreateFontString(nil, "OVERLAY", "SkaldSmall")
+        footer.number:SetPoint("CENTER", 0, 0)
+        footer.number:SetWidth(K.FOOTER.numberWidth)
+        footer.number:SetJustifyH("CENTER")
+        footer.number:SetWordWrap(false)
+        ns.ThemeText(footer.number, K.C_MUTED[1], K.C_MUTED[2], K.C_MUTED[3])
+        for _, side in ipairs({ "l", "r" }) do
+            local art = footer:CreateTexture(nil, "ARTWORK")
+            art:SetSize(K.FOOTER.artWidth, K.FOOTER.artHeight)
+            art:SetTexture("Interface\\AddOns\\Skald\\Textures\\ui_laurel_" .. side)
+            art:SetPoint(side == "l" and "RIGHT" or "LEFT", footer.number,
+                side == "l" and "LEFT" or "RIGHT", side == "l" and 2 or -2, -1)
+            ns.ThemeTint(art, "ornament")
+            ns.ThemeAlpha(art, 0.9, 0.8)
+            footer[side == "l" and "laurelL" or "laurelR"] = art
+        end
+        footer:EnableMouse(true)
+        footer:SetScript("OnEnter", function(self)
+            if self.page and self.total then
+                GameTooltip:SetOwner(self, "ANCHOR_TOP")
+                GameTooltip:SetText(string.format("%d / %d", self.page, self.total))
+                GameTooltip:Show()
+            end
+        end)
+        footer:SetScript("OnLeave", function() GameTooltip:Hide() end)
+        s.footer, s.num = footer, footer.number
 
         s.sub = fr:CreateFontString(nil, "OVERLAY", "SkaldBody")
         s.sub:SetWidth(K.CW)
@@ -3943,7 +3986,7 @@ local function CreateWindow()
         local entryPage = {}
         local pages = { { type = "coverL" }, { type = "coverR" } }
         for i = 1, indexPages do
-            pages[#pages + 1] = { type = "index", rows = chunks[i] or {}, first = (i == 1), label = RomanLower(i) }
+            pages[#pages + 1] = { type = "index", rows = chunks[i] or {}, first = (i == 1) }
         end
 
         local firstDayPage = #pages + 1
@@ -4066,9 +4109,6 @@ local function CreateWindow()
         s.sub:Hide()
         s.rule:Hide()
         s.line:Hide()
-        s.quill:Hide()
-        s.laurelR:Hide()
-        s.num:SetText("")
         -- no running head over a page: only the cover's left page raises it again (DrawPage)
         s.hl:Hide(); s.hr:Hide(); s.hm:Hide()
         if s.zoneCard then s.zoneCard:Hide() end
@@ -4097,23 +4137,19 @@ local function CreateWindow()
             return
         end
         if page.type == "blank" then return end
-        s.num:SetText(Hex(K.C_MUTED) .. tostring(number) .. "|r")
-        s.quill:Show()
-        s.laurelR:Show()
         local px = s.padL
         if page.type == "daycard" then
             -- the page that closes a day: its numbers
-            s.num:SetText(Hex(K.C_MUTED) .. tostring(number - layout.firstDayPage + 1) .. "|r")
             if ns.DayCard then
                 if not s.dayCard then
                     local okCard, card = pcall(ns.DayCard.Build, s.frame, K.CW)
-                    if okCard then s.dayCard = card else SkaldDB.errors = SkaldDB.errors or {}; table.insert(SkaldDB.errors, tostring(card)) end
+                    if okCard then s.dayCard = card else ns.NoteError(card) end
                 end
                 if s.dayCard then
                     s.dayCard:ClearAllPoints()
                     s.dayCard:SetPoint("TOPLEFT", s.frame, "TOPLEFT", px, -(K.TOP_Y + 4))
                     local okSet, err = pcall(s.dayCard.Set, s.dayCard, page.day, (DayTitle(page.day, page.day.number):gsub(":", " -", 1)))
-                    if okSet then s.dayCard:Show() else SkaldDB.errors = SkaldDB.errors or {}; table.insert(SkaldDB.errors, tostring(err)) end
+                    if okSet then s.dayCard:Show() else ns.NoteError(err) end
                 end
             end
             return
@@ -4140,13 +4176,13 @@ local function CreateWindow()
                 if mapID then
                     if not s.zoneCard then
                         local okCard, card = pcall(ns.ZoneCard.Build, s.frame, K.CW)
-                        if okCard then s.zoneCard = card else SkaldDB.errors = SkaldDB.errors or {}; table.insert(SkaldDB.errors, tostring(card)) end
+                        if okCard then s.zoneCard = card else ns.NoteError(card) end
                     end
                     if s.zoneCard then
                         s.zoneCard:ClearAllPoints()
                         s.zoneCard:SetPoint("TOPLEFT", s.frame, "TOPLEFT", px, -(K.TOP_Y - 4))
                         local okSet, err = pcall(s.zoneCard.Set, s.zoneCard, mapID, inst)
-                        if okSet then s.zoneCard:Show() else SkaldDB.errors = SkaldDB.errors or {}; table.insert(SkaldDB.errors, tostring(err)) end
+                        if okSet then s.zoneCard:Show() else ns.NoteError(err) end
                     end
                 end
             end
@@ -4201,7 +4237,6 @@ local function CreateWindow()
 
         -- A day.
         local day = page.day
-        s.num:SetText(Hex(K.C_MUTED) .. tostring(number - layout.firstDayPage + 1) .. "|r")
         local y
         if page.first then
             Heading(DayTitle(day, day.number), K.TOP_Y, "SkaldHead2")
@@ -4532,6 +4567,48 @@ local function CreateWindow()
 
     local function SpreadCount() return layout and math.floor(#layout.pages / 2) or 1 end
 
+    f.footers = { sides[1].footer, sides[2].footer }
+    function f:RefreshFooters()
+        local first, total = 1, 2
+        local panel = panels[view]
+        local pager = panel and panel.pager
+        local section = panel and view or SectionOf(spread)
+        local showFolio = section == "days" or section == "saga"
+        if panel then
+            if pager then
+                local current = pager.Current and pager.Current() or 1
+                local count = pager.Count and pager.Count() or 1
+                first = pager.Folio and pager.Folio() or ((math.max(1, current) - 1) * 2 + 1)
+                total = math.max(first + 1, math.max(1, count) * 2)
+            end
+        elseif layout then
+            local absolute = spread * 2 - 1
+            if spread == 1 then
+                first, total = 1, 2
+            elseif absolute < layout.firstDayPage then
+                first, total = absolute - 2, layout.firstDayPage - 3
+            else
+                first, total = absolute - layout.firstDayPage + 1, #layout.pages - layout.firstDayPage + 1
+            end
+        end
+        for i, footer in ipairs(f.footers) do
+            footer.page, footer.total = first + i - 1, math.max(2, total)
+            footer.section = section
+            footer.number:SetText(tostring(footer.page))
+            footer:SetShown(showFolio)
+        end
+        -- Every spread has the same corners; a single spread has two inactive corners.
+        prevButton:Show(); nextButton:Show()
+        local canPrev, canNext
+        if panel then
+            canPrev, canNext = pager and pager.CanPrev() or false, pager and pager.CanNext() or false
+        else
+            canPrev, canNext = spread > 1, spread < SpreadCount()
+        end
+        prevButton:SetEnabled(canPrev); nextButton:SetEnabled(canNext)
+        prevButton:SetAlpha(canPrev and 1 or 0.35); nextButton:SetAlpha(canNext and 1 or 0.35)
+    end
+
     -- "Today": back to the newest day, at the foot of the right page, only when you are away.
     local todayButton = CreateFrame("Button", nil, book)
     todayButton:SetFrameLevel(book:GetFrameLevel() + 6)
@@ -4555,10 +4632,7 @@ local function CreateWindow()
         if not Journal() then return end
         for _, p in pairs(panels) do p.frame:Hide() end
         local showBook = panels[view] == nil
-        local pager = panels[view] and panels[view].pager
         for _, s in ipairs(sides) do s.frame:Show() end
-        prevButton:SetShown(showBook or pager ~= nil)
-        nextButton:SetShown(showBook or pager ~= nil)
         if not showBook then todayButton:Hide() end
         if showBook then
             layout = Layout()
@@ -4568,40 +4642,15 @@ local function CreateWindow()
             local lp, rp = layout.pages[spread * 2 - 1], layout.pages[spread * 2]
             DrawPage(sides[1], lp, spread * 2 - 1)
             DrawPage(sides[2], rp, spread * 2)
-            -- Front matter is numbered i, ii, iii; the days from 1.
-            for i, page in ipairs({ lp or false, rp or false }) do
-                if page and page.type == "index" then
-                    sides[i].num:SetText(Hex(K.C_MUTED) .. page.label .. "|r")
-                end
-            end
             local newest
             for i, p in ipairs(layout.pages) do if p.type == "day" then newest = math.floor((i + 1) / 2) end end
             todayButton:SetShown(newest ~= nil and spread ~= newest)
-            prevButton:SetEnabled(spread > 1)
-            nextButton:SetEnabled(spread < count)
-            prevButton:SetAlpha(spread > 1 and 1 or 0.35)
-            nextButton:SetAlpha(spread < count and 1 or 0.35)
         else
             for _, s in ipairs(sides) do Clear(s) end
-            -- the settings tabs are numbered on in Roman figures, between the sprigs of laurel
-            local first = (pager and pager.Folio and pager.Folio()) or K.TAB_FOLIO[view]
-            if first then
-                for i, s in ipairs(sides) do
-                    s.num:SetText(Hex(K.C_MUTED) .. RomanLower(first + i - 1) .. "|r")
-                    s.quill:Show()
-                    s.laurelR:Show()
-                end
-            end
             panels[view].frame:Show()
             if panels[view].refresh then pcall(panels[view].refresh) end
-            if pager then
-                local canPrev, canNext = pager.CanPrev(), pager.CanNext()
-                prevButton:SetEnabled(canPrev)
-                nextButton:SetEnabled(canNext)
-                prevButton:SetAlpha(canPrev and 1 or 0.35)
-                nextButton:SetAlpha(canNext and 1 or 0.35)
-            end
         end
+        self:RefreshFooters()
         local current = showBook and SectionOf(spread) or view
         for id, t in pairs(tabs) do t:SetActive(id == current) end
     end
@@ -4796,6 +4845,7 @@ local function CreateWindow()
     -- The corners turn the pages of the book, or those of a tab that has pages of its own.
     local function Corner(delta)
         local pager = panels[view] and panels[view].pager
+        if panels[view] and not pager then return end
         if pager then
             if (delta < 0 and pager.CanPrev()) or (delta > 0 and pager.CanNext()) then
                 pager.Turn(delta)
@@ -5131,6 +5181,7 @@ SkaldAPI.RIGHT_X = K.RIGHT_X
 SkaldAPI.CW = K.CW
 SkaldAPI.AddEntry = AddEntry
 SkaldAPI.RefreshWindow = function() if window and window:IsShown() then window:Refresh() end end
+SkaldAPI.RefreshFooter = function() if window and window:IsShown() then window:RefreshFooters() end end
 SkaldAPI.IsBookOpen = function() return window ~= nil and window:IsShown() end
 SkaldAPI.OpenSection = function(id) if window then window:ShowSection(id); window:Show() end end   -- the book open at a tab
 -- What the game itself counts (creatures, dungeons, bosses): more exact than the diary's own estimate.
@@ -6022,8 +6073,7 @@ Mile.Timed = function(name, fn, ...)
     local ok, err = pcall(fn, ...)
     if t0 then ns.NoteStall(name, debugprofilestop() - t0) end
     if not ok then
-        SkaldDB.errors = SkaldDB.errors or {}
-        table.insert(SkaldDB.errors, name .. ": " .. tostring(err))
+        ns.NoteError(name .. ": " .. tostring(err))
     end
     return ok, err
 end
@@ -8134,9 +8184,7 @@ frame:SetScript("OnEvent", function(self, event, ...)
             reported[report] = true
             if SkaldDB then
                 SkaldDB.lastError = report
-                SkaldDB.errors = SkaldDB.errors or {}
-                table.insert(SkaldDB.errors, report)
-                while #SkaldDB.errors > 8 do table.remove(SkaldDB.errors, 1) end
+                ns.NoteError(report)
             end
             Say("|cffff6060" .. L.ERROR_PREFIX .. "|r " .. report)
         end
@@ -8329,7 +8377,7 @@ end
 -- "Notable": rare quests and above, and the events that mark a journey.
 K.NOTABLE_KINDS = {
     milestone = true, dungeon = true, boss = true, achievement = true,
-    mount = true, guild = true, day = true, note = true,
+    mount = true, guild = true, day = true, note = true, revenge = true,
 }
 local function IsNotable(e)
     if e.kind == "quest" then return (e.tier or 1) >= 3 end
@@ -9306,9 +9354,9 @@ local function BuildNotices(panel)
 end
 
 -- The settings are one tab, "Settings", with three spreads (Style, Notices, Options) that the corners of the book turn, as in
--- any tab with pages of its own; the folio numerals at the foot go on (vii, ix, xi).
+-- any tab with pages of its own; the common footer numbers its spreads from one.
 K.SETTINGS_PAGES = { { id = "style", build = BuildStyle }, { id = "notices", build = BuildNotices }, { id = "options", build = BuildOptions } }
-K.SETTINGS_FOLIO = 7
+K.SETTINGS_FOLIO = 1
 local function BuildSettings(panel)
     local subs, refreshes = {}, {}
     local current = 1
@@ -9325,6 +9373,7 @@ local function BuildSettings(panel)
             if i == current then sub:Show() else sub:Hide() end
         end
         if refreshes[current] then pcall(refreshes[current]) end
+        if SkaldAPI.RefreshFooter then SkaldAPI.RefreshFooter() end
     end
     panel.subs = subs   -- for the tests
     function panel.GoTo(id)
@@ -9337,6 +9386,7 @@ local function BuildSettings(panel)
         CanNext = function() return current < #subs end,
         Folio = function() return K.SETTINGS_FOLIO + (current - 1) * 2 end,
         Current = function() return current end,
+        Count = function() return #subs end,
     }
     panel.pager = pager
     return ShowPage, pager
@@ -9809,6 +9859,20 @@ SlashCmdList["SKALD"] = function(msg)
         else Say(L.CMD_SIZE_HINT); return end
         if window then window:FitScale() end
         Say(L.CMD_SIZE_DONE)
+    elseif msg == "errors" or msg == "errors clear" then
+        if msg == "errors clear" then
+            Settings().errors = nil
+            Settings().lastError = nil
+            Say(L.ERRORS_CLEARED)
+        else
+            local list = Settings().errors
+            if type(list) ~= "table" or #list == 0 then
+                Say(L.ERRORS_NONE)
+            else
+                Say(L.ERRORS_HEAD)
+                for _, line in ipairs(list) do Say(tostring(line)) end
+            end
+        end
     elseif msg == "report" then
         ns.ShowReport()
     elseif ns.SpeechOn and (msg == "read" or msg == "read stop") then

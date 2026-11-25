@@ -3,6 +3,76 @@
 
 local _, ns = ...
 
+-- The three spreads of the war chronicle. These describe only records the diary actually keeps.
+ns.PVP_CHAPTER_TEXT = {
+    enUS = {
+        WORLD = "Open world", BG = "Battlegrounds", ARENA = "Arena", LANDS = "Contested lands",
+        ARENA_BOOK = "Beyond the gates", HONOR = "honor earned", KILLS = "honorable kills", CAMPAIGN = "Across the open world",
+        TERRITORIES = "%d lands marked by battle", SHEET = "%d / %d", LIFETIME = "Lifetime honorable kills: %d",
+        WORLD_STORY = "The road had no banners to guide me. I learned where the war had reached by walking it.",
+        WORLD_EMPTY = "These pages do not yet hold the lands where I fought. The next battle on the open roads will leave its place in this chronicle.",
+        FIRST_MARKS = "Along the roads", UNWRITTEN = "A chapter yet to be written",
+        WORLD_MOTTO = "The war follows no road. It finds us along the way.",
+        WORLD_CLOSING = "May these pages remember the places, as well as the battles.", LIFETIME_LABEL = "lifetime honorable kills",
+        WORLD_HINT = "Choose a land to unfold its map.", ARENA_STORY = "Beyond these gates, every step will matter.",
+        ARENA_EMPTY = "The arena chapter awaits its first record.",
+        ARENA_HINT = "Skald does not record arena matches yet. Results and ratings will appear here when arena recording is available.",
+    },
+    ptBR = {
+        WORLD = "Mundo aberto", BG = "Campos de batalha", ARENA = "Arena", LANDS = "Terras em conflito",
+        ARENA_BOOK = "Além dos portões", HONOR = "honra conquistada", KILLS = "abates honrosos", CAMPAIGN = "Em todo o mundo aberto",
+        TERRITORIES = "%d terras marcadas pela guerra", SHEET = "%d / %d", LIFETIME = "Abates honrosos de toda a vida: %d",
+        WORLD_STORY = "A estrada não tinha estandartes para me guiar. Descobri por onde a guerra havia passado ao percorrê-la.",
+        WORLD_EMPTY = "Ainda não anotei nestas páginas as terras onde lutei. A próxima batalha pelas estradas deixará seu lugar nesta crônica.",
+        FIRST_MARKS = "Pelas estradas", UNWRITTEN = "Um capítulo por escrever",
+        WORLD_MOTTO = "A guerra não segue uma estrada. Ela nos encontra pelo caminho.",
+        WORLD_CLOSING = "Que estas páginas guardem os lugares, além das batalhas.", LIFETIME_LABEL = "abates honrosos ao longo da vida",
+        WORLD_HINT = "Escolha uma terra para abrir seu mapa.", ARENA_STORY = "Além destes portões, cada passo terá seu peso.",
+        ARENA_EMPTY = "O capítulo da arena aguarda seu primeiro registro.",
+        ARENA_HINT = "O Skald ainda não registra partidas de arena. Resultados e classificação aparecerão aqui quando esse registro estiver disponível.",
+    },
+    frFR = {
+        WORLD = "Monde ouvert", BG = "Champs de bataille", ARENA = "Arène", LANDS = "Terres disputées",
+        ARENA_BOOK = "Au-delà des portes", HONOR = "honneur gagné", KILLS = "victoires honorables", CAMPAIGN = "Dans tout le monde ouvert",
+        TERRITORIES = "%d terres marquées par la guerre", SHEET = "%d / %d", LIFETIME = "Victoires honorables à vie\194\160: %d",
+        WORLD_STORY = "Aucune bannière ne guidait mes pas sur la route. En la parcourant, j'ai découvert où la guerre était passée.",
+        WORLD_EMPTY = "Ces pages ne gardent pas encore les terres où j'ai combattu. La prochaine bataille sur les routes laissera sa place dans cette chronique.",
+        FIRST_MARKS = "Sur les routes", UNWRITTEN = "Un chapitre à écrire",
+        WORLD_MOTTO = "La guerre ne suit aucune route. Elle nous trouve en chemin.",
+        WORLD_CLOSING = "Que ces pages gardent les lieux autant que les batailles.", LIFETIME_LABEL = "victoires honorables à vie",
+        WORLD_HINT = "Choisissez une terre pour déplier sa carte.", ARENA_STORY = "Au-delà de ces portes, chaque pas aura son poids.",
+        ARENA_EMPTY = "Le chapitre de l'arène attend son premier récit.",
+        ARENA_HINT = "Skald ne consigne pas encore les matchs d'arène. Résultats et classement apparaîtront ici lorsque ce suivi sera disponible.",
+    },
+    esES = {
+        WORLD = "Mundo abierto", BG = "Campos de batalla", ARENA = "Arena", LANDS = "Tierras en disputa",
+        ARENA_BOOK = "Más allá de las puertas", HONOR = "honor ganado", KILLS = "muertes con honor", CAMPAIGN = "En todo el mundo abierto",
+        TERRITORIES = "%d tierras marcadas por la guerra", SHEET = "%d / %d", LIFETIME = "Muertes con honor de toda la vida: %d",
+        WORLD_STORY = "No había estandartes que guiaran mis pasos. Al recorrer el camino descubrí por dónde había pasado la guerra.",
+        WORLD_EMPTY = "Estas páginas aún no guardan las tierras donde luché. La próxima batalla en los caminos dejará su lugar en esta crónica.",
+        FIRST_MARKS = "Por los caminos", UNWRITTEN = "Un capítulo por escribir",
+        WORLD_MOTTO = "La guerra no sigue un camino. Nos encuentra mientras lo recorremos.",
+        WORLD_CLOSING = "Que estas páginas guarden los lugares, además de las batallas.", LIFETIME_LABEL = "muertes con honor de toda la vida",
+        WORLD_HINT = "Elige una tierra para desplegar su mapa.", ARENA_STORY = "Más allá de estas puertas, cada paso tendrá su peso.",
+        ARENA_EMPTY = "El capítulo de la arena espera su primer registro.",
+        ARENA_HINT = "Skald aún no registra encuentros de arena. Los resultados y la clasificación aparecerán aquí cuando ese registro esté disponible.",
+    },
+    deDE = {
+        WORLD = "Offene Welt", BG = "Schlachtfelder", ARENA = "Arena", LANDS = "Umkämpfte Gebiete",
+        ARENA_BOOK = "Jenseits der Tore", HONOR = "errungene Ehre", KILLS = "ehrenhafte Siege", CAMPAIGN = "In der gesamten offenen Welt",
+        TERRITORIES = "%d vom Krieg gezeichnete Gebiete", SHEET = "%d / %d", LIFETIME = "Ehrenhafte Siege insgesamt: %d",
+        WORLD_STORY = "Kein Banner wies mir den Weg. Auf meinen Reisen erfuhr ich, wohin der Krieg gelangt war.",
+        WORLD_EMPTY = "Diese Seiten bewahren noch nicht die Gebiete, in denen ich gekämpft habe. Die nächste Schlacht auf meinen Wegen wird hier ihren Platz finden.",
+        FIRST_MARKS = "Auf den Wegen", UNWRITTEN = "Ein ungeschriebenes Kapitel",
+        WORLD_MOTTO = "Der Krieg folgt keinem Weg. Er findet uns unterwegs.",
+        WORLD_CLOSING = "Mögen diese Seiten die Orte ebenso bewahren wie die Schlachten.", LIFETIME_LABEL = "ehrenhafte Siege insgesamt",
+        WORLD_HINT = "Wähle ein Gebiet, um seine Karte zu entfalten.", ARENA_STORY = "Jenseits dieser Tore wird jeder Schritt zählen.",
+        ARENA_EMPTY = "Das Arenakapitel wartet auf seinen ersten Eintrag.",
+        ARENA_HINT = "Skald zeichnet Arenakämpfe noch nicht auf. Ergebnisse und Wertung erscheinen hier, sobald diese Aufzeichnung verfügbar ist.",
+    },
+}
+ns.PVP_CHAPTER_TEXT.esMX = ns.PVP_CHAPTER_TEXT.esES
+
 ns.LOCALES = {
     enUS = {
         phrases = {
@@ -3035,6 +3105,7 @@ ns.LOCALES = {
         OPT_SOUND = "Page-turn sound",
         OPT_LOOTGEAR = "Items: gear only (and rare finds)",
         ERROR_PREFIX = "error (please report):",
+        ERRORS_HEAD = "errors kept (newest last, date and version of Skald):", ERRORS_NONE = "no error kept.", ERRORS_CLEARED = "the list of errors is cleared.",
         NOTE_KEYS = "Enter saves  -  Esc cancels",
         NOTE_PLACEHOLDER = "Write a line and press Enter...",
         CHAPTER_HEADER = "%s. %s",
@@ -6429,6 +6500,7 @@ ns.LOCALES = {
         OPT_SOUND = "Som ao virar a página",
         OPT_LOOTGEAR = "Itens: só equipamentos (e achados raros)",
         ERROR_PREFIX = "erro (por favor, reporte):",
+        ERRORS_HEAD = "erros guardados (o mais novo por último, com data e versão do Skald):", ERRORS_NONE = "nenhum erro guardado.", ERRORS_CLEARED = "a lista de erros foi limpa.",
         NOTE_KEYS = "Enter salva  -  Esc cancela",
         NOTE_PLACEHOLDER = "Escreva uma linha e tecle Enter...",
         CHAPTER_HEADER = "%s. %s",
@@ -10024,6 +10096,7 @@ ns.LOCALES = {
         PROBE_HELP = "sondes (outils de développement)\194\160: /skald probe [off|clear] (données de quêtes), /skald probe lore [list|off|clear], /skald probe events [list|off], /skald probe maps, /skald perf (times the book), /skald probe spells [off], /skald probe comms, /skald probe guild, /skald probe weather.",
         EMPTY = "Aucune page écrite pour l'instant. Partez vivre votre aventure\194\160!",
         ERROR_PREFIX = "erreur (merci de la signaler)\194\160:",
+        ERRORS_HEAD = "erreurs gard\195\169es (la plus r\195\169cente en dernier, avec la date et la version de Skald)\194\160:", ERRORS_NONE = "aucune erreur gard\195\169e.", ERRORS_CLEARED = "la liste des erreurs est vid\195\169e.",
         EXPORT_BTN = "Exporter le journal",
         EXPORT_EMPTY = "Rien à exporter pour l'instant.",
         EXPORT_FORMAT = "Format",
@@ -13531,6 +13604,7 @@ ns.LOCALES = {
         OPT_SOUND = "Sonido al pasar página",
         OPT_LOOTGEAR = "Objetos: solo equipo y hallazgos poco comunes",
         ERROR_PREFIX = "error (envía un informe):",
+        ERRORS_HEAD = "errores guardados (el más reciente al final, con la fecha y la versión de Skald):", ERRORS_NONE = "no hay ningún error guardado.", ERRORS_CLEARED = "la lista de errores está vacía.",
         NOTE_KEYS = "Intro guarda  -  Esc cancela",
         NOTE_PLACEHOLDER = "Escribe unas palabras y pulsa Intro...",
         CHAPTER_HEADER = "%s. %s",
@@ -17354,6 +17428,7 @@ ns.LOCALES.deDE = {
         OPT_SOUND = "Geräusch beim Umblättern",
         OPT_LOOTGEAR = "Gegenstände: nur Ausrüstung und seltene Funde",
         ERROR_PREFIX = "Fehler (bitte melden):",
+        ERRORS_HEAD = "Gespeicherte Fehler (der neueste zuletzt, mit Datum und Skald-Version):", ERRORS_NONE = "Kein Fehler gespeichert.", ERRORS_CLEARED = "Die Fehlerliste ist geleert.",
         NOTE_KEYS = "Eingabe speichert  –  Esc verwirft",
         NOTE_PLACEHOLDER = "Schreibe eine Zeile und drücke Eingabe …",
         CHAPTER_HEADER = "%s. %s",
@@ -17888,3 +17963,94 @@ ns.LOCALES.deDE = {
         PROBE_LORE_COUNT = "%d Texte gespeichert: Quests %d, Gespräche %d, Kreaturen %d, Bücher %d.",
         PROBE_HELP = "Tests (Entwicklungswerkzeuge): /skald probe [off|clear] (Questdaten), /skald probe lore [list|off|clear], /skald probe events [list|off], /skald probe maps, /skald perf (Zeitmessung), /skald probe spells [off], /skald probe comms, /skald probe guild, /skald probe weather.",
     }
+
+-- Names of players are event data; the story and interface remain localizable.
+ns.PVP_REVENGE_TEXT = {
+    enUS = {
+        TITLE = "Blood debts", INTRO = "Some names stay with me after a fall. I will know them when our paths cross again.",
+        EMPTY = "No blood debt has been written. When a player brings me down on the open roads, their name will have its place here.",
+        PENDING = "open debts", WON = "revenges fulfilled", PENDING_ROW = "A debt still open", WON_ROW = "Revenge fulfilled",
+        WORLD_LINK = "Blood debts", BACK = "Back to the lands", UNKNOWN = "An unknown adversary", TOAST = "Revenge fulfilled",
+        LINES = {
+            "I met %s again. This time, I was the one left standing.",
+            "The road brought %s back before me. I settled the debt I had carried.",
+            "I had not forgotten %s. Today, that name lost its weight.",
+            "When %s fell, I remembered my own fall. The debt was paid.",
+            "I faced %s once more and reclaimed the ground I had lost.",
+            "I had carried the memory of %s long enough. I left it on the field today.",
+            "I found %s along the road. This meeting ended differently.",
+            "My weapons answered %s at last. I can turn that page now.",
+        },
+    },
+    ptBR = {
+        TITLE = "Dívidas de sangue", INTRO = "Alguns nomes ficam comigo depois da queda. Vou reconhecê-los quando nossos caminhos se cruzarem outra vez.",
+        EMPTY = "Nenhuma dívida de sangue foi escrita. Quando alguém me derrubar pelas estradas, seu nome terá lugar aqui.",
+        PENDING = "dívidas abertas", WON = "vinganças cumpridas", PENDING_ROW = "Uma dívida ainda aberta", WON_ROW = "Vingança cumprida",
+        WORLD_LINK = "Dívidas de sangue", BACK = "Voltar aos territórios", UNKNOWN = "Um adversário desconhecido", TOAST = "Vingança cumprida",
+        LINES = {
+            "Encontrei %s outra vez. Desta vez, fui eu quem ficou de pé.",
+            "A estrada trouxe %s de volta ao meu caminho. Acertei a conta que carregava.",
+            "Eu não havia esquecido %s. Hoje, esse nome perdeu o peso.",
+            "Quando %s caiu, lembrei da minha própria queda. A dívida estava paga.",
+            "Encarei %s mais uma vez e retomei o chão que havia perdido.",
+            "Carreguei a lembrança de %s por tempo suficiente. Hoje, deixei-a no campo.",
+            "Achei %s pelo caminho. Este encontro terminou de outro jeito.",
+            "Minhas armas enfim responderam a %s. Agora posso virar essa página.",
+        },
+    },
+    frFR = {
+        TITLE = "Dettes de sang", INTRO = "Certains noms restent avec moi après la chute. Je les reconnaîtrai lorsque nos chemins se croiseront à nouveau.",
+        EMPTY = "Aucune dette de sang n'est inscrite. Quand un adversaire me fera tomber sur les routes, son nom trouvera sa place ici.",
+        PENDING = "dettes ouvertes", WON = "vengeances accomplies", PENDING_ROW = "Une dette encore ouverte", WON_ROW = "Vengeance accomplie",
+        WORLD_LINK = "Dettes de sang", BACK = "Retour aux terres", UNKNOWN = "Un adversaire inconnu", TOAST = "Vengeance accomplie",
+        LINES = {
+            "J'ai retrouvé %s. Cette fois, c'est moi qui tenais encore debout.",
+            "La route a ramené %s devant moi. J'ai réglé la dette que je portais.",
+            "Je n'avais pas oublié %s. Aujourd'hui, ce nom a perdu son poids.",
+            "En voyant %s à terre, j'ai repensé à ma propre chute. La dette était payée.",
+            "J'ai affronté %s une nouvelle fois et repris le terrain perdu.",
+            "J'avais assez longtemps porté le souvenir de %s. Je l'ai laissé sur le champ aujourd'hui.",
+            "J'ai retrouvé %s sur la route. Cette rencontre s'est achevée autrement.",
+            "Mes armes ont enfin répondu à %s. Je peux tourner cette page.",
+        },
+    },
+    esES = {
+        TITLE = "Deudas de sangre", INTRO = "Algunos nombres se quedan conmigo después de la caída. Los reconoceré cuando nuestros caminos vuelvan a cruzarse.",
+        EMPTY = "Aún no hay deudas de sangre escritas. Cuando alguien me derribe en los caminos, su nombre tendrá aquí su lugar.",
+        PENDING = "deudas abiertas", WON = "venganzas cumplidas", PENDING_ROW = "Una deuda aún abierta", WON_ROW = "Venganza cumplida",
+        WORLD_LINK = "Deudas de sangre", BACK = "Volver a las tierras", UNKNOWN = "Un adversario desconocido", TOAST = "Venganza cumplida",
+        LINES = {
+            "Volví a encontrar a %s. Esta vez fui yo quien quedó en pie.",
+            "El camino trajo de nuevo a %s ante mí. Saldé la cuenta que llevaba pendiente.",
+            "No había olvidado a %s. Hoy ese nombre perdió su peso.",
+            "Cuando %s cayó, recordé mi propia caída. La deuda estaba pagada.",
+            "Me enfrenté una vez más a %s y recuperé el terreno perdido.",
+            "Había cargado bastante tiempo con el recuerdo de %s. Hoy lo dejé en el campo.",
+            "Encontré a %s en el camino. Este encuentro terminó de otra manera.",
+            "Mis armas respondieron por fin a %s. Ya puedo pasar esa página.",
+        },
+    },
+    deDE = {
+        TITLE = "Blutschulden", INTRO = "Manche Namen bleiben mir nach einem Sturz im Gedächtnis. Ich werde sie erkennen, wenn sich unsere Wege wieder kreuzen.",
+        EMPTY = "Noch ist keine Blutschuld verzeichnet. Wenn mich jemand auf meinen Wegen zu Fall bringt, findet sein Name hier seinen Platz.",
+        PENDING = "offene Schulden", WON = "vollzogene Racheakte", PENDING_ROW = "Eine noch offene Schuld", WON_ROW = "Rache vollzogen",
+        WORLD_LINK = "Blutschulden", BACK = "Zurück zu den Gebieten", UNKNOWN = "Ein unbekannter Gegner", TOAST = "Rache vollzogen",
+        LINES = {
+            "Ich traf %s wieder. Diesmal blieb ich auf den Beinen.",
+            "Der Weg führte mich erneut zu %s. Ich beglich die offene Rechnung.",
+            "Ich hatte %s nicht vergessen. Heute verlor dieser Name sein Gewicht.",
+            "Als %s fiel, dachte ich an meinen eigenen Sturz. Die Schuld war beglichen.",
+            "Ich stellte mich %s erneut und gewann den verlorenen Boden zurück.",
+            "Ich hatte die Erinnerung an %s lange genug getragen. Heute ließ ich sie auf dem Feld zurück.",
+            "Ich fand %s auf meinem Weg. Diese Begegnung endete anders.",
+            "Meine Waffen gaben %s endlich eine Antwort. Nun kann ich diese Seite umblättern.",
+        },
+    },
+}
+ns.PVP_REVENGE_TEXT.esMX = ns.PVP_REVENGE_TEXT.esES
+for locale, texts in pairs(ns.PVP_REVENGE_TEXT) do
+    local language = ns.LOCALES[locale]
+    language.phrases.revenge = texts.LINES
+    language.REVENGE_UNKNOWN = texts.UNKNOWN
+    language.TOAST_KIND.revenge = texts.TOAST
+end

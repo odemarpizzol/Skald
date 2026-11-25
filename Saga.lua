@@ -1223,18 +1223,6 @@ local function BuildSagaTab(panel)
         side.epilogue:SetTexture("Interface\\AddOns\\Skald\\Textures\\ui_saga_epilogue")
         side.epilogue:SetAlpha(0.92)
         side.epilogue:Hide()
-        side.number = panel:CreateFontString(nil, "OVERLAY", "SkaldSmall")
-        side.number:SetPoint("BOTTOM", panel, "BOTTOMLEFT", x + CW / 2, 2)
-        ns.ThemeText(side.number, SkaldAPI.C_MUTED[1], SkaldAPI.C_MUTED[2], SkaldAPI.C_MUTED[3])
-        -- the number between two sprigs of laurel, as on the pages of the book
-        side.laurelL = panel:CreateTexture(nil, "ARTWORK")
-        side.laurelL:SetSize(56, 28)
-        side.laurelL:SetTexture("Interface\\AddOns\\Skald\\Textures\\ui_laurel_l")
-        side.laurelL:SetPoint("RIGHT", side.number, "LEFT", 2, -1)
-        side.laurelR = panel:CreateTexture(nil, "ARTWORK")
-        side.laurelR:SetSize(56, 28)
-        side.laurelR:SetTexture("Interface\\AddOns\\Skald\\Textures\\ui_laurel_r")
-        side.laurelR:SetPoint("LEFT", side.number, "RIGHT", -2, -1)
         sides[i] = side
     end
     local empty = panel:CreateFontString(nil, "OVERLAY", "SkaldBody")
@@ -1250,9 +1238,6 @@ local function BuildSagaTab(panel)
         for i, side in ipairs(sides) do
             local number = (spread - 1) * 2 + i
             local page = pages[number] or {}
-            side.number:SetText(pages[number] and tostring(number) or "")
-            side.laurelL:SetShown(pages[number] ~= nil)
-            side.laurelR:SetShown(pages[number] ~= nil)
             local closing = false
             for _, c in ipairs(page) do if c.key == "epilogue" then closing = true end end
             side.epilogue:SetShown(closing)
@@ -1306,8 +1291,7 @@ local function BuildSagaTab(panel)
                     local okC, total = pcall(Compose, slot, c, besideArt and (CW - ART_W * scale - 8) or CW,
                         CW, besideArt and (ART_H * scale + 4) or nil)
                     if not okC then
-                        SkaldDB.errors = SkaldDB.errors or {}
-                        table.insert(SkaldDB.errors, "saga compose: " .. tostring(total))
+                        if ns.NoteError then ns.NoteError("saga compose: " .. tostring(total)) end
                         slot.body:SetText(c.text)
                     elseif stackedArt and art and type(total) == "number" then
                         local artSize = math.min(170, math.max(56, PAGE_HEIGHT - TITLE_HEIGHT - total - 20))
@@ -1325,12 +1309,15 @@ local function BuildSagaTab(panel)
             end
         end
     end
+    local BaseShow = Show
+    Show = function()
+        BaseShow()
+        if SkaldAPI.RefreshFooter then SkaldAPI.RefreshFooter() end
+    end
     local function Refresh()
         local ok, built = pcall(ns.BuildSaga)
         if not ok then
-            SkaldDB.errors = SkaldDB.errors or {}
-            table.insert(SkaldDB.errors, "saga: " .. tostring(built))
-            while #SkaldDB.errors > 8 do table.remove(SkaldDB.errors, 1) end
+            if ns.NoteError then ns.NoteError("saga: " .. tostring(built)) end
             built = {}
         end
         local size
@@ -1370,6 +1357,8 @@ local function BuildSagaTab(panel)
         Turn = function(delta) spread = math.max(1, math.min(Spreads(), spread + delta)); Show() end,
         CanPrev = function() return spread > 1 end,
         CanNext = function() return spread < Spreads() end,
+        Current = function() return spread end,
+        Count = function() return Spreads() end,
     }
     Refresh()
     return Refresh, pager

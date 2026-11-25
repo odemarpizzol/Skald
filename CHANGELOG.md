@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.2.0
+
+- **The PvP tab is a war chronicle in three parts**: Open world, Battlegrounds and Arena, with links at the top and the corners of the book turning through the lands and fields. The open world counts your honorable kills and honor by zone, read from the game's own count (battlegrounds keep their own record), with the map of the zone you pick. Arena has its page but no records yet
+- **Blood debts**: a player of the other faction who kills you is remembered as a rival; defeat the same player later and the debt is settled and the revenge written in the diary. Kept in the history, told in every language, found by Search and shown in the web Reader
+- **Journeys and the Saga** carry matching laurels and page numbers; the cover and the utility tabs no longer show decorative folios, page corners stay in step when filters change, and the Bard and Search keep room above the foot of the page
+- **Errors are kept with the date and the version**: `/skald errors` lists them (the same one again is counted, at most twenty), `/skald errors clear` empties the list
+- The PvP probes (`/skald probe kills`) no longer trigger the game's "action blocked" window in Forever and stay quiet in the chat
+- All of this has only been seen in a simulation so far: please report what looks wrong
+
 ## 1.1.1
 
 - **Map markers give way to quests**: when a Skald marker sits on a marker of the game or of another addon (a quest, a flight master, Questie...), the Skald one now steps back, faded underneath so the quest stays clear; hover it and it comes back. The Atlas tab has a new row, "Where another marker stands", to fade it (default), hide it, or keep it as before. Thanks to the player who asked for it. Only seen in a simulation so far: please report what looks wrong

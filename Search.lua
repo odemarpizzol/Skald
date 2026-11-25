@@ -18,7 +18,7 @@ Search.ROWS = 7        -- rows on the right page
 Search.GROUPS = {
     { key = "all" },
     { key = "quests",  kinds = { quest = true } },
-    { key = "battles", kinds = { boss = true, dungeon = true, death = true, revive = true, bg = true } },
+    { key = "battles", kinds = { boss = true, dungeon = true, death = true, revive = true, bg = true, revenge = true } },
     { key = "loot",    kinds = { loot = true } },
     { key = "company", kinds = { party = true, reunion = true, guild = true, guildleave = true, tame = true } },
     { key = "journeys", kinds = { zone = true, weather = true, flight = true, hearth = true, home = true, mount = true } },
@@ -286,21 +286,15 @@ local function BuildTab(panel)
     hint:SetText(L.SEARCH_HINT)
     -- the count sits at the foot of the page, under what the box and the choices leave empty
     local count = panel:CreateFontString(nil, "OVERLAY", "SkaldBody")
-    count:SetPoint("TOPLEFT", 0, -430)
+    count:SetPoint("TOPLEFT", 0, -380)
     count:SetWidth(CW)
     count:SetJustifyH("CENTER")
     ns.ThemeText(count, head[1], head[2], head[3])
     local capNote = panel:CreateFontString(nil, "OVERLAY", "SkaldSmall")
-    capNote:SetPoint("TOPLEFT", 0, -452)
+    capNote:SetPoint("TOPLEFT", 0, -408)
     capNote:SetWidth(CW)
     capNote:SetJustifyH("CENTER")
     ns.ThemeText(capNote, muted[1], muted[2], muted[3])
-
-    local pageLabel = panel:CreateFontString(nil, "OVERLAY", "SkaldBody")
-    pageLabel:SetPoint("TOPLEFT", RIGHT_X, -430)
-    pageLabel:SetWidth(CW)
-    pageLabel:SetJustifyH("CENTER")
-    ns.ThemeText(pageLabel, body[1], body[2], body[3])
 
     -- the pages found, on the right: the picture of the page, when and where, and the story with the words found
     local rows = {}
@@ -381,8 +375,6 @@ local function BuildTab(panel)
         end
         pages = math.max(1, math.ceil(#results / Search.ROWS))
         state.page = math.max(1, math.min(state.page, pages))
-        pageLabel:SetShown(pages > 1)
-        pageLabel:SetText(string.format("%d / %d", state.page, pages))
         for i, row in ipairs(rows) do
             local e = results[(state.page - 1) * Search.ROWS + i]
             row.entry = e
@@ -405,10 +397,17 @@ local function BuildTab(panel)
         end
     end
 
+    local baseRefresh = refresh
+    refresh = function()
+        baseRefresh()
+        if SkaldAPI.RefreshFooter then SkaldAPI.RefreshFooter() end
+    end
     local pager = {
         Turn = function(delta) state.page = math.max(1, math.min(pages, state.page + delta)) end,
         CanPrev = function() return state.page > 1 end,
         CanNext = function() return state.page < pages end,
+        Current = function() return state.page end,
+        Count = function() return pages end,
     }
     refresh()
     return refresh, pager

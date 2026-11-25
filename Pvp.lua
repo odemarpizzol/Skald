@@ -1,4 +1,5 @@
--- Skald: the PvP tab, a war chronicle of the battlegrounds. It reads what the diary already keeps: the pages of kind
+-- Skald: the PvP tab, a war chronicle with separate spreads for the open world, battlegrounds and arena.
+-- Battlegrounds read what the diary already keeps: the pages of kind
 -- "bg" (one per match, written by Mile.CheckBattleground in Skald.lua, which this file never repeats) and the
 -- permanent count per field (SkaldCharDB.stats.bgFields, kept by K.Tally, so it survives the cap on pages).
 --
@@ -6,9 +7,9 @@
 -- whoever asks for it with /skald pvp on. The client has no call we trust to tell the type of a realm, and the name of
 -- a realm says nothing, so the tab never guesses from either (/skald probe realm lists what this client offers).
 --
--- Not here yet: the open world (who struck the blow that killed you, honour, kills by land), arenas and duels. None of
--- it has been tested in a client (the combat log may hold the last hit taken before a death, with the kind of its
--- source; it is a candidate to probe, not a finding), and nothing is invented without a source that was checked.
+-- The open world: honorable kills and honour by land, from the game's own count (P.WorldCount, seen in Forever).
+-- Blood debts pair a confirmed death with a later kill of the same player GUID, outside instances.
+-- Arenas and duels are left out. The restricted combat log is never requested in Forever.
 --
 -- Loaded after Cartographer.lua; it uses SkaldAPI (AddTab, Render, OpenEntry, MakeButton...).
 local _, ns = ...
@@ -33,7 +34,8 @@ local UI_TEXT = {
         WON_TAG = "gewonnen",
         LOST_TAG = "verloren",
         DATE = "%d.%m.%Y",
-        WORLD = "Hier zeichne ich vorerst nur die Kämpfe auf Schlachtfeldern auf.",
+        WORLD = "Ehrenhafte Siege außerhalb der Schlachtfelder werden hier nach Gebiet verzeichnet.",
+        WORLD_HEAD = "Offene Welt", WORLD_SUM = "Siege: %d · Ehre: %d", WORLD_ZONE = "%d Siege, %d Ehre",
         LINES = {
             "Die Banner fielen und wurden wieder erhoben; unter jedem von ihnen war ich dabei.",
             "Ein Feld ist nur Erde, bis jemand darauf blutet. Dann erhält es einen Namen.",
@@ -58,9 +60,8 @@ local UI_TEXT = {
         PROBE_ZONE = "PvP-Status dieses Gebiets: %s",
         PROBE_WANT = "PvP selbst eingeschaltet: %s; PvP-Timer läuft: %s",
         PROBE_WAR = "Kriegsmodus: gibt es %s, gewünscht %s, aktiv %s; C_PvP dazu: %s",
-        KPROBE_ON = "Sonde für PvP-Siege an: Besiege einen Spieler der anderen Fraktion, dann /reload. Bisher gespeichert: %d.",
+        KPROBE_ON = "Sonde für PvP-Siege an: sammelt ohne Chatmeldungen bis /reload oder /skald probe kills off. Bisher gespeichert: %d.",
         KPROBE_OFF = "Sonde für PvP-Siege aus (%d gespeichert).",
-        KPROBE_SEEN = "Sonde: %s gesehen (%d gespeichert).",
         PROBE_NAMES = "Clientfunktionen und Tabellen mit realm, pvp oder ruleset im Namen: %s",
         PROBE_NONE = "keine gefunden",
         YES = "ja",
@@ -74,7 +75,8 @@ local UI_TEXT = {
         EMPTY = "No battleground yet. The first one will be written here.",
         EMPTY_HINT = "Each match, won or lost, will be marked here, field by field.",
         REC = "%d victories, %d defeats", WON_TAG = "won", LOST_TAG = "lost", DATE = "%m/%d/%Y",
-        WORLD = "For now, I record here only the battles of the battlegrounds.",
+        WORLD = "Honorable kills outside the battlegrounds are written here, land by land.",
+        WORLD_HEAD = "Open world", WORLD_SUM = "Kills: %d · Honor: %d", WORLD_ZONE = "%d kills, %d honor",
         LINES = {
             "The banners have fallen and risen again, and I was there under each.",
             "A field is only ground until someone bleeds on it. Then it is a name.",
@@ -94,8 +96,8 @@ local UI_TEXT = {
         PROBE_FLAG = "marked for PvP: %s", PROBE_ZONE = "this land's PvP status: %s",
         PROBE_WANT = "PvP switched on by you: %s; leaving timer running: %s",
         PROBE_WAR = "War Mode: exists %s, wanted %s, active %s; C_PvP about it: %s",
-        KPROBE_ON = "PvP kill probe on: slay a player of the other faction, then /reload. Kept so far: %d.",
-        KPROBE_OFF = "PvP kill probe off (%d kept).", KPROBE_SEEN = "probe: %s seen (%d kept).",
+        KPROBE_ON = "PvP kill probe on: collecting silently until /reload or /skald probe kills off. Kept so far: %d.",
+        KPROBE_OFF = "PvP kill probe off (%d kept).",
         PROBE_NAMES = "calls and tables of the client with realm, pvp or ruleset in the name: %s",
         PROBE_NONE = "none found", YES = "yes", NO = "no", UNKNOWN = "unknown",
     }, esES = {
@@ -117,7 +119,8 @@ local UI_TEXT = {
             WON_TAG = "victoria",
             LOST_TAG = "derrota",
             DATE = "%d/%m/%Y",
-            WORLD = "Por ahora guardo aquí solo las batallas de los campos de batalla.",
+            WORLD = "Las muertes honorables fuera de los campos de batalla se anotan aquí, tierra por tierra.",
+            WORLD_HEAD = "Mundo abierto", WORLD_SUM = "Muertes: %d · Honor: %d", WORLD_ZONE = "%d muertes, %d de honor",
             LINES = {
                 "He visto caer y alzarse nuestros estandartes, y he seguido bajo sus colores.",
                 "El campo guarda el recuerdo de quienes lo cruzamos cuando sonaron los cuernos.",
@@ -142,9 +145,8 @@ local UI_TEXT = {
             PROBE_ZONE = "estado JcJ de esta zona: %s",
             PROBE_WANT = "JcJ activado por ti: %s; temporizador de salida en marcha: %s",
             PROBE_WAR = "Modo Guerra: existe %s, deseado %s, activo %s; C_PvP al respecto: %s",
-            KPROBE_ON = "sonda de muertes JcJ activada: mata a un jugador de la otra facción y luego /reload. Guardados hasta ahora: %d.",
+            KPROBE_ON = "sonda de muertes JcJ activada: recoge datos sin mensajes hasta /reload o /skald probe kills off. Guardados hasta ahora: %d.",
             KPROBE_OFF = "sonda de muertes JcJ desactivada (%d guardados).",
-            KPROBE_SEEN = "sonda: %s visto (%d guardados).",
             PROBE_NAMES = "funciones y tablas del cliente con realm, pvp o ruleset en el nombre: %s",
             PROBE_NONE = "no se encontró ninguna",
             YES = "sí",
@@ -158,7 +160,8 @@ local UI_TEXT = {
         EMPTY = "Nenhum campo de batalha ainda. O primeiro será escrito aqui.",
         EMPTY_HINT = "Cada partida, vencida ou perdida, será marcada aqui, campo por campo.",
         REC = "Vitórias: %d; derrotas: %d", WON_TAG = "vitória", LOST_TAG = "derrota", DATE = "%d/%m/%Y",
-        WORLD = "Por ora, registro aqui apenas as batalhas nos campos.",
+        WORLD = "Os abates honrosos fora dos campos de batalha ficam anotados aqui, terra por terra.",
+        WORLD_HEAD = "Mundo aberto", WORLD_SUM = "Abates: %d · Honra: %d", WORLD_ZONE = "%d abates, %d de honra",
         LINES = {
             "As bandeiras caíram e se ergueram de novo, e eu estive sob cada uma delas.",
             "Um campo é só chão até que alguém sangre nele. Depois, é um nome.",
@@ -178,8 +181,8 @@ local UI_TEXT = {
         PROBE_FLAG = "marcado para JxJ: %s", PROBE_ZONE = "estado de JxJ desta terra: %s",
         PROBE_WANT = "JxJ ligado por você: %s; contador de saída correndo: %s",
         PROBE_WAR = "Modo Guerra: existe %s, desejado %s, ativo %s; C_PvP sobre isso: %s",
-        KPROBE_ON = "sonda de abates JxJ ligada: mate um jogador da outra facção e depois /reload. Guardados até agora: %d.",
-        KPROBE_OFF = "sonda de abates JxJ desligada (%d guardados).", KPROBE_SEEN = "sonda: %s visto (%d guardados).",
+        KPROBE_ON = "sonda de abates JxJ ligada: coleta em silêncio até /reload ou /skald probe kills off. Guardados até agora: %d.",
+        KPROBE_OFF = "sonda de abates JxJ desligada (%d guardados).",
         PROBE_NAMES = "chamadas e tabelas do cliente com realm, pvp ou ruleset no nome: %s",
         PROBE_NONE = "nenhuma encontrada", YES = "sim", NO = "não", UNKNOWN = "desconhecido",
     },
@@ -190,7 +193,8 @@ local UI_TEXT = {
         EMPTY = "Pas encore de champ de bataille. Le premier sera \195\169crit ici.",
         EMPTY_HINT = "Chaque partie, gagn\195\169e ou perdue, sera marqu\195\169e ici, champ par champ.",
         REC = "%d victoires, %d d\195\169faites", WON_TAG = "victoire", LOST_TAG = "d\195\169faite", DATE = "%d/%m/%Y",
-        WORLD = "Pour l'instant, je ne consigne ici que les batailles des champs.",
+        WORLD = "Les victoires honorables hors des champs de bataille sont not\195\169es ici, terre par terre.",
+        WORLD_HEAD = "Monde ouvert", WORLD_SUM = "Victoires\194\160: %d · Honneur\194\160: %d", WORLD_ZONE = "%d victoires, %d d'honneur",
         LINES = {
             "Les banni\195\168res sont tomb\195\169es et se sont relev\195\169es, et j'\195\169tais l\195\160 sous chacune d'elles.",
             "Un champ n'est que de la terre jusqu'\195\160 ce que quelqu'un y saigne. Ensuite, c'est un nom.",
@@ -210,8 +214,8 @@ local UI_TEXT = {
         PROBE_FLAG = "marqu\195\169 pour le JcJ\194\160: %s", PROBE_ZONE = "\195\169tat JcJ de cette terre\194\160: %s",
         PROBE_WANT = "JcJ activ\195\169 par vous\194\160: %s\194\160; minuteur de sortie en cours\194\160: %s",
         PROBE_WAR = "Mode Guerre\194\160: existe %s, souhait\195\169 %s, actif %s\194\160; C_PvP \195\160 ce sujet\194\160: %s",
-        KPROBE_ON = "sonde des victoires JcJ activ\195\169e\194\160: tuez un joueur de l'autre faction, puis /reload. Gard\195\169s jusqu'ici\194\160: %d.",
-        KPROBE_OFF = "sonde des victoires JcJ arr\195\170t\195\169e (%d gard\195\169s).", KPROBE_SEEN = "sonde\194\160: %s vu (%d gard\195\169s).",
+        KPROBE_ON = "sonde des victoires JcJ activ\195\169e\194\160: collecte silencieuse jusqu'\195\160 /reload ou /skald probe kills off. Gard\195\169s jusqu'ici\194\160: %d.",
+        KPROBE_OFF = "sonde des victoires JcJ arr\195\170t\195\169e (%d gard\195\169s).",
         PROBE_NAMES = "appels et tables du client avec realm, pvp ou ruleset dans le nom\194\160: %s",
         PROBE_NONE = "aucun trouv\195\169", YES = "oui", NO = "non", UNKNOWN = "inconnu",
     },
@@ -221,10 +225,14 @@ local UI = UI_TEXT[ns.LocaleKey()] or UI_TEXT.enUS
 
 local P = {}
 ns.Pvp = P
+local R = { cache = {}, MAX_RIVALS = 256, CACHE_MAX = 80, ROWS = 6 }
+P.Rivals = R
 P.UI = UI
 P.TEXTS = UI_TEXT
 P.TAB_ID = "pvp"
-P.RECENT_ROWS, P.FIELD_ROWS = 5, 6
+P.RECENT_ROWS, P.FIELD_ROWS, P.WORLD_ROWS = 5, 6, 6
+local CH = ns.PVP_CHAPTER_TEXT[ns.LocaleKey()] or ns.PVP_CHAPTER_TEXT.enUS
+local RV = ns.PVP_REVENGE_TEXT[ns.LocaleKey()] or ns.PVP_REVENGE_TEXT.enUS
 
 -- The battlegrounds of the diary, by field: { label, won, lost } for each, the busiest first, and the totals. The count
 -- is the permanent one (stats.bgFields); a field told before its id was kept is listed by the name it was written with,
@@ -371,17 +379,21 @@ function P.Wanted()
     local stats = db and db.stats
     if not stats then return false end
     if type(stats.bgFields) == "table" and next(stats.bgFields) ~= nil then return true end
+    local w = db.worldPvp
+    if type(w) == "table" and type(w.zones) == "table" and next(w.zones) ~= nil then return true end
+    if type(w) == "table" and type(w.rivals) == "table" and next(w.rivals) ~= nil then return true end
     return (tonumber(stats.bgWins) or 0) > 0
 end
 
 -- /skald probe kills [off]: what the client says when the player slays someone in the open world, kept in
 -- SkaldDB.probeKills (at most 30 records) to be read from the saved file. While it is on, its own frame listens to the
--- combat log (only PARTY_KILL, and UNIT_DIED of a player), PLAYER_PVP_KILLS_CHANGED and the honour line of the chat;
+-- combat log (only PARTY_KILL, and UNIT_DIED of a player), PLAYER_PVP_KILLS_CHANGED, the honour line of the chat and the death of the player (PLAYER_DEAD);
 -- each record says which fields the client withheld (secret), the land, the PvP flag and the game's honorable kills.
 -- Nothing of this writes a page: it is to learn which source to trust before the diary uses one.
+-- Collection is silent and must be explicitly enabled again after each reload; saved records remain available.
 local KP_MAX = 30
 local kpFrame
-local function KpSay(msg) print("|cffffd100Skald|r: " .. msg) end
+local kpSession
 local function Secret(v) return _G.issecretvalue and issecretvalue(v) or false end
 local function LifetimeHK()
     if not GetPVPLifetimeStats then return nil end
@@ -398,7 +410,6 @@ local function KpRecord(rec)
     if UnitIsPVP then local okF, f = pcall(UnitIsPVP, "player"); if okF and not Secret(f) then rec.flagged = f and true or false end end
     list[#list + 1] = rec
     while #list > KP_MAX do table.remove(list, 1) end
-    KpSay(string.format(UI.KPROBE_SEEN, tostring(rec.sub_ or rec.ev), #list))
 end
 local function KpCombatLog()
     if not CombatLogGetCurrentEventInfo then return end
@@ -432,8 +443,75 @@ local function KpCombatLog()
     if not Secret(srcFlags) and type(srcFlags) == "number" then rec.srcFlags = string.format("0x%X", srcFlags) end
     KpRecord(rec)
 end
+-- What the client tells when the player dies, without the combat log (forbidden in Forever): the target and the hostile
+-- players whose nameplates are shown, and every Get/Has/Is function of a death recap (DeathRecap*, C_DeathInfo) called
+-- without arguments, read at the death and again two seconds later (the recap may come after PLAYER_DEAD).
+local function KpUnit(u)
+    if not (UnitExists and UnitIsPlayer) then return nil end
+    local okE, ex = pcall(UnitExists, u)
+    if not okE or Secret(ex) or not ex then return nil end
+    local okP, isPlayer = pcall(UnitIsPlayer, u)
+    if not okP or Secret(isPlayer) or not isPlayer then return nil end
+    local parts = {}
+    local okN, name = pcall(UnitName, u); parts[#parts + 1] = (okN and not Secret(name) and name) or "?"
+    local okL, lvl = pcall(UnitLevel, u); if okL and not Secret(lvl) then parts[#parts + 1] = tostring(lvl) end
+    if UnitCanAttack then
+        local okA, foe = pcall(UnitCanAttack, "player", u)
+        if okA and not Secret(foe) then parts[#parts + 1] = foe and "hostile" or "friend" end
+    end
+    return table.concat(parts, " ")
+end
+local function KpRecap()
+    local out = {}
+    local function try(label, fn)
+        local ok, a, b = pcall(fn)
+        if not ok then out[#out + 1] = label .. "=error"
+        elseif Secret(a) then out[#out + 1] = label .. "=(secret)"
+        elseif type(a) == "table" then out[#out + 1] = label .. "=table#" .. #a
+        else out[#out + 1] = label .. "=" .. tostring(a) .. (b ~= nil and ("," .. (Secret(b) and "(secret)" or tostring(b))) or "") end
+    end
+    local names = {}
+    for k, v in pairs(_G) do
+        if type(k) == "string" and type(v) == "function" and k:find("DeathRecap") then names[#names + 1] = k end
+    end
+    table.sort(names)
+    for _, k in ipairs(names) do
+        if k:find("^Get") or k:find("^Has") or k:find("^Is") or k:find("^DeathRecap_Has") or k:find("^DeathRecap_Get") then try(k, _G[k]) end
+    end
+    local di = type(C_DeathInfo) == "table" and C_DeathInfo
+    if di then
+        local keys = {}
+        for k, v in pairs(di) do if type(v) == "function" then keys[#keys + 1] = k end end
+        table.sort(keys)
+        out[#out + 1] = "C_DeathInfo:" .. table.concat(keys, ",")
+        for _, k in ipairs(keys) do
+            if k:find("^Get") or k:find("^Has") or k:find("^Is") then try("C_DeathInfo." .. k, di[k]) end
+        end
+    end
+    return #names > 0 and table.concat(names, ",") or nil, table.concat(out, " ; ")
+end
+local function KpDeath(when)
+    local rec = { ev = "PLAYER_DEAD", sub_ = "PLAYER_DEAD" .. (when and (" +" .. when .. "s") or "") }
+    rec.target = KpUnit("target")
+    local near = {}
+    for i = 1, 40 do
+        local u = KpUnit("nameplate" .. i)
+        if u and u:find("hostile$") then near[#near + 1] = u end
+    end
+    rec.hostileNear = #near > 0 and table.concat(near, "; ") or nil
+    rec.recapNames, rec.recap = KpRecap()
+    if R.ProbeRecap then rec.fatal = R.ProbeRecap() end
+    KpRecord(rec)
+end
 local function KpOnEvent(_, event, ...)
+    if not kpSession then return end
     if event == "COMBAT_LOG_EVENT_UNFILTERED" then return KpCombatLog() end
+    if event == "PLAYER_DEAD" then
+        KpDeath()
+        local session = kpSession
+        if C_Timer and C_Timer.After then C_Timer.After(2, function() if kpSession == session then pcall(KpDeath, 2) end end) end
+        return
+    end
     local args = {}
     for i = 1, select("#", ...) do
         local v = select(i, ...)
@@ -441,28 +519,396 @@ local function KpOnEvent(_, event, ...)
     end
     KpRecord({ ev = event, sub_ = event, args = table.concat(args, " | ") })
 end
-local KP_EVENTS = { "COMBAT_LOG_EVENT_UNFILTERED", "PLAYER_PVP_KILLS_CHANGED", "CHAT_MSG_COMBAT_HONOR_GAIN" }
+-- The Forever client forbids the combat log to addons: asking for it raised the game's "action blocked" window (seen on
+-- 2026-11-23). A client with secret values (issecretvalue) is that family, so it is never asked there.
+local function KpEvents()
+    local list = { "PLAYER_PVP_KILLS_CHANGED", "CHAT_MSG_COMBAT_HONOR_GAIN", "PLAYER_DEAD", "PARTY_KILL" }
+    if not _G.issecretvalue then table.insert(list, 1, "COMBAT_LOG_EVENT_UNFILTERED") end
+    return list
+end
 function P.KillProbeSync()
-    local on = SkaldDB and SkaldDB.probeKillsOn and true or false
+    if SkaldDB then SkaldDB.probeKillsOn = nil end -- discard the old persistent switch
+    local on = kpSession ~= nil
     if on and not kpFrame and CreateFrame then
         kpFrame = CreateFrame("Frame")
         kpFrame:SetScript("OnEvent", function(...) pcall(KpOnEvent, ...) end)
     end
     if not kpFrame then return end
-    for _, ev in ipairs(KP_EVENTS) do
+    for _, ev in ipairs(KpEvents()) do
         if on then pcall(kpFrame.RegisterEvent, kpFrame, ev) else pcall(kpFrame.UnregisterEvent, kpFrame, ev) end
     end
 end
 function P.KillProbe(arg)
-    if arg == "off" then SkaldDB.probeKillsOn = nil else SkaldDB.probeKillsOn = true end
+    if arg == "off" then kpSession = nil else kpSession = {} end
     P.KillProbeSync()
     local n = type(SkaldDB.probeKills) == "table" and #SkaldDB.probeKills or 0
-    return SkaldDB.probeKillsOn and string.format(UI.KPROBE_ON, n) or string.format(UI.KPROBE_OFF, n)
+    return kpSession and string.format(UI.KPROBE_ON, n) or string.format(UI.KPROBE_OFF, n)
+end
+
+-- The open world: honorable kills and honour outside the battlegrounds, by zone, in SkaldCharDB.worldPvp
+-- ({ base = the game's count last read, zones = { [zone map id] = { k = kills, h = honour } } }, in K.DIARY_STATE).
+-- Seen in Forever on 2026-11-25: one kill fires PLAYER_PVP_KILLS_CHANGED twice and CHAT_MSG_COMBAT_HONOR_GAIN once
+-- ("You have been awarded 8 honor points", no name of the slain), and GetPVPLifetimeStats goes up. So the kills are the
+-- difference of the game's count (never the events, which come twice), read again a second later in case the count
+-- moves after the event; the honour is the number of the chat line. Inside an instance (a battleground) the count is
+-- only followed, never added: the battlegrounds have their own record. A diary started fresh counts from now.
+local worldFrame
+local function MapName(id, fallback)
+    if C_Map and C_Map.GetMapInfo then
+        local ok, info = pcall(C_Map.GetMapInfo, id)
+        if ok and type(info) == "table" and type(info.name) == "string" and info.name ~= "" then return info.name end
+    end
+    return fallback
+end
+local function WorldZone()
+    if not (C_Map and C_Map.GetBestMapForUnit) then return nil end
+    local ok, here = pcall(C_Map.GetBestMapForUnit, "player")
+    if not ok or type(here) ~= "number" or Secret(here) then return nil end
+    return (ns.ZoneCard and ns.ZoneCard.ZoneMap and ns.ZoneCard.ZoneMap(here)) or here
+end
+local function InInstance()
+    if not IsInInstance then return false end
+    local ok, inside = pcall(IsInInstance)
+    return ok and inside and true or false
+end
+local function WorldDB()
+    local db = SkaldCharDB
+    if type(db) ~= "table" then return nil end
+    if type(db.worldPvp) ~= "table" then db.worldPvp = { zones = {} } end
+    if type(db.worldPvp.zones) ~= "table" then db.worldPvp.zones = {} end
+    return db.worldPvp
+end
+local function WorldAdd(field, n)
+    local w = WorldDB()
+    local zone = w and WorldZone()
+    if not zone then return end
+    local rec = w.zones[zone]
+    if type(rec) ~= "table" then rec = { k = 0, h = 0 }; w.zones[zone] = rec end
+    rec[field] = (tonumber(rec[field]) or 0) + n
+end
+function P.WorldCount()
+    local w = WorldDB()
+    local hk = LifetimeHK()
+    if not w or type(hk) ~= "number" then return end
+    local base = tonumber(w.base)
+    w.base = hk
+    if not base or hk <= base then return end
+    if not InInstance() then WorldAdd("k", hk - base) end
+    if P.refresh then pcall(P.refresh) end
+end
+function P.WorldHonor(msg)
+    if Secret(msg) or type(msg) ~= "string" or InInstance() then return end
+    local n = tonumber(msg:match("(%d+)"))
+    if n and n > 0 and n < 100000 then
+        WorldAdd("h", n)
+        if P.refresh then pcall(P.refresh) end
+    end
+end
+local function WorldEvent(_, event, msg)
+    if event == "CHAT_MSG_COMBAT_HONOR_GAIN" then return P.WorldHonor(msg) end
+    P.WorldCount()
+    if C_Timer and C_Timer.After then C_Timer.After(1, function() pcall(P.WorldCount) end) end
+end
+function P.WorldStart()
+    local w = WorldDB()
+    if w and w.base == nil then w.base = LifetimeHK() end
+    if worldFrame or not CreateFrame then return end
+    worldFrame = CreateFrame("Frame")
+    worldFrame:SetScript("OnEvent", function(...) pcall(WorldEvent, ...) end)
+    pcall(worldFrame.RegisterEvent, worldFrame, "PLAYER_PVP_KILLS_CHANGED")
+    pcall(worldFrame.RegisterEvent, worldFrame, "CHAT_MSG_COMBAT_HONOR_GAIN")
+end
+-- { rows = { { label, k, h } ... } the most kills first, k = total kills, h = total honour }
+function P.World()
+    if P.demo then
+        return { k = 23, h = 186, rows = { { id = 1442, label = MapName(1442, "Stonetalon Mountains"), k = 14, h = 112 },
+            { id = 1417, label = MapName(1417, "Arathi Highlands"), k = 6, h = 51 }, { id = 1424, label = MapName(1424, "Hillsbrad Foothills"), k = 3, h = 23 } } }
+    end
+    local w = SkaldCharDB and SkaldCharDB.worldPvp
+    local out = { k = 0, h = 0, rows = {} }
+    if type(w) ~= "table" or type(w.zones) ~= "table" then return out end
+    for id, rec in pairs(w.zones) do
+        if type(rec) == "table" then
+            local k, h = tonumber(rec.k) or 0, tonumber(rec.h) or 0
+            out.rows[#out.rows + 1] = { id = id, label = MapName(id, "#" .. tostring(id)), k = k, h = h }
+            out.k, out.h = out.k + k, out.h + h
+        end
+    end
+    table.sort(out.rows, function(a, b)
+        if a.k ~= b.k then return a.k > b.k end
+        if a.h ~= b.h then return a.h > b.h end
+        return a.label < b.label
+    end)
+    return out
+end
+
+-- Blood debts. Identity is the player's GUID, never a bare name or the currently selected target.
+-- Forever: PARTY_KILL carries attackerGUID and targetGUID (UnitDocumentation.lua, branch forever).
+-- The death recap's FIRST row is the killing blow (Blizzard_DeathRecap/Mainline, BuildDataProvider).
+-- A readable name there may be resolved only against one recent, readable hostile-player identity.
+-- Secret payloads are discarded BEFORE comparing, indexing, formatting or saving them.
+local function Read(fn, ...)
+    if type(fn) ~= "function" then return nil end
+    local ok, v = pcall(fn, ...)
+    if ok and not Secret(v) then return v end
+end
+function R.OpenWorld() return Read(IsInInstance) == false end
+local function PlayerGUID(v)
+    return not Secret(v) and type(v) == "string" and v:match("^Player%-%d+%-%x+$") ~= nil
+end
+local function Name(v)
+    if Secret(v) or type(v) ~= "string" or #v == 0 or #v > 160 or v:find("[|%c]") then return nil end
+    return v
+end
+local function RivalDB()
+    local w = WorldDB()
+    if w and type(w.rivals) ~= "table" then w.rivals = {} end
+    return w
+end
+local function RecapLink()
+    local api = type(_G.C_DeathRecap) == "table" and _G.C_DeathRecap
+    local link = Read(api and api.GetRecapLink or _G.GetDeathRecapLink)
+    return type(link) == "string" and link:match("|Hdeath:(%d+)") or nil
+end
+local function RecapEvents()
+    local api = type(_G.C_DeathRecap) == "table" and _G.C_DeathRecap
+    local list = Read(api and api.GetRecapEvents or _G.DeathRecap_GetEvents)
+    if type(list) ~= "table" then return nil end
+    local row = list[1]
+    return not Secret(row) and type(row) == "table" and row or nil
+end
+function R.ProbeRecap()
+    local row = RecapEvents()
+    if not row then return nil end
+    local out = {}
+    for _, key in ipairs({ "sourceGUID", "sourceName", "event", "timestamp", "currentHP", "overkill", "hideCaster" }) do
+        local v = row[key]
+        if Secret(v) then out[key] = "(secret)"
+        elseif type(v) == "number" or type(v) == "boolean" or Name(v) then out[key] = v end
+    end
+    out.recap = RecapLink()
+    return out
+end
+function R.Sync()
+    local w = RivalDB()
+    if R.world ~= w then
+        R.world, R.cache, R.death, R.fatal = w, {}, nil, nil
+        R.lastRecap = RecapLink()
+        R.startedAt = Read(_G.GetTime)
+    end
+    return w
+end
+function R.Remember(unit)
+    if Secret(unit) or type(unit) ~= "string" or not R.OpenWorld() then return end
+    if Read(UnitIsPlayer, unit) ~= true or Read(UnitCanAttack, "player", unit) ~= true then return end
+    local guid = Read(UnitGUID, unit)
+    local name = Name(Read(UnitName, unit))
+    if not PlayerGUID(guid) or not name then return end
+    local realm
+    local ok, _, server = pcall(UnitName, unit)
+    if ok then realm = Name(server) end
+    local full = realm and (name .. "-" .. realm) or name
+    R.cache[guid] = { guid = guid, name = full, short = name, at = time() }
+    local n, oldest, oldestAt = 0
+    for key, rec in pairs(R.cache) do
+        n = n + 1
+        if not oldestAt or rec.at < oldestAt then oldest, oldestAt = key, rec.at end
+    end
+    if n > R.CACHE_MAX then R.cache[oldest] = nil end
+end
+local function ResolveName(guid)
+    if not PlayerGUID(guid) then return nil end
+    local api = _G.UnitNameFromGUID
+    if type(api) == "function" then
+        local ok, name, realm = pcall(api, guid)
+        if ok and Name(name) then return Name(realm) and (name .. "-" .. realm) or name end
+    end
+    if type(_G.GetPlayerInfoByGUID) == "function" then
+        local ok, _, _, _, _, _, name, realm = pcall(_G.GetPlayerInfoByGUID, guid)
+        if ok and Name(name) then return Name(realm) and (name .. "-" .. realm) or name end
+    end
+    return R.cache[guid] and R.cache[guid].name or nil
+end
+local function FatalIdentity(row, at)
+    if Secret(row.event) or Secret(row.hideCaster) or row.hideCaster or row.event == "ENVIRONMENTAL_DAMAGE" then return nil end
+    if PlayerGUID(row.sourceGUID) then return row.sourceGUID, Name(row.sourceName) or ResolveName(row.sourceGUID) end
+    if Secret(row.sourceGUID) or row.sourceGUID ~= nil then return nil end
+    local name = Name(row.sourceName)
+    if not name then return nil end
+    local found
+    for _, rec in pairs(R.cache) do
+        if at - rec.at >= 0 and at - rec.at <= 10 and (rec.name == name or rec.short == name) then
+            if found then return nil end -- the recap did not distinguish two players with the same name
+            found = rec
+        end
+    end
+    return found and found.guid, found and found.name
+end
+local function RefreshRivals()
+    if P.Ensure then P.Ensure() end
+    if P.refresh then P.refresh() end
+    if SkaldAPI.RefreshWindow then SkaldAPI.RefreshWindow() end
+end
+function R.Loss(guid, name, ctx)
+    if not PlayerGUID(guid) or not ctx or not ctx.world or ctx.done or ctx.world ~= R.Sync() or ctx.db ~= SkaldCharDB or not R.OpenWorld() then return false end
+    if guid == Read(UnitGUID, "player") then return false end
+    local w = R.world
+    local rec = w.rivals[guid]
+    if not rec then
+        local count, oldest, oldestAt = 0
+        for key, old in pairs(w.rivals) do
+            count = count + 1
+            if not old.pending and (not oldestAt or (old.wonAt or 0) < oldestAt) then oldest, oldestAt = key, old.wonAt or 0 end
+        end
+        if count >= R.MAX_RIVALS then
+            if not oldest then return false end -- never discard an unresolved debt to make room
+            w.rivals[oldest] = nil
+        end
+        rec = { guid = guid, deaths = 0, revenges = 0 }
+        w.rivals[guid] = rec
+    end
+    if Name(name) then rec.name = name end
+    local kill = ctx.kills and ctx.kills[guid]
+    local paid = kill and kill.settled
+    if not rec.pending and not paid then rec.since = ctx.at end
+    rec.pending, rec.deaths, rec.lastDeath, rec.zone = not paid, (rec.deaths or 0) + 1, ctx.at, ctx.zone
+    ctx.done = true
+    -- The recap can arrive after a posthumous kill. Reconcile the confirmed kill in event order.
+    if kill and not paid then R.Kill(kill.owner, guid) end
+    RefreshRivals()
+    return true
+end
+function R.Kill(attacker, victim)
+    if Secret(attacker) or type(attacker) ~= "string" or not PlayerGUID(victim) or not R.OpenWorld() then return false end
+    local me, pet = Read(UnitGUID, "player"), Read(UnitGUID, "pet")
+    if not PlayerGUID(me) or (attacker ~= me and attacker ~= pet) or victim == me then return false end
+    local w = R.Sync()
+    local rec = w and w.rivals[victim]
+    local ctx, kill = R.death
+    if ctx and not ctx.done and ctx.world == w and time() - ctx.at <= 3 then
+        ctx.kills = ctx.kills or {}
+        ctx.kills[victim] = ctx.kills[victim] or { owner = me }
+        kill = ctx.kills[victim]
+    end
+    if not rec or not rec.pending then return false end
+    local name = ResolveName(victim)
+    if name then rec.name = name end
+    rec.pending, rec.wonAt, rec.wonZone = false, time(), WorldZone()
+    rec.revenges, w.revengeTotal = (rec.revenges or 0) + 1, (w.revengeTotal or 0) + 1
+    if kill then kill.settled = true end
+    SkaldAPI.AddEntry("revenge", rec.name or "",
+        nil, { rival = victim, rivalWin = rec.revenges, pz = rec.wonZone, debtAt = rec.since })
+    RefreshRivals()
+    return true
+end
+function R.TryRecap(ctx)
+    if not ctx or ctx ~= R.death or ctx.done or ctx.db ~= SkaldCharDB or ctx.world ~= R.Sync() or not R.OpenWorld() then return end
+    local id = RecapLink()
+    if not id or id == ctx.before then return end -- the recap of an earlier death is not evidence of this one
+    local row = RecapEvents()
+    if not row then return end
+    if not ctx.before then
+        local stamp = row.timestamp
+        if Secret(stamp) or type(stamp) ~= "number" or type(ctx.clock) ~= "number"
+            or type(R.startedAt) ~= "number" or stamp < R.startedAt or stamp < ctx.clock - 3 or stamp > ctx.clock + 1 then return end
+    end
+    local guid, name = FatalIdentity(row, ctx.at)
+    if guid and R.Loss(guid, name, ctx) then R.lastRecap = id end
+end
+function R.BeginDeath()
+    R.Sync()
+    if not R.world or not R.OpenWorld() then return end
+    if R.death then
+        local fatal = R.fatal
+        if fatal and time() - fatal.at >= 0 and time() - fatal.at <= 3 then R.Loss(fatal.guid, fatal.name, R.death) end
+        return
+    end
+    R.Remember("target"); R.Remember("focus")
+    for i = 1, 40 do R.Remember("nameplate" .. i) end
+    local ctx = { at = time(), zone = WorldZone(), db = SkaldCharDB, world = R.world, before = R.lastRecap, clock = Read(_G.GetTime) }
+    R.death = ctx
+    local fatal = R.fatal
+    if fatal and ctx.at - fatal.at >= 0 and ctx.at - fatal.at <= 3 then R.Loss(fatal.guid, fatal.name, ctx) end
+    R.TryRecap(ctx)
+    if C_Timer and C_Timer.After then
+        for _, delay in ipairs({ 0.3, 1, 2 }) do C_Timer.After(delay, function() R.TryRecap(ctx) end) end
+    end
+end
+function R.CombatLog()
+    if _G.issecretvalue or not CombatLogGetCurrentEventInfo or not R.OpenWorld() then return end
+    local args = { CombatLogGetCurrentEventInfo() }
+    local kind, source, dest = args[2], args[4], args[8]
+    if Secret(kind) or Secret(source) or Secret(dest) then return end
+    if kind == "PARTY_KILL" then return R.Kill(source, dest) end
+    if kind == "UNIT_DIED" and dest == Read(UnitGUID, "player") then return R.BeginDeath() end
+    if dest ~= Read(UnitGUID, "player") or not PlayerGUID(source) then return end
+    local overkill = kind == "SWING_DAMAGE" and args[13]
+        or ((kind == "SPELL_DAMAGE" or kind == "SPELL_PERIODIC_DAMAGE" or kind == "RANGE_DAMAGE") and args[16])
+    if not Secret(overkill) and type(overkill) == "number" and overkill >= 0 then
+        R.fatal = { guid = source, name = Name(args[5]) or ResolveName(source), at = time() }
+    end
+end
+function R.Event(_, event, a, b)
+    R.Sync()
+    if event == "PARTY_KILL" then return R.Kill(a, b) end
+    if event == "COMBAT_LOG_EVENT_UNFILTERED" then return R.CombatLog() end
+    if event == "PLAYER_DEAD" then return R.BeginDeath() end
+    if event == "PLAYER_ALIVE" or event == "PLAYER_UNGHOST" or event == "PLAYER_ENTERING_WORLD" then
+        R.death, R.fatal, R.lastRecap = nil, nil, RecapLink()
+    end
+    if event == "NAME_PLATE_UNIT_ADDED" then R.Remember(a)
+    elseif event == "UPDATE_MOUSEOVER_UNIT" then R.Remember("mouseover")
+    else R.Remember("target"); R.Remember("focus") end
+end
+function R.Start()
+    R.Sync()
+    if R.frame or not CreateFrame then return end
+    R.frame = CreateFrame("Frame")
+    R.frame:SetScript("OnEvent", function(...)
+        local ok, err = pcall(R.Event, ...)
+        if not ok and ns.NoteError then ns.NoteError("PvP rivals: " .. tostring(err)) end
+    end)
+    for _, event in ipairs({ "PARTY_KILL", "PLAYER_DEAD", "PLAYER_ALIVE", "PLAYER_UNGHOST", "PLAYER_ENTERING_WORLD",
+        "PLAYER_TARGET_CHANGED", "PLAYER_FOCUS_CHANGED", "UPDATE_MOUSEOVER_UNIT", "NAME_PLATE_UNIT_ADDED" }) do
+        pcall(R.frame.RegisterEvent, R.frame, event)
+    end
+    if not _G.issecretvalue and CombatLogGetCurrentEventInfo then
+        pcall(R.frame.RegisterEvent, R.frame, "COMBAT_LOG_EVENT_UNFILTERED")
+    end
+end
+function P.RivalData()
+    if P.demo then
+        return { pending = 2, total = 1, rows = {
+            { guid = "sample:1", name = "Aldren", pending = true, lastDeath = time() - 86400, zone = 1417, deaths = 2, revenges = 0 },
+            { guid = "sample:2", name = "Vaelis", pending = true, lastDeath = time() - 172800, zone = 1442, deaths = 1, revenges = 0 },
+            { guid = "sample:3", name = "Thoren", pending = false, wonAt = time() - 259200, wonZone = 1424, deaths = 1, revenges = 1 },
+        } }
+    end
+    local w = SkaldCharDB and SkaldCharDB.worldPvp
+    local out = { pending = 0, total = tonumber(w and w.revengeTotal) or 0, rows = {} }
+    for guid, rec in pairs(type(w and w.rivals) == "table" and w.rivals or {}) do
+        if type(rec) == "table" then
+            local row = {}
+            for k, v in pairs(rec) do row[k] = v end
+            row.guid = guid
+            out.rows[#out.rows + 1] = row
+            if rec.pending then out.pending = out.pending + 1 end
+        end
+    end
+    table.sort(out.rows, function(a, b)
+        if not not a.pending ~= not not b.pending then return a.pending == true end
+        local at, bt = a.pending and a.lastDeath or a.wonAt, b.pending and b.lastDeath or b.wonAt
+        if (at or 0) ~= (bt or 0) then return (at or 0) > (bt or 0) end
+        return a.guid < b.guid
+    end)
+    return out
 end
 
 -- The tab is added when it is wanted: at the login, when the first match is written and when /skald pvp on is typed.
 function P.Ensure()
-    pcall(P.KillProbeSync)   -- a kill probe left on goes on listening after a /reload
+    pcall(P.KillProbeSync)   -- diagnostic listeners follow only this session's explicit switch
+    pcall(P.WorldStart)      -- the open world is counted whether the tab is shown or not
+    pcall(R.Start)
     if not (SkaldAPI and SkaldAPI.AddTab) then return end
     if P.Wanted() then
         SkaldAPI.AddTab(P.TAB_ID, UI.TAB, P.Build)
@@ -653,7 +1099,7 @@ function P.ServerLines()
     return lines
 end
 
-local function BuildTab(panel)
+local function BuildBattleground(panel, sheet)
     local CW = SkaldAPI.CW or 342
     local RIGHT_X = SkaldAPI.RIGHT_X or 402
     local body = SkaldAPI.C_BODY or { 0.24, 0.16, 0.09 }
@@ -682,9 +1128,8 @@ local function BuildTab(panel)
     end
 
     -- the left page: the totals, a bar of won against lost, the game's own count and the word about the open world
-    local demoNote = Line(0, -44, CW, "SkaldSmall", "CENTER", head)
-    demoNote:SetText(UI.DEMO_NOTE)
-    demoNote:Hide()
+    local chapter = Line(0, -80, CW, "SkaldBody", "CENTER", head)
+    chapter:SetText(CH.BG)
     -- two banners side by side, the numbers large under each and the share of wins in a faded seal between them
     local function Centre(cx, y, width, font, color)
         local fs = panel:CreateFontString(nil, "OVERLAY", font)
@@ -698,31 +1143,27 @@ local function BuildTab(panel)
     local LX, MX, RX = CW * 0.2, CW * 0.5, CW * 0.8
     local wonBanner = panel:CreateTexture(nil, "ARTWORK")
     wonBanner:SetSize(80, 80)
-    wonBanner:SetPoint("TOP", panel, "TOPLEFT", LX, -66)
+    wonBanner:SetPoint("TOP", panel, "TOPLEFT", LX, -104)
     wonBanner:SetTexture(TEX .. "pvp_won")
     local lostBanner = panel:CreateTexture(nil, "ARTWORK")
     lostBanner:SetSize(80, 80)
-    lostBanner:SetPoint("TOP", panel, "TOPLEFT", RX, -66)
+    lostBanner:SetPoint("TOP", panel, "TOPLEFT", RX, -104)
     lostBanner:SetTexture(TEX .. "pvp_lost")
-    local wonNum = Centre(LX, -150, 110, "SkaldHead", GREEN)
-    local lostNum = Centre(RX, -150, 110, "SkaldHead", WINE)
-    local wonWord = Centre(LX, -184, 110, "SkaldSmall", muted)
+    local wonNum = Centre(LX, -190, 110, "SkaldHead", GREEN)
+    local lostNum = Centre(RX, -190, 110, "SkaldHead", WINE)
+    local wonWord = Centre(LX, -224, 110, "SkaldSmall", muted)
     wonWord:SetText(UI.WON_WORD)
-    local lostWord = Centre(RX, -184, 110, "SkaldSmall", muted)
+    local lostWord = Centre(RX, -224, 110, "SkaldSmall", muted)
     lostWord:SetText(UI.LOST_WORD)
     local medal = panel:CreateTexture(nil, "ARTWORK")
     medal:SetSize(78, 78)
-    medal:SetPoint("TOP", panel, "TOPLEFT", MX, -76)
+    medal:SetPoint("TOP", panel, "TOPLEFT", MX, -114)
     medal:SetTexture(TEX .. "pvp_title_seal")
     medal:SetAlpha(0.3)
-    local pctText = Centre(MX, -150, 90, "SkaldHead", head)
-    local matches = Line(0, -226, CW, "SkaldBody", "CENTER")
-    local honor = Line(0, -252, CW, "SkaldBody", "CENTER")
-    local story = Line(30, -300, CW - 60, "SkaldBody", "CENTER", body)
+    local pctText = Centre(MX, -190, 90, "SkaldHead", head)
+    local matches = Line(0, -272, CW, "SkaldBody", "CENTER")
+    local story = Line(30, -324, CW - 60, "SkaldBody", "CENTER", body)
     story:SetWordWrap(true)
-    local world = Line(0, -380, CW - 20, "SkaldSmall", "LEFT", muted)
-    world:SetWordWrap(true)
-    world:SetText(UI.WORLD)
     local empty = Line(0, -140, CW, "SkaldBody", "CENTER", muted)
     empty:SetText(UI.EMPTY)
     empty:Hide()
@@ -781,12 +1222,11 @@ local function BuildTab(panel)
         local data = P.Data()
         local none = data.total == 0
         empty:SetShown(none)
-        demoNote:SetShown(P.demo == true)
         emptySeal:SetShown(none)
         emptyHint:SetShown(none)
         story:SetShown(not none)
         story:SetText(none and "" or P.Line(data.total))
-        for _, region in ipairs({ matches, honor, wonBanner, lostBanner, wonNum, lostNum, wonWord, lostWord, medal, pctText }) do
+        for _, region in ipairs({ matches, wonBanner, lostBanner, wonNum, lostNum, wonWord, lostWord, medal, pctText }) do
             region:SetShown(not none)
         end
         recentHead:SetShown(not none)
@@ -795,16 +1235,14 @@ local function BuildTab(panel)
             wonNum:SetText(tostring(data.won))
             lostNum:SetText(tostring(data.lost))
             pctText:SetText(math.floor(100 * data.won / data.total + 0.5) .. "%")
-            local hk = P.HonorableKills()
-            honor:SetText(hk and ((type(HONORABLE_KILLS) == "string" and HONORABLE_KILLS ~= "" and HONORABLE_KILLS or UI.HK) .. UI.SEP .. hk) or "")
         end
         for i, r in ipairs(fieldRows) do
-            local f = data.fields[i]
+            local f = data.fields[(sheet() - 1) * P.FIELD_ROWS + i]
             r.name:SetText(f and f.label or "")
             r.rec:SetText(f and string.format(UI.REC, f.won, f.lost) or "")
         end
         -- "Last matches" follows the last field listed, not a fixed place, so a few fields leave no gap
-        local listed = math.max(1, math.min(#data.fields, P.FIELD_ROWS))
+        local listed = math.max(1, math.min(#data.fields - (sheet() - 1) * P.FIELD_ROWS, P.FIELD_ROWS))
         local top = -54 - listed * 26 - 22
         recentHead:ClearAllPoints()
         recentHead:SetPoint("TOPLEFT", RIGHT_X, top)
@@ -826,7 +1264,352 @@ local function BuildTab(panel)
             end
         end
     end
-    P.refresh = Refresh
     return Refresh
+end
+
+-- All chapters use the book's inks, including the dark-paper variants. Maps are the existing hand-drawn art.
+local function PageKit(panel, rightTitle)
+    local cw, rx = SkaldAPI.CW or 342, SkaldAPI.RIGHT_X or 402
+    local body = SkaldAPI.C_BODY or { 0.24, 0.16, 0.09 }
+    local head = SkaldAPI.C_HEAD or { 0.43, 0.12, 0.10 }
+    local muted = SkaldAPI.C_MUTED or { 0.42, 0.29, 0.17 }
+    local tex = "Interface\\AddOns\\Skald\\Textures\\skald2\\"
+    SkaldAPI.PageHeading(panel, UI.TITLE, 0)
+    local rightHeading = SkaldAPI.PageHeading(panel, rightTitle, rx)
+    local function Text(x, y, width, text, font, color, align)
+        local f = panel:CreateFontString(nil, "OVERLAY", font or "SkaldBody")
+        f:SetPoint("TOPLEFT", x, y)
+        f:SetWidth(width)
+        f:SetJustifyH(align or "CENTER")
+        f:SetWordWrap(true)
+        local ink = color or body
+        ns.ThemeText(f, ink[1], ink[2], ink[3])
+        f:SetText(text or "")
+        return f
+    end
+    local function Art(name, x, y, w, h, alpha)
+        local t = panel:CreateTexture(nil, "ARTWORK")
+        t:SetSize(w, h)
+        t:SetPoint("TOPLEFT", x, y)
+        t:SetTexture(name:find("\\", 1, true) and name or (tex .. name))
+        ns.ThemeAlpha(t, alpha or 1, alpha or 1)
+        return t
+    end
+    return cw, rx, Text, Art, head, muted, tex, rightHeading
+end
+
+local function PageLink(panel, label, x, y, click)
+    local b = CreateFrame("Button", nil, panel)
+    b:SetSize(SkaldAPI.CW or 342, 20)
+    b:SetPoint("TOPLEFT", x, y)
+    b.text = b:CreateFontString(nil, "OVERLAY", "SkaldSmall")
+    b.text:SetPoint("CENTER")
+    b.text:SetWidth((SkaldAPI.CW or 342) - 20)
+    b.text:SetWordWrap(false)
+    b.text:SetJustifyH("CENTER")
+    b.text:SetText(label)
+    ns.ThemeText(b.text, 0.43, 0.12, 0.10)
+    b:SetScript("OnClick", click)
+    b.hover = b:CreateTexture(nil, "BACKGROUND")
+    b.hover:SetAllPoints()
+    ns.ThemeFill(b.hover, 0.43, 0.12, 0.10, 0.06, "hover")
+    b.hover:Hide()
+    b:SetScript("OnEnter", function(self) self.hover:Show() end)
+    b:SetScript("OnLeave", function(self) self.hover:Hide() end)
+    return b
+end
+
+local function BuildWorld(panel, sheet, redraw, goRivals)
+    local cw, rx, Text, Art, head, muted, tex, rightHeading = PageKit(panel, CH.LANDS)
+    local map = Art("map_compass", 16, -88, cw - 32, 170)
+    local place = Text(10, -266, cw - 20, "", "SkaldHead2", head)
+    place:SetHeight(22)
+    local campaign = Text(0, -302, cw, CH.CAMPAIGN, "SkaldSmall", muted)
+    local kills = Text(0, -320, cw / 2, "", "SkaldHead", head)
+    local honor = Text(cw / 2, -320, cw / 2, "", "SkaldHead", head)
+    local killsLabel = Text(0, -349, cw / 2, CH.KILLS, "SkaldSmall", muted)
+    local honorLabel = Text(cw / 2, -349, cw / 2, CH.HONOR, "SkaldSmall", muted)
+    local story = Text(20, -380, cw - 40, CH.WORLD_STORY, "SkaldSmall", muted)
+    story:SetHeight(42)
+    local count = Text(rx, -50, cw, "", "SkaldSmall", muted)
+    local hint = Text(rx + 12, -390, cw - 24, CH.WORLD_HINT, "SkaldSmall", muted)
+    local lifetime = Text(rx, -368, cw, "", "SkaldSmall", muted)
+    panel.rivalLink = PageLink(panel, RV.WORLD_LINK, rx, -414, goRivals)
+    -- The first opening is a frontispiece, not an empty scoreboard. The existing war illustration is kept square.
+    local frontispiece = Art("Interface\\AddOns\\Skald\\Textures\\ui_saga_war", (cw - 166) / 2, -93, 166, 166)
+    local motto = Text(35, -267, cw - 70, CH.WORLD_MOTTO, "SkaldItalic", muted)
+    motto:SetHeight(42)
+    local divider = Art("rule", (cw - 110) / 2, -316, 110, 9)
+    divider:SetTexCoord(0, 160 / 256, 0, 14 / 16)
+    ns.ThemeTint(divider, "ornament")
+    local remembered = Text(0, -341, cw, "", "SkaldHead", head)
+    local rememberedLabel = Text(16, -374, cw - 32, CH.LIFETIME_LABEL, "SkaldSmall", muted)
+    local unwritten = Text(rx + 28, -105, cw - 56, CH.UNWRITTEN, "SkaldHead2", head, "LEFT")
+    local empty = Text(rx + 28, -158, cw - 56, CH.WORLD_EMPTY, "SkaldSaga", nil, "LEFT")
+    empty:SetHeight(125)
+    local closingRule = Art("rule", rx + (cw - 90) / 2, -307, 90, 8)
+    closingRule:SetTexCoord(0, 160 / 256, 0, 14 / 16)
+    ns.ThemeTint(closingRule, "ornament")
+    local closing = Text(rx + 40, -340, cw - 80, CH.WORLD_CLOSING, "SkaldItalic", muted)
+    closing:SetHeight(65)
+    local summaryRegions = { map, place, campaign, kills, honor, killsLabel, honorLabel, story, count, hint, lifetime }
+    local emptyRegions = { frontispiece, motto, unwritten, empty, closingRule, closing }
+    local selected
+    local rows = {}
+    local function Select(z)
+        local name = ns.ZoneCard and ns.ZoneCard.ART and ns.ZoneCard.ART[z.id]
+        map:SetTexture(tex .. (name or "map_compass"))
+        map:ClearAllPoints()
+        map:SetSize(name and (cw - 32) or 100, name and 170 or 100)
+        map:SetPoint("TOPLEFT", name and 16 or ((cw - 100) / 2), name and -88 or -124)
+        place:SetText(z.label)
+    end
+    for i = 1, P.WORLD_ROWS do
+        local y = -84 - (i - 1) * 48
+        local b = CreateFrame("Button", nil, panel)
+        b:SetSize(cw, 44)
+        b:SetPoint("TOPLEFT", rx, y)
+        b.name = Text(rx + 16, y, cw - 24, "", "SkaldBody", head, "LEFT")
+        b.name:SetHeight(19)
+        b.name:SetWordWrap(false)
+        b.rec = Text(rx + 16, y - 21, cw - 24, "", "SkaldSmall", muted, "LEFT")
+        b.dot = Art("pvp_won", rx - 3, y - 1, 18, 28, 0.8)
+        b.hover = b:CreateTexture(nil, "BACKGROUND")
+        b.hover:SetAllPoints()
+        ns.ThemeFill(b.hover, head[1], head[2], head[3], 0.07, "hover")
+        b.hover:Hide()
+        b:SetScript("OnEnter", function(self) self.hover:Show() end)
+        b:SetScript("OnLeave", function(self) self.hover:Hide() end)
+        b:SetScript("OnClick", function(self)
+            if self.zone then selected = self.zone.id; redraw() end
+        end)
+        rows[i] = b
+    end
+    panel.rows, panel.map, panel.place = rows, map, place
+    panel.summaryRegions, panel.emptyRegions, panel.remembered = summaryRegions, emptyRegions, remembered
+    return function()
+        local data = P.World()
+        local first = (sheet() - 1) * P.WORLD_ROWS + 1
+        local chosen
+        for i = first, math.min(#data.rows, first + P.WORLD_ROWS - 1) do
+            if data.rows[i].id == selected then chosen = data.rows[i] end
+        end
+        chosen = chosen or data.rows[first]
+        selected = chosen and chosen.id
+        if chosen then Select(chosen) else place:SetText("") end
+        kills:SetText(tostring(data.k))
+        honor:SetText(tostring(data.h))
+        count:SetText(string.format(CH.TERRITORIES, #data.rows))
+        local hk = P.HonorableKills()
+        lifetime:SetText(hk and string.format(CH.LIFETIME, hk) or "")
+        local populated = #data.rows > 0
+        for _, region in ipairs(summaryRegions) do region:SetShown(populated) end
+        for _, region in ipairs(emptyRegions) do region:SetShown(not populated) end
+        rightHeading:SetText(populated and CH.LANDS or CH.FIRST_MARKS)
+        local hasHistory = not populated and hk ~= nil and hk > 0
+        remembered:SetShown(hasHistory)
+        rememberedLabel:SetShown(hasHistory)
+        divider:SetShown(hasHistory)
+        remembered:SetText(hasHistory and tostring(hk) or "")
+        for i, row in ipairs(rows) do
+            local z = data.rows[first + i - 1]
+            row.zone = z
+            row:SetShown(z ~= nil)
+            row.name:SetShown(z ~= nil)
+            row.rec:SetShown(z ~= nil)
+            row.dot:SetShown(z ~= nil and z.id == selected)
+            row.name:SetText(z and z.label or "")
+            row.rec:SetText(z and string.format(UI.WORLD_ZONE, z.k, z.h) or "")
+        end
+    end
+end
+
+local function BuildRivals(panel, sheet, goWorld)
+    local cw, rx, Text, Art, head, muted = PageKit(panel, RV.TITLE)
+    Art("pvp_title_seal", (cw - 112) / 2, -99, 112, 112, 0.9)
+    local intro = Text(30, -232, cw - 60, RV.INTRO, "SkaldItalic", muted)
+    intro:SetHeight(66)
+    local pending = Text(0, -322, cw / 2, "", "SkaldHead", head)
+    local won = Text(cw / 2, -322, cw / 2, "", "SkaldHead", head)
+    local pendingLabel = Text(0, -354, cw / 2, RV.PENDING, "SkaldSmall", muted)
+    local wonLabel = Text(cw / 2, -354, cw / 2, RV.WON, "SkaldSmall", muted)
+    local empty = Text(rx + 28, -156, cw - 56, RV.EMPTY, "SkaldSaga", nil, "LEFT")
+    empty:SetHeight(150)
+    panel.worldLink = PageLink(panel, RV.BACK, rx, -414, goWorld)
+    local rows = {}
+    for i = 1, R.ROWS do
+        local y = -68 - (i - 1) * 50
+        local b = CreateFrame("Button", nil, panel)
+        b:SetSize(cw, 46)
+        b:SetPoint("TOPLEFT", rx, y)
+        b.mark = b:CreateTexture(nil, "ARTWORK")
+        b.mark:SetPoint("TOPLEFT", 0, 0)
+        b.mark:SetSize(23, 33)
+        b.name = Text(rx + 30, y, cw - 30, "", "SkaldBody", head, "LEFT")
+        b.name:SetWordWrap(false)
+        b.status = Text(rx + 30, y - 17, cw - 30, "", "SkaldSmall", muted, "LEFT")
+        b.place = Text(rx + 30, y - 31, cw - 30, "", "SkaldSmall", muted, "LEFT")
+        b.place:SetWordWrap(false)
+        b:SetScript("OnEnter", function(self)
+            if self.rival and GameTooltip then
+                GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+                GameTooltip:SetText(self.rival.name or RV.UNKNOWN)
+                GameTooltip:AddLine(self.place:GetText() or "", 0.9, 0.8, 0.6, true)
+                GameTooltip:Show()
+            end
+        end)
+        b:SetScript("OnLeave", function() if GameTooltip then GameTooltip:Hide() end end)
+        b:SetScript("OnClick", function(self)
+            if not self.rival or self.rival.pending or P.demo then return end
+            local entries = SkaldCharDB and SkaldCharDB.entries or {}
+            for at = #entries, 1, -1 do
+                local e = entries[at]
+                if e.kind == "revenge" and e.rival == self.rival.guid and e.rivalWin == self.rival.revenges then
+                    if SkaldAPI.OpenEntry then SkaldAPI.OpenEntry(e) end
+                    return
+                end
+            end
+        end)
+        rows[i] = b
+    end
+    panel.rows, panel.empty = rows, empty
+    return function()
+        local data = P.RivalData()
+        local any = #data.rows > 0
+        for _, region in ipairs({ pending, won, pendingLabel, wonLabel }) do region:SetShown(any) end
+        pending:SetText(tostring(data.pending))
+        won:SetText(tostring(data.total))
+        empty:SetShown(not any)
+        local tex = "Interface\\AddOns\\Skald\\Textures\\skald2\\"
+        for i, row in ipairs(rows) do
+            local rec = data.rows[(sheet() - 1) * R.ROWS + i]
+            row.rival = rec
+            row:SetShown(rec ~= nil)
+            row.name:SetShown(rec ~= nil); row.status:SetShown(rec ~= nil); row.place:SetShown(rec ~= nil)
+            if rec then
+                row.mark:SetTexture(tex .. (rec.pending and "pvp_lost" or "pvp_won"))
+                row.name:SetText(rec.name or RV.UNKNOWN)
+                row.status:SetText(rec.pending and RV.PENDING_ROW or RV.WON_ROW)
+                local at, zone = rec.pending and rec.lastDeath or rec.wonAt, rec.pending and rec.zone or rec.wonZone
+                row.place:SetText((at and date(UI.DATE, at) or "") .. (zone and (" · " .. MapName(zone, "#" .. zone)) or ""))
+            end
+        end
+    end
+end
+
+local function BuildArena(panel)
+    local cw, rx, Text, Art, head, muted = PageKit(panel, CH.ARENA_BOOK)
+    Text(0, -80, cw, CH.ARENA, "SkaldBody", head)
+    Art("pvp_title_seal", (cw - 160) / 2, -128, 160, 160, 0.65)
+    Text(30, -312, cw - 60, CH.ARENA_STORY, "SkaldBody", muted)
+    Text(rx + 25, -150, cw - 50, CH.ARENA_EMPTY, "SkaldBody", head)
+    local hint = Text(rx + 30, -220, cw - 60, CH.ARENA_HINT, "SkaldBody", muted)
+    hint:SetHeight(135)
+    return function() end
+end
+
+-- A chapter uses a full spread. The book corners also turn through long territory/field lists before the next chapter.
+local function BuildTab(panel)
+    local cw = SkaldAPI.CW or 342
+    local current, page = 1, 1
+    local subs, refreshes, buttons = {}, {}, {}
+    local labels = { CH.WORLD, CH.BG, CH.ARENA }
+    local Refresh
+    local function WorldPages() return math.max(1, math.ceil(#P.World().rows / P.WORLD_ROWS)) end
+    local function Pages(chapter)
+        if chapter == 1 then return WorldPages() + math.max(1, math.ceil(#P.RivalData().rows / R.ROWS)) end
+        return chapter == 2 and math.max(1, math.ceil(#P.Data().fields / P.FIELD_ROWS)) or 1
+    end
+    local function Redraw()
+        Refresh()
+        if SkaldAPI.RefreshWindow then SkaldAPI.RefreshWindow() end
+    end
+    for i = 1, 3 do
+        local sub = CreateFrame("Frame", nil, panel)
+        sub:SetAllPoints(panel)
+        sub:Hide()
+        subs[i] = sub
+    end
+    local sheet = function() return page end
+    local rivalPanel = CreateFrame("Frame", nil, panel)
+    rivalPanel:SetAllPoints(panel)
+    rivalPanel:Hide()
+    local function GoWorld() current, page = 1, 1; Redraw() end
+    local function GoRivals() current, page = 1, WorldPages() + 1; Redraw() end
+    local refreshRivals = BuildRivals(rivalPanel, function() return page - WorldPages() end, GoWorld)
+    refreshes[1] = BuildWorld(subs[1], sheet, Redraw, GoRivals)
+    refreshes[2] = BuildBattleground(subs[2], sheet)
+    refreshes[3] = BuildArena(subs[3])
+    -- Written chapter links on the parchment; the selected chapter has a short underline.
+    local widths, left = { cw * 0.31, cw * 0.47, cw * 0.22 }, 0
+    for i, label in ipairs(labels) do
+        local chapter = i
+        local b = CreateFrame("Button", nil, panel)
+        b:SetSize(widths[i], 26)
+        b:SetPoint("TOPLEFT", left, -42)
+        b.text = b:CreateFontString(nil, "OVERLAY", "SkaldSmall")
+        b.text:SetPoint("CENTER")
+        b.text:SetWidth(widths[i] - 4)
+        b.text:SetWordWrap(false)
+        b.text:SetText(label)
+        b.mark = b:CreateTexture(nil, "ARTWORK")
+        b.mark:SetPoint("BOTTOMLEFT", 9, 0)
+        b.mark:SetPoint("BOTTOMRIGHT", -9, 0)
+        b.mark:SetHeight(1)
+        ns.ThemeFill(b.mark, 0.43, 0.12, 0.10, 0.65)
+        b:SetScript("OnClick", function() current, page = chapter, 1; Redraw() end)
+        b.hover = b:CreateTexture(nil, "BACKGROUND")
+        b.hover:SetAllPoints()
+        ns.ThemeFill(b.hover, 0.43, 0.12, 0.10, 0.07, "hover")
+        b.hover:Hide()
+        b:SetScript("OnEnter", function(self) self.hover:Show() end)
+        b:SetScript("OnLeave", function(self) self.hover:Hide() end)
+        buttons[i] = b
+        left = left + widths[i]
+    end
+    local demo = panel:CreateFontString(nil, "OVERLAY", "SkaldSmall")
+    demo:SetPoint("TOPLEFT", 0, -424)
+    demo:SetWidth(cw)
+    demo:SetJustifyH("CENTER")
+    ns.ThemeText(demo, 0.43, 0.12, 0.10)
+    demo:SetText(UI.DEMO_NOTE)
+    Refresh = function()
+        local total = Pages(current)
+        page = math.max(1, math.min(total, page))
+        local inRivals = current == 1 and page > WorldPages()
+        for i, sub in ipairs(subs) do
+            sub:SetShown(i == current and not inRivals)
+            buttons[i].mark:SetShown(i == current)
+            ns.ThemeText(buttons[i].text, i == current and 0.43 or 0.42, i == current and 0.12 or 0.29, i == current and 0.10 or 0.17)
+        end
+        rivalPanel:SetShown(inRivals)
+        if inRivals then refreshRivals() else refreshes[current]() end
+        demo:SetShown(P.demo == true and current ~= 3)
+        if SkaldAPI.RefreshFooter then SkaldAPI.RefreshFooter() end
+    end
+    local pager = {
+        Turn = function(delta)
+            if delta > 0 then
+                if page < Pages(current) then page = page + 1
+                elseif current < 3 then current, page = current + 1, 1 end
+            elseif delta < 0 then
+                if page > 1 then page = page - 1
+                elseif current > 1 then current = current - 1; page = Pages(current) end
+            end
+            Refresh()
+        end,
+        CanPrev = function() return current > 1 or page > 1 end,
+        CanNext = function() return current < 3 or page < Pages(current) end,
+        Current = function() return current, page end,
+        Count = function() return Pages(1) + Pages(2) + Pages(3) end,
+        Folio = function()
+            local before = 0
+            for chapter = 1, current - 1 do before = before + Pages(chapter) end
+            return (before + page - 1) * 2 + 1
+        end,
+    }
+    panel.subs, panel.chapterButtons, panel.pager, panel.rivalPanel = subs, buttons, pager, rivalPanel
+    P.refresh, P.pager = Refresh, pager
+    return Refresh, pager
 end
 P.Build = BuildTab
