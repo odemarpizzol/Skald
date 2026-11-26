@@ -1,5 +1,6 @@
 -- G2: a local, fictional guild chronicle. Only the visibility switch is saved.
 -- Contributions, the note, the preview choices and the suggestion preference live in this module's memory.
+-- G3 (the end of the file): the first real sharing between two clients, off until /skald chronicle share on.
 local _, ns = ...
 local L = ns.LOCALES[GetLocale()] or ns.LOCALES.enUS
 local UI = L.CHRONICLE
@@ -317,6 +318,230 @@ function C.Command(arg)
         if SkaldDB then SkaldDB.chronicleTab = false end
         SkaldAPI.SetTabShown(C.TAB_ID, false)
         return { UI.DEMO_OFF }
+    end
+    return { UI.USAGE }
+end
+
+-- G3: two clients send and keep a real contribution. Off until the player turns it on (/skald chronicle share on, kept in
+-- SkaldDB.chronicleNet); then a Comms (Comms.lua) hears the guild and /skald chronicle send queues one contribution: the
+-- newest dungeon of the diary whose boss pages carry ids, or, without one, a test contribution marked as such. The book of the
+-- guild is SkaldDB.chronicle[<guild name>] (a Chronicle store, account-wide: every character of the guild reads the same; not
+-- in /skald backup yet). Only the guild channel fills it; a contribution heard on a group channel is logged, not kept. Every
+-- send, drop and arrival is logged in SkaldDB.chronicleLog (at most C.NET_LOG_MAX) to be read from the saved file. Nothing of
+-- this writes a page of the diary, and the chapter in the tab is still the demo.
+C.NET_LOG_MAX, C.NET_PUMP = 30, 0.5
+C.NET_PREFIX = "SKALD1"
+local function NetSafe(v) if _G.issecretvalue and issecretvalue(v) then return nil end return v end
+local function NetSay(msg) print("|cffffd100Skald|r: " .. msg) end
+function C.GuildName()
+    if not (IsInGuild and IsInGuild()) or not GetGuildInfo then return nil end
+    local ok, name = pcall(GetGuildInfo, "player")
+    name = ok and NetSafe(name) or nil
+    if type(name) ~= "string" or name == "" then return nil end
+    return name
+end
+function C.Book(create)
+    local guild = C.GuildName()
+    if not guild or not SkaldDB then return nil, guild end
+    if type(SkaldDB.chronicle) ~= "table" then SkaldDB.chronicle = {} end
+    local store = SkaldDB.chronicle[guild]
+    if type(store) ~= "table" and create then store = ns.Chronicle.NewStore(); SkaldDB.chronicle[guild] = store end
+    return store, guild
+end
+local function NetContext()
+    local okI, inside, kind = pcall(IsInInstance)
+    local fight = InCombatLockdown and InCombatLockdown() and "yes" or "no"
+    local boss = (ns.encounter and not ns.encounter.ended) and "yes" or "no"
+    return string.format("inst=%s combat=%s boss=%s", (okI and inside) and tostring(kind) or "no", fight, boss)
+end
+local function NetLog(line)
+    if not SkaldDB then return end
+    local log = type(SkaldDB.chronicleLog) == "table" and SkaldDB.chronicleLog or {}
+    SkaldDB.chronicleLog = log
+    log[#log + 1] = { t = time(), line = date("%H:%M:%S", time()) .. " " .. line .. " | " .. NetContext() }
+    while #log > C.NET_LOG_MAX do table.remove(log, 1) end
+end
+local function RealMe()
+    local ok, name = pcall(UnitName, "player")
+    return ok and NetSafe(name) or nil
+end
+-- While an echo test waits (/skald chronicle send echo), Comms is told no name, so the copy of our own message that the guild
+-- channel sends back is not dropped as ours; it goes to a test book (SkaldDB.chronicleEcho), never to the guild's.
+C.ECHO_WAIT = 300
+local function Echoing() return C.echoUntil and (GetTime and GetTime() or time()) < C.echoUntil end
+local function Me()
+    if Echoing() then return nil end
+    return RealMe()
+end
+
+-- the contribution to send: the newest dungeon of the diary (its boss pages with ids, within four hours of the newest), else a test
+function C.Contribution(rev)
+    local chron = ns.Chronicle
+    local entries = SkaldCharDB and SkaldCharDB.entries or {}
+    local newest
+    for i = #entries, 1, -1 do
+        local e = entries[i]
+        if type(e) == "table" and e.kind == "boss" and type(e.enc) == "number" and type(e.iid) == "number" then newest = e; break end
+    end
+    if newest then
+        local pages = {}
+        for _, e in ipairs(entries) do
+            if type(e) == "table" and e.kind == "boss" and e.iid == newest.iid and type(e.t) == "number" and math.abs(e.t - (newest.t or 0)) <= 4 * 3600 then
+                pages[#pages + 1] = e
+            end
+        end
+        local c = chron.Build(pages, { rev = rev })
+        if c then return c, false end
+    end
+    local hour = math.floor(time() / 3600) * 3600   -- the same hour, the same adventure: a second send is a copy, not a new one
+    return chron.Build({ { kind = "boss", iid = C.IID, enc = C.BOSSES[1], t = hour, tries = 1 } },
+        { rev = rev, t0 = hour, t1 = hour, note = UI.NET_TEST_NOTE }), true
+end
+
+local function Word(res)
+    if res == "added" then return UI.NET_ADDED elseif res == "replaced" then return UI.NET_REPLACED
+    elseif res == "stale" then return UI.NET_STALE end
+    return string.format(UI.NET_REFUSED, tostring(res))
+end
+function C.OnMessage(kind, value, sender, channel, id)
+    channel = tostring(channel or "?")
+    local mine = RealMe()
+    if mine and ns.Comms.SameName(sender, mine) then
+        if type(SkaldDB.chronicleEcho) ~= "table" then SkaldDB.chronicleEcho = ns.Chronicle.NewStore() end
+        local res = ns.Chronicle.Receive(SkaldDB.chronicleEcho, kind, value, sender)
+        NetLog(string.format("echo %s %s on %s: %s", tostring(kind), tostring(id), channel, tostring(res)))
+        NetSay(string.format(UI.NET_ECHO, channel, Word(res)))
+        return
+    end
+    if channel ~= "GUILD" then
+        NetLog(string.format("heard %s %s from %s on %s: not kept", tostring(kind), tostring(id), tostring(sender), channel))
+        NetSay(string.format(UI.NET_NOT_KEPT, tostring(sender), channel))
+        return
+    end
+    local store = C.Book(true)
+    if not store then NetLog("heard " .. tostring(id) .. " from " .. tostring(sender) .. ": no guild"); return end
+    local res = ns.Chronicle.Receive(store, kind, value, sender)
+    NetLog(string.format("heard %s %s from %s on %s: %s", tostring(kind), tostring(id), tostring(sender), channel, tostring(res)))
+    NetSay(string.format(UI.NET_HEARD, tostring(sender), Word(res)))
+end
+
+local netFrame
+local function Pump()
+    C.pumping = false
+    local comms = C.comms
+    if not comms then return end
+    pcall(comms.Pump, comms)
+    if comms:Waiting() > 0 and C_Timer and C_Timer.After then
+        C.pumping = true
+        C_Timer.After(C.NET_PUMP, Pump)
+    end
+end
+local function Kick()
+    if C.comms and not C.pumping then Pump() end
+end
+function C.NetStart()
+    if C.comms or not (SkaldDB and SkaldDB.chronicleNet) or not ns.Comms then return end
+    local api = C_ChatInfo or {}
+    local send = api.SendAddonMessage or SendAddonMessage
+    if not send then return end
+    local comms = ns.Comms.New({ send = send, now = GetTime or function() return time() end, me = Me, prefix = C.NET_PREFIX,
+        kinds = { chron = true }, safe = NetSafe, onMessage = C.OnMessage })
+    comms.onSent = function(kind, id)
+        NetLog("sent " .. tostring(kind) .. " " .. tostring(id))
+        NetSay(UI.NET_SENT)
+    end
+    comms.onDrop = function(kind, id, why)
+        NetLog("dropped " .. tostring(kind) .. " " .. tostring(id) .. ": " .. tostring(why))
+        NetSay(string.format(UI.NET_DROPPED, tostring(why)))
+    end
+    C.comms = comms
+    ns.CommsLive = comms   -- Skald.lua hands every SKALD1 message it hears to it
+    if not netFrame and CreateFrame then
+        netFrame = CreateFrame("Frame")
+        -- the game may have lifted a lock on addon messages: after a fight, a boss, a loading screen
+        netFrame:SetScript("OnEvent", function()
+            if C.comms then pcall(C.comms.Resume, C.comms); Kick() end
+        end)
+    end
+    if netFrame then
+        for _, ev in ipairs({ "PLAYER_REGEN_ENABLED", "ENCOUNTER_END", "LOADING_SCREEN_DISABLED" }) do pcall(netFrame.RegisterEvent, netFrame, ev) end
+    end
+end
+function C.NetStop()
+    if ns.CommsLive == C.comms then ns.CommsLive = nil end
+    C.comms = nil
+    if netFrame then netFrame:UnregisterAllEvents() end
+end
+
+function C.NetSend(arg)
+    if not (SkaldDB and SkaldDB.chronicleNet) then return { UI.NET_NEED_ON } end
+    C.NetStart()
+    if not C.comms then return { UI.NET_NO_SEND } end
+    local guild = C.GuildName()
+    if not guild then return { UI.NET_NO_GUILD } end
+    local echo = arg == "echo" or arg == "echo new"
+    if echo then C.echoUntil = (GetTime and GetTime() or time()) + C.ECHO_WAIT end
+    if arg == "new" or arg == "echo new" then SkaldDB.chronicleRev = (tonumber(SkaldDB.chronicleRev) or 1) + 1 end
+    local rev = tonumber(SkaldDB.chronicleRev) or 1
+    local c, test = C.Contribution(rev)
+    if not c then return { string.format(UI.NET_DROPPED, "no contribution") } end
+    local channel = "GUILD"
+    if arg == "party" then
+        if IsInGroup and IsInGroup(_G.LE_PARTY_CATEGORY_INSTANCE or 2) then channel = "INSTANCE_CHAT"
+        elseif IsInRaid and IsInRaid() then channel = "RAID"
+        elseif IsInGroup and IsInGroup() then channel = "PARTY"
+        else return { UI.NET_NO_GROUP } end
+    end
+    local id, why = C.comms:Send("chron", c, channel)
+    if not id then return { string.format(UI.NET_DROPPED, tostring(why)) } end
+    local store = C.Book(true)
+    if store and channel == "GUILD" and not echo then ns.Chronicle.Add(store, Me() or "?", c) end   -- the author's own book has it too
+    NetLog(string.format("queued chron %s on %s rev %d%s %s", id, channel, rev, echo and " echo" or "", test and "test" or ("iid " .. tostring(c.iid) .. " bosses " .. #c.bosses)))
+    Kick()
+    return { string.format(UI.NET_QUEUED, channel, test and UI.NET_TEST or string.format(UI.NET_FROM_DIARY, #c.bosses), rev) }
+end
+
+function C.NetStatus()
+    local store, guild = C.Book(false)
+    local n, chapters = 0, 0
+    if store then
+        for _ in pairs(store.contribs or {}) do n = n + 1 end
+        chapters = #ns.Chronicle.Chapters(store)
+    end
+    local on = SkaldDB and SkaldDB.chronicleNet
+    local lines = { string.format(UI.NET_STATUS, on and UI.NET_WORD_ON or UI.NET_WORD_OFF, guild or "-", n, chapters) }
+    local s = C.comms and C.comms.stats
+    if s then
+        lines[#lines + 1] = string.format(UI.NET_STATS, s.sent, s.delivered, s.dup, s.held, s.dropped, C.comms:Waiting())
+    end
+    local echoStore = SkaldDB and SkaldDB.chronicleEcho
+    if type(echoStore) == "table" then
+        local e = 0
+        for _ in pairs(echoStore.contribs or {}) do e = e + 1 end
+        lines[#lines + 1] = string.format(UI.NET_ECHO_KEPT, e)
+    end
+    local log = SkaldDB and SkaldDB.chronicleLog or {}
+    for i = math.max(1, #log - 4), #log do lines[#lines + 1] = log[i].line end
+    return lines
+end
+
+function C.NetCommand(rest)
+    rest = tostring(rest or ""):lower()
+    if rest == "share on" then
+        SkaldDB.chronicleNet = true
+        C.NetStart()
+        return { UI.NET_ON }
+    elseif rest == "echo clear" then
+        SkaldDB.chronicleEcho = nil
+        return { UI.NET_ECHO_CLEARED }
+    elseif rest == "share off" then
+        SkaldDB.chronicleNet = nil
+        C.NetStop()
+        return { UI.NET_OFF }
+    elseif rest == "send" or rest:match("^send ") then
+        return C.NetSend(rest:match("^send (.+)$"))
+    elseif rest == "status" then
+        return C.NetStatus()
     end
     return { UI.USAGE }
 end

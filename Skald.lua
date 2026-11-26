@@ -7426,6 +7426,7 @@ H.PLAYER_LOGIN = function(self, event, ...)
         if okClass and classFile == "HUNTER" then window:AddTab("pets", L.TAB_PETS, Mile.BuildPets) end
     end
     if ns.Pvp then pcall(ns.Pvp.Ensure) end
+    if ns.ChronicleTab and ns.ChronicleTab.NetStart then pcall(ns.ChronicleTab.NetStart) end   -- sharing left on hears the guild again
     lastZone, K.lastDoor = GetZoneText(), K.InstanceNow()
     pcall(K.NoteInstance)   -- a reload inside an instance marks it for the Cartographer too
     VisitZone(lastZone)
@@ -9724,6 +9725,8 @@ SlashCmdList["SKALD"] = function(msg)
         for _, line in ipairs(Mile.ProbeEventLines()) do Say(line) end
     elseif msg == "perf" then
         Mile.Perf()
+    elseif msg:match("^chronicle share") or msg:match("^chronicle send") or msg == "chronicle status" or msg == "chronicle echo clear" then
+        if ns.ChronicleTab then for _, line in ipairs(ns.ChronicleTab.NetCommand(msg:match("^chronicle (.+)$"))) do Say(line) end end
     elseif msg == "chronicle" or msg:match("^chronicle %a+$") then
         if ns.ChronicleTab then for _, line in ipairs(ns.ChronicleTab.Command(msg:match("^chronicle (%a+)$"))) do Say(line) end end
     elseif msg == "pvp" or msg:match("^pvp %a+$") then

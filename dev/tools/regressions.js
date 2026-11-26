@@ -5118,6 +5118,81 @@ RES = (base and one and bgOut and wanted and demo and SkaldDB.errors == nil) and
   or ("base=" .. tostring(base) .. " one=" .. tostring(one) .. " k=" .. w.k .. " h=" .. w.h .. " rows=" .. #w.rows .. " bgOut=" .. tostring(bgOut) .. " wanted=" .. tostring(wanted) .. " demo=" .. tostring(demo) .. " err=" .. tostring(SkaldDB.errors and SkaldDB.errors[1]))`,
 });
 
+// G3 of the Guild Chronicle (2026-11-25): a real contribution goes out on the guild channel, a second client keeps it, a copy that
+// comes again changes nothing, a newer revision replaces it and a group channel is not kept.
+run('/skald chronicle share on + send: a contribution is sent on GUILD, kept once by the other client, replaced by a newer revision, never kept from a group channel', {
+  pre: FOREVER + `
+CLOCK = 100; function GetTime() return CLOCK end
+function IsInGuild() return true end
+function GetGuildInfo(u) if u == "player" then return "Pena" end end
+SENT = {}
+C_ChatInfo.SendAddonMessage = function(prefix, text, channel) SENT[#SENT + 1] = { prefix, text, channel }; return 0 end
+function drain() for i = 1, 60 do CLOCK = CLOCK + 1; runTimers() end end
+function replay(from, channel, list) for _, m in ipairs(list) do fire("CHAT_MSG_ADDON", m[1], m[2], channel, from) end end
+function chunks(first) local out = {}; for i = first, #SENT do if SENT[i][3] == "GUILD" then out[#out + 1] = SENT[i] end end; return out end
+function kept() local n = 0; for _ in pairs((SkaldDB.chronicle or {}).Pena and SkaldDB.chronicle.Pena.contribs or {}) do n = n + 1 end; return n end`,
+  body: `SlashCmdList.SKALD("chronicle send")
+local refused = #SENT == 0 and SkaldDB.chronicleLog == nil
+SlashCmdList.SKALD("chronicle share on")
+SlashCmdList.SKALD("chronicle send")
+drain()
+local first = chunks(1)
+local own = kept() == 1
+replay("Friend-Other", "GUILD", first)
+local heard = kept() == 2
+replay("Friend-Other", "GUILD", first)
+local once = kept() == 2
+local mark = #SENT + 1
+SlashCmdList.SKALD("chronicle send new")
+drain()
+local second = chunks(mark)
+replay("Friend-Other", "GUILD", second)
+local friend
+for k, c in pairs(SkaldDB.chronicle.Pena.contribs) do if c.by == "Friend-Other" then friend = c end end
+local replaced = kept() == 2 and friend and friend.rev == 2
+replay("Stranger-Other", "PARTY", second)
+local party = kept() == 2
+local log = table.concat((function() local t = {}; for _, e in ipairs(SkaldDB.chronicleLog or {}) do t[#t + 1] = e.line end; return t end)(), "\\n")
+local logged = log:find("queued chron", 1, true) and log:find("sent chron", 1, true) and log:find(": added", 1, true) and log:find(": replaced", 1, true) and log:find("not kept", 1, true)
+local status = ns.ChronicleTab.NetStatus()
+SlashCmdList.SKALD("chronicle share off")
+local off = ns.CommsLive == nil and SkaldDB.chronicleNet == nil
+RES = (refused and #first > 0 and own and heard and once and replaced and party and logged and #status >= 2 and off and SkaldDB.errors == nil) and "ok"
+  or ("refused=" .. tostring(refused) .. " first=" .. #first .. " own=" .. tostring(own) .. " heard=" .. tostring(heard) .. " once=" .. tostring(once) .. " replaced=" .. tostring(replaced) .. " party=" .. tostring(party) .. " logged=" .. tostring(logged) .. " off=" .. tostring(off) .. " kept=" .. kept() .. " err=" .. tostring(SkaldDB.errors and SkaldDB.errors[1]) .. "\\n" .. log)`,
+});
+
+// Asked on 2026-11-26: test the sharing alone, with the copy of our own message that the guild channel sends back.
+run('/skald chronicle send echo: our own echo on GUILD is kept in the test book only, a copy is stale, echo new replaces, and outside the test our echo is ignored', {
+  pre: FOREVER + `
+CLOCK = 100; function GetTime() return CLOCK end
+function IsInGuild() return true end
+function GetGuildInfo(u) if u == "player" then return "Pena" end end
+SENT = {}
+C_ChatInfo.SendAddonMessage = function(prefix, text, channel) SENT[#SENT + 1] = { prefix, text, channel }; return 0 end
+function drain() for i = 1, 60 do CLOCK = CLOCK + 1; runTimers() end end
+function echo(first) for i = first, #SENT do fire("CHAT_MSG_ADDON", SENT[i][1], SENT[i][2], "GUILD", "Tester-Realm") end end
+function count(t) local n = 0; for _ in pairs(t and t.contribs or {}) do n = n + 1 end; return n end`,
+  body: `SlashCmdList.SKALD("chronicle share on")
+SlashCmdList.SKALD("chronicle send echo"); drain(); echo(1)
+local e = SkaldDB.chronicleEcho
+local kept = count(e) == 1 and count((SkaldDB.chronicle or {}).Pena) == 0
+local m = #SENT + 1
+SlashCmdList.SKALD("chronicle send echo"); drain(); echo(m)
+m = #SENT + 1
+SlashCmdList.SKALD("chronicle send echo new"); drain(); echo(m)
+local c; for _, x in pairs(e.contribs) do c = x end
+local replaced = count(e) == 1 and c.rev == 2
+CLOCK = CLOCK + 1000
+m = #SENT + 1
+SlashCmdList.SKALD("chronicle send"); drain(); echo(m)
+local ignored = count(SkaldDB.chronicleEcho) == 1 and count(SkaldDB.chronicle.Pena) == 1
+local log = {}; for _, x in ipairs(SkaldDB.chronicleLog or {}) do log[#log + 1] = x.line end; log = table.concat(log, "\\n")
+local seen = log:find("echo chron", 1, true) and log:find(": stale", 1, true) and log:find(": replaced", 1, true)
+SlashCmdList.SKALD("chronicle echo clear")
+RES = (kept and replaced and ignored and seen and SkaldDB.chronicleEcho == nil and SkaldDB.errors == nil) and "ok"
+  or ("kept=" .. tostring(kept) .. " replaced=" .. tostring(replaced) .. " ignored=" .. tostring(ignored) .. " seen=" .. tostring(seen) .. " err=" .. tostring(SkaldDB.errors and SkaldDB.errors[1]) .. "\\n" .. log)`,
+});
+
 run('/skald pvp demo draws the tab with example numbers, writes nothing in the diary, and leaving it puts the tab as it was', {
   body: `local before = ns.Pvp.Wanted()
 local entriesBefore, statsBefore = #SkaldCharDB.entries, SkaldCharDB.stats.bgFields

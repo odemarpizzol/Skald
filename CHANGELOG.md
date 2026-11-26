@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.1
+
+- **Guild Chronicle sharing, first step** (off until you turn it on): `/skald chronicle share on` lets this character hear the contributions of its guild, and `/skald chronicle send` shares your last dungeon with bosses on the guild channel. Each guild has one book for all your characters in it; a copy that arrives twice changes nothing, a newer revision replaces the older, and nothing heard on a group channel is kept. `/skald chronicle status` shows what was sent and kept. The Chronicle tab still shows its demo: reading the shared chapters in the book comes next
+- `/skald chronicle send echo` tests sharing alone: the copy of your own message that the guild channel sends back goes to a separate test book, never to the guild's (`/skald chronicle echo clear` empties it)
+- Seen in the game so far: sending and the echo coming back on the guild channel, outside instances and combat. Not yet between two players nor inside a dungeon or a fight: please report what you see
+
 ## 1.2.0
 
 - **The PvP tab is a war chronicle in three parts**: Open world, Battlegrounds and Arena, with links at the top and the corners of the book turning through the lands and fields. The open world counts your honorable kills and honor by zone, read from the game's own count (battlegrounds keep their own record), with the map of the zone you pick. Arena has its page but no records yet
